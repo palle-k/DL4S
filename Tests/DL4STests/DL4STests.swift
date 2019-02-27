@@ -30,7 +30,7 @@ final class DL4STests: XCTestCase {
         
         let result = (a * b) / (c + d)
         print(result.value)
-        result._backwards()
+        result.backwards()
         dump(result)
     }
     

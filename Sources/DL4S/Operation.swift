@@ -10,11 +10,14 @@ import Foundation
 protocol OperationContext {
     func zeroGradient()
     func backwards(from parameter: Variable)
+    var symbol: String { get }
+    var dependencies: [Variable] { get }
 }
 
 protocol BinaryOperationContext: OperationContext {
     var lhs: Variable { get }
     var rhs: Variable { get }
+    var symbol: String { get }
 }
 
 extension BinaryOperationContext {
@@ -22,21 +25,70 @@ extension BinaryOperationContext {
         lhs.zeroGradient()
         rhs.zeroGradient()
     }
+    
+    var dependencies: [Variable] {
+        return [lhs, rhs]
+    }
 }
 
 protocol UnaryOperationContext: OperationContext {
     var param: Variable { get }
+    var symbol: String { get }
 }
 
 extension UnaryOperationContext {
     func zeroGradient() {
         param.zeroGradient()
     }
+    
+    var dependencies: [Variable] {
+        return [param]
+    }
+}
+
+
+extension OperationContext {
+    private var id: String {
+        return String(dependencies.hashValue ^ symbol.hashValue).replacingOccurrences(of: "-", with: "_")
+    }
+    
+    private func collectVariables() -> Set<Variable> {
+        return Set(dependencies).union(dependencies.map {$0.context?.collectVariables() ?? []}.reduce(Set(), {$0.union($1)}))
+    }
+    
+    private func collectEdges() -> [String] {
+        let dependencyEdges = Array(dependencies.map {$0.context?.collectEdges() ?? []}.joined())
+        let edges = dependencies.compactMap {v in v.context.map {(v, $0)}}.map { v, ctx in
+            "node\(ctx.id) -> node\(self.id) [label=\"\(v.value), \(v.gradient)\"]"
+        }
+        let emptyEdges = dependencies.filter {$0.context == nil}.map { v in
+            "var\(String(v.hashValue).replacingOccurrences(of: "-", with: "_")) -> node\(self.id)"
+        }
+        return dependencyEdges + edges + emptyEdges
+    }
+    
+    private func collectNodes() -> [String] {
+        return Array(dependencies.compactMap {$0.context?.collectNodes()}.joined()) + ["\(id) [label=\"\(symbol)\"]"]
+    }
+    
+    public var description: String {
+        return """
+        digraph G {
+            \(collectVariables().map {"var\(String($0.hashValue).replacingOccurrences(of: "-", with: "_")) [label=\"v(\($0.value), \($0.gradient))\"]"}.joined(separator: "\n\t"))
+            \(collectNodes().joined(separator: "\n\t"))
+            \(collectEdges().joined(separator: "\n\t"))
+        }
+        """
+    }
 }
 
 
 public func + (lhs: Variable, rhs: Variable) -> Variable {
     struct AdditionOperationContext: BinaryOperationContext {
+        var symbol: String {
+            return "+"
+        }
+        
         var lhs: Variable
         var rhs: Variable
         
@@ -56,6 +108,10 @@ public func + (lhs: Variable, rhs: Variable) -> Variable {
 
 public func * (lhs: Variable, rhs: Variable) -> Variable {
     struct MultiplicationOperationContext: BinaryOperationContext {
+        var symbol: String {
+            return "*"
+        }
+        
         var lhs: Variable
         var rhs: Variable
         
@@ -75,6 +131,10 @@ public func * (lhs: Variable, rhs: Variable) -> Variable {
 
 public prefix func - (value: Variable) -> Variable {
     struct NegationOperationContext: UnaryOperationContext {
+        var symbol: String {
+            return "*(-1)"
+        }
+        
         var param: Variable
         
         func backwards(from parameter: Variable) {
@@ -95,6 +155,10 @@ public func - (lhs: Variable, rhs: Variable) -> Variable {
 
 public func / (lhs: Variable, rhs: Variable) -> Variable {
     struct DivisionOperationContext: BinaryOperationContext {
+        var symbol: String {
+            return "/"
+        }
+        
         var lhs: Variable
         var rhs: Variable
         
@@ -112,8 +176,28 @@ public func / (lhs: Variable, rhs: Variable) -> Variable {
     return Variable(value: lhs.value / rhs.value, context: DivisionOperationContext(lhs: lhs, rhs: rhs))
 }
 
+public func += (lhs: inout Variable, rhs: Variable) {
+    lhs = lhs + rhs
+}
+
+public func -= (lhs: inout Variable, rhs: Variable) {
+    lhs = lhs - rhs
+}
+
+public func *= (lhs: inout Variable, rhs: Variable) {
+    lhs = lhs * rhs
+}
+
+public func /= (lhs: inout Variable, rhs: Variable) {
+    lhs = lhs / rhs
+}
+
 public func exp(_ parameter: Variable) -> Variable {
     struct ExponentiationOperationContext: UnaryOperationContext {
+        var symbol: String {
+            return "exp"
+        }
+        
         var param: Variable
         
         func backwards(from parameter: Variable) {
@@ -129,6 +213,10 @@ public func exp(_ parameter: Variable) -> Variable {
 
 public func log(_ parameter: Variable) -> Variable {
     struct LogOperationContext: UnaryOperationContext {
+        var symbol: String {
+            return "log"
+        }
+        
         var param: Variable
         
         func backwards(from parameter: Variable) {
@@ -144,6 +232,10 @@ public func log(_ parameter: Variable) -> Variable {
 
 public func sum(_ parameters: [Variable]) -> Variable {
     struct SumOperationContext: OperationContext {
+        var symbol: String {
+            return "sum"
+        }
+        
         var parameters: [Variable]
         
         func backwards(from parameter: Variable) {
@@ -155,6 +247,10 @@ public func sum(_ parameters: [Variable]) -> Variable {
         
         func zeroGradient() {
             parameters.forEach {$0.zeroGradient()}
+        }
+        
+        var dependencies: [Variable] {
+            return parameters
         }
     }
     
@@ -170,6 +266,10 @@ public func sigmoid(_ parameter: Variable) -> Variable {
 
 public func relu(_ parameter: Variable) -> Variable {
     struct ReluOperationContext: UnaryOperationContext {
+        var symbol: String {
+            return "relu"
+        }
+        
         var param: Variable
         
         func backwards(from parameter: Variable) {
@@ -188,6 +288,10 @@ public func relu(_ parameter: Variable) -> Variable {
 
 public func tanh(_ parameter: Variable) -> Variable {
     struct TanhOperationContext: UnaryOperationContext {
+        var symbol: String {
+            return "tanh"
+        }
+        
         var param: Variable
         
         func backwards(from parameter: Variable) {
@@ -212,26 +316,44 @@ public func softmax(_ parameters: [Variable]) -> [Variable] {
 }
 
 public func dot(_ x: [Variable], _ y: [Variable]) -> Variable {
+    precondition(x.count == y.count)
+    
     return sum(zip(x, y).map(*))
 }
 
-public func + (lhs: [Variable], rhs: [Variable]) -> [Variable] {
+infix operator .+ : AdditionPrecedence
+infix operator .* : MultiplicationPrecedence
+infix operator .- : AdditionPrecedence
+
+public func .+ (lhs: [Variable], rhs: [Variable]) -> [Variable] {
+    precondition(lhs.count == rhs.count)
+    
     return zip(lhs, rhs).map(+)
 }
 
-public func - (lhs: [Variable], rhs: [Variable]) -> [Variable] {
+public func .- (lhs: [Variable], rhs: [Variable]) -> [Variable] {
+    precondition(lhs.count == rhs.count)
+    
     return zip(lhs, rhs).map(-)
 }
 
-public func + (lhs: [[Variable]], rhs: [[Variable]]) -> [[Variable]] {
+public func .+ (lhs: [[Variable]], rhs: [[Variable]]) -> [[Variable]] {
+    precondition(lhs.count == rhs.count)
+    precondition(lhs.isEmpty && rhs.isEmpty || lhs[0].count == rhs[0].count)
+    
     return zip(lhs, rhs).map {zip($0, $1).map(+)}
 }
 
-public func - (lhs: [[Variable]], rhs: [[Variable]]) -> [[Variable]] {
+public func .- (lhs: [[Variable]], rhs: [[Variable]]) -> [[Variable]] {
+    precondition(lhs.count == rhs.count)
+    precondition(lhs.isEmpty && rhs.isEmpty || lhs[0].count == rhs[0].count)
+    
     return zip(lhs, rhs).map {zip($0, $1).map(-)}
 }
 
 public func * (_ x: [[Variable]], _ y: [[Variable]]) -> [[Variable]] {
+    precondition(x[0].count == y.count)
+    
     var result: [[Variable]] = Array(repeating: [], count: x.count)
     for row in 0 ..< x.count {
         result[row].reserveCapacity(y[0].count)
@@ -243,6 +365,8 @@ public func * (_ x: [[Variable]], _ y: [[Variable]]) -> [[Variable]] {
 }
 
 public func * (_ x: [[Variable]], _ y: [Variable]) -> [Variable] {
+    precondition(x.allSatisfy {$0.count == y.count})
+    
     var result: [Variable] = []
     result.reserveCapacity(x.count)
     for row in 0 ..< x.count {
@@ -267,14 +391,18 @@ func log(_ val: [Variable]) -> [Variable] {
     return val.map(log)
 }
 
-func convolve(image: [[Variable]], filter: [[Variable]]) -> [[Variable]] {
+func relu(_ val: [Variable]) -> [Variable] {
+    return val.map(relu)
+}
+
+func convolve(image: [[Variable]], filter: [[Variable]], stride: Int = 1) -> [[Variable]] {
     var result: [[Variable]] = []
     result.reserveCapacity(image.count - filter.count)
     
-    for i in 0 ..< (image.count - filter.count) {
+    for i in Swift.stride(from: 0, to: image.count - filter.count, by: stride) {
         var row: [Variable] = []
         row.reserveCapacity(image[0].count - filter[0].count)
-        for j in 0 ..< (image[0].count - filter[0].count) {
+        for j in Swift.stride(from: 0, to: image[0].count - filter[0].count, by: stride) {
             row.append(
                 sum((0 ..< filter.count)
                     .flatMap {(y: Int) in (0 ..< filter[0].count).map {(y, $0)}}
@@ -287,4 +415,26 @@ func convolve(image: [[Variable]], filter: [[Variable]]) -> [[Variable]] {
         result.append(row)
     }
     return result
+}
+
+func convolve(image: [[[Variable]]], filter: [[[Variable]]], stride: Int = 1) -> [[Variable]] {
+    var result: [[Variable]] = Array(repeating: 0, rows: image.count - filter.count, columns: image[0].count - filter[0].count)
+    for z in 0 ..< image.count {
+        result = result .+ convolve(image: image[z], filter: filter[z], stride: stride)
+    }
+    return result
+}
+
+func convolve(image: [[[Variable]]], filters: [[[[Variable]]]], stride: Int = 1) -> [[[Variable]]] {
+    return filters.reduce(into: []) { acc, filter in
+        acc.append(convolve(image: image, filter: filter, stride: stride))
+    }
+}
+
+func binaryCrossEntropy(expected: Variable, actual: Variable) -> Variable {
+    return -(expected * log(actual) + (1 - expected) * log(1 - actual))
+}
+
+func categoricalCrossEntropy(expected: [Variable], actual: [Variable]) -> Variable {
+    return -sum(zip(expected, actual.map(log)).map(*))
 }

@@ -51,15 +51,30 @@ public class Variable: ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral {
     }
 }
 
+extension Variable: Hashable {
+    public static func == (lhs: Variable, rhs: Variable) -> Bool {
+        return lhs.value == rhs.value && lhs.gradient == rhs.gradient && lhs.context?.dependencies == rhs.context?.dependencies && lhs.context?.symbol == rhs.context?.symbol
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(value)
+        hasher.combine(gradient)
+        hasher.combine(context?.dependencies)
+        hasher.combine(context?.symbol)
+    }
+}
+
 extension Array where Element == Variable {
     public init(repeating: Float, count: Int) {
         self = (0 ..< count).map{_ in Variable(value: repeating)}
     }
     
-    public func fillRandomly(_ range: ClosedRange<Float> = 0 ... 1) {
+    @discardableResult
+    public func fillRandomly(_ range: ClosedRange<Float> = 0 ... 1) -> [Variable] {
         for i in 0 ..< count {
             self[i].value = Float.random(in: range)
         }
+        return self
     }
 }
 
@@ -70,9 +85,43 @@ extension Array where Element == [Variable] {
         }
     }
     
-    public func fillRandomly(_ range: ClosedRange<Float> = 0 ... 1) {
+    @discardableResult
+    public func fillRandomly(_ range: ClosedRange<Float> = 0 ... 1) -> [[Variable]] {
         for i in 0 ..< count {
             self[i].fillRandomly(range)
         }
+        return self
+    }
+}
+
+extension Array where Element == [[Variable]] {
+    public init(repeating: Float, depth: Int, rows: Int, columns: Int) {
+        self = (0 ..< depth).map { _ in
+            [[Variable]](repeating: repeating, rows: rows, columns: columns)
+        }
+    }
+    
+    @discardableResult
+    public func fillRandomly(_ range: ClosedRange<Float> = 0 ... 1) -> [[[Variable]]] {
+        for i in 0 ..< count {
+            self[i].fillRandomly(range)
+        }
+        return self
+    }
+}
+
+extension Array where Element == [[[Variable]]] {
+    public init(repeating: Float, count: Int, depth: Int, rows: Int, columns: Int) {
+        self = (0 ..< count).map { _ in
+            [[[Variable]]](repeating: repeating, depth: depth, rows: rows, columns: columns)
+        }
+    }
+    
+    @discardableResult
+    public func fillRandomly(_ range: ClosedRange<Float> = 0 ... 1) -> [[[[Variable]]]] {
+        for i in 0 ..< count {
+            self[i].fillRandomly(range)
+        }
+        return self
     }
 }
