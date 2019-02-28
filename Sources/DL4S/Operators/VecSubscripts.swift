@@ -11,8 +11,8 @@ fileprivate struct ReshapeOperation<Element: NumericType>: UnaryVectorOperation 
     var source: Vector<Element>
     
     func backwards(from vector: Vector<Element>) {
-        if !Vector.sameIdentity(source, vector.parent) {
-            Element.vAdd(lhs: vector.gradient, rhs: source.gradient, result: source.gradient, count: source.count)
+        if !Vector.sameIdentity(source, vector) {
+            Element.vAdd(lhs: vector.gradient.immutable, rhs: source.gradient.immutable, result: source.gradient, count: source.count)
         }
         source._backwards()
     }
@@ -20,6 +20,10 @@ fileprivate struct ReshapeOperation<Element: NumericType>: UnaryVectorOperation 
 
 public extension Vector {
     func view(as shape: Int...) -> Vector<Element> {
+        return view(as: shape)
+    }
+    
+    func view(as shape: [Int]) -> Vector<Element> {
         precondition(shape.count(where: {$0 == -1}) <= 1, "The size of at most one dimension can be unknown (-1).")
         precondition(shape.allSatisfy {$0 >= -1}, "All dimensions must be greater than or equal to -1.")
         
@@ -32,6 +36,11 @@ public extension Vector {
         return Vector(values: values, gradient: gradient, shape: shape, parent: self, context: ReshapeOperation(source: self).asAny())
     }
     
+    func viewAsScalar() -> Vector<Element> {
+        precondition(count == 1, "Only vectors with exactly one element can be viewed as a scalar.")
+        
+        return Vector(values: values, gradient: gradient, shape: [], parent: self, context: ReshapeOperation(source: self).asAny())
+    }
 }
 
 fileprivate struct ReplaceOperation<Element: NumericType>: UnaryVectorOperation {
@@ -50,10 +59,10 @@ fileprivate struct SelectOperation<Element: NumericType>: UnaryVectorOperation {
     
     func backwards(from vector: Vector<Element>) {
         let (buffer, isCopy, _) = source.gradient(from: location)
-        Element.vAdd(lhs: buffer, rhs: vector.gradient, result: buffer, count: vector.count)
+        Element.vAdd(lhs: buffer.immutable, rhs: vector.gradient.immutable, result: buffer, count: vector.count)
         
         if isCopy {
-            source.setGradient(at: location, source: buffer, sourceShape: vector.shape)
+            source.setGradient(at: location, source: buffer.immutable, sourceShape: vector.shape)
         }
         source._backwards()
     }
@@ -75,10 +84,10 @@ fileprivate struct RangeSelectOperation<Element: NumericType>: UnaryVectorOperat
     
     func backwards(from vector: Vector<Element>) {
         let (buffer, isCopy, _) = source.gradient(from: location)
-        Element.vAdd(lhs: buffer, rhs: vector.gradient, result: buffer, count: vector.count)
+        Element.vAdd(lhs: buffer.immutable, rhs: vector.gradient.immutable, result: buffer, count: vector.count)
         
         if isCopy {
-            source.setGradient(at: location, source: buffer, sourceShape: vector.shape)
+            source.setGradient(at: location, source: buffer.immutable, sourceShape: vector.shape)
         }
         source._backwards()
     }
@@ -106,8 +115,8 @@ public extension Vector {
                 fatalError("Assigning from a single value not supported yet.")
             }
             
-            MemoryOps.set(slice: index, of: values, with: shape, from: slice.values, with: slice.shape)
-            MemoryOps.set(slice: index, of: gradient, with: shape, from: slice.gradient, with: slice.shape)
+            MemoryOps.set(slice: index, of: values, with: shape, from: slice.values.immutable, with: slice.shape)
+            MemoryOps.set(slice: index, of: gradient, with: shape, from: slice.gradient.immutable, with: slice.shape)
             
             self.context = ReplaceOperation(source: origin, location: index).asAny()
         }
@@ -137,8 +146,8 @@ public extension Vector {
                 fatalError("Assigning from a single value not supported yet.")
             }
             
-            MemoryOps.set(slice: index, of: values, with: shape, from: slice.values, with: slice.shape)
-            MemoryOps.set(slice: index, of: gradient, with: shape, from: slice.gradient, with: slice.shape)
+            MemoryOps.set(slice: index, of: values, with: shape, from: slice.values.immutable, with: slice.shape)
+            MemoryOps.set(slice: index, of: gradient, with: shape, from: slice.gradient.immutable, with: slice.shape)
             
             self.context = RangeReplaceOperation(source: origin, location: index).asAny()
         }

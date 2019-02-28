@@ -25,8 +25,10 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         return MemoryOps.strides(from: shape)
     }
     
-    var values: UnsafeMutablePointer<Element>
-    var gradient: UnsafeMutablePointer<Element>
+    public var tag: String? = nil
+    
+    var values: UnsafeMutableBufferPointer<Element>
+    var gradient: UnsafeMutableBufferPointer<Element>
     var context: AnyVectorOperation<Element>?
     
     // Specifies, whether the vector is the owner of the value pointers
@@ -36,8 +38,8 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = UnsafeMutablePointer.allocate(capacity: count)
-        self.gradient = UnsafeMutablePointer.allocate(capacity: count)
+        self.values = UnsafeMutableBufferPointer.allocate(capacity: count)
+        self.gradient = UnsafeMutableBufferPointer.allocate(capacity: count)
         self.context = nil
         self.parent = nil
         
@@ -49,8 +51,8 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = UnsafeMutablePointer.allocate(capacity: count)
-        self.gradient = UnsafeMutablePointer.allocate(capacity: count)
+        self.values = UnsafeMutableBufferPointer.allocate(capacity: count)
+        self.gradient = UnsafeMutableBufferPointer.allocate(capacity: count)
         self.context = nil
         self.parent = nil
         
@@ -60,7 +62,67 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         Element.fill(value: 0, result: gradient, count: count)
     }
     
-    init(values: UnsafeMutablePointer<Element>, gradient: UnsafeMutablePointer<Element>, shape: [Int], parent: Vector<Element>? = nil, context: AnyVectorOperation<Element>?) {
+    public convenience init(_ array: [Element]) {
+        self.init(array, shape: array.count)
+    }
+    
+    public convenience init(_ array: [[Element]]) {
+        precondition(array.allSatisfy {$0.count == array[0].count}, "Invalid shape, all rows of array must be of same length.")
+        self.init(Array(array.joined()), shape: array.count, array.first?.count ?? 0)
+    }
+    
+    public convenience init(_ array: [[[Element]]]) {
+        precondition(array.allSatisfy {
+            $0.count == array[0].count && $0.allSatisfy {
+                $0.count == array[0][0].count
+            }
+        }, "Invalid shape, all rows of array must be of same length.")
+        self.init(
+            Array(array.joined().joined()),
+            shape: array.count,
+            array.first?.count ?? 0,
+            array.first?.first?.count ?? 0
+        )
+    }
+    
+    public convenience init(_ array: [[[[Element]]]]) {
+        precondition(array.allSatisfy {
+            $0.count == array[0].count && $0.allSatisfy {
+                $0.count == array[0][0].count && $0.allSatisfy {
+                    $0.count == array[0][0][0].count
+                }
+            }
+        }, "Invalid shape, all rows of array must be of same length.")
+        self.init(
+            Array(array.joined().joined().joined()),
+            shape: array.count,
+            array.first?.count ?? 0,
+            array.first?.first?.count ?? 0,
+            array.first?.first?.first?.count ?? 0
+        )
+    }
+    
+    public convenience init(_ array: [[[[[Element]]]]]) {
+        precondition(array.allSatisfy {
+            $0.count == array[0].count && $0.allSatisfy {
+                $0.count == array[0][0].count && $0.allSatisfy {
+                    $0.count == array[0][0][0].count && $0.allSatisfy {
+                        $0.count == array[0][0][0][0].count
+                    }
+                }
+            }
+        }, "Invalid shape, all rows of array must be of same length.")
+        self.init(
+            Array(array.joined().joined().joined().joined()),
+            shape: array.count,
+            array.first?.count ?? 0,
+            array.first?.first?.count ?? 0,
+            array.first?.first?.first?.count ?? 0,
+            array.first?.first?.first?.first?.count ?? 0
+        )
+    }
+    
+    init(values: UnsafeMutableBufferPointer<Element>, gradient: UnsafeMutableBufferPointer<Element>, shape: [Int], parent: Vector<Element>? = nil, context: AnyVectorOperation<Element>?) {
         self.values = values
         self.gradient = gradient
         self.shape = shape
@@ -68,9 +130,9 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         self.context = context
     }
     
-    init(values: UnsafeMutablePointer<Element>, shape: [Int], parent: Vector<Element>? = nil, context: AnyVectorOperation<Element>?) {
+    init(values: UnsafeMutableBufferPointer<Element>, shape: [Int], parent: Vector<Element>? = nil, context: AnyVectorOperation<Element>?) {
         self.values = values
-        self.gradient = UnsafeMutablePointer<Element>.allocate(capacity: shape.reduce(1, *))
+        self.gradient = UnsafeMutableBufferPointer<Element>.allocate(capacity: shape.reduce(1, *))
         self.shape = shape
         self.parent = parent
         self.context = context
@@ -78,10 +140,21 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         Element.fill(value: 0, result: self.gradient, count: count)
     }
     
+    public init(_ value: Element) {
+        self.shape = []
+        self.values = UnsafeMutableBufferPointer.allocate(capacity: 1)
+        self.gradient = UnsafeMutableBufferPointer.allocate(capacity: 1)
+        self.context = nil
+        self.parent = nil
+        
+        self.values.pointee = value
+        self.gradient.pointee = 0
+    }
+    
     public required init(floatLiteral value: Double) {
         self.shape = []
-        self.values = UnsafeMutablePointer.allocate(capacity: 1)
-        self.gradient = UnsafeMutablePointer.allocate(capacity: 1)
+        self.values = UnsafeMutableBufferPointer.allocate(capacity: 1)
+        self.gradient = UnsafeMutableBufferPointer.allocate(capacity: 1)
         self.context = nil
         self.parent = nil
         self.values.pointee = Element(value)
@@ -90,8 +163,8 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
     
     public required init(integerLiteral value: Int32) {
         self.shape = []
-        self.values = UnsafeMutablePointer.allocate(capacity: 1)
-        self.gradient = UnsafeMutablePointer.allocate(capacity: 1)
+        self.values = UnsafeMutableBufferPointer.allocate(capacity: 1)
+        self.gradient = UnsafeMutableBufferPointer.allocate(capacity: 1)
         self.context = nil
         self.parent = nil
         self.values.pointee = Element(value)
@@ -102,8 +175,8 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = UnsafeMutablePointer.allocate(capacity: count)
-        self.gradient = UnsafeMutablePointer.allocate(capacity: count)
+        self.values = UnsafeMutableBufferPointer.allocate(capacity: count)
+        self.gradient = UnsafeMutableBufferPointer.allocate(capacity: count)
         self.context = context
         self.parent = parent
         
@@ -129,11 +202,11 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let existingValues = self.values
         let existingGradient = self.gradient
         
-        self.values = UnsafeMutablePointer.allocate(capacity: count)
-        self.gradient = UnsafeMutablePointer.allocate(capacity: count)
+        self.values = UnsafeMutableBufferPointer.allocate(capacity: count)
+        self.gradient = UnsafeMutableBufferPointer.allocate(capacity: count)
         
-        self.values.assign(from: existingValues, count: count)
-        self.gradient.assign(from: existingGradient, count: count)
+        self.values.assign(from: existingValues.immutable, count: count)
+        self.gradient.assign(from: existingGradient.immutable, count: count)
         
         self.parent = nil
     }
@@ -156,23 +229,11 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
     /// Only applicable to zero-dimensional tensors (scalars)
     /// The item is not further tracked with automatic differentiation
     public var item: Element {
-        get {
-            if dim == 0 {
-                return values.pointee
-            } else {
-                fatalError("Cannot obtain item of vector with dimensionality other than 0")
-            }
-        }
-        set {
-            if dim == 0 {
-                ensureOwnership()
-                // if context != nil {
-                //     fatalError("Setting item of vector is not allowed when the vector was generated from a mathematical operation. Use vector.detached()")
-                // }
-                values.pointee = newValue
-            } else {
-                fatalError("Cannot set item of vector with dimensionality other than 0")
-            }
+        if dim == 0 {
+            
+            return values.pointee
+        } else {
+            fatalError("Cannot obtain item of vector with dimensionality other than 0")
         }
     }
     
@@ -205,10 +266,12 @@ public class Vector<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
 
 extension Vector: CustomStringConvertible, CustomDebugStringConvertible {
     private func generateDescription() -> String {
+        
         if dim > 1 {
             let d = (0 ..< shape[0])
                 .map {self[$0].generateDescription()}
                 .joined(separator: ",\n")
+                .replacingOccurrences(of: "\n", with: "\n ")
             return "[\(d)]"
         } else if let count = self.shape.first {
             let d = (0 ..< count)
@@ -225,6 +288,7 @@ extension Vector: CustomStringConvertible, CustomDebugStringConvertible {
             let d = (0 ..< shape[0])
                 .map {self[$0].generateGradientDescription()}
                 .joined(separator: ",\n")
+                .replacingOccurrences(of: "\n", with: "\n ")
             return "[\(d)]"
         } else if let count = self.shape.first {
             let d = (0 ..< count)
@@ -232,12 +296,16 @@ extension Vector: CustomStringConvertible, CustomDebugStringConvertible {
                 .joined(separator: ", ")
             return "[\(d)]"
         } else {
-            return "\(item)"
+            return "\(gradientItem)"
         }
     }
     
     public var description: String {
         return generateDescription()
+    }
+    
+    public var gradientDescription: String {
+        return generateGradientDescription()
     }
     
     public var debugDescription: String {
@@ -253,35 +321,58 @@ extension Vector: CustomStringConvertible, CustomDebugStringConvertible {
 
 // Memory operation extensions
 extension Vector {
-    func buffer(from indices: [Int?]) -> (UnsafeMutablePointer<Element>, Bool, [Int]) {
+    func buffer(from indices: [Int?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
         return MemoryOps.get(slice: indices, of: values, with: shape)
     }
     
-    func setBuffer(at indices: [Int?], source: UnsafePointer<Element>, sourceShape: [Int]) {
+    func setBuffer(at indices: [Int?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
         MemoryOps.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
     }
     
-    func gradient(from indices: [Int?]) -> (UnsafeMutablePointer<Element>, Bool, [Int]) {
+    func gradient(from indices: [Int?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
         return MemoryOps.get(slice: indices, of: gradient, with: shape)
     }
     
-    func setGradient(at indices: [Int?], source: UnsafePointer<Element>, sourceShape: [Int]) {
+    func setGradient(at indices: [Int?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
         MemoryOps.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
     }
     
-    func buffer(from indices: [Range<Int>?]) -> (UnsafeMutablePointer<Element>, Bool, [Int]) {
+    func buffer(from indices: [Range<Int>?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
         return MemoryOps.get(slice: indices, of: values, with: shape)
     }
     
-    func setBuffer(at indices: [Range<Int>?], source: UnsafePointer<Element>, sourceShape: [Int]) {
+    func setBuffer(at indices: [Range<Int>?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
         MemoryOps.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
     }
     
-    func gradient(from indices: [Range<Int>?]) -> (UnsafeMutablePointer<Element>, Bool, [Int]) {
+    func gradient(from indices: [Range<Int>?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
         return MemoryOps.get(slice: indices, of: gradient, with: shape)
     }
     
-    func setGradient(at indices: [Range<Int>?], source: UnsafePointer<Element>, sourceShape: [Int]) {
+    func setGradient(at indices: [Range<Int>?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
         MemoryOps.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
     }
+}
+
+func iterate(_ shape: [Int]) -> AnySequence<[Int]> {
+    func increment<S: RandomAccessCollection>(_ list: S, shape: S) -> ([Int], Bool) where S.Element == Int {
+        guard let first = list.first, let firstDim = shape.first else {
+            return ([], true)
+        }
+        let (rest, overflows) = increment(list.dropFirst(), shape: shape.dropFirst())
+        if overflows {
+            if first + 1 >= firstDim {
+                return ([0] + rest, true)
+            } else {
+                return ([first + 1] + rest, false)
+            }
+        } else {
+            return ([first] + rest, false)
+        }
+    }
+    
+    return AnySequence(sequence(first: Array(repeating: 0, count: shape.count)) { state -> [Int]? in
+        let (incremented, overflows) = increment(state, shape: shape)
+        return overflows ? nil : incremented
+    })
 }

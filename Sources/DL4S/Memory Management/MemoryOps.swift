@@ -9,8 +9,8 @@ import Foundation
 
 
 private func recursiveCopy<Element>(
-    source: UnsafePointer<Element>,
-    destination: UnsafeMutablePointer<Element>,
+    source: UnsafeBufferPointer<Element>,
+    destination: UnsafeMutableBufferPointer<Element>,
     sourceShape: [Int],
     sourceStrides: [Int],
     destinationStrides: [Int],
@@ -21,9 +21,11 @@ private func recursiveCopy<Element>(
         let dStride = destinationStrides.first,
         let idx = indices.first,
         let dimSize = sourceShape.first
-        else {
-            destination.pointee = source.pointee
-            return
+    else {
+        //fatalError("BUGS!!!")
+        print("POTENTIAL INVALID WRITE")
+        destination.pointee = source.pointee
+        return
     }
     
     if let idx = idx {
@@ -62,8 +64,8 @@ private func recursiveCopy<Element>(
 }
 
 private func recursiveCopy<Element>(
-    source: UnsafePointer<Element>,
-    destination: UnsafeMutablePointer<Element>,
+    source: UnsafeBufferPointer<Element>,
+    destination: UnsafeMutableBufferPointer<Element>,
     sourceShape: [Int],
     sourceStrides: [Int],
     destinationStrides: [Int],
@@ -75,8 +77,8 @@ private func recursiveCopy<Element>(
         let idx = indices.first,
         let dimSize = sourceShape.first
     else {
-            destination.pointee = source.pointee
-            return
+        destination.pointee = source.pointee
+        return
     }
     
     if zip(indices, sourceShape).allSatisfy({$0 == nil || ($0?.lowerBound == 0 && $0?.upperBound == $1)}) {
@@ -138,7 +140,7 @@ enum MemoryOps {
     ///   - buffer: Vector
     ///   - shape: Shape of vector
     /// - Returns: Vector and boolean indicating, whether a new memory region has been allocated, and the shape of the result.
-    static func get<Element>(slice: [Int?], of buffer: UnsafeMutablePointer<Element>, with shape: [Int]) -> (UnsafeMutablePointer<Element>, Bool, [Int]) {
+    static func get<Element>(slice: [Int?], of buffer: UnsafeMutableBufferPointer<Element>, with shape: [Int]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
         
         
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
@@ -160,12 +162,12 @@ enum MemoryOps {
             let flattenedResultShape = resultShape.compactMap {$0}
             
             let resultCount = flattenedResultShape.reduce(1, *)
-            let resultBuffer = UnsafeMutablePointer<Element>.allocate(capacity: resultCount)
+            let resultBuffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: resultCount)
             
             let dstStrides = MemoryOps.strides(from: resultShape.map {$0 ?? 1})
             
             recursiveCopy(
-                source: buffer,
+                source: buffer.immutable,
                 destination: resultBuffer,
                 sourceShape: shape,
                 sourceStrides: strides,
@@ -185,7 +187,7 @@ enum MemoryOps {
     ///   - buffer: Vector
     ///   - shape: Shape of vector
     /// - Returns: Vector and boolean indicating, whether a new memory region has been allocated, and the shape of the result.
-    static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: UnsafeMutablePointer<Element>, with shape: [Int]) -> (UnsafeMutablePointer<Element>, Bool, [Int]) {
+    static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: UnsafeMutableBufferPointer<Element>, with shape: [Int]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         
         let strides = MemoryOps.strides(from: shape)
@@ -199,12 +201,12 @@ enum MemoryOps {
         let flattenedResultShape = resultShape.compactMap {$0}
         
         let resultCount = flattenedResultShape.reduce(1, *)
-        let resultBuffer = UnsafeMutablePointer<Element>.allocate(capacity: resultCount)
+        let resultBuffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: resultCount)
         
         let dstStrides = MemoryOps.strides(from: resultShape.map {$0 ?? 1})
         
         recursiveCopy(
-            source: buffer,
+            source: buffer.immutable,
             destination: resultBuffer,
             sourceShape: shape,
             sourceStrides: strides,
@@ -215,7 +217,7 @@ enum MemoryOps {
         return (resultBuffer, true, flattenedResultShape)
     }
     
-    static func set<Element>(slice: [Int?], of buffer: UnsafeMutablePointer<Element>, with dstShape: [Int], from source: UnsafePointer<Element>, with sourceShape: [Int]) {
+    static func set<Element>(slice: [Int?], of buffer: UnsafeMutableBufferPointer<Element>, with dstShape: [Int], from source: UnsafeBufferPointer<Element>, with sourceShape: [Int]) {
         precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Shape of source must be equal to source of destination minus number of knowns in slice")
         
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
@@ -238,7 +240,7 @@ enum MemoryOps {
         )
     }
     
-    static func set<Element>(slice: [Range<Int>?], of buffer: UnsafeMutablePointer<Element>, with dstShape: [Int], from source: UnsafePointer<Element>, with sourceShape: [Int]) {
+    static func set<Element>(slice: [Range<Int>?], of buffer: UnsafeMutableBufferPointer<Element>, with dstShape: [Int], from source: UnsafeBufferPointer<Element>, with sourceShape: [Int]) {
         precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Shape of source must be equal to source of destination minus number of knowns in slice")
         
         let padded = slice + [Range<Int>?](repeating: nil, count: dstShape.count - slice.count)
@@ -260,6 +262,4 @@ enum MemoryOps {
             indices: padded
         )
     }
-    
-    
 }

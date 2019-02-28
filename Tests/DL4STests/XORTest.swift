@@ -14,25 +14,27 @@ class XORTest: XCTestCase {
         let dataset: [([Variable], Variable)] = [
             ([0, 0], 0),
             ([1, 0], 1),
-            ([0, 1], 0),
+            ([0, 1], 1),
             ([1, 1,], 0)
         ]
         
-        let net = Sequential(
-            Dense(inputs: 2, outputs: 4, weightScale: 0.1),
-            Sigmoid(),
-            Dense(inputs: 4, outputs: 1, weightScale: 0.1),
-            Sigmoid()
+        let net = ScalarSequential(
+            ScalarDense(inputs: 2, outputs: 6, weightScale: 0.1),
+            ScalarSigmoid(),
+            ScalarDense(inputs: 6, outputs: 1, weightScale: 0.1),
+            ScalarSigmoid()
         )
         
-        let learningRate: Float = 1.0
+        let learningRate: Float = 0.1
         
-        for epoch in 1 ... 30 {
+        for epoch in 1 ... 1000 {
             var loss = Variable(value: 0)
             
             for (input, expected) in dataset {
                 let pred = net.forward(input)[0]
-                loss = loss + binaryCrossEntropy(expected: expected, actual: pred)
+                let l = binaryCrossEntropy(expected: expected, actual: pred)
+                // print(l.value)
+                loss = loss + l
             }
             
             loss.zeroGradient()
@@ -42,7 +44,7 @@ class XORTest: XCTestCase {
                 param.value -= param.gradient * learningRate
             }
             
-            if epoch % 10 == 0 {
+            if epoch % 100 == 0 {
                 print("[\(epoch)]: loss \(loss.value / Float(dataset.count))")
             }
         }

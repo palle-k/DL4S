@@ -1,78 +1,60 @@
 //
 //  Layers.swift
-//  DL4STests
+//  DL4S
 //
-//  Created by Palle Klewitz on 25.02.19.
+//  Created by Palle Klewitz on 28.02.19.
 //
 
 import Foundation
 
+
 public protocol Layer {
-    var allParameters: [Variable] { get }
+    associatedtype Element: NumericType
     
-    func forward(_ input: [Variable]) -> [Variable]
+    var parameters: [Vector<Element>] { get }
+    var trainable: Bool { get nonmutating set }
+    
+    func forward(_ inputs: [Vector<Element>]) -> Vector<Element>
 }
 
-public class Dense: Layer {
-    public var allParameters: [Variable] {
-        return Array(params.joined())
+public extension Layer {
+    func forward(_ inputs: Vector<Element>...) -> Vector<Element> {
+        return forward(inputs)
     }
     
-    let params: [[Variable]]
-    let bias: [Variable]
-    
-    init(inputs: Int, outputs: Int, weightScale: Float = 0.01) {
-        params = [[Variable]](repeating: 0, rows: outputs, columns: inputs).fillRandomly(-weightScale ... weightScale)
-        bias = [Variable](repeating: Float(0), count: outputs)
-    }
-    
-    public func forward(_ input: [Variable]) -> [Variable] {
-        return params * input .+ bias
+    func asAny() -> AnyLayer<Element> {
+        return AnyLayer(self)
     }
 }
 
-public class Tanh: Layer {
-    public var allParameters: [Variable] {
-        return []
+public struct AnyLayer<Element: NumericType>: Layer {
+    
+    private let getParams: () -> [Vector<Element>]
+    private let performForward: ([Vector<Element>]) -> (Vector<Element>)
+    private let getTrainable: () -> Bool
+    private let setTrainable: (Bool) -> ()
+    
+    public var parameters: [Vector<Element>] {
+        return getParams()
     }
     
-    public func forward(_ input: [Variable]) -> [Variable] {
-        return tanh(input)
-    }
-}
-
-public class Sigmoid: Layer {
-    public var allParameters: [Variable] {
-        return []
-    }
-    
-    public func forward(_ input: [Variable]) -> [Variable] {
-        return sigmoid(input)
-    }
-}
-
-public class Relu: Layer {
-    public var allParameters: [Variable] {
-        return []
+    public var trainable: Bool {
+        get {
+            return getTrainable()
+        }
+        nonmutating set {
+            setTrainable(newValue)
+        }
     }
     
-    public func forward(_ input: [Variable]) -> [Variable] {
-        return relu(input)
-    }
-}
-
-public class Sequential: Layer {
-    public var allParameters: [Variable] {
-        return layers.flatMap {$0.allParameters}
+    public init<L: Layer>(_ layer: L) where L.Element == Element {
+        self.getParams = {layer.parameters}
+        self.performForward = {layer.forward($0)}
+        self.getTrainable = {layer.trainable}
+        self.setTrainable = {layer.trainable = $0}
     }
     
-    let layers: [Layer]
-    
-    init(_ layers: Layer...) {
-        self.layers = layers
-    }
-    
-    public func forward(_ input: [Variable]) -> [Variable] {
-        return layers.reduce(input, {$1.forward($0)})
+    public func forward(_ inputs: [Vector<Element>]) -> Vector<Element> {
+        return performForward(inputs)
     }
 }

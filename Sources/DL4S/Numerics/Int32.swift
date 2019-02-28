@@ -10,7 +10,8 @@ import Accelerate
 
 
 extension Int32: NumericType {
-    public static func vSquare(values: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    
+    public static func vSquare(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = values[i] * values[i]
         }
@@ -20,20 +21,20 @@ extension Int32: NumericType {
         self = Int32(value)
     }
     
-    public static func tanh(val: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func tanh(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         fatalError("Tanh not implemented for Int32")
     }
     
-    public static func relu(val: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func relu(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = Swift.max(0, val[i])
         }
     }
     
-    public static func transpose(val: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, width: Int, height: Int) {
-        for x in 0 ..< width {
-            for y in 0 ..< height {
-                result[y + x * height] = val[y * width + x]
+    public static func transpose(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, srcRows: Int, srcCols: Int) {
+        for x in 0 ..< srcCols {
+            for y in 0 ..< srcRows {
+                result[y + x * srcRows] = val[y * srcCols + x]
             }
         }
     }
@@ -42,77 +43,164 @@ extension Int32: NumericType {
         return 1
     }
     
-    public static func vsAdd(lhs: UnsafePointer<Int32>, rhs: Int32, result: UnsafeMutablePointer<Int32>, count: Int) {
-        vDSP_vsaddi(lhs, 1, [rhs], result, 1, UInt(count))
+    public static func vsAdd(lhs: UnsafeBufferPointer<Int32>, rhs: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        vDSP_vsaddi(lhs.pointer(capacity: count), 1, [rhs], result.pointer(capacity: count), 1, UInt(count))
     }
     
-    public static func vsMul(lhs: UnsafePointer<Int32>, rhs: Int32, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func vsMul(lhs: UnsafeBufferPointer<Int32>, rhs: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = lhs[i] * rhs
         }
     }
     
-    public static func svDiv(lhs: Int32, rhs: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func svDiv(lhs: Int32, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = lhs / rhs[i]
         }
     }
     
-    public static func fill(value: Int32, result: UnsafeMutablePointer<Int32>, count: Int) {
-        vDSP_vfilli([value], result, 1, UInt(count))
+    public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        vDSP_vfilli([value], result.pointer(capacity: count), 1, UInt(count))
     }
     
-    public static func log(val: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func log(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         fatalError("Logarithm not supported for type Int32, cast to Float or Double first.")
     }
     
-    public static func exp(val: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func exp(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         fatalError("Exponentiation not supported for type Int32, cast to Float or Double first.")
     }
     
-    public static func matMul(lhs: UnsafePointer<Int32>, rhs: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, lhsRows: Int, lhsCols: Int, rhsCols: Int) {
+    public static func matMul(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, lhsRows: Int, lhsCols: Int, rhsCols: Int) {
         fatalError("Matrix multiplication not supported for type Int32")
     }
     
-    public static func vSub(lhs: UnsafePointer<Int32>, rhs: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func vSub(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = lhs[i] - rhs[i]
         }
     }
     
-    public static func vMul(lhs: UnsafePointer<Int32>, rhs: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func vMul(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = lhs[i] * rhs[i]
         }
     }
     
-    public static func vMA(lhs: UnsafePointer<Int32>, rhs: UnsafePointer<Int32>, add: UnsafeMutablePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func vMA(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, add: UnsafeMutableBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = lhs[i] * rhs[i] + add[i]
         }
     }
     
-    public static func vDiv(lhs: UnsafePointer<Int32>, rhs: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func vDiv(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = lhs[i] * rhs[i]
         }
     }
     
-    public static func vAdd(lhs: UnsafePointer<Int32>, rhs: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
-        vDSP_vaddi(lhs, 1, rhs, 1, result, 1, UInt(count))
+    public static func vAdd(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        vDSP_vaddi(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
     
-    public static func vNeg(val: UnsafePointer<Int32>, result: UnsafeMutablePointer<Int32>, count: Int) {
+    public static func vNeg(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = -val[i]
         }
     }
     
-    public static func sum(val: UnsafePointer<Int32>, count: Int) -> Int32 {
+    public static func sum(val: UnsafeBufferPointer<Int32>, count: Int) -> Int32 {
         var result: Int32 = 0
         for i in 0 ..< count {
             result += val[i]
         }
         return result
+    }
+    
+    public static func copysign(values: UnsafeBufferPointer<Int32>, signs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        for i in 0 ..< count {
+            if signs[i] < 0 {
+                result[i] = -values[i]
+            } else if signs[i] > 0 {
+                result[i] = values[i]
+            } else {
+                result[i] = 0
+            }
+        }
+    }
+    
+    public static func dot(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, count: Int) -> Int32 {
+        var result: Int32 = 0
+        for i in 0 ..< count {
+            result += lhs[i] * rhs[i]
+        }
+        return result
+    }
+    
+    public static func vMulSA(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, add: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        for i in 0 ..< count {
+            result[i] = lhs[i] * rhs[i] + add
+        }
+    }
+    
+    public static func vsMulVAdd(lhs: UnsafeBufferPointer<Int32>, rhs: Int32, add: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        for i in 0 ..< count {
+            result[i] = lhs[i] * rhs + add[i]
+        }
+    }
+    
+    public static func matMulAddInPlace(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool = false, transposeSecond: Bool = false) {
+        fatalError("Matrix multiplication not defined for Int32")
+    }
+    
+    public func sqrt() -> Int32 {
+        return Int32(Foundation.sqrt(Float(self)))
+    }
+    
+    public func log() -> Int32 {
+        return Int32(Foundation.log(Float(self)))
+    }
+    
+    public func exp() -> Int32 {
+        return Int32(Foundation.exp(Float(self)))
+    }
+    
+    public func sin() -> Int32 {
+        return Int32(round(Float(Foundation.sin(Float(self)))))
+    }
+    
+    public func cos() -> Int32 {
+        return Int32(round(Float(Foundation.cos(Float(self)))))
+    }
+    
+    public func tan() -> Int32 {
+        return Int32(round(Float(Foundation.tan(Float(self)))))
+    }
+    
+    public func sinh() -> Int32 {
+        return Int32(round(Float(Foundation.sinh(Float(self)))))
+    }
+    
+    public func cosh() -> Int32 {
+        return Int32(round(Float(Foundation.cosh(Float(self)))))
+    }
+    
+    public func tanh() -> Int32 {
+        return Int32(round(Float(Foundation.tanh(Float(self)))))
+    }
+    
+    public static func argmax(values: UnsafeBufferPointer<Int32>, count: Int) -> (Int, Int32) {
+        precondition(count > 0)
+        var maxI = 0
+        var maxV = values[0]
+        
+        for i in 0 ..< count {
+            if maxV < values[i] {
+                maxI = i
+                maxV = values[i]
+            }
+        }
+        
+        return (maxI, maxV)
     }
 }
