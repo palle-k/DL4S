@@ -27,18 +27,21 @@ class XORTest: XCTestCase {
         
         let learningRate: Float = 0.1
         
-        for epoch in 1 ... 1000 {
+        for epoch in 1 ... 10000 {
             var loss = Variable(value: 0)
             
             for (input, expected) in dataset {
                 let pred = net.forward(input)[0]
                 let l = binaryCrossEntropy(expected: expected, actual: pred)
                 // print(l.value)
+                //print(pred.value)
                 loss = loss + l
             }
             
             loss.zeroGradient()
             loss.backwards()
+            
+            
             
             for param in net.allParameters {
                 param.value -= param.gradient * learningRate

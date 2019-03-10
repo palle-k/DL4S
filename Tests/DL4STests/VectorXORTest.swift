@@ -18,19 +18,25 @@ class VectorXORTest: XCTestCase {
             Sigmoid().asAny()
         )
         
-        let inputs = Vector<Float>([
+        let inputs = Tensor<Float>([
             [0, 0],
             [0, 1],
             [1, 0],
             [1, 1]
         ])
         
-        let expectedOutputs = Vector<Float>([0, 1, 1, 0])
+        let expectedOutputs = Tensor<Float>([0, 1, 1, 0])
         
-        let optimizer = SGDOptimizer(learningRate: 0.3, parameters: net.parameters)
+        let optimizer = MomentumOptimizer(parameters: net.parameters, learningRate: 0.05)
+        // let optimizer = Adam(parameters: net.parameters, learningRate: 0.05)
         
-        for epoch in 1 ... 1000 {
+        let epochs = 1000
+        
+        for epoch in 1 ... epochs {
             let predictions = net.forward(inputs)
+            
+            //print(predictions)
+            
             let loss = binaryCrossEntropy(expected: expectedOutputs, actual: predictions)
             
             loss.zeroGradient()
@@ -41,7 +47,7 @@ class VectorXORTest: XCTestCase {
             let lossValue = loss.item
             
             if epoch % 10 == 0 {
-                print("AVG loss: \(lossValue / 4)")
+                print("[\(epoch)/\(epochs)] loss: \(lossValue / 4)")
             }
         }
         

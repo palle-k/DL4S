@@ -10,6 +10,13 @@ import Accelerate
 
 
 extension Int32: NumericType {
+    public func toUInt8() -> UInt8 {
+        return UInt8(self)
+    }
+    
+    public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, stride: Int, count: Int) {
+        vDSP_vfilli([value], result.pointer(capacity: count), stride, UInt(count))
+    }
     
     public static func vSquare(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
@@ -39,6 +46,10 @@ extension Int32: NumericType {
         }
     }
     
+    public static func pow(base: Int32, exponent: Int32) -> Int32 {
+        return repeatElement(base, count: Int(exponent)).reduce(1, *)
+    }
+    
     public static var one: Int32 {
         return 1
     }
@@ -64,15 +75,25 @@ extension Int32: NumericType {
     }
     
     public static func log(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("Logarithm not supported for type Int32, cast to Float or Double first.")
+        for i in 0 ..< count {
+            result[i] = Int32(Foundation.log(Float(val[i])))
+        }
     }
     
     public static func exp(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("Exponentiation not supported for type Int32, cast to Float or Double first.")
+        for i in 0 ..< count {
+            result[i] = Int32(Foundation.exp(Float(val[i])))
+        }
     }
     
     public static func matMul(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, lhsRows: Int, lhsCols: Int, rhsCols: Int) {
         fatalError("Matrix multiplication not supported for type Int32")
+    }
+    
+    public static func sqrt(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        for i in 0 ..< count {
+            result[i] = Int32(Foundation.sqrt(Float(val[i])))
+        }
     }
     
     public static func vSub(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
@@ -87,7 +108,7 @@ extension Int32: NumericType {
         }
     }
     
-    public static func vMA(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, add: UnsafeMutableBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+    public static func vMA(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, add: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             result[i] = lhs[i] * rhs[i] + add[i]
         }

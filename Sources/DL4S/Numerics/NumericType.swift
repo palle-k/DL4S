@@ -8,7 +8,7 @@
 import Foundation
 import Accelerate
 
-public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral {
+public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral, Codable, Comparable {
     init(_ floatValue: Double)
     init(_ integerValue: Int32)
     
@@ -31,11 +31,18 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     func cosh() -> Self
     func tanh() -> Self
     
+    static func pow(base: Self, exponent: Self) -> Self
+    
     init(_ float: Float)
     init(_ int: Int)
     init(_ uint: UInt)
+    init(_ uint8: UInt8)
+    
+    func toUInt8() -> UInt8
     
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
+    
     static func transpose(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, srcRows: Int, srcCols: Int)
     
     static func vAdd(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
@@ -44,7 +51,7 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func vSub(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func vMul(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func vMA(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, add: UnsafeMutableBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func vMA(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, add: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func vsMul(lhs: UnsafeBufferPointer<Self>, rhs: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func vDiv(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
@@ -64,9 +71,17 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func relu(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func tanh(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
+    static func sqrt(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    
     static func sum(val: UnsafeBufferPointer<Self>, count: Int) -> Self
     
     static func copysign(values: UnsafeBufferPointer<Self>, signs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func argmax(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
+}
+
+extension UInt8 {
+    init<Element: NumericType>(_ element: Element) {
+        self = element.toUInt8()
+    }
 }

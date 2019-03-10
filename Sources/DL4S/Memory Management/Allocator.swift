@@ -55,7 +55,8 @@ extension UnsafeMutableBufferPointer {
     func assign(from ptr: UnsafeBufferPointer<Element>, count: Int) {
         precondition(ptr.count >= count, "Out of bounds access")
         precondition(self.count >= count, "Out of bounds write")
-        memcpy(self.baseAddress!, ptr.baseAddress!, count)
+        //memcpy(self.baseAddress!, ptr.baseAddress!, count * MemoryLayout<Element>.stride)
+        self.baseAddress!.assign(from: ptr.baseAddress!, count: count)
     }
     
     func pointer(capacity: Int) -> UnsafeMutablePointer<Element> {
@@ -90,44 +91,49 @@ extension UnsafeMutableBufferPointer: Equatable {
 }
 
 enum Allocator {
-    private static var maxCache: Int = 1_000_000_000 // 1GB
-    private static var freeBuffers: [(UnsafeMutableRawBufferPointer, Int)] = []
-    private static var usedBuffers: [UnsafeMutableRawBufferPointer: Int] = [:]
+    private static let maxCache: Int = 1_000_000_000 // 1GB
+    private static var usedCache: Int = 0
     
-    private static var unusedMemory: Int {
-        return freeBuffers.map {$1}.reduce(0, +)
+    private static var freeBuffers: [Int: [UnsafeMutableRawBufferPointer]] = [:]
+    
+    private static var unusedCache: Int {
+        return maxCache - usedCache
     }
     
     static func allocate<T>(count: Int) -> UnsafeMutableBufferPointer<T> {
         let stride = MemoryLayout<T>.stride
-        let alignment = MemoryLayout<T>.alignment
+        let alignment = max(MemoryLayout<T>.alignment, 16) // Some vDSP routines perform better with 16 byte alignment
         
         let byteCount = count * stride
+        usedCache += byteCount
         
-//        if let idx = freeBuffers.filter({$0.1 > byteCount}).minIndex(by: {$0.1 < $1.1}) {
-//            let (reusedBuffer, capacity) = freeBuffers.remove(at: idx)
-//            usedBuffers[reusedBuffer] = capacity
-//            return reusedBuffer.bindMemory(to: T.self)
-//        } else {
-//            let newBuffer = UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: alignment)
-//            usedBuffers[newBuffer] = byteCount
-//            return newBuffer.bindMemory(to: T.self)
-//        }
-        let ptr = UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: alignment)
-        return ptr.bindMemory(to: T.self)
+        if let ptr = freeBuffers[byteCount]?.first {
+            freeBuffers[byteCount]?.removeFirst()
+            if freeBuffers[byteCount]?.isEmpty == true {
+                freeBuffers.removeValue(forKey: byteCount)
+            }
+            return ptr.bindMemory(to: T.self)
+        } else {
+            UnsafeMutableRawBufferPointer.allocate(byteCount: 1, alignment: 1).bindMemory(to: Double.self)
+            let ptr = UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: alignment)
+            return ptr.bindMemory(to: T.self)
+        }
     }
     
     static func free<T>(_ buffer: UnsafeMutableBufferPointer<T>) {
         let rawBuffer = UnsafeMutableRawBufferPointer(buffer)
+        let capacity = rawBuffer.count
+        
         rawBuffer.deallocate()
-//        if let capacity = usedBuffers[rawBuffer] {
-//            if unusedMemory + capacity > maxCache {
-//                rawBuffer.deallocate()
-//            } else {
-//                freeBuffers.append((rawBuffer, capacity))
-//            }
-//        } else {
-//            rawBuffer.deallocate()
-//        }
+        usedCache -= capacity
+        
+        return;
+        
+        if usedCache >= maxCache {
+            rawBuffer.deallocate()
+            usedCache -= capacity
+        } else {
+            freeBuffers[capacity, default: []].append(rawBuffer)
+        }
     }
 }

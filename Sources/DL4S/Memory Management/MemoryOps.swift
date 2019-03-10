@@ -8,110 +8,250 @@
 import Foundation
 
 
-private func recursiveCopy<Element>(
+private func recursiveRead<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
-    sourceShape: [Int],
-    sourceStrides: [Int],
-    destinationStrides: [Int],
-    indices: [Int?]
+    srcIndex: [Int?],
+    srcStrides: [Int],
+    srcShape: [Int]
 ) {
     guard
-        let sStride = sourceStrides.first,
-        let dStride = destinationStrides.first,
-        let idx = indices.first,
-        let dimSize = sourceShape.first
+        let sIdx = srcIndex.first,
+        let sStride = srcStrides.first,
+        let sDim = srcShape.first
     else {
-        //fatalError("BUGS!!!")
-        print("POTENTIAL INVALID WRITE")
         destination.pointee = source.pointee
         return
     }
     
-    if let idx = idx {
-        let srcStart = source.advanced(by: idx * sStride)
-        let dstStart = destination.advanced(by: idx * dStride)
+    if let sIdx = sIdx {
+        let offset = sIdx * sStride
         
-        recursiveCopy(
+        let srcStart = source.advanced(by: offset)
+        
+        recursiveRead(
             source: srcStart,
-            destination: dstStart,
-            sourceShape: Array(sourceShape.dropFirst()),
-            sourceStrides: Array(sourceStrides.dropFirst()),
-            destinationStrides: Array(destinationStrides.dropFirst()),
-            indices: Array(indices.dropFirst())
+            destination: destination,
+            srcIndex: Array(srcIndex.dropFirst()),
+            srcStrides: Array(srcStrides.dropFirst()),
+            srcShape: Array(srcShape.dropFirst())
         )
-    } else if indices.allSatisfy({$0 == nil}) {
-        // Rest of the indices are nil -> perform optimized copy
-        
-        let count = dimSize * sStride
+    } else if srcIndex.allSatisfy({$0 == nil}) {
+        let count = sDim * sStride
         destination.assign(from: source, count: count)
-        
     } else {
-        for i in 0 ..< dimSize {
-            let srcStart = source.advanced(by: i * sStride)
-            let dstStart = destination.advanced(by: i * dStride)
+        let dstShape = zip(srcIndex, srcStrides)
+            .filter {$0.0 == nil}
+            .map {$1}
+        let dstStrides = MemoryOps.strides(from: dstShape)
+        let dStride = dstStrides[0]
+        
+        for i in 0 ..< sDim {
+            let srcOffset = i * sStride
+            let srcStart = source.advanced(by: srcOffset)
+            let dstOffset = i * dStride
+            let dstStart = destination.advanced(by: dstOffset)
             
-            recursiveCopy(
+            recursiveRead(
                 source: srcStart,
                 destination: dstStart,
-                sourceShape: Array(sourceShape.dropFirst()),
-                sourceStrides: Array(sourceStrides.dropFirst()),
-                destinationStrides: Array(destinationStrides.dropFirst()),
-                indices: Array(indices.dropFirst())
+                srcIndex: Array(srcIndex.dropFirst()),
+                srcStrides: Array(srcStrides.dropFirst()),
+                srcShape: Array(srcShape.dropFirst())
             )
         }
     }
 }
 
-private func recursiveCopy<Element>(
+private func recursiveRead<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
-    sourceShape: [Int],
-    sourceStrides: [Int],
-    destinationStrides: [Int],
-    indices: [Range<Int>?]
+    srcIndex: [Range<Int>?],
+    srcStrides: [Int],
+    srcShape: [Int]
 ) {
     guard
-        let sStride = sourceStrides.first,
-        let dStride = destinationStrides.first,
-        let idx = indices.first,
-        let dimSize = sourceShape.first
+        let sIdx = srcIndex.first,
+        let sStride = srcStrides.first,
+        let sDim = srcShape.first
     else {
         destination.pointee = source.pointee
         return
     }
     
-    if zip(indices, sourceShape).allSatisfy({$0 == nil || ($0?.lowerBound == 0 && $0?.upperBound == $1)}) {
-        // Rest of the indices are nil -> perform optimized copy
-        
-        let count = dimSize * sStride
-        destination.assign(from: source, count: count)
-        
-    } else {
-        let start = idx?.lowerBound ?? 0
-        let end = idx?.upperBound ?? dimSize
-        
-        if zip(indices.dropFirst(), sourceShape.dropFirst()).allSatisfy({$0 == nil || ($0?.lowerBound == 0 && $0?.upperBound == $1)}) {
-            let srcStart = source.advanced(by: start * sStride)
-            let dstStart = destination.advanced(by: start * dStride)
+    if let sIdx = sIdx {
+        if srcIndex.dropFirst().allSatisfy({$0 == nil}) {
+            let offset = sIdx.lowerBound * sStride
+            let srcStart = source.advanced(by: offset)
+            let count = sIdx.count * sStride
+            destination.assign(from: srcStart, count: count)
+        } else {
+            let dstShape = zip(srcIndex, srcStrides)
+                .filter {$0.0 == nil}
+                .map {$1}
+            let dstStrides = MemoryOps.strides(from: dstShape)
+            let dStride = dstStrides[0]
             
-            let count = sStride * (end - start)
-            
-            dstStart.assign(from: srcStart, count: count)
-            return
+            for i in sIdx {
+                let offset = i * sStride
+                let dstOffset = i * dStride
+                
+                recursiveRead(
+                    source: source.advanced(by: offset),
+                    destination: destination.advanced(by: dstOffset),
+                    srcIndex: Array(srcIndex.dropFirst()),
+                    srcStrides: Array(srcStrides.dropFirst()),
+                    srcShape: Array(srcShape.dropFirst())
+                )
+            }
         }
+    } else if srcIndex.allSatisfy({$0 == nil}) {
+        let count = sDim * sStride
+        destination.assign(from: source, count: count)
+    } else {
+        let dstShape = zip(srcIndex, srcStrides)
+            .filter {$0.0 == nil}
+            .map {$1}
+        let dstStrides = MemoryOps.strides(from: dstShape)
+        let dStride = dstStrides[0]
         
-        for i in start ..< end {
-            let srcStart = source.advanced(by: i * sStride)
-            let dstStart = destination.advanced(by: i * dStride)
+        for i in 0 ..< sDim {
+            let srcOffset = i * sStride
+            let srcStart = source.advanced(by: srcOffset)
+            let dstOffset = i * dStride
+            let dstStart = destination.advanced(by: dstOffset)
             
-            recursiveCopy(
+            recursiveRead(
                 source: srcStart,
                 destination: dstStart,
-                sourceShape: Array(sourceShape.dropFirst()),
-                sourceStrides: Array(sourceStrides.dropFirst()),
-                destinationStrides: Array(destinationStrides.dropFirst()),
-                indices: Array(indices.dropFirst())
+                srcIndex: Array(srcIndex.dropFirst()),
+                srcStrides: Array(srcStrides.dropFirst()),
+                srcShape: Array(srcShape.dropFirst())
+            )
+        }
+    }
+}
+
+private func recursiveWrite<Element>(
+    source: UnsafeBufferPointer<Element>,
+    destination: UnsafeMutableBufferPointer<Element>,
+    dstIndex: [Int?],
+    dstStrides: [Int],
+    dstShape: [Int]
+) {
+    guard
+        let dIdx = dstIndex.first,
+        let dStride = dstStrides.first,
+        let dDim = dstShape.first
+    else {
+        destination.pointee = source.pointee
+        return
+    }
+    
+    if let dIdx = dIdx {
+        let offset = dIdx * dStride
+        let dstStart = destination.advanced(by: offset)
+        
+        recursiveWrite(
+            source: source,
+            destination: dstStart,
+            dstIndex: Array(dstIndex.dropFirst()),
+            dstStrides: Array(dstStrides.dropFirst()),
+            dstShape: Array(dstShape.dropFirst())
+        )
+    } else if dstIndex.allSatisfy({$0 == nil}) {
+        let count = dDim * dStride
+        destination.assign(from: source, count: count)
+    } else {
+        let srcShape = zip(dstIndex, dstStrides)
+            .filter {$0.0 == nil}
+            .map {$1}
+        let srcStrides = MemoryOps.strides(from: srcShape)
+        let sStride = srcStrides[0]
+        
+        for i in 0 ..< dDim {
+            let srcOffset = i * sStride
+            let srcStart = source.advanced(by: srcOffset)
+            let dstOffset = i * dStride
+            let dstStart = destination.advanced(by: dstOffset)
+            
+            recursiveWrite(
+                source: srcStart,
+                destination: dstStart,
+                dstIndex: Array(dstIndex.dropFirst()),
+                dstStrides: Array(dstStrides.dropFirst()),
+                dstShape: Array(dstShape.dropFirst())
+            )
+        }
+    }
+}
+
+private func recursiveWrite<Element>(
+    source: UnsafeBufferPointer<Element>,
+    destination: UnsafeMutableBufferPointer<Element>,
+    dstIndex: [Range<Int>?],
+    dstStrides: [Int],
+    dstShape: [Int]
+) {
+    guard
+        let dIdx = dstIndex.first,
+        let dStride = dstStrides.first,
+        let dDim = dstShape.first
+    else {
+        destination.pointee = source.pointee
+        return
+    }
+    
+    if let dIdx = dIdx {
+        if dstIndex.dropFirst().allSatisfy({$0 == nil}) {
+            let offset = dIdx.lowerBound * dStride
+            let dstStart = destination.advanced(by: offset)
+            let count = dIdx.count * dStride
+            dstStart.assign(from: source, count: count)
+        } else {
+            let srcShape = zip(dstIndex, dstStrides)
+                .filter {$0.0 == nil}
+                .map {$1}
+            let srcStrides = MemoryOps.strides(from: srcShape)
+            let sStride = srcStrides[0]
+            
+            for i in dIdx {
+                let offset = i * dStride
+                let dstStart = destination.advanced(by: offset)
+                let srcOffset = i * sStride
+                let srcStart = source.advanced(by: srcOffset)
+                
+                recursiveWrite(
+                    source: srcStart,
+                    destination: dstStart,
+                    dstIndex: Array(dstIndex.dropFirst()),
+                    dstStrides: Array(dstStrides.dropFirst()),
+                    dstShape: Array(dstShape.dropFirst())
+                )
+            }
+        }
+    } else if dstIndex.allSatisfy({$0 == nil}) {
+        let count = dDim * dStride
+        destination.assign(from: source, count: count)
+    } else {
+        let srcShape = zip(dstIndex, dstStrides)
+            .filter {$0.0 == nil}
+            .map {$1}
+        let srcStrides = MemoryOps.strides(from: srcShape)
+        let sStride = srcStrides[0]
+        
+        for i in 0 ..< dDim {
+            let srcOffset = i * sStride
+            let srcStart = source.advanced(by: srcOffset)
+            let dstOffset = i * dStride
+            let dstStart = destination.advanced(by: dstOffset)
+            
+            recursiveWrite(
+                source: srcStart,
+                destination: dstStart,
+                dstIndex: Array(dstIndex.dropFirst()),
+                dstStrides: Array(dstStrides.dropFirst()),
+                dstShape: Array(dstShape.dropFirst())
             )
         }
     }
@@ -132,6 +272,16 @@ enum MemoryOps {
         return str
     }
     
+    static func linearIndex(from index: [Int], shape: [Int]) -> Int {
+        let strides = MemoryOps.strides(from: shape)
+        return zip(index, strides).map(*).reduce(0, +)
+    }
+    
+    static func index(from linearIndex: Int, shape: [Int]) -> [Int] {
+        let strides = MemoryOps.strides(from: shape)
+        return zip(shape, strides).map { dim, str in (linearIndex / str) % dim}
+    }
+    
     
     /// Retrieves the values of the source buffer and copies them into a newly allocated destination buffer if needed.
     ///
@@ -141,8 +291,6 @@ enum MemoryOps {
     ///   - shape: Shape of vector
     /// - Returns: Vector and boolean indicating, whether a new memory region has been allocated, and the shape of the result.
     static func get<Element>(slice: [Int?], of buffer: UnsafeMutableBufferPointer<Element>, with shape: [Int]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
-        
-        
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         
         let nonNilIndices = slice.compactMap {$0}
@@ -162,18 +310,9 @@ enum MemoryOps {
             let flattenedResultShape = resultShape.compactMap {$0}
             
             let resultCount = flattenedResultShape.reduce(1, *)
-            let resultBuffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: resultCount)
-            
-            let dstStrides = MemoryOps.strides(from: resultShape.map {$0 ?? 1})
-            
-            recursiveCopy(
-                source: buffer.immutable,
-                destination: resultBuffer,
-                sourceShape: shape,
-                sourceStrides: strides,
-                destinationStrides: dstStrides,
-                indices: padded
-            )
+            let resultBuffer: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: resultCount)
+
+            recursiveRead(source: buffer.immutable, destination: resultBuffer, srcIndex: padded, srcStrides: strides, srcShape: shape)
             
             return (resultBuffer, true, flattenedResultShape)
         }
@@ -201,18 +340,9 @@ enum MemoryOps {
         let flattenedResultShape = resultShape.compactMap {$0}
         
         let resultCount = flattenedResultShape.reduce(1, *)
-        let resultBuffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: resultCount)
+        let resultBuffer: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: resultCount)
         
-        let dstStrides = MemoryOps.strides(from: resultShape.map {$0 ?? 1})
-        
-        recursiveCopy(
-            source: buffer.immutable,
-            destination: resultBuffer,
-            sourceShape: shape,
-            sourceStrides: strides,
-            destinationStrides: dstStrides,
-            indices: padded
-        )
+        recursiveRead(source: buffer.immutable, destination: resultBuffer, srcIndex: padded, srcStrides: strides, srcShape: shape)
         
         return (resultBuffer, true, flattenedResultShape)
     }
@@ -222,44 +352,16 @@ enum MemoryOps {
         
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
         
-        let nonflatSrcShape = zip(padded, sourceShape).enumerated().map { idx, el -> Int? in
-            let (index, dimSize) = el
-            return index == nil ? dimSize : nil
-        }
-        
-        let sourceStrides = MemoryOps.strides(from: nonflatSrcShape.map {$0 ?? 1})
         let dstStrides = MemoryOps.strides(from: dstShape)
-        
-        recursiveCopy(
-            source: source,
-            destination: buffer,
-            sourceShape: sourceShape,
-            sourceStrides: sourceStrides,
-            destinationStrides: dstStrides,
-            indices: padded
-        )
+        recursiveWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
     
     static func set<Element>(slice: [Range<Int>?], of buffer: UnsafeMutableBufferPointer<Element>, with dstShape: [Int], from source: UnsafeBufferPointer<Element>, with sourceShape: [Int]) {
         precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Shape of source must be equal to source of destination minus number of knowns in slice")
         
         let padded = slice + [Range<Int>?](repeating: nil, count: dstShape.count - slice.count)
-        
-        let nonflatSrcShape = zip(padded, sourceShape).enumerated().map { idx, el -> Int? in
-            let (index, dimSize) = el
-            return index.map {$0.count} ?? dimSize
-        }
-        
-        let sourceStrides = MemoryOps.strides(from: nonflatSrcShape.map {$0 ?? 1})
         let dstStrides = MemoryOps.strides(from: dstShape)
         
-        recursiveCopy(
-            source: source,
-            destination: buffer,
-            sourceShape: sourceShape,
-            sourceStrides: sourceStrides,
-            destinationStrides: dstStrides,
-            indices: padded
-        )
+        recursiveWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
 }

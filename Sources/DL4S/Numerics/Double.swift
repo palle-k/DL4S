@@ -10,6 +10,13 @@ import Accelerate
 
 
 extension Double: NumericType {
+    public func toUInt8() -> UInt8 {
+        return UInt8(self)
+    }
+    
+    public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, stride: Int, count: Int) {
+        vDSP_vfillD([value], result.pointer(capacity: count), stride, UInt(count))
+    }
     
     public static func vSquare(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         vDSP_vsqD(values.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
@@ -27,8 +34,16 @@ extension Double: NumericType {
         vDSP_mtransD(val.pointer(capacity: srcRows * srcCols), 1, result.pointer(capacity: srcRows * srcCols), 1, UInt(srcCols), UInt(srcRows))
     }
     
+    public static func sqrt(val: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vvsqrt(result.pointer(capacity: count), val.pointer(capacity: count), [Int32(count)])
+    }
+    
     public static var one: Double {
         return 1.0
+    }
+    
+    public static func pow(base: Double, exponent: Double) -> Double {
+        return Foundation.pow(base, exponent)
     }
     
     public static func vsAdd(lhs: UnsafeBufferPointer<Double>, rhs: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
@@ -75,7 +90,7 @@ extension Double: NumericType {
         vDSP_vmulD(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
     
-    public static func vMA(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, add: UnsafeMutableBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+    public static func vMA(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, add: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         vDSP_vmaD(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, add.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
     

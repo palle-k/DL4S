@@ -10,6 +10,14 @@ import Accelerate
 
 
 extension Float: NumericType {
+    public func toUInt8() -> UInt8 {
+        return UInt8(self)
+    }
+    
+    public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {
+        vDSP_vfill([value], result.pointer(capacity: count), stride, UInt(count))
+    }
+    
     public static func vSquare(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         vDSP_vsq(values.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
@@ -26,8 +34,16 @@ extension Float: NumericType {
         vDSP_mtrans(val.pointer(capacity: srcRows * srcCols), 1, result.pointer(capacity: srcRows * srcCols), 1, UInt(srcCols), UInt(srcRows))
     }
     
+    public static func sqrt(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vvsqrtf(result.pointer(capacity: count), val.pointer(capacity: count), [Int32(count)])
+    }
+    
     public static var one: Float {
         return 1.0
+    }
+    
+    public static func pow(base: Float, exponent: Float) -> Float {
+        return powf(base, exponent)
     }
     
     public static func vsAdd(lhs: UnsafeBufferPointer<Float>, rhs: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
@@ -74,7 +90,7 @@ extension Float: NumericType {
         vDSP_vmul(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
     
-    public static func vMA(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, add: UnsafeMutableBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+    public static func vMA(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, add: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         vDSP_vma(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, add.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
     
