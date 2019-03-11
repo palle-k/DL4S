@@ -29,16 +29,16 @@ func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
 }
 
 public enum Random {
-    public static func fill<Element: RandomizableType, DeviceType: Device>(_ vector: Tensor<Element, DeviceType>, a: Element, b: Element) {
+    public static func fill<Element: RandomizableType, Device: DeviceType>(_ vector: Tensor<Element, Device>, a: Element, b: Element) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in 0 ..< vector.count {
             buffer[i] = Element.random(in: a ... b)
         }
-        DeviceType.MemoryOperatorType.assign(from: buffer.immutable, to: vector.values, count: vector.count)
+        Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
         buffer.deallocate()
     }
     
-    public static func fillNormal<Element: RandomizableType, DeviceType: Device>(_ vector: Tensor<Element, DeviceType>, mean: Element = 0, stdev: Element = 1) {
+    public static func fillNormal<Element: RandomizableType, Device: DeviceType>(_ vector: Tensor<Element, Device>, mean: Element = 0, stdev: Element = 1) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in stride(from: 0, to: vector.count, by: 2) {
             let (a, b) = randNormal(stdev: stdev, mean: mean)
@@ -50,11 +50,11 @@ public enum Random {
             let (a, _) = randNormal(stdev: stdev, mean: mean)
             buffer[vector.count-1] = a
         }
-        DeviceType.MemoryOperatorType.assign(from: buffer.immutable, to: vector.values, count: vector.count)
+        Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
         buffer.deallocate()
     }
     
-    public static func minibatch<Element: NumericType, DeviceType: Device>(from dataset: Tensor<Element, DeviceType>, count: Int) -> Tensor<Element, DeviceType> {
+    public static func minibatch<Element: NumericType, Device: DeviceType>(from dataset: Tensor<Element, Device>, count: Int) -> Tensor<Element, Device> {
         let n = dataset.shape[0]
         
         let sampleShape = [1] + Array(dataset.shape.dropFirst())
@@ -66,7 +66,7 @@ public enum Random {
         )
     }
     
-    public static func minibatch<E1: NumericType, E2: NumericType, D1: Device, D2: Device>(from dataset: Tensor<E1, D1>, labels: Tensor<E2, D2>, count: Int) -> (Tensor<E1, D1>, Tensor<E2, D2>) {
+    public static func minibatch<E1: NumericType, E2: NumericType, D1: DeviceType, D2: DeviceType>(from dataset: Tensor<E1, D1>, labels: Tensor<E2, D2>, count: Int) -> (Tensor<E1, D1>, Tensor<E2, D2>) {
         let n = dataset.shape[0]
         
         // let sampleShape = [1] + Array(dataset.shape.dropFirst())
@@ -89,7 +89,7 @@ public enum Random {
         }
         
         let result = Tensor<Element, Device>(repeating: 0, shape: shape)
-        Device.MemoryOperatorType.assign(from: buffer.immutable, to: result.values, count: count)
+        Device.Memory.assign(from: buffer.immutable, to: result.values, count: count)
         buffer.deallocate()
         return result
     }

@@ -8,10 +8,10 @@
 import Foundation
 
 
-public class Relu<Element: NumericType, DeviceType: Device>: Layer, Codable {
+public class Relu<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -26,17 +26,17 @@ public class Relu<Element: NumericType, DeviceType: Device>: Layer, Codable {
     
     public init() {}
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         return relu(inputs[0])
     }
 }
 
 
-public class Tanh<Element: NumericType, DeviceType: Device>: Layer, Codable {
+public class Tanh<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -51,17 +51,17 @@ public class Tanh<Element: NumericType, DeviceType: Device>: Layer, Codable {
     
     public init() {}
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         return tanh(inputs[0])
     }
 }
 
 
-public class Sigmoid<Element: NumericType, DeviceType: Device>: Layer, Codable {
+public class Sigmoid<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -76,7 +76,7 @@ public class Sigmoid<Element: NumericType, DeviceType: Device>: Layer, Codable {
     
     public init() {}
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         let out = sigmoid(inputs[0])
         assert(out.shape == inputs[0].shape)
@@ -85,10 +85,10 @@ public class Sigmoid<Element: NumericType, DeviceType: Device>: Layer, Codable {
 }
 
 
-public class Softmax<Element: NumericType, DeviceType: Device>: Layer, Codable {
+public class Softmax<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -103,7 +103,7 @@ public class Softmax<Element: NumericType, DeviceType: Device>: Layer, Codable {
     
     public init() {}
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         // TODO: Normalize inputs to make exp more stable
         let norm = inputs[0] - max(inputs[0]).detached()
@@ -114,10 +114,10 @@ public class Softmax<Element: NumericType, DeviceType: Device>: Layer, Codable {
 }
 
 
-public class Flatten<Element: NumericType, DeviceType: Device>: Layer, Codable {
+public class Flatten<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -132,16 +132,16 @@ public class Flatten<Element: NumericType, DeviceType: Device>: Layer, Codable {
     
     public init() {}
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         return inputs[0].view(as: inputs[0].shape[0], -1)
     }
 }
 
 
-public class Reshape<Element: NumericType, DeviceType: Device>: Layer, Codable {
+public class Reshape<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -164,7 +164,7 @@ public class Reshape<Element: NumericType, DeviceType: Device>: Layer, Codable {
         self.init(shape: shape)
     }
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         let x = inputs[0]
         return x.view(as: [x.shape[0]] + self.outputShape)
     }

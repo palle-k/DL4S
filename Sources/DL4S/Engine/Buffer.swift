@@ -8,20 +8,33 @@
 import Foundation
 
 
-public struct Buffer<Element: NumericType, DeviceType: Device>: Hashable {
-    let memory: DeviceType.MemoryOperatorType.RawBufferType
+public struct Buffer<Element: NumericType, Device: DeviceType>: Hashable {
+    let memory: Device.Memory.RawBuffer
     
     var count: Int {
-        return DeviceType.MemoryOperatorType.getSize(of: self)
+        return Device.Memory.getSize(of: self)
     }
     
     var pointee: Element {
         get {
-            return DeviceType.MemoryOperatorType.getValue(from: self)
+            return Device.Memory.getValue(from: self)
         }
         
         nonmutating set (newValue) {
-            DeviceType.EngineType.fill(value: newValue, result: self, count: 1)
+            Device.Engine.fill(value: newValue, result: self, count: 1)
+        }
+    }
+    
+    func advanced(by offset: Int) -> Buffer<Element, Device> {
+        return Device.Memory.advance(buffer: self, by: offset)
+    }
+    
+    subscript(index: Int) -> Element {
+        get {
+            return advanced(by: index).pointee
+        }
+        nonmutating set {
+            advanced(by: index).pointee = newValue
         }
     }
 }

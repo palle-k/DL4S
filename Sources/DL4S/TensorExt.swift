@@ -58,7 +58,7 @@ public extension Tensor {
 }
 
 public extension NSImage {
-    convenience init?<Element>(_ tensor: Tensor<Element>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
         let pixels = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: tensor.count)
         defer {
             pixels.deallocate()
@@ -172,48 +172,48 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
 
 // Memory operation extensions
 extension Tensor {
-    func buffer(from indices: [Int?]) -> (Buffer<Element, DeviceType>, Bool, [Int]) {
-        return DeviceType.EngineType.get(slice: indices, of: values, with: shape)
+    func buffer(from indices: [Int?]) -> (Buffer<Element, Device>, Bool, [Int]) {
+        return Device.Memory.get(slice: indices, of: values, with: shape)
     }
     
-    func setBuffer(at indices: [Int?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
-        DeviceType.EngineType.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
+    func setBuffer(at indices: [Int?], source: Buffer<Element, Device>, sourceShape: [Int]) {
+        Device.Memory.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
     }
     
-    func gradient(from indices: [Int?]) -> (Buffer<Element, DeviceType>, Bool, [Int])? {
+    func gradient(from indices: [Int?]) -> (Buffer<Element, Device>, Bool, [Int])? {
         guard let gradient = self.gradient else {
             return nil
         }
-        return DeviceType.EngineType.get(slice: indices, of: gradient, with: shape)
+        return Device.Memory.get(slice: indices, of: gradient, with: shape)
     }
     
-    func setGradient(at indices: [Int?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
+    func setGradient(at indices: [Int?], source: Buffer<Element, Device>, sourceShape: [Int]) {
         guard let gradient = self.gradient else {
             return
         }
-        DeviceType.EngineType.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
+        Device.Memory.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
     }
     
-    func buffer(from indices: [Range<Int>?]) -> (Buffer<Element, DeviceType>, Bool, [Int]) {
-        return DeviceType.EngineType.get(slice: indices, of: values, with: shape)
+    func buffer(from indices: [Range<Int>?]) -> (Buffer<Element, Device>, Bool, [Int]) {
+        return Device.Memory.get(slice: indices, of: values, with: shape)
     }
     
-    func setBuffer(at indices: [Range<Int>?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
-        DeviceType.EngineType.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
+    func setBuffer(at indices: [Range<Int>?], source: Buffer<Element, Device>, sourceShape: [Int]) {
+        Device.Memory.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
     }
     
-    func gradient(from indices: [Range<Int>?]) -> (Buffer<Element, DeviceType>, Bool, [Int])? {
+    func gradient(from indices: [Range<Int>?]) -> (Buffer<Element, Device>, Bool, [Int])? {
         guard let gradient = self.gradient else {
             return nil
         }
-        return DeviceType.EngineType.get(slice: indices, of: gradient, with: shape)
+        return Device.Memory.get(slice: indices, of: gradient, with: shape)
     }
     
-    func setGradient(at indices: [Range<Int>?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
+    func setGradient(at indices: [Range<Int>?], source: Buffer<Element, Device>, sourceShape: [Int]) {
         guard let gradient = self.gradient else {
             return
         }
-        DeviceType.EngineType.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
+        Device.Memory.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
     }
 }
 
@@ -222,24 +222,22 @@ extension Tensor: Hashable {
         hasher.combine(shape)
         // removed for performance reasons
         //hasher.combine(bytes: UnsafeRawBufferPointer(self.values))
-        hasher.combine(self.values.first)
-        hasher.combine(self.values.last)
+        hasher.combine(self.values.pointee)
         if let gradient = self.gradient {
             //hasher.combine(bytes: UnsafeRawBufferPointer(gradient))
-            hasher.combine(gradient.first)
-            hasher.combine(gradient.last)
+            hasher.combine(gradient.pointee)
         }
     }
     
-    public static func == (lhs: Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) -> Bool {
+    public static func == (lhs: Tensor<Element, Device>, rhs: Tensor<Element, Device>) -> Bool {
         return lhs.shape == rhs.shape && lhs.values == rhs.values && lhs.gradient == rhs.gradient
     }
 }
 
 public extension Tensor {
-    static func diagonal(size: Int, value: Element) -> Tensor<Element, DeviceType> {
-        let matrix = Tensor<Element, DeviceType>(repeating: 0, shape: size, size)
-        DeviceType.EngineType.fill(value: value, result: matrix.values, stride: size + 1, count: matrix.count)
+    static func diagonal(size: Int, value: Element) -> Tensor<Element, Device> {
+        let matrix = Tensor<Element, Device>(repeating: 0, shape: size, size)
+        Device.Engine.fill(value: value, result: matrix.values, stride: size + 1, count: matrix.count)
         return matrix
     }
 }
@@ -258,7 +256,7 @@ public extension Tensor {
 }
 
 extension Tensor {
-    func sorted(sorting: inout [Tensor<Element, DeviceType>], visited: inout Set<Tensor<Element, DeviceType>>) {
+    func sorted(sorting: inout [Tensor<Element, Device>], visited: inout Set<Tensor<Element, Device>>) {
         guard !visited.contains(self), self.requiresGradient else {
             return
         }
@@ -273,8 +271,8 @@ extension Tensor {
 }
 
 extension Tensor where Element == Int32 {
-    func toOneHot(dim: Int) -> Tensor<Float, DeviceType> {
-        let result = Tensor<Float, DeviceType>(repeating: 0, shape: self.shape + [dim])
+    func toOneHot(dim: Int) -> Tensor<Float, Device> {
+        let result = Tensor<Float, Device>(repeating: 0, shape: self.shape + [dim])
         
         for idx in iterate(self.shape) {
             let target = Int(self[idx].item)
@@ -286,13 +284,13 @@ extension Tensor where Element == Int32 {
 }
 
 extension Tensor {
-    func toLabels() -> Tensor<Int32, DeviceType> {
-        let result = Tensor<Int32, DeviceType>(repeating: 0, shape: shape.dropLast())
+    func toLabels() -> Tensor<Int32, Device> {
+        let result = Tensor<Int32, Device>(repeating: 0, shape: shape.dropLast())
         
         for idx in iterate(self.shape.dropLast()) {
             let slice = self[idx]
-            let (arg, _) = DeviceType.EngineType.argmax(values: slice.values, count: slice.count)
-            result[idx] = Tensor<Int32, DeviceType>(Int32(arg))
+            let (arg, _) = Device.Engine.argmax(values: slice.values, count: slice.count)
+            result[idx] = Tensor<Int32, Device>(Int32(arg))
         }
         
         return result

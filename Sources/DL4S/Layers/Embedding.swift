@@ -8,16 +8,16 @@
 import Foundation
 
 
-public class Embedding<Element: RandomizableType, DeviceType: Device>: Layer, Codable {
+public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Int32
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return trainable ? [embeddingMatrix] : []
     }
     
     public var trainable: Bool = true
     
-    let embeddingMatrix: Tensor<Element, DeviceType>
+    let embeddingMatrix: Tensor<Element, Device>
     
     public let inputFeatures: Int
     public let outputSize: Int
@@ -25,12 +25,12 @@ public class Embedding<Element: RandomizableType, DeviceType: Device>: Layer, Co
     public init(inputFeatures: Int, outputSize: Int) {
         self.inputFeatures = inputFeatures
         self.outputSize = outputSize
-        self.embeddingMatrix = Tensor<Element, DeviceType>(repeating: 0, shape: [inputFeatures, outputSize])
+        self.embeddingMatrix = Tensor<Element, Device>(repeating: 0, shape: [inputFeatures, outputSize])
         
         Random.fillNormal(embeddingMatrix, mean: 0, stdev: (2 / Element(outputSize)).sqrt())
     }
     
-    public func forward(_ inputs: [Tensor<Int32, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Int32, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         
         let x = inputs[0]

@@ -7,9 +7,9 @@
 
 import Foundation
 
-private enum GraphNode<Element: NumericType, DeviceType: Device> {
-    case tensor(Tensor<Element, DeviceType>)
-    case operation(AnyTensorOperation<Element, DeviceType>)
+private enum GraphNode<Element: NumericType, Device: DeviceType> {
+    case tensor(Tensor<Element, Device>)
+    case operation(AnyTensorOperation<Element, Device>)
     
     var id: String {
         switch self {
@@ -51,9 +51,9 @@ private enum GraphNode<Element: NumericType, DeviceType: Device> {
     }
 }
 
-private struct Edge<Element: NumericType, DeviceType: Device> {
-    let source: GraphNode<Element, DeviceType>
-    let destination: GraphNode<Element, DeviceType>
+private struct Edge<Element: NumericType, Device: DeviceType> {
+    let source: GraphNode<Element, Device>
+    let destination: GraphNode<Element, Device>
     
     var declaration: String {
         let srcId = source.id
@@ -65,7 +65,7 @@ private struct Edge<Element: NumericType, DeviceType: Device> {
 
 extension TensorOperation {
     var graph: String {
-        var visited = Set<Tensor<Element, DeviceType>>()
+        var visited = Set<Tensor<Element, Device>>()
         let (nodes, edges, selfNode) = collectGraph(visited: &visited)
         let nodeString = nodes.map {$0.declaration}.joined(separator: "\n\t")
         let edgeString = edges.map {$0.declaration}.joined(separator: "\n\t")
@@ -79,12 +79,12 @@ extension TensorOperation {
         """
     }
     
-    fileprivate func collectGraph(visited: inout Set<Tensor<Element, DeviceType>>) -> ([GraphNode<Element, DeviceType>], [Edge<Element, DeviceType>], GraphNode<Element, DeviceType>) {
+    fileprivate func collectGraph(visited: inout Set<Tensor<Element, Device>>) -> ([GraphNode<Element, Device>], [Edge<Element, Device>], GraphNode<Element, Device>) {
         let selfNode = GraphNode.operation(self.asAny())
         
         let sources = self.sourceTensors
         var nodes = [selfNode]
-        var edges: [Edge<Element, DeviceType>] = []
+        var edges: [Edge<Element, Device>] = []
         
 //        var newVisited = visited.union(sources)
         

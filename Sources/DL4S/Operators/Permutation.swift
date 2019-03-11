@@ -8,36 +8,32 @@
 import Foundation
 
 
-fileprivate struct PermutationOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+fileprivate struct PermutationOperation<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var symbol: String {
         return "permute"
     }
     
-    var source: Tensor<Element, DeviceType>
+    var source: Tensor<Element, Device>
     var axisArangement: [Int]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
         guard let srcGrad = source.gradient, let dstGrad = vector.gradient else {
             return
         }
         
-        for index in iterate(source.shape) {
-            var dstIdx = [Int](repeating: 0, count: source.dim)
-            for i in dstIdx.indices {
-                dstIdx[axisArangement[i]] = index[i]
-            }
-            
-            let lsIdx = MemoryOps.linearIndex(from: index, shape: source.shape)
-            let ldIdx = MemoryOps.linearIndex(from: dstIdx, shape: vector.shape)
-            
-            srcGrad[lsIdx] = dstGrad[ldIdx]
+        var invArangement = [Int](repeating: 0, count: vector.dim)
+        
+        for (i, j) in axisArangement.enumerated() {
+            invArangement[i] = j
         }
+        
+        Device.Engine.permuteAxesAdd(input: dstGrad, arangement: invArangement, shape: vector.shape, add: srcGrad, destination: srcGrad)
     }
 }
 
 
 public extension Tensor {
-    func permuted(to axisArangement: [Int]) -> Tensor<Element, DeviceType> {
+    func permuted(to axisArangement: [Int]) -> Tensor<Element, Device> {
         precondition(axisArangement.count == dim, "Axis arangement must have dimensionality of source tensor")
         precondition(Set(axisArangement).count == dim, "Axis arangement must not contain duplicate axes")
         
@@ -47,28 +43,18 @@ public extension Tensor {
             dstShape[axisArangement[i]] = shape[i]
         }
         
-        let result = Tensor<Element, DeviceType>(
+        let result = Tensor<Element, Device>(
             shape: dstShape,
             parent: nil,
             context: requiresGradient ? PermutationOperation(source: self, axisArangement: axisArangement).asAny() : nil
         )
         
-        for index in iterate(shape) {
-            var dstIdx = [Int](repeating: 0, count: dim)
-            for i in dstIdx.indices {
-                dstIdx[axisArangement[i]] = index[i]
-            }
-            
-            let lsIdx = MemoryOps.linearIndex(from: index, shape: shape)
-            let ldIdx = MemoryOps.linearIndex(from: dstIdx, shape: dstShape)
-            
-            result.values[ldIdx] = self.values[lsIdx]
-        }
+        Device.Engine.permuteAxes(input: self.values, arangement: axisArangement, shape: self.shape, destination: result.values)
         
         return result
     }
     
-    func permuted(to axisArangement: Int...) -> Tensor<Element, DeviceType> {
+    func permuted(to axisArangement: Int...) -> Tensor<Element, Device> {
         return permuted(to: axisArangement)
     }
 }

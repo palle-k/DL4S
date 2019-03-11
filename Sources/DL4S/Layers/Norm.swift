@@ -8,21 +8,21 @@
 import Foundation
 
 
-public class BatchNorm<Element: NumericType, DeviceType: Device>: Layer, Codable {
+public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable {
     
     public typealias Input = Element
     
     public var trainable: Bool = true
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return [shift, scale]
     }
     
-    let shift: Tensor<Element, DeviceType>
-    let scale: Tensor<Element, DeviceType>
+    let shift: Tensor<Element, Device>
+    let scale: Tensor<Element, Device>
     
-    var runningMean: Tensor<Element, DeviceType>
-    var runningVar: Tensor<Element, DeviceType>
+    var runningMean: Tensor<Element, Device>
+    var runningVar: Tensor<Element, Device>
     
     public var momentum: Element
     
@@ -36,7 +36,7 @@ public class BatchNorm<Element: NumericType, DeviceType: Device>: Layer, Codable
         self.momentum = momentum
     }
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         let x = inputs[0]
         

@@ -7,13 +7,13 @@
 
 import Foundation
 
-public class Dense<Element: RandomizableType, DeviceType: Device>: Layer, Codable {
+public class Dense<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
-    let w: Tensor<Element, DeviceType>
-    let b: Tensor<Element, DeviceType>
+    let w: Tensor<Element, Device>
+    let b: Tensor<Element, Device>
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return trainable ? [w, b] : []
     }
     
@@ -37,7 +37,7 @@ public class Dense<Element: RandomizableType, DeviceType: Device>: Layer, Codabl
         b.tag = "b"
     }
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         let out = mmul(inputs[0], w) + b
         // print(out)

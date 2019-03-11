@@ -8,35 +8,37 @@
 import Foundation
 
 
-public protocol Device {
-    associatedtype MemoryOperatorType: MemoryOperators where MemoryOperatorType.DeviceType == Self
-    associatedtype EngineType: Engine where EngineType.DeviceType == Self
+public protocol DeviceType {
+    associatedtype Memory: MemoryOperatorsType where Memory.Device == Self
+    associatedtype Engine: EngineType where Engine.Device == Self
 }
 
 
-public protocol MemoryOperators {
-    associatedtype DeviceType: Device where DeviceType.MemoryOperatorType == Self
-    associatedtype RawBufferType: Hashable
+public protocol MemoryOperatorsType {
+    associatedtype Device: DeviceType where Device.Memory == Self
+    associatedtype RawBuffer: Hashable
     
-    static func allocateBuffer<Element>(withCapacity: Int, type: Element.Type) -> Buffer<Element, DeviceType>
-    static func free<Element>(_ buffer: Buffer<Element, DeviceType>)
+    static func allocateBuffer<Element>(withCapacity: Int, type: Element.Type) -> Buffer<Element, Device>
+    static func free<Element>(_ buffer: Buffer<Element, Device>)
     
-    static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, DeviceType>, count: Int)
-    static func assign<Element>(from source: Buffer<Element, DeviceType>, to destination: Buffer<Element, DeviceType>, count: Int)
-    static func assign<Element>(from source: Buffer<Element, DeviceType>, to destination: UnsafeMutableBufferPointer<Element>, count: Int)
+    static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, Device>, count: Int)
+    static func assign<Element>(from source: Buffer<Element, Device>, to destination: Buffer<Element, Device>, count: Int)
+    static func assign<Element>(from source: Buffer<Element, Device>, to destination: UnsafeMutableBufferPointer<Element>, count: Int)
     
-    static func getValue<Element>(from source: Buffer<Element, DeviceType>) -> Element
-    static func getSize<Element>(of buffer: Buffer<Element, DeviceType>) -> Int
+    static func getValue<Element>(from source: Buffer<Element, Device>) -> Element
+    static func getSize<Element>(of buffer: Buffer<Element, Device>) -> Int
     
-    static func get<Element>(slice: [Int?], of buffer: Buffer<Element, DeviceType>, with shape: [Int]) -> (Buffer<Element, DeviceType>, Bool, [Int])
-    static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, DeviceType>, with shape: [Int]) -> (Buffer<Element, DeviceType>, Bool, [Int])
-    static func set<Element>(slice: [Int?], of buffer: Buffer<Element, DeviceType>, with dstShape: [Int], from source: Buffer<Element, DeviceType>, with sourceShape: [Int])
-    static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, DeviceType>, with dstShape: [Int], from source: Buffer<Element, DeviceType>, with sourceShape: [Int])
+    static func get<Element>(slice: [Int?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (Buffer<Element, Device>, Bool, [Int])
+    static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (Buffer<Element, Device>, Bool, [Int])
+    static func set<Element>(slice: [Int?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
+    static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
+    
+    static func advance<Element>(buffer: Buffer<Element, Device>, by advancement: Int) -> Buffer<Element, Device>
 }
 
 
-public protocol Engine {
-    associatedtype DeviceType: Device where DeviceType.EngineType == Self
+public protocol EngineType {
+    associatedtype Device: DeviceType where Device.Engine == Self
     
     static func sqrt<N: NumericType>(_ value: N) -> N
     static func log<N: NumericType>(_ value: N) -> N
@@ -49,37 +51,40 @@ public protocol Engine {
     static func tanh<N: NumericType>(_ value: N) -> N
     static func pow<N: NumericType>(base: N, exponent: N) -> N
     
-    static func fill<N: NumericType>(value: N, result: Buffer<N, DeviceType>, count: Int)
-    static func fill<N: NumericType>(value: N, result: Buffer<N, DeviceType>, stride: Int, count: Int)
-    static func transpose<N: NumericType>(val: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, srcRows: Int, srcCols: Int)
-    static func vAdd<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func vsAdd<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: N, result: Buffer<N, DeviceType>, count: Int)
-    static func vNeg<N: NumericType>(val: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func vSub<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func vMul<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func vMA<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, add: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func vsMul<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: N, result: Buffer<N, DeviceType>, count: Int)
-    static func vDiv<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func svDiv<N: NumericType>(lhs: N, rhs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func vSquare<N: NumericType>(values: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func matMul<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, lhsRows: Int, lhsCols: Int, rhsCols: Int)
-    static func matMulAddInPlace<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool, transposeSecond: Bool)
-    static func dot<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, count: Int) -> N
-    static func vMulSA<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: Buffer<N, DeviceType>, add: N, result: Buffer<N, DeviceType>, count: Int)
-    static func vsMulVAdd<N: NumericType>(lhs: Buffer<N, DeviceType>, rhs: N, add: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func log<N: NumericType>(val: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func exp<N: NumericType>(val: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func relu<N: NumericType>(val: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func isPositive<N: NumericType>(val: Buffer<N, DeviceType>, result: UnsafeMutablePointer<N>, count: Int)
-    static func tanh<N: NumericType>(val: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func sqrt<N: NumericType>(val: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func sum<N: NumericType>(val: Buffer<N, DeviceType>, count: Int) -> N
-    static func copysign<N: NumericType>(values: Buffer<N, DeviceType>, signs: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, count: Int)
-    static func argmax<N: NumericType>(values: Buffer<N, DeviceType>, count: Int) -> (Int, N)
-    static func conv2d<N: NumericType>(input: Buffer<N, DeviceType>, filter: Buffer<N, DeviceType>, result: Buffer<N, DeviceType>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
+    static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int)
+    static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, stride: Int, count: Int)
+    static func transpose<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, srcRows: Int, srcCols: Int)
+    static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func vsAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int)
+    static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func vMA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func vsMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int)
+    static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func svDiv<N: NumericType>(lhs: N, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func vSquare<N: NumericType>(values: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func matMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsRows: Int, lhsCols: Int, rhsCols: Int)
+    static func matMulAddInPlace<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool, transposeSecond: Bool)
+    static func dot<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, count: Int) -> N
+    static func vMulSA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: N, result: Buffer<N, Device>, count: Int)
+    static func vsMulVAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func log<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func exp<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func relu<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: UnsafeMutablePointer<N>, count: Int)
+    static func tanh<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func sqrt<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N
+    static func copysign<N: NumericType>(values: Buffer<N, Device>, signs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
+    static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N)
+    static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
+    static func permuteAxes<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], destination: Buffer<N, Device>)
+    static func permuteAxesAdd<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], add: Buffer<N, Device>, destination: Buffer<N, Device>)
 }
 
-extension Engine {
+
+extension EngineType {
     public static func sqrt<N: NumericType>(_ value: N) -> N {
         return value.sqrt()
     }

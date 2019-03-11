@@ -11,31 +11,31 @@ import Foundation
 public protocol Layer {
     associatedtype Input: NumericType
     associatedtype Element: NumericType
-    associatedtype DeviceType: Device
+    associatedtype Device: DeviceType
     
-    var parameters: [Tensor<Element, DeviceType>] { get }
+    var parameters: [Tensor<Element, Device>] { get }
     var trainable: Bool { get nonmutating set }
     
-    func forward(_ inputs: [Tensor<Input, DeviceType>]) -> Tensor<Element, DeviceType>
+    func forward(_ inputs: [Tensor<Input, Device>]) -> Tensor<Element, Device>
 }
 
 public extension Layer {
-    func forward(_ inputs: Tensor<Input, DeviceType>...) -> Tensor<Element, DeviceType> {
+    func forward(_ inputs: Tensor<Input, Device>...) -> Tensor<Element, Device> {
         return forward(inputs)
     }
     
-    func asAny() -> AnyLayer<Input, Element, DeviceType> {
+    func asAny() -> AnyLayer<Input, Element, Device> {
         return AnyLayer(self)
     }
 }
 
-public struct AnyLayer<Input: NumericType, Element: NumericType, DeviceType: Device>: Layer {
-    private let getParams: () -> [Tensor<Element, DeviceType>]
-    private let performForward: ([Tensor<Input, DeviceType>]) -> (Tensor<Element, DeviceType>)
+public struct AnyLayer<Input: NumericType, Element: NumericType, Device: DeviceType>: Layer {
+    private let getParams: () -> [Tensor<Element, Device>]
+    private let performForward: ([Tensor<Input, Device>]) -> (Tensor<Element, Device>)
     private let getTrainable: () -> Bool
     private let setTrainable: (Bool) -> ()
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return getParams()
     }
     
@@ -48,23 +48,23 @@ public struct AnyLayer<Input: NumericType, Element: NumericType, DeviceType: Dev
         }
     }
     
-    public init<L: Layer>(_ layer: L) where L.Element == Element, L.Input == Input, L.DeviceType == DeviceType {
+    public init<L: Layer>(_ layer: L) where L.Element == Element, L.Input == Input, L.Device == Device {
         self.getParams = {layer.parameters}
         self.performForward = {layer.forward($0)}
         self.getTrainable = {layer.trainable}
         self.setTrainable = {layer.trainable = $0}
     }
     
-    public func forward(_ inputs: [Tensor<Input, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Input, Device>]) -> Tensor<Element, Device> {
         return performForward(inputs)
     }
 }
 
 
-public class Sequential<Element: NumericType, DeviceType: Device>: Layer {
+public class Sequential<Element: NumericType, Device: DeviceType>: Layer {
     public typealias Input = Element
     
-    public let layers: [AnyLayer<Element, Element, DeviceType>]
+    public let layers: [AnyLayer<Element, Element, Device>]
     
     public var trainable: Bool {
         get {
@@ -75,15 +75,15 @@ public class Sequential<Element: NumericType, DeviceType: Device>: Layer {
         }
     }
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return layers.flatMap {$0.parameters}
     }
     
-    public init(_ layers: AnyLayer<Element, Element, DeviceType>...) {
+    public init(_ layers: AnyLayer<Element, Element, Device>...) {
         self.layers = layers
     }
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         return layers.reduce(inputs[0]) {$1.forward([$0])}
     }
     
@@ -98,20 +98,20 @@ public class Sequential<Element: NumericType, DeviceType: Device>: Layer {
         let params = self.parameters
         let decoder = JSONDecoder()
         let encoded = try Data(contentsOf: url)
-        let decodedParams = try decoder.decode([Tensor<Element, DeviceType>].self, from: encoded)
+        let decodedParams = try decoder.decode([Tensor<Element, Device>].self, from: encoded)
         
         for (dst, src) in zip(params, decodedParams) {
-            DeviceType.MemoryOperatorType.assign(from: src.values, to: dst.values, count: dst.count)
+            Device.Memory.assign(from: src.values, to: dst.values, count: dst.count)
             
             if let dstGrad = dst.gradient, let srcGrad = src.gradient {
-                DeviceType.MemoryOperatorType.assign(from: srcGrad, to: dstGrad, count: dst.count)
+                Device.Memory.assign(from: srcGrad, to: dstGrad, count: dst.count)
             }
         }
     }
 }
 
-public class Logging<Element: NumericType, DeviceType: Device>: Layer {
-    public var parameters: [Tensor<Element, DeviceType>] {
+public class Logging<Element: NumericType, Device: DeviceType>: Layer {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -131,7 +131,7 @@ public class Logging<Element: NumericType, DeviceType: Device>: Layer {
         self.rate = rate
     }
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         count += 1
         if count % rate == 0 {
@@ -142,7 +142,7 @@ public class Logging<Element: NumericType, DeviceType: Device>: Layer {
     }
 }
 
-public class Dropout<Element: NumericType, DeviceType: Device>: Layer {
+public class Dropout<Element: NumericType, Device: DeviceType>: Layer {
     public typealias Input = Element
     
     public var trainable: Bool {
@@ -154,7 +154,7 @@ public class Dropout<Element: NumericType, DeviceType: Device>: Layer {
         }
     }
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
@@ -166,10 +166,10 @@ public class Dropout<Element: NumericType, DeviceType: Device>: Layer {
         self.dropoutRate = rate
     }
     
-    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         if isTrainingMode {
             let x = inputs[0]
-            let mask: Tensor<Element, DeviceType> = Random.bernoulli(p: (1 - dropoutRate), shape: Array(x.shape.dropFirst()))
+            let mask: Tensor<Element, Device> = Random.bernoulli(p: (1 - dropoutRate), shape: Array(x.shape.dropFirst()))
             mask.tag = "DropoutMask"
             return x * mask
         } else {
@@ -178,7 +178,7 @@ public class Dropout<Element: NumericType, DeviceType: Device>: Layer {
     }
 }
 
-public class Lambda<Element: NumericType, Input: NumericType, DeviceType: Device>: Layer {
+public class Lambda<Element: NumericType, Input: NumericType, Device: DeviceType>: Layer {
     public var trainable: Bool {
         get {
             return false
@@ -188,17 +188,17 @@ public class Lambda<Element: NumericType, Input: NumericType, DeviceType: Device
         }
     }
     
-    public var parameters: [Tensor<Element, DeviceType>] {
+    public var parameters: [Tensor<Element, Device>] {
         return []
     }
     
-    public var transform: (Tensor<Input, DeviceType>) -> Tensor<Element, DeviceType>
+    public var transform: (Tensor<Input, Device>) -> Tensor<Element, Device>
     
-    public init(_ transform: @escaping (Tensor<Input, DeviceType>) -> Tensor<Element, DeviceType>) {
+    public init(_ transform: @escaping (Tensor<Input, Device>) -> Tensor<Element, Device>) {
         self.transform = transform
     }
     
-    public func forward(_ inputs: [Tensor<Input, DeviceType>]) -> Tensor<Element, DeviceType> {
+    public func forward(_ inputs: [Tensor<Input, Device>]) -> Tensor<Element, Device> {
         return transform(inputs[0])
     }
 }
