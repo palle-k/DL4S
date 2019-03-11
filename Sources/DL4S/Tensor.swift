@@ -36,11 +36,11 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
                 return
             }
             if newValue {
-                let gradient: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: count)
+                let gradient: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: count)
                 Element.fill(value: 0, result: gradient, count: count)
                 self.gradient = gradient
             } else {
-                gradient.map(Allocator.free)
+                gradient.map(CPUAllocator.free)
             }
         }
     }
@@ -58,7 +58,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = Allocator.allocate(count: count)
+        self.values = CPUAllocator.allocate(count: count)
         self.gradient = nil
         self.context = nil
         self.parent = nil
@@ -75,7 +75,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = Allocator.allocate(count: count)
+        self.values = CPUAllocator.allocate(count: count)
         self.gradient = nil
         self.context = nil
         self.parent = nil
@@ -175,7 +175,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
     
     public init(_ value: Element, requiresGradient: Bool = false) {
         self.shape = []
-        self.values = Allocator.allocate(count: 1)
+        self.values = CPUAllocator.allocate(count: 1)
         self.gradient = nil
         self.context = nil
         self.parent = nil
@@ -186,7 +186,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
     
     public required init(floatLiteral value: Double) {
         self.shape = []
-        self.values = Allocator.allocate(count: 1)
+        self.values = CPUAllocator.allocate(count: 1)
         self.gradient = nil
         self.context = nil
         self.parent = nil
@@ -195,7 +195,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
     
     public required init(integerLiteral value: Int32) {
         self.shape = []
-        self.values = Allocator.allocate(count: 1)
+        self.values = CPUAllocator.allocate(count: 1)
         self.gradient = nil
         self.context = nil
         self.parent = nil
@@ -206,7 +206,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = Allocator.allocate(count: count)
+        self.values = CPUAllocator.allocate(count: count)
         self.gradient = nil
         self.context = context
         self.parent = parent
@@ -226,12 +226,12 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let values = try container.decode([Element].self, forKey: .values)
         
         self.shape = shape
-        self.values = Allocator.allocate(count: shape.reduce(1, *))
+        self.values = CPUAllocator.allocate(count: shape.reduce(1, *))
         self.context = nil
         self.parent = nil
         
         if let gradient = try container.decode([Element]?.self, forKey: .gradient) {
-            self.gradient = Allocator.allocate(count: shape.reduce(1, *))
+            self.gradient = CPUAllocator.allocate(count: shape.reduce(1, *))
             gradient.withUnsafeBufferPointer { ptr in
                 self.gradient?.assign(from: ptr, count: ptr.count)
             }
@@ -246,8 +246,8 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
     
     deinit {
         if parent == nil {
-            Allocator.free(values)
-            gradient.map(Allocator.free)
+            CPUAllocator.free(values)
+            gradient.map(CPUAllocator.free)
         }
     }
     
@@ -276,11 +276,11 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let existingValues = self.values
         let existingGradient = self.gradient
         
-        self.values = Allocator.allocate(count: count)
+        self.values = CPUAllocator.allocate(count: count)
         self.values.assign(from: existingValues.immutable, count: count)
         
         if let gradient = existingGradient {
-            self.gradient = Allocator.allocate(count: count)
+            self.gradient = CPUAllocator.allocate(count: count)
             self.gradient!.assign(from: gradient.immutable, count: count)
         }
         

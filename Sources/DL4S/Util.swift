@@ -58,3 +58,17 @@ extension Slice: Hashable where Element: Hashable {
         }
     }
 }
+
+extension Collection {
+    func minIndex(by comparator: (Element, Element) throws -> Bool) rethrows -> Index? {
+        var minIndex: Index? = nil
+        var minValue: Element? = nil
+        for index in indices {
+            if let mv = minValue, try !comparator(mv, self[index]) {
+                minIndex = index
+                minValue = self[index]
+            }
+        }
+        return minIndex
+    }
+}

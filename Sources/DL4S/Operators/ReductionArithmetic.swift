@@ -16,8 +16,6 @@ private struct SumContext<Element: NumericType>: UnaryTensorOperation {
             return
         }
         Element.vsAdd(lhs: sourceGradient.immutable, rhs: vectorGradient, result: sourceGradient, count: source.count)
-        
-        backpropagate()
     }
     
     var symbol: String {
@@ -60,8 +58,6 @@ private struct MaxContext<Element: NumericType>: UnaryTensorOperation {
             return
         }
         sourceGradient[maxI] = sourceGradient[maxI] + vectorGradient
-        
-        backpropagate()
     }
     
     var symbol: String {
@@ -75,8 +71,6 @@ private struct MaxAxisContext<Element: NumericType>: UnaryTensorOperation {
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
         
-        
-        backpropagate()
     }
     
     var symbol: String {
@@ -132,8 +126,6 @@ private struct StackOperation<Element: NumericType>: TensorOperation {
             Element.vAdd(lhs: srcGradient.immutable, rhs: vectorGradient.advanced(by: offset).immutable, result: srcGradient, count: numElements)
             offset += numElements
         }
-        
-        backpropagate()
     }
     
     var symbol: String {

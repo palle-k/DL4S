@@ -189,5 +189,21 @@ extension Double: NumericType {
         
         return (Int(maxI), maxV)
     }
+    
+    public static func conv2d(input: UnsafeBufferPointer<Double>, filter: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
+        let kernelElementCount = kernelWidth * kernelHeight * kernelDepth
+        let planeElementCount = width * height
+        
+        for k in 0 ..< kernelCount {
+            let kernel = filter.advanced(by: k * kernelElementCount)
+            let outputPlane = result.advanced(by: k * planeElementCount)
+            
+            for d in 0 ..< kernelDepth {
+                let inputPlane = input.advanced(by: d * planeElementCount)
+                
+                vDSP_imgfirD(inputPlane.pointer(capacity: planeElementCount), UInt(height), UInt(width), kernel.pointer(capacity: kernelElementCount), outputPlane.pointer(capacity: planeElementCount), UInt(kernelHeight), UInt(kernelWidth))
+            }
+        }
+    }
 }
 

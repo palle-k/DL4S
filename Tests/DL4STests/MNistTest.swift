@@ -83,7 +83,7 @@ class MNistTest: XCTestCase {
         )
         
         let epochs = 5_000
-        let batchSize = 256
+        let batchSize = 128
         
         let optimizer = Adam(parameters: model.parameters, learningRate: 0.001)
         
@@ -102,7 +102,6 @@ class MNistTest: XCTestCase {
             if epoch % 100 == 0 {
                 let avgLoss = loss.item
                 print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
-                // optimizer.learningRate *= 0.999
             }
         }
         
@@ -134,8 +133,8 @@ class MNistTest: XCTestCase {
             Softmax().asAny()
         )
         
-        let epochs = 1000
-        let batchSize = 16
+        let epochs = 10_000
+        let batchSize = 128
         
         let optimizer = Adam(parameters: model.parameters, learningRate: 0.001)
         
@@ -153,7 +152,7 @@ class MNistTest: XCTestCase {
             
             optimizer.step()
             
-            if epoch % 10 == 0 {
+            if epoch % 100 == 0 {
                 let avgLoss = loss.item
                 print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
             }
@@ -174,5 +173,56 @@ class MNistTest: XCTestCase {
         let accuracy = Float(correctCount) / Float(ds_val.0.shape[0])
         
         print("Accuracy: \(accuracy)")
+        
+        try? model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_gru_params2.json"))
+    }
+    
+    func testGenerative() throws {
+        let model = Sequential<Float>(
+            Flatten().asAny(),
+            Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
+            Tanh().asAny(),
+            Dense(inputFeatures: 500, outputFeatures: 300).asAny(),
+            Tanh().asAny(),
+            Dense(inputFeatures: 300, outputFeatures: 10).asAny(),
+            Softmax().asAny()
+        )
+        
+        try model.loadWeights(from: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_params.json"))
+        
+        let input = Tensor<Float>(repeating: 0, shape: [1, 28, 28], requiresGradient: true)
+        let expected = Tensor<Int32>([5])
+        
+        Random.fill(input, a: 0, b: 1)
+        
+        let optimizer = Adam(parameters: [input], learningRate: 0.001)
+        
+        let epochs = 5000
+        
+        for epoch in 1 ... epochs {
+            optimizer.zeroGradient()
+            
+            let pred = model.forward(input)
+            let loss = categoricalCrossEntropy(expected: expected, actual: pred) + sum((input - 0.5) * (input - 0.5)) * 0.00001
+            loss.backwards()
+            
+            optimizer.step()
+            
+            if epoch % 100 == 0 {
+                let avgLoss = loss.item
+                print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
+            }
+        }
+        
+        guard let image = NSImage(input), let imgData = image.tiffRepresentation else {
+            fatalError()
+        }
+        guard let rep = NSBitmapImageRep.init(data: imgData) else {
+            fatalError()
+        }
+        guard let png = rep.representation(using: .png, properties: [:]) else {
+            fatalError()
+        }
+        try png.write(to: URL(fileURLWithPath: "/Users/Palle/Desktop/input.png"))
     }
 }

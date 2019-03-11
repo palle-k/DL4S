@@ -17,8 +17,6 @@ private struct ExpContext<Element: NumericType>: UnaryTensorOperation {
         }
         
         Element.vMA(lhs: vector.values.immutable, rhs: vectorGradient.immutable, add: sourceGradient.immutable, result: sourceGradient, count: source.count)
-        
-        backpropagate()
     }
     
     var symbol: String {
@@ -33,14 +31,12 @@ private struct LogContext<Element: NumericType>: UnaryTensorOperation {
         guard let sourceGradient = source.gradient, let vectorGradient = vector.gradient else {
             return
         }
-        let temp: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
+        let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
         
         Element.vDiv(lhs: vectorGradient.immutable, rhs: source.values.immutable, result: temp, count: source.count)
         Element.vAdd(lhs: temp.immutable, rhs: sourceGradient.immutable, result: sourceGradient, count: source.count)
         
-        Allocator.free(temp)
-        
-        backpropagate()
+        CPUAllocator.free(temp)
     }
     
     var symbol: String {
@@ -55,16 +51,14 @@ private struct TanhContext<Element: NumericType>: UnaryTensorOperation {
         guard let sourceGradient = source.gradient, let vectorGradient = vector.gradient else {
             return
         }
-        let temp: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
+        let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
         
         Element.vSquare(values: vector.values.immutable, result: temp, count: source.count)
         Element.vNeg(val: temp.immutable, result: temp, count: source.count)
         Element.vsAdd(lhs: temp.immutable, rhs: 1, result: temp, count: source.count)
         Element.vMA(lhs: temp.immutable, rhs: vectorGradient.immutable, add: sourceGradient.immutable, result: sourceGradient, count: source.count)
         
-        Allocator.free(temp)
-        
-        backpropagate()
+        CPUAllocator.free(temp)
     }
     
     var symbol: String {
@@ -80,8 +74,8 @@ private struct ReluContext<Element: NumericType>: UnaryTensorOperation {
             return
         }
         
-        let temp1: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
-        let temp2: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
+        let temp1: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
+        let temp2: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
         
         Element.fill(value: 0.5, result: temp1, count: vector.count)
         Element.fill(value: 0.5, result: temp2, count: vector.count)
@@ -91,10 +85,8 @@ private struct ReluContext<Element: NumericType>: UnaryTensorOperation {
         Element.vAdd(lhs: temp1.immutable, rhs: temp2.immutable, result: temp1, count: vector.count)
         Element.vMA(lhs: temp1.immutable, rhs: vectorGradient.immutable, add: sourceGradient.immutable, result: sourceGradient, count: source.count)
         
-        Allocator.free(temp1)
-        Allocator.free(temp2)
-        
-        backpropagate()
+        CPUAllocator.free(temp1)
+        CPUAllocator.free(temp2)
     }
     
     var symbol: String {
@@ -109,14 +101,12 @@ private struct SqrtContext<Element: NumericType>: UnaryTensorOperation {
         guard let sourceGradient = source.gradient, let vectorGradient = vector.gradient else {
             return
         }
-        let tmp: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
+        let tmp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
         
         // 1/2*1/sqrt(source)
         Element.svDiv(lhs: 0.5, rhs: vector.values.immutable, result: tmp, count: vector.count)
         Element.vMA(lhs: tmp.immutable, rhs: vectorGradient.immutable, add: sourceGradient.immutable, result: sourceGradient, count: source.count)
-        Allocator.free(tmp)
-        
-        backpropagate()
+        CPUAllocator.free(tmp)
     }
     
     var symbol: String {
@@ -235,12 +225,12 @@ public func variance<Element>(_ vector: Tensor<Element>, axis: Int? = nil) -> Te
 }
 
 public func l2loss<Element>(_ vector: Tensor<Element>, loss: Element) -> Tensor<Element> {
-    return sum(vector * vector) * Tensor(loss)
+    return mean(vector * vector) * Tensor(loss)
 }
 
 public func l1loss<Element>(_ vector: Tensor<Element>, loss: Element) -> Tensor<Element> {
     // abs(x) = sqrt(x * x)
-    return sum(sqrt(vector * vector)) * Tensor(loss)
+    return mean(sqrt(vector * vector)) * Tensor(loss)
 }
 
 
@@ -255,7 +245,7 @@ private struct SoftmaxContext<Element: NumericType>: UnaryTensorOperation {
         
         let diag = Tensor<Element>.diagonal(size: vector.shape[1], value: 1)
         let stride = vector.strides[0]
-        let temp: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: stride)
+        let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: stride)
         
         for i in 0 ..< vector.shape[0] {
             let filled = diag * vector[i]
@@ -274,7 +264,7 @@ private struct SoftmaxContext<Element: NumericType>: UnaryTensorOperation {
             Element.vAdd(lhs: sourceGradient.advanced(by: stride * i).immutable, rhs: temp.immutable, result: sourceGradient.advanced(by: stride * i), count: stride)
         }
         
-        Allocator.free(temp)
+        CPUAllocator.free(temp)
     }
     
     var symbol: String {

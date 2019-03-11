@@ -16,7 +16,6 @@ private enum GraphNode<Element: NumericType> {
         case .operation(let op):
             return op.id
         case .tensor(let t):
-            var h = Hasher()
             return String(t.values.baseAddress?.hashValue ?? 0).replacingOccurrences(of: "-", with: "z")
         }
     }

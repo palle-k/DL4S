@@ -224,4 +224,8 @@ extension Int32: NumericType {
         
         return (maxI, maxV)
     }
+    
+    public static func conv2d(input: UnsafeBufferPointer<Int32>, filter: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
+        fatalError("Conv2D is not available for data type Int32")
+    }
 }

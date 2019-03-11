@@ -17,7 +17,6 @@ fileprivate struct ReshapeOperation<Element: NumericType>: UnaryTensorOperation 
         if !Tensor.sameIdentity(source, vector) {
             Element.vAdd(lhs: vectorGradient.immutable, rhs: sourceGradient.immutable, result: sourceGradient, count: source.count)
         }
-        backpropagate()
     }
     
     var symbol: String {
@@ -87,7 +86,6 @@ fileprivate struct SelectOperation<Element: NumericType>: UnaryTensorOperation {
         if isCopy {
             source.setGradient(at: location, source: buffer.immutable, sourceShape: vector.shape)
         }
-        backpropagate()
     }
     
     var symbol: String {
@@ -125,7 +123,6 @@ fileprivate struct RangeSelectOperation<Element: NumericType>: UnaryTensorOperat
         if isCopy {
             source.setGradient(at: location, source: buffer.immutable, sourceShape: vector.shape)
         }
-        backpropagate()
     }
     
     var symbol: String {
@@ -136,6 +133,13 @@ fileprivate struct RangeSelectOperation<Element: NumericType>: UnaryTensorOperat
 public extension Tensor {
     subscript(index: [Int?]) -> Tensor<Element> {
         get {
+            let index = zip(index, shape).map { idx, dim -> Int? in
+                if let idx = idx, idx < 0 {
+                    return dim + idx
+                } else {
+                    return idx
+                }
+            }
             let (val, isCopy, shape) = MemoryOps.get(slice: index, of: values, with: self.shape)
             let grad: UnsafeMutableBufferPointer<Element>?
             if let gradient = self.gradient {
@@ -153,6 +157,13 @@ public extension Tensor {
             )
         }
         set (slice) {
+            let index = zip(index, shape).map { idx, dim -> Int? in
+                if let idx = idx, idx < 0 {
+                    return dim + idx
+                } else {
+                    return idx
+                }
+            }
             if slice.dim == 0 && dim - index.filter({$0 != nil}).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }

@@ -11,7 +11,7 @@ import Accelerate
 
 extension Float: NumericType {
     public func toUInt8() -> UInt8 {
-        return UInt8(self)
+        return UInt8(max(min(self, 255), 0))
     }
     
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {
@@ -188,5 +188,21 @@ extension Float: NumericType {
         vDSP_maxvi(values.pointer(capacity: count), 1, &maxV, &maxI, UInt(count))
         
         return (Int(maxI), maxV)
+    }
+    
+    public static func conv2d(input: UnsafeBufferPointer<Float>, filter: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
+        let kernelElementCount = kernelWidth * kernelHeight * kernelDepth
+        let planeElementCount = width * height
+        
+        for k in 0 ..< kernelCount {
+            let kernel = filter.advanced(by: k * kernelElementCount)
+            let outputPlane = result.advanced(by: k * planeElementCount)
+            
+            for d in 0 ..< kernelDepth {
+                let inputPlane = input.advanced(by: d * planeElementCount)
+                
+                vDSP_imgfir(inputPlane.pointer(capacity: planeElementCount), UInt(height), UInt(width), kernel.pointer(capacity: kernelElementCount), outputPlane.pointer(capacity: planeElementCount), UInt(kernelHeight), UInt(kernelWidth))
+            }
+        }
     }
 }

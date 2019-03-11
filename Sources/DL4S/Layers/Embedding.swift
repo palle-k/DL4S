@@ -26,6 +26,8 @@ public class Embedding<Element: RandomizableType>: Layer, Codable {
         self.inputFeatures = inputFeatures
         self.outputSize = outputSize
         self.embeddingMatrix = Tensor<Element>(repeating: 0, shape: [inputFeatures, outputSize])
+        
+        Random.fillNormal(embeddingMatrix, mean: 0, stdev: (2 / Element(outputSize)).sqrt())
     }
     
     public func forward(_ inputs: [Tensor<Int32>]) -> Tensor<Element> {
@@ -34,7 +36,7 @@ public class Embedding<Element: RandomizableType>: Layer, Codable {
         let x = inputs[0]
         
         let embedded = (0 ..< x.shape[0]).map { i in
-            embeddingMatrix[Int(x[i].item)].view(as: 1, outputSize)
+            embeddingMatrix[Int(x[i].item)].unsqueeze(at: 0)
         }
         
         return stack(embedded)

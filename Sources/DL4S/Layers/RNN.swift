@@ -28,6 +28,7 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
     
     public let hiddenSize: Int
     public let inputSize: Int
+    public let shouldReturnFullSequence: Bool
     
     public var parameters: [Tensor<Element>] {
         return trainable ? [
@@ -35,10 +36,10 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
             W_o, U_o, b_o,
             W_f, U_f, b_f,
             W_c, U_c, b_c
-            ] : []
+        ] : []
     }
     
-    public init(inputSize: Int, hiddenSize: Int) {
+    public init(inputSize: Int, hiddenSize: Int, shouldReturnFullSequence: Bool = false) {
         W_i = Tensor<Element>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         W_o = Tensor<Element>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         W_f = Tensor<Element>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
@@ -69,6 +70,7 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
         
         self.hiddenSize = hiddenSize
         self.inputSize = inputSize
+        self.shouldReturnFullSequence = shouldReturnFullSequence
         
         for W in [W_i, W_o, W_f, W_c] {
             Random.fillNormal(W, stdev: (Element(1) / Element(inputSize)).sqrt())
@@ -129,15 +131,15 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
             h_p = h_t
             c_p = c_t
             
-            hiddenStates.append(h_t)
-            lstmStates.append(c_t)
+            hiddenStates.append(h_t.unsqueeze(at: 0))
+            lstmStates.append(c_t.unsqueeze(at: 0))
         }
         
-//        hiddenStates = hiddenStates.map {$0.view(as: 1, batchSize, self.hiddenSize)}
-//        lstmStates = lstmStates.map {$0.view(as: 1, batchSize, self.hiddenSize)}
-        
-        //return stack(stack(hiddenStates), stack(lstmStates))
-        return h_p
+        if shouldReturnFullSequence {
+            return stack(stack(hiddenStates).unsqueeze(at: 0), stack(lstmStates).unsqueeze(at: 0))
+        } else {
+            return h_p
+        }
     }
 }
 
@@ -163,10 +165,12 @@ public class GRU<Element: RandomizableType>: Layer, Codable {
     
     public let hiddenSize: Int
     public let inputSize: Int
+    public let shouldReturnFullSequence: Bool
     
-    public init(inputSize: Int, hiddenSize: Int) {
+    public init(inputSize: Int, hiddenSize: Int, shouldReturnFullSequence: Bool = false) {
         self.inputSize = inputSize
         self.hiddenSize = hiddenSize
+        self.shouldReturnFullSequence = shouldReturnFullSequence
         
         W_z = Tensor(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         W_r = Tensor(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
@@ -232,38 +236,15 @@ public class GRU<Element: RandomizableType>: Layer, Codable {
             let h_t = h_t_partial_1 + z_t * h_t_partial_2
             h_p = h_t
             
-            hiddenStates.append(h_t)
+            hiddenStates.append(h_t.unsqueeze(at: 0))
         }
         
-        // Output shape: 1 x SequenceLength x BatchSize x HiddenSize
-        // return stack(hiddenStates).view(as: 1, seqlen, batchSize, hiddenSize)
-        
-        // Output shape: BatchSize x HiddenSize
-        return h_p
-    }
-}
-
-public class TakeLastHiddenState<Element: NumericType>: Layer {
-    public var trainable: Bool {
-        get {
-            return false
+        if shouldReturnFullSequence {
+            // Output shape: 1 x SequenceLength x BatchSize x HiddenSize
+            return stack(hiddenStates).view(as: 1, seqlen, batchSize, hiddenSize)
+        } else {
+            // Output shape: BatchSize x HiddenSize
+            return h_p
         }
-        set {
-            // noop
-        }
-    }
-    
-    public var parameters: [Tensor<Element>] {
-        return []
-    }
-    
-    public init() {}
-    
-    public func forward(_ inputs: [Tensor<Element>]) -> Tensor<Element> {
-        precondition(inputs.count == 1)
-        
-        let sequence = inputs[0]
-        
-        return sequence[0, sequence.shape[1]-1]
     }
 }

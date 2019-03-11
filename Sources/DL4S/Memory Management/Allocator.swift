@@ -7,20 +7,6 @@
 
 import Foundation
 
-extension Collection {
-    func minIndex(by comparator: (Element, Element) throws -> Bool) rethrows -> Index? {
-        var minIndex: Index? = nil
-        var minValue: Element? = nil
-        for index in indices {
-            if let mv = minValue, try !comparator(mv, self[index]) {
-                minIndex = index
-                minValue = self[index]
-            }
-        }
-        return minIndex
-    }
-}
-
 extension UnsafeMutableRawBufferPointer: Hashable {
     public static func == (lhs: UnsafeMutableRawBufferPointer, rhs: UnsafeMutableRawBufferPointer) -> Bool {
         return lhs.baseAddress == rhs.baseAddress && lhs.count == rhs.count
@@ -90,7 +76,7 @@ extension UnsafeMutableBufferPointer: Equatable {
     }
 }
 
-enum Allocator {
+enum CPUAllocator {
     private static let maxCache: Int = 1_000_000_000 // 1GB
     private static var usedCache: Int = 0
     

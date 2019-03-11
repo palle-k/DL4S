@@ -18,29 +18,27 @@ private struct MatmulOperation<Element: NumericType>: BinaryTensorOperation {
         }
         
         if let lhsGradient = lhs.gradient {
-            let temp2: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: rhs.count)
-            let temp3: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: lhs.count)
+            let temp2: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
+            let temp3: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
             
             Element.transpose(val: rhs.values.immutable, result: temp2, srcRows: rhs.shape[0], srcCols: rhs.shape[1])
             Element.matMul(lhs: vectorGradient.immutable, rhs: temp2.immutable, result: temp3, lhsRows: vector.shape[0], lhsCols: vector.shape[1], rhsCols: rhs.shape[0])
             Element.vAdd(lhs: temp3.immutable, rhs: lhsGradient.immutable, result: lhsGradient, count: lhs.count)
             
-            Allocator.free(temp2)
-            Allocator.free(temp3)
+            CPUAllocator.free(temp2)
+            CPUAllocator.free(temp3)
         }
         if let rhsGradient = rhs.gradient {
-            let temp1: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: lhs.count)
-            let temp4: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: rhs.count)
+            let temp1: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
+            let temp4: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
             
             Element.transpose(val: lhs.values.immutable, result: temp1, srcRows: lhs.shape[0], srcCols: lhs.shape[1])
             Element.matMul(lhs: temp1.immutable, rhs: vectorGradient.immutable, result: temp4, lhsRows: lhs.shape[1], lhsCols: lhs.shape[0], rhsCols: vector.shape[1])
             Element.vAdd(lhs: temp4.immutable, rhs: rhsGradient.immutable, result: rhsGradient, count: rhs.count)
             
-            Allocator.free(temp1)
-            Allocator.free(temp4)
+            CPUAllocator.free(temp1)
+            CPUAllocator.free(temp4)
         }
-        
-        backpropagate()
     }
     
     var symbol: String {
@@ -101,12 +99,10 @@ struct TransposeOperation<Element: NumericType>: UnaryTensorOperation {
         guard let vectorGradient = vector.gradient, let sourceGradient = source.gradient else {
             return
         }
-        let temp: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
+        let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
         Element.transpose(val: vectorGradient.immutable, result: temp, srcRows: vector.shape[0], srcCols: vector.shape[1])
         Element.vAdd(lhs: sourceGradient.immutable, rhs: temp.immutable, result: sourceGradient, count: vector.count)
-        Allocator.free(temp)
-        
-        backpropagate()
+        CPUAllocator.free(temp)
     }
     
     var symbol: String {

@@ -14,7 +14,6 @@ protocol TensorOperation {
     var sourceTensors: [Tensor<Element>] { get }
     func fillSourceGradients(fromResultGradients vector: Tensor<Element>)
     func zeroGradient()
-    func backpropagate()
     
     var symbol: String { get }
 }
@@ -28,13 +27,6 @@ extension TensorOperation {
     
     func asAny() -> AnyTensorOperation<Element> {
         return AnyTensorOperation(operation: self)
-    }
-    
-    func backpropagate() {
-        // Do nothing
-//        sourceTensors.filter {$0.requiresGradient}.forEach {
-//            $0._backwards()
-//        }
     }
     
 }

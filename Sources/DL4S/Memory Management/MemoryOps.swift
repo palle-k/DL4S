@@ -310,7 +310,7 @@ enum MemoryOps {
             let flattenedResultShape = resultShape.compactMap {$0}
             
             let resultCount = flattenedResultShape.reduce(1, *)
-            let resultBuffer: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: resultCount)
+            let resultBuffer: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: resultCount)
 
             recursiveRead(source: buffer.immutable, destination: resultBuffer, srcIndex: padded, srcStrides: strides, srcShape: shape)
             
@@ -340,7 +340,7 @@ enum MemoryOps {
         let flattenedResultShape = resultShape.compactMap {$0}
         
         let resultCount = flattenedResultShape.reduce(1, *)
-        let resultBuffer: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: resultCount)
+        let resultBuffer: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: resultCount)
         
         recursiveRead(source: buffer.immutable, destination: resultBuffer, srcIndex: padded, srcStrides: strides, srcShape: shape)
         

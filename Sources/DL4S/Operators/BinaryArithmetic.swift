@@ -55,8 +55,6 @@ private struct AdditionOperation<Element: NumericType>: BinaryTensorOperation {
                 }
             }
         }
-        
-        backpropagate()
     }
     
     var symbol: String {
@@ -111,8 +109,6 @@ private struct SubtractionOperation<Element: NumericType>: BinaryTensorOperation
                 }
             }
         }
-        
-        backpropagate()
     }
     
     var symbol: String {
@@ -166,8 +162,6 @@ private struct MultiplicationOperation<Element: NumericType>: BinaryTensorOperat
                 }
             }
         }
-    
-        backpropagate()
     }
     
     var symbol: String {
@@ -184,7 +178,7 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
             return
         }
         if lhs.dim == 0 {
-            let temp: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
+            let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
             
             if let lhsGradient = lhs.gradient {
                 // lhs.gradient += vectorGradient / rhs.values
@@ -200,10 +194,10 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
                 Element.vMA(lhs: temp.immutable, rhs: vectorGradient.immutable, add: rhsGradient.immutable, result: rhsGradient, count: rhs.count)
             }
             
-            Allocator.free(temp)
+            CPUAllocator.free(temp)
             
         } else if rhs.dim == 0 {
-            let temp: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: vector.count)
+            let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
             
             if let lhsGradient = lhs.gradient {
                 // lhs.gradient += vectorGradient / rhs.values
@@ -220,11 +214,11 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
                 rhsGradient.pointee = rhsGradient.pointee + Element.sum(val: temp.immutable, count: lhs.count)
             }
             
-            Allocator.free(temp)
+            CPUAllocator.free(temp)
             
         } else if lhs.dim < rhs.dim {
-            let tempA: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: rhs.count)
-            let tempB: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: lhs.count)
+            let tempA: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
+            let tempB: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
             
             if rhs.requiresGradient {
                 Element.vSquare(values: rhs.values.immutable, result: tempA, count: rhs.count)
@@ -254,13 +248,13 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
             if let rhsGradient = rhs.gradient {
                 Element.vAdd(lhs: rhsGradient.immutable, rhs: tempA.immutable, result: rhsGradient, count: rhs.count)
             }
-            Allocator.free(tempA)
-            Allocator.free(tempB)
+            CPUAllocator.free(tempA)
+            CPUAllocator.free(tempB)
             
         } else /*if rhs.dim <= lhs.dim*/ {
-            let lhsTimesGrad: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: lhs.count)
-            let negInvRhsSq: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: rhs.count)
-            let invRhs: UnsafeMutableBufferPointer<Element> = Allocator.allocate(count: rhs.count)
+            let lhsTimesGrad: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
+            let negInvRhsSq: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
+            let invRhs: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
             
             if rhs.requiresGradient {
                 Element.vSquare(values: rhs.values.immutable, result: negInvRhsSq, count: rhs.count)
@@ -289,12 +283,10 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
                 }
             }
             
-            Allocator.free(lhsTimesGrad)
-            Allocator.free(negInvRhsSq)
-            Allocator.free(invRhs)
+            CPUAllocator.free(lhsTimesGrad)
+            CPUAllocator.free(negInvRhsSq)
+            CPUAllocator.free(invRhs)
         }
-        
-        backpropagate()
     }
     
     var symbol: String {

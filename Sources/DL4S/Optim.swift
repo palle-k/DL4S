@@ -61,7 +61,7 @@ public class MomentumOptimizer<Element: NumericType>: Optimizer {
         self.learningRate = learningRate
         self.momentum = momentum
         self.parameters = parameters
-        self.momentumParams = parameters.map {Allocator.allocate(count: $0.count)}
+        self.momentumParams = parameters.map {CPUAllocator.allocate(count: $0.count)}
         
         for m in self.momentumParams {
             m.assign(repeating: 0)
@@ -69,7 +69,7 @@ public class MomentumOptimizer<Element: NumericType>: Optimizer {
     }
     
     deinit {
-        self.momentumParams.forEach(Allocator.free)
+        self.momentumParams.forEach(CPUAllocator.free)
     }
     
     public func reset() {
@@ -125,10 +125,10 @@ public class Adam<Element: NumericType>: Optimizer {
         self.beta2 = beta2
         self.epsilon = epsilon
         
-        self.firstMoment = parameters.map {Allocator.allocate(count: $0.count)}
-        self.secondMoment = parameters.map {Allocator.allocate(count: $0.count)}
-        self.cache = parameters.map {Allocator.allocate(count: $0.count)}
-        self.cache2 = parameters.map {Allocator.allocate(count: $0.count)}
+        self.firstMoment = parameters.map {CPUAllocator.allocate(count: $0.count)}
+        self.secondMoment = parameters.map {CPUAllocator.allocate(count: $0.count)}
+        self.cache = parameters.map {CPUAllocator.allocate(count: $0.count)}
+        self.cache2 = parameters.map {CPUAllocator.allocate(count: $0.count)}
         
         self.beta1t = beta1
         self.beta2t = beta2
@@ -139,7 +139,7 @@ public class Adam<Element: NumericType>: Optimizer {
     }
     
     deinit {
-        [firstMoment, secondMoment, cache, cache2].joined().forEach(Allocator.free)
+        [firstMoment, secondMoment, cache, cache2].joined().forEach(CPUAllocator.free)
     }
     
     public func reset() {

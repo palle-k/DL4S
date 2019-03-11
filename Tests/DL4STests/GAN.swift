@@ -44,11 +44,12 @@ class GANTests: XCTestCase {
         
         let network = Sequential(generator.asAny(), discriminator.asAny())
         
-        let optimGen = Adam(parameters: generator.parameters, learningRate: 0.001)
-        let optimDis = Adam(parameters: discriminator.parameters, learningRate: 0.001)
+        let optimGen = Adam(parameters: generator.parameters, learningRate: 0.0003)
+        let optimDis = Adam(parameters: discriminator.parameters, learningRate: 0.0003)
         
-        let batchSize = 16
+        let batchSize = 32
         let epochs = 10_000
+        let regularization: Float = 0.001
         
         let genInputs = Tensor<Float>(repeating: 0, shape: batchSize, 20)
         
@@ -63,7 +64,8 @@ class GANTests: XCTestCase {
             let realResult = discriminator.forward(real)
             let fakeResult = network.forward(genInputs)
 
-            let discriminatorLoss = -sum(log(realResult)) - sum(log(1 - fakeResult))
+            let dRegLoss = optimDis.parameters.map {l2loss($0, loss: regularization)}.reduce(0, +)
+            let discriminatorLoss = -mean(log(realResult)) - mean(log(1 - fakeResult)) + dRegLoss
 
             discriminatorLoss.backwards()
             optimDis.step()
@@ -75,8 +77,9 @@ class GANTests: XCTestCase {
                 Random.fillNormal(genInputs)
 
                 let genResult = network.forward(genInputs)
-                generatorLoss = -0.5 * sum(log(genResult)) // heuristic non-saturating loss
-//                generatorLoss = sum(log(1 - genResult)) // "-" is left out as the goal is to ascend the stochastic gradient
+                
+                let gRegLoss = optimDis.parameters.map {l2loss($0, loss: regularization)}.reduce(0, +)
+                generatorLoss = -0.5 * mean(log(genResult)) + gRegLoss // heuristic non-saturating loss
 
                 generatorLoss.backwards()
                 optimGen.step()
@@ -97,7 +100,7 @@ class GANTests: XCTestCase {
                 d2.isTrainingMode = true
 
                 for i in 0 ..< batchSize {
-                    let slice = genResult[i].unsqueeze(at: 0)
+                    let slice = genResult[i].T.unsqueeze(at: 0)
                     guard let image = NSImage(slice), let imgData = image.tiffRepresentation else {
                         continue
                     }

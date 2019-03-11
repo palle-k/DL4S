@@ -176,3 +176,28 @@ public class Dropout<Element: NumericType>: Layer {
         }
     }
 }
+
+public class Lambda<Element: NumericType, Input: NumericType>: Layer {
+    public var trainable: Bool {
+        get {
+            return false
+        }
+        set {
+            // noop
+        }
+    }
+    
+    public var parameters: [Tensor<Element>] {
+        return []
+    }
+    
+    public var transform: (Tensor<Input>) -> Tensor<Element>
+    
+    public init(_ transform: @escaping (Tensor<Input>) -> Tensor<Element>) {
+        self.transform = transform
+    }
+    
+    public func forward(_ inputs: [Tensor<Input>]) -> Tensor<Element> {
+        return transform(inputs[0])
+    }
+}

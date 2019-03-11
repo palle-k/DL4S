@@ -586,17 +586,9 @@ class VecTests: XCTestCase {
         print(result)
     }
     
-//    func testSoftmax() {
-//        let a = Tensor<Float>([
-//            [1.0, 2.0, 3.0, 4.0],
-//            [-4.0, -3.0, -2.0, -1.0],
-//            [1.0, 1.0, 0.0, 0.0],
-//            [0.0, 10.0, 0.0, 0.0]
-//        ], requiresGradient: true)
-//        let result = sum(softmax(a))
-//
-//        result.backwards()
-//
-//        print(a.gradientDescription!)
-//    }
+    func testNegativeIndices() {
+        let a = Tensor<Float>([[1,2,3,4],[5,6,7,8]])
+        
+        print(a[nil, -3])
+    }
 }
