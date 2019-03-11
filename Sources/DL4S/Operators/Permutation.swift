@@ -8,15 +8,15 @@
 import Foundation
 
 
-fileprivate struct PermutationOperation<Element: NumericType>: UnaryTensorOperation {
+fileprivate struct PermutationOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
     var symbol: String {
         return "permute"
     }
     
-    var source: Tensor<Element>
+    var source: Tensor<Element, DeviceType>
     var axisArangement: [Int]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let srcGrad = source.gradient, let dstGrad = vector.gradient else {
             return
         }
@@ -37,7 +37,7 @@ fileprivate struct PermutationOperation<Element: NumericType>: UnaryTensorOperat
 
 
 public extension Tensor {
-    func permuted(to axisArangement: [Int]) -> Tensor<Element> {
+    func permuted(to axisArangement: [Int]) -> Tensor<Element, DeviceType> {
         precondition(axisArangement.count == dim, "Axis arangement must have dimensionality of source tensor")
         precondition(Set(axisArangement).count == dim, "Axis arangement must not contain duplicate axes")
         
@@ -47,7 +47,7 @@ public extension Tensor {
             dstShape[axisArangement[i]] = shape[i]
         }
         
-        let result = Tensor<Element>(
+        let result = Tensor<Element, DeviceType>(
             shape: dstShape,
             parent: nil,
             context: requiresGradient ? PermutationOperation(source: self, axisArangement: axisArangement).asAny() : nil
@@ -68,7 +68,7 @@ public extension Tensor {
         return result
     }
     
-    func permuted(to axisArangement: Int...) -> Tensor<Element> {
+    func permuted(to axisArangement: Int...) -> Tensor<Element, DeviceType> {
         return permuted(to: axisArangement)
     }
 }

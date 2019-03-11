@@ -8,28 +8,28 @@
 import Foundation
 
 
-private struct AdditionOperation<Element: NumericType>: BinaryTensorOperation {
-    var lhs: Tensor<Element>
-    var rhs: Tensor<Element>
+private struct AdditionOperation<Element: NumericType, DeviceType: Device>: BinaryTensorOperation {
+    var lhs: Tensor<Element, DeviceType>
+    var rhs: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
         if lhs.dim == 0 {
             if let lhsGradient = lhs.gradient {
-                let sum = Element.sum(val: vectorGradient.immutable, count: vector.count)
+                let sum = DeviceType.EngineType.sum(val: vectorGradient, count: vector.count)
                 lhsGradient.pointee = lhsGradient.pointee + sum
             }
             if let rhsGradient = rhs.gradient {
-                Element.vAdd(lhs: rhsGradient.immutable, rhs: vectorGradient.immutable, result: rhsGradient, count: rhs.count)
+                DeviceType.EngineType.vAdd(lhs: rhsGradient, rhs: vectorGradient, result: rhsGradient, count: rhs.count)
             }
         } else if rhs.dim == 0 {
             if let lhsGradient = lhs.gradient {
-                Element.vAdd(lhs: lhsGradient.immutable, rhs: vectorGradient.immutable, result: lhsGradient, count: lhs.count)
+                DeviceType.EngineType.vAdd(lhs: lhsGradient, rhs: vectorGradient, result: lhsGradient, count: lhs.count)
             }
             if let rhsGradient = rhs.gradient {
-                let sum = Element.sum(val: vectorGradient.immutable, count: vector.count)
+                let sum = DeviceType.EngineType.sum(val: vectorGradient, count: vector.count)
                 rhsGradient.pointee = rhsGradient.pointee + sum
             }
         } else if lhs.dim < rhs.dim {
@@ -37,21 +37,21 @@ private struct AdditionOperation<Element: NumericType>: BinaryTensorOperation {
                 let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
                 for idx in iterate(Array(shapePrefix)) {
                     let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                    Element.vAdd(lhs: lhsGradient.immutable, rhs: vectorGradient.advanced(by: offset).immutable, result: lhsGradient, count: lhs.count)
+                    DeviceType.EngineType.vAdd(lhs: lhsGradient, rhs: vectorGradient.advanced(by: offset), result: lhsGradient, count: lhs.count)
                 }
             }
             if let rhsGradient = rhs.gradient {
-                Element.vAdd(lhs: rhsGradient.immutable, rhs: vectorGradient.immutable, result: rhsGradient, count: rhs.count)
+                DeviceType.EngineType.vAdd(lhs: rhsGradient, rhs: vectorGradient, result: rhsGradient, count: rhs.count)
             }
         } else /*if rhs.dim <= lhs.dim*/ {
             if let lhsGradient = lhs.gradient {
-                Element.vAdd(lhs: lhsGradient.immutable, rhs: vectorGradient.immutable, result: lhsGradient, count: lhs.count)
+                DeviceType.EngineType.vAdd(lhs: lhsGradient, rhs: vectorGradient, result: lhsGradient, count: lhs.count)
             }
             if let rhsGradient = rhs.gradient {
                 let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
                 for idx in iterate(Array(shapePrefix)) {
                     let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                    Element.vAdd(lhs: rhsGradient.immutable, rhs: vectorGradient.advanced(by: offset).immutable, result: rhsGradient, count: rhs.count)
+                    DeviceType.EngineType.vAdd(lhs: rhsGradient, rhs: vectorGradient.advanced(by: offset), result: rhsGradient, count: rhs.count)
                 }
             }
         }
@@ -62,28 +62,28 @@ private struct AdditionOperation<Element: NumericType>: BinaryTensorOperation {
     }
 }
 
-private struct SubtractionOperation<Element: NumericType>: BinaryTensorOperation {
-    var lhs: Tensor<Element>
-    var rhs: Tensor<Element>
+private struct SubtractionOperation<Element: NumericType, DeviceType: Device>: BinaryTensorOperation {
+    var lhs: Tensor<Element, DeviceType>
+    var rhs: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
         if lhs.dim == 0 {
             if let lhsGradient = lhs.gradient {
-                let sum = Element.sum(val: vectorGradient.immutable, count: vector.count)
+                let sum = DeviceType.EngineType.sum(val: vectorGradient, count: vector.count)
                 lhsGradient.pointee = lhsGradient.pointee + sum
             }
             if let rhsGradient = rhs.gradient {
-                Element.vSub(lhs: rhsGradient.immutable, rhs: vectorGradient.immutable, result: rhsGradient, count: rhs.count)
+                DeviceType.EngineType.vSub(lhs: rhsGradient, rhs: vectorGradient, result: rhsGradient, count: rhs.count)
             }
         } else if rhs.dim == 0 {
             if let lhsGradient = lhs.gradient {
-                Element.vAdd(lhs: lhsGradient.immutable, rhs: vectorGradient.immutable, result: lhsGradient, count: lhs.count)
+                DeviceType.EngineType.vAdd(lhs: lhsGradient, rhs: vectorGradient, result: lhsGradient, count: lhs.count)
             }
             if let rhsGradient = rhs.gradient {
-                let sum = Element.sum(val: vectorGradient.immutable, count: vector.count)
+                let sum = DeviceType.EngineType.sum(val: vectorGradient, count: vector.count)
                 rhsGradient.pointee = rhsGradient.pointee - sum
             }
         } else if lhs.dim < rhs.dim {
@@ -91,21 +91,21 @@ private struct SubtractionOperation<Element: NumericType>: BinaryTensorOperation
                 let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
                 for idx in iterate(Array(shapePrefix)) {
                     let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                    Element.vAdd(lhs: lhsGradient.immutable, rhs: vectorGradient.advanced(by: offset).immutable, result: lhsGradient, count: lhs.count)
+                    DeviceType.EngineType.vAdd(lhs: lhsGradient, rhs: vectorGradient.advanced(by: offset), result: lhsGradient, count: lhs.count)
                 }
             }
             if let rhsGradient = rhs.gradient {
-                Element.vSub(lhs: rhsGradient.immutable, rhs: vectorGradient.immutable, result: rhsGradient, count: rhs.count)
+                DeviceType.EngineType.vSub(lhs: rhsGradient, rhs: vectorGradient, result: rhsGradient, count: rhs.count)
             }
         } else /*if rhs.dim <= lhs.dim*/ {
             if let lhsGradient = lhs.gradient {
-                Element.vAdd(lhs: lhsGradient.immutable, rhs: vectorGradient.immutable, result: lhsGradient, count: lhs.count)
+                DeviceType.EngineType.vAdd(lhs: lhsGradient, rhs: vectorGradient, result: lhsGradient, count: lhs.count)
             }
             if let rhsGradient = rhs.gradient {
                 let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
                 for idx in iterate(Array(shapePrefix)) {
                     let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                    Element.vSub(lhs: rhsGradient.immutable, rhs: vectorGradient.advanced(by: offset).immutable, result: rhsGradient, count: rhs.count)
+                    DeviceType.EngineType.vSub(lhs: rhsGradient, rhs: vectorGradient.advanced(by: offset), result: rhsGradient, count: rhs.count)
                 }
             }
         }
@@ -117,37 +117,37 @@ private struct SubtractionOperation<Element: NumericType>: BinaryTensorOperation
     
 }
 
-private struct MultiplicationOperation<Element: NumericType>: BinaryTensorOperation {
-    var lhs: Tensor<Element>
-    var rhs: Tensor<Element>
+private struct MultiplicationOperation<Element: NumericType, DeviceType: Device>: BinaryTensorOperation {
+    var lhs: Tensor<Element, DeviceType>
+    var rhs: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
         if lhs.dim == 0 {
             if let lhsGradient = lhs.gradient {
-                lhsGradient.pointee = lhsGradient.pointee + Element.dot(lhs: vectorGradient.immutable, rhs: rhs.values.immutable, count: vector.count)
+                lhsGradient.pointee = lhsGradient.pointee + DeviceType.EngineType.dot(lhs: vectorGradient, rhs: rhs.values, count: vector.count)
             }
             if let rhsGradient = rhs.gradient {
-                Element.vsMulVAdd(lhs: vectorGradient.immutable, rhs: lhs.values.pointee, add: rhsGradient.immutable, result: rhsGradient, count: vector.count)
+                DeviceType.EngineType.vsMulVAdd(lhs: vectorGradient, rhs: lhs.values.pointee, add: rhsGradient, result: rhsGradient, count: vector.count)
             }
         } else if rhs.dim == 0 {
             if let lhsGradient = lhs.gradient {
-                Element.vsMulVAdd(lhs: vectorGradient.immutable, rhs: rhs.values.pointee, add: lhsGradient.immutable, result: lhsGradient, count: vector.count)
+                DeviceType.EngineType.vsMulVAdd(lhs: vectorGradient, rhs: rhs.values.pointee, add: lhsGradient, result: lhsGradient, count: vector.count)
             }
             if let rhsGradient = rhs.gradient {
-                rhsGradient.pointee = rhsGradient.pointee + Element.dot(lhs: vectorGradient.immutable, rhs: lhs.values.immutable, count: vector.count)
+                rhsGradient.pointee = rhsGradient.pointee + DeviceType.EngineType.dot(lhs: vectorGradient, rhs: lhs.values, count: vector.count)
             }
         } else if lhs.dim < rhs.dim {
             let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
                 if let lhsGradient = lhs.gradient {
-                    Element.vMA(lhs: rhs.values.advanced(by: offset).immutable, rhs: vectorGradient.advanced(by: offset).immutable, add: lhsGradient.immutable, result: lhsGradient, count: lhs.count)
+                    DeviceType.EngineType.vMA(lhs: rhs.values.advanced(by: offset), rhs: vectorGradient.advanced(by: offset), add: lhsGradient, result: lhsGradient, count: lhs.count)
                 }
                 if let rhsGradient = rhs.gradient {
-                    Element.vMA(lhs: lhs.values.immutable, rhs: vectorGradient.advanced(by: offset).immutable, add: rhsGradient.advanced(by: offset).immutable, result: rhsGradient.advanced(by: offset), count: lhs.count)
+                    DeviceType.EngineType.vMA(lhs: lhs.values, rhs: vectorGradient.advanced(by: offset), add: rhsGradient.advanced(by: offset), result: rhsGradient.advanced(by: offset), count: lhs.count)
                 }
             }
         } else /*if rhs.dim <= lhs.dim*/ {
@@ -155,10 +155,10 @@ private struct MultiplicationOperation<Element: NumericType>: BinaryTensorOperat
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
                 if let lhsGradient = lhs.gradient {
-                    Element.vMA(lhs: rhs.values.immutable, rhs: vectorGradient.advanced(by: offset).immutable, add: lhsGradient.advanced(by: offset).immutable, result: lhsGradient.advanced(by: offset), count: rhs.count)
+                    DeviceType.EngineType.vMA(lhs: rhs.values, rhs: vectorGradient.advanced(by: offset), add: lhsGradient.advanced(by: offset), result: lhsGradient.advanced(by: offset), count: rhs.count)
                 }
                 if let rhsGradient = rhs.gradient {
-                    Element.vMA(lhs: lhs.values.advanced(by: offset).immutable, rhs: vectorGradient.advanced(by: offset).immutable, add: rhsGradient.immutable, result: rhsGradient, count: rhs.count)
+                    DeviceType.EngineType.vMA(lhs: lhs.values.advanced(by: offset), rhs: vectorGradient.advanced(by: offset), add: rhsGradient, result: rhsGradient, count: rhs.count)
                 }
             }
         }
@@ -169,61 +169,61 @@ private struct MultiplicationOperation<Element: NumericType>: BinaryTensorOperat
     }
 }
 
-private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
-    var lhs: Tensor<Element>
-    var rhs: Tensor<Element>
+private struct DivisionOperation<Element: NumericType, DeviceType: Device>: BinaryTensorOperation {
+    var lhs: Tensor<Element, DeviceType>
+    var rhs: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
         if lhs.dim == 0 {
-            let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
+            let temp: Buffer<Element, DeviceType> = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: vector.count, type: Element.self)
             
             if let lhsGradient = lhs.gradient {
                 // lhs.gradient += vectorGradient / rhs.values
-                Element.vDiv(lhs: vectorGradient.immutable, rhs: rhs.values.immutable, result: temp, count: rhs.count)
-                let sum = Element.sum(val: temp.immutable, count: rhs.count)
+                DeviceType.EngineType.vDiv(lhs: vectorGradient, rhs: rhs.values, result: temp, count: rhs.count)
+                let sum = Element.sum(val: temp, count: rhs.count)
                 lhsGradient.pointee = lhsGradient.pointee + sum
             }
             if let rhsGradient = rhs.gradient {
                 // rhs.gradient += lhs.values / ((-1) * rhs.values ** 2) * vectorGradient
-                Element.vSquare(values: rhs.values.immutable, result: temp, count: rhs.count)
-                Element.vNeg(val: temp.immutable, result: temp, count: rhs.count)
-                Element.svDiv(lhs: lhs.values.pointee, rhs: temp.immutable, result: temp, count: rhs.count)
-                Element.vMA(lhs: temp.immutable, rhs: vectorGradient.immutable, add: rhsGradient.immutable, result: rhsGradient, count: rhs.count)
+                DeviceType.EngineType.vSquare(values: rhs.values, result: temp, count: rhs.count)
+                DeviceType.EngineType.vNeg(val: temp, result: temp, count: rhs.count)
+                DeviceType.EngineType.svDiv(lhs: lhs.values.pointee, rhs: temp, result: temp, count: rhs.count)
+                DeviceType.EngineType.vMA(lhs: temp, rhs: vectorGradient, add: rhsGradient, result: rhsGradient, count: rhs.count)
             }
             
-            CPUAllocator.free(temp)
+            DeviceType.MemoryOperatorType.free(temp)
             
         } else if rhs.dim == 0 {
-            let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
+            let temp: Buffer<Element, DeviceType> = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: vector.count, type: Element.self)
             
             if let lhsGradient = lhs.gradient {
                 // lhs.gradient += vectorGradient / rhs.values
-                Element.vsMul(lhs: vectorGradient.immutable, rhs: rhs.values.pointee, result: temp, count: vector.count)
-                Element.vAdd(lhs: temp.immutable, rhs: lhsGradient.immutable, result: lhsGradient, count: lhs.count)
+                DeviceType.EngineType.vsMul(lhs: vectorGradient, rhs: rhs.values.pointee, result: temp, count: vector.count)
+                Element.vAdd(lhs: temp, rhs: lhsGradient, result: lhsGradient, count: lhs.count)
             }
             if let rhsGradient = rhs.gradient {
                 // rhs.gradient += lhs.values / ((-1) * rhs.values ** 2) * vectorGradient
                 let rhsVal = rhs.values.pointee
                 let invRhsSq = 1 / (-rhsVal * rhsVal)
-                Element.vsMul(lhs: lhs.values.immutable, rhs: invRhsSq, result: temp, count: lhs.count)
-                Element.vMul(lhs: temp.immutable, rhs: vectorGradient.immutable, result: temp, count: lhs.count)
+                DeviceType.EngineType.vsMul(lhs: lhs.values, rhs: invRhsSq, result: temp, count: lhs.count)
+                DeviceType.EngineType.vMul(lhs: temp, rhs: vectorGradient, result: temp, count: lhs.count)
                 
-                rhsGradient.pointee = rhsGradient.pointee + Element.sum(val: temp.immutable, count: lhs.count)
+                rhsGradient.pointee = rhsGradient.pointee + Element.sum(val: temp, count: lhs.count)
             }
             
-            CPUAllocator.free(temp)
+            DeviceType.MemoryOperatorType.free(temp)
             
         } else if lhs.dim < rhs.dim {
-            let tempA: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
-            let tempB: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
+            let tempA = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: rhs.count, type: Element.self)
+            let tempB = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: lhs.count, type: Element.self)
             
             if rhs.requiresGradient {
-                Element.vSquare(values: rhs.values.immutable, result: tempA, count: rhs.count)
-                Element.vNeg(val: tempA.immutable, result: tempA, count: rhs.count)
-                Element.vDiv(lhs: vectorGradient.immutable, rhs: tempA.immutable, result: tempA, count: rhs.count)
+                DeviceType.EngineType.vSquare(values: rhs.values, result: tempA, count: rhs.count)
+                DeviceType.EngineType.vNeg(val: tempA, result: tempA, count: rhs.count)
+                DeviceType.EngineType.vDiv(lhs: vectorGradient, rhs: tempA, result: tempA, count: rhs.count)
             }
             
             
@@ -235,36 +235,36 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
                 // dvector/dlhs = 1/rhs * dvector
                 
                 if rhs.requiresGradient {
-                    Element.vMul(lhs: lhs.values.immutable, rhs: tempA.advanced(by: offset).immutable, result: tempA.advanced(by: offset), count: lhs.count)
+                    DeviceType.EngineType.vMul(lhs: lhs.values, rhs: tempA.advanced(by: offset), result: tempA.advanced(by: offset), count: lhs.count)
                 }
                 
                 if let lhsGradient = lhs.gradient {
-                    Element.vDiv(lhs: vectorGradient.advanced(by: offset).immutable, rhs: rhs.values.advanced(by: offset).immutable, result: tempB, count: lhs.count)
-                    Element.vAdd(lhs: lhsGradient.immutable, rhs: tempB.immutable, result: lhsGradient, count: lhs.count)
+                    DeviceType.EngineType.vDiv(lhs: vectorGradient.advanced(by: offset), rhs: rhs.values.advanced(by: offset), result: tempB, count: lhs.count)
+                    DeviceType.EngineType.vAdd(lhs: lhsGradient, rhs: tempB, result: lhsGradient, count: lhs.count)
                 }
                 
             }
             
             if let rhsGradient = rhs.gradient {
-                Element.vAdd(lhs: rhsGradient.immutable, rhs: tempA.immutable, result: rhsGradient, count: rhs.count)
+                DeviceType.EngineType.vAdd(lhs: rhsGradient, rhs: tempA, result: rhsGradient, count: rhs.count)
             }
-            CPUAllocator.free(tempA)
-            CPUAllocator.free(tempB)
+            DeviceType.MemoryOperatorType.free(tempA)
+            DeviceType.MemoryOperatorType.free(tempB)
             
         } else /*if rhs.dim <= lhs.dim*/ {
-            let lhsTimesGrad: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
-            let negInvRhsSq: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
-            let invRhs: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
+            let lhsTimesGrad = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: lhs.count, type: Element.self)
+            let negInvRhsSq = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: rhs.count, type: Element.self)
+            let invRhs = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: rhs.count, type: Element.self)
             
             if rhs.requiresGradient {
-                Element.vSquare(values: rhs.values.immutable, result: negInvRhsSq, count: rhs.count)
-                Element.svDiv(lhs: -1, rhs: negInvRhsSq.immutable, result: negInvRhsSq, count: rhs.count)
+                DeviceType.EngineType.vSquare(values: rhs.values, result: negInvRhsSq, count: rhs.count)
+                DeviceType.EngineType.svDiv(lhs: -1, rhs: negInvRhsSq, result: negInvRhsSq, count: rhs.count)
                 
-                Element.vMul(lhs: lhs.values.immutable, rhs: vectorGradient.immutable, result: lhsTimesGrad, count: lhs.count)
+                DeviceType.EngineType.vMul(lhs: lhs.values, rhs: vectorGradient, result: lhsTimesGrad, count: lhs.count)
             }
             
             if lhs.requiresGradient {
-                Element.svDiv(lhs: 1, rhs: rhs.values.immutable, result: invRhs, count: rhs.count)
+                DeviceType.EngineType.svDiv(lhs: 1, rhs: rhs.values, result: invRhs, count: rhs.count)
             }
             
             let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
@@ -275,17 +275,17 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
                 // dvector/drhs = (lhs * dvector) (/ -rhs^2)
                 
                 if let lhsGradient = lhs.gradient {
-                    Element.vMA(lhs: vectorGradient.advanced(by: offset).immutable, rhs: invRhs.immutable, add: lhsGradient.advanced(by: offset).immutable, result: lhsGradient.advanced(by: offset), count: rhs.count)
+                    DeviceType.EngineType.vMA(lhs: vectorGradient.advanced(by: offset), rhs: invRhs, add: lhsGradient.advanced(by: offset), result: lhsGradient.advanced(by: offset), count: rhs.count)
                 }
                 
                 if let rhsGradient = rhs.gradient {
-                    Element.vMA(lhs: lhsTimesGrad.advanced(by: offset).immutable, rhs: negInvRhsSq.immutable, add: rhsGradient.immutable, result: rhsGradient, count: rhs.count)
+                    DeviceType.EngineType.vMA(lhs: lhsTimesGrad.advanced(by: offset), rhs: negInvRhsSq, add: rhsGradient, result: rhsGradient, count: rhs.count)
                 }
             }
             
-            CPUAllocator.free(lhsTimesGrad)
-            CPUAllocator.free(negInvRhsSq)
-            CPUAllocator.free(invRhs)
+            DeviceType.MemoryOperatorType.free(lhsTimesGrad)
+            DeviceType.MemoryOperatorType.free(negInvRhsSq)
+            DeviceType.MemoryOperatorType.free(invRhs)
         }
     }
     
@@ -295,7 +295,7 @@ private struct DivisionOperation<Element: NumericType>: BinaryTensorOperation {
 }
 
 public extension Tensor {
-    static func + (lhs: Tensor<Element>, rhs: Tensor<Element>) -> Tensor<Element> {
+    static func + (lhs: Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) -> Tensor<Element, DeviceType> {
         precondition(
             (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
                 (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
@@ -304,36 +304,36 @@ public extension Tensor {
         
         let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
         
-        let result = Tensor<Element>(
+        let result = Tensor<Element, DeviceType>(
             shape: resultShape,
             parent: nil,
             context: AdditionOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
         if lhs.dim == 0 {
-            Element.vsAdd(lhs: rhs.values.immutable, rhs: lhs.values.pointee, result: result.values, count: result.count)
+            DeviceType.EngineType.vsAdd(lhs: rhs.values, rhs: lhs.values.pointee, result: result.values, count: result.count)
         } else if rhs.dim == 0 {
-            Element.vsAdd(lhs: lhs.values.immutable, rhs: rhs.values.pointee, result: result.values, count: result.count)
+            DeviceType.EngineType.vsAdd(lhs: lhs.values, rhs: rhs.values.pointee, result: result.values, count: result.count)
         } else if lhs.dim < rhs.dim {
             assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
             let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Element.vAdd(lhs: lhs.values.immutable, rhs: rhs.values.advanced(by: offset).immutable, result: result.values.advanced(by: offset), count: lhs.count)
+                DeviceType.EngineType.vAdd(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
             }
         } else /*if lhs.dim > rhs.dim*/ {
             assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
             let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Element.vAdd(lhs: lhs.values.advanced(by: offset).immutable, rhs: rhs.values.immutable, result: result.values.advanced(by: offset), count: rhs.count)
+                DeviceType.EngineType.vAdd(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
             }
         }
         
         return result
     }
     
-    static func - (lhs: Tensor<Element>, rhs: Tensor<Element>) -> Tensor<Element> {
+    static func - (lhs: Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) -> Tensor<Element, DeviceType> {
         precondition(
             (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
                 (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
@@ -342,37 +342,37 @@ public extension Tensor {
         
         let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
         
-        let result = Tensor<Element>(
+        let result = Tensor<Element, DeviceType>(
             shape: resultShape,
             parent: nil,
             context: SubtractionOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
         if lhs.dim == 0 {
-            Element.vsAdd(lhs: rhs.values.immutable, rhs: -lhs.values.pointee, result: result.values, count: result.count)
-            Element.vNeg(val: result.values.immutable, result: result.values, count: result.count)
+            DeviceType.EngineType.vsAdd(lhs: rhs.values, rhs: -lhs.values.pointee, result: result.values, count: result.count)
+            DeviceType.EngineType.vNeg(val: result.values, result: result.values, count: result.count)
         } else if rhs.dim == 0 {
-            Element.vsAdd(lhs: lhs.values.immutable, rhs: -rhs.values.pointee, result: result.values, count: result.count)
+            Element.vsAdd(lhs: lhs.values, rhs: -rhs.values.pointee, result: result.values, count: result.count)
         } else if lhs.dim < rhs.dim {
             assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
             let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Element.vSub(lhs: lhs.values.immutable, rhs: rhs.values.advanced(by: offset).immutable, result: result.values.advanced(by: offset), count: lhs.count)
+                DeviceType.EngineType.vSub(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
             }
         } else /*if lhs.dim > rhs.dim*/ {
             assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
             let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Element.vSub(lhs: lhs.values.advanced(by: offset).immutable, rhs: rhs.values.immutable, result: result.values.advanced(by: offset), count: rhs.count)
+                DeviceType.EngineType.vSub(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
             }
         }
         
         return result
     }
     
-    static func * (lhs: Tensor<Element>, rhs: Tensor<Element>) -> Tensor<Element> {
+    static func * (lhs: Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) -> Tensor<Element, DeviceType> {
         precondition(
             (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
                 (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
@@ -381,36 +381,36 @@ public extension Tensor {
         
         let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
         
-        let result = Tensor<Element>(
+        let result = Tensor<Element, DeviceType>(
             shape: resultShape,
             parent: nil,
             context: MultiplicationOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
         if lhs.dim == 0 {
-            Element.vsMul(lhs: rhs.values.immutable, rhs: lhs.values.pointee, result: result.values, count: result.count)
+            DeviceType.EngineType.vsMul(lhs: rhs.values, rhs: lhs.values.pointee, result: result.values, count: result.count)
         } else if rhs.dim == 0 {
-            Element.vsMul(lhs: lhs.values.immutable, rhs: rhs.values.pointee, result: result.values, count: result.count)
+            DeviceType.EngineType.vsMul(lhs: lhs.values, rhs: rhs.values.pointee, result: result.values, count: result.count)
         } else if lhs.dim < rhs.dim {
             assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
             let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Element.vMul(lhs: lhs.values.immutable, rhs: rhs.values.advanced(by: offset).immutable, result: result.values.advanced(by: offset), count: lhs.count)
+                DeviceType.EngineType.vMul(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
             }
         } else /*if lhs.dim > rhs.dim*/ {
             assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
             let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Element.vMul(lhs: lhs.values.advanced(by: offset).immutable, rhs: rhs.values.immutable, result: result.values.advanced(by: offset), count: rhs.count)
+                DeviceType.EngineType.vMul(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
             }
         }
         
         return result
     }
     
-    static func / (lhs: Tensor<Element>, rhs: Tensor<Element>) -> Tensor<Element> {
+    static func / (lhs: Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) -> Tensor<Element, DeviceType> {
         precondition(
             (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
                 (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
@@ -419,44 +419,44 @@ public extension Tensor {
         
         let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
         
-        let result = Tensor<Element>(
+        let result = Tensor<Element, DeviceType>(
             shape: resultShape,
             parent: nil,
             context: DivisionOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
         if lhs.dim == 0 {
-            Element.svDiv(lhs: lhs.values.pointee, rhs: rhs.values.immutable, result: result.values, count: result.count)
+            DeviceType.EngineType.svDiv(lhs: lhs.values.pointee, rhs: rhs.values, result: result.values, count: result.count)
         } else if rhs.dim == 0 {
-            Element.vsMul(lhs: lhs.values.immutable, rhs: 1 / rhs.values.pointee, result: result.values, count: result.count)
+            DeviceType.EngineType.vsMul(lhs: lhs.values, rhs: 1 / rhs.values.pointee, result: result.values, count: result.count)
         } else if lhs.dim < rhs.dim {
             assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
             let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Element.vDiv(lhs: lhs.values.immutable, rhs: rhs.values.advanced(by: offset).immutable, result: result.values.advanced(by: offset), count: lhs.count)
+                DeviceType.EngineType.vDiv(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
             }
         } else /*if lhs.dim > rhs.dim*/ {
             assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
             let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
             for idx in iterate(Array(shapePrefix)) {
                 let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Element.vDiv(lhs: lhs.values.advanced(by: offset).immutable, rhs: rhs.values.immutable, result: result.values.advanced(by: offset), count: rhs.count)
+                DeviceType.EngineType.vDiv(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
             }
         }
         
         return result
     }
     
-    static func += (lhs: inout Tensor<Element>, rhs: Tensor<Element>) {
+    static func += (lhs: inout Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) {
         lhs = lhs + rhs
     }
     
-    static func -= (lhs: inout Tensor<Element>, rhs: Tensor<Element>) {
+    static func -= (lhs: inout Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) {
         lhs = lhs - rhs
     }
 }
 
-public prefix func - <Element>(value: Tensor<Element>) -> Tensor<Element> {
+public prefix func - <Element, DeviceType>(value: Tensor<Element, DeviceType>) -> Tensor<Element, DeviceType> {
     return 0 - value
 }

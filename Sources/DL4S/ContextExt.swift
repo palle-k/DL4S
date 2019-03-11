@@ -7,16 +7,16 @@
 
 import Foundation
 
-private enum GraphNode<Element: NumericType> {
-    case tensor(Tensor<Element>)
-    case operation(AnyTensorOperation<Element>)
+private enum GraphNode<Element: NumericType, DeviceType: Device> {
+    case tensor(Tensor<Element, DeviceType>)
+    case operation(AnyTensorOperation<Element, DeviceType>)
     
     var id: String {
         switch self {
         case .operation(let op):
             return op.id
         case .tensor(let t):
-            return String(t.values.baseAddress?.hashValue ?? 0).replacingOccurrences(of: "-", with: "z")
+            return String(t.values.hashValue ?? 0).replacingOccurrences(of: "-", with: "z")
         }
     }
     
@@ -51,9 +51,9 @@ private enum GraphNode<Element: NumericType> {
     }
 }
 
-private struct Edge<Element: NumericType> {
-    let source: GraphNode<Element>
-    let destination: GraphNode<Element>
+private struct Edge<Element: NumericType, DeviceType: Device> {
+    let source: GraphNode<Element, DeviceType>
+    let destination: GraphNode<Element, DeviceType>
     
     var declaration: String {
         let srcId = source.id
@@ -65,7 +65,7 @@ private struct Edge<Element: NumericType> {
 
 extension TensorOperation {
     var graph: String {
-        var visited = Set<Tensor<Element>>()
+        var visited = Set<Tensor<Element, DeviceType>>()
         let (nodes, edges, selfNode) = collectGraph(visited: &visited)
         let nodeString = nodes.map {$0.declaration}.joined(separator: "\n\t")
         let edgeString = edges.map {$0.declaration}.joined(separator: "\n\t")
@@ -79,12 +79,12 @@ extension TensorOperation {
         """
     }
     
-    fileprivate func collectGraph(visited: inout Set<Tensor<Element>>) -> ([GraphNode<Element>], [Edge<Element>], GraphNode<Element>) {
+    fileprivate func collectGraph(visited: inout Set<Tensor<Element, DeviceType>>) -> ([GraphNode<Element, DeviceType>], [Edge<Element, DeviceType>], GraphNode<Element, DeviceType>) {
         let selfNode = GraphNode.operation(self.asAny())
         
         let sources = self.sourceTensors
         var nodes = [selfNode]
-        var edges: [Edge<Element>] = []
+        var edges: [Edge<Element, DeviceType>] = []
         
 //        var newVisited = visited.union(sources)
         

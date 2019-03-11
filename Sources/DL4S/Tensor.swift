@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral, Codable {
+public class Tensor<Element: NumericType, DeviceType: Device>: ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral, Codable {
     public typealias FloatLiteralType = Double
     public typealias IntegerLiteralType = Int32
     
@@ -36,35 +36,35 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
                 return
             }
             if newValue {
-                let gradient: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: count)
-                Element.fill(value: 0, result: gradient, count: count)
+                let gradient: Buffer<Element, DeviceType> = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: count, type: Element.self)
+                DeviceType.EngineType.fill(value: 0, result: gradient, count: count)
                 self.gradient = gradient
             } else {
-                gradient.map(CPUAllocator.free)
+                gradient.map(DeviceType.MemoryOperatorType.free)
             }
         }
     }
     
-    var values: UnsafeMutableBufferPointer<Element>
+    var values: Buffer<Element, DeviceType>
     
-    var gradient: UnsafeMutableBufferPointer<Element>?
+    var gradient: Buffer<Element, DeviceType>?
     
-    var context: AnyTensorOperation<Element>?
+    var context: AnyTensorOperation<Element, DeviceType>?
     
     // Specifies, whether the vector is the owner of the value pointers
-    var parent: Tensor<Element>?
+    var parent: Tensor<Element, DeviceType>?
     
     public init(repeating value: Element, shape: [Int], requiresGradient: Bool = false) {
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = CPUAllocator.allocate(count: count)
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: count, type: Element.self)
         self.gradient = nil
         self.context = nil
         self.parent = nil
         self.requiresGradient = requiresGradient
         
-        Element.fill(value: value, result: values, count: count)
+        DeviceType.EngineType.fill(value: value, result: values, count: count)
     }
     
     public convenience init(repeating value: Element, shape: Int..., requiresGradient: Bool = false) {
@@ -75,13 +75,13 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = CPUAllocator.allocate(count: count)
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: count, type: Element.self)
         self.gradient = nil
         self.context = nil
         self.parent = nil
         
-        for (i, el) in elements.enumerated() {
-            values[i] = el
+        elements.withUnsafeBufferPointer { ptr in
+            DeviceType.MemoryOperatorType.assign(from: ptr, to: self.values, count: self.count)
         }
         
         self.requiresGradient = requiresGradient
@@ -154,7 +154,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         )
     }
     
-    init(values: UnsafeMutableBufferPointer<Element>, gradient: UnsafeMutableBufferPointer<Element>?, shape: [Int], parent: Tensor<Element>? = nil, context: AnyTensorOperation<Element>?) {
+    init(values: Buffer<Element, DeviceType>, gradient: Buffer<Element, DeviceType>?, shape: [Int], parent: Tensor<Element, DeviceType>? = nil, context: AnyTensorOperation<Element, DeviceType>?) {
         self.values = values
         self.gradient = gradient
         self.shape = shape
@@ -162,51 +162,53 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         self.context = context
     }
     
-    init(values: UnsafeMutableBufferPointer<Element>, shape: [Int], parent: Tensor<Element>? = nil, context: AnyTensorOperation<Element>?) {
+    init(values: Buffer<Element, DeviceType>, shape: [Int], parent: Tensor<Element, DeviceType>? = nil, context: AnyTensorOperation<Element, DeviceType>?) {
         self.values = values
         self.gradient = nil
         self.shape = shape
         self.parent = parent
         self.context = context
         
-        Element.fill(value: 0, result: self.gradient!, count: count)
+        DeviceType.EngineType.fill(value: 0, result: self.gradient!, count: count)
         self.requiresGradient = context?.sourceTensors.contains(where: {$0.requiresGradient}) ?? false
     }
     
     public init(_ value: Element, requiresGradient: Bool = false) {
         self.shape = []
-        self.values = CPUAllocator.allocate(count: 1)
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: 1, type: Element.self)
         self.gradient = nil
         self.context = nil
         self.parent = nil
         
-        self.values.pointee = value
+        DeviceType.EngineType.fill(value: value, result: self.values, count: 1)
         self.requiresGradient = requiresGradient
     }
     
     public required init(floatLiteral value: Double) {
         self.shape = []
-        self.values = CPUAllocator.allocate(count: 1)
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: 1, type: Element.self)
         self.gradient = nil
         self.context = nil
         self.parent = nil
-        self.values.pointee = Element(value)
+        
+        DeviceType.EngineType.fill(value: Element(value), result: self.values, count: 1)
     }
     
     public required init(integerLiteral value: Int32) {
         self.shape = []
-        self.values = CPUAllocator.allocate(count: 1)
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: 1, type: Element.self)
         self.gradient = nil
         self.context = nil
         self.parent = nil
-        self.values.pointee = Element(value)
+        
+        DeviceType.EngineType.fill(value: Element(value), result: self.values, count: 1)
     }
     
-    init(shape: [Int], parent: Tensor<Element>?, context: AnyTensorOperation<Element>?) {
+    init(shape: [Int], parent: Tensor<Element, DeviceType>?, context: AnyTensorOperation<Element, DeviceType>?) {
         let count = shape.reduce(1, *)
         
         self.shape = shape
-        self.values = CPUAllocator.allocate(count: count)
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: count, type: Element.self)
         self.gradient = nil
         self.context = context
         self.parent = parent
@@ -226,45 +228,54 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let values = try container.decode([Element].self, forKey: .values)
         
         self.shape = shape
-        self.values = CPUAllocator.allocate(count: shape.reduce(1, *))
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: shape.reduce(1, *), type: Element.self)
         self.context = nil
         self.parent = nil
         
         if let gradient = try container.decode([Element]?.self, forKey: .gradient) {
-            self.gradient = CPUAllocator.allocate(count: shape.reduce(1, *))
+            self.gradient = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: shape.reduce(1, *), type: Element.self)
             gradient.withUnsafeBufferPointer { ptr in
-                self.gradient?.assign(from: ptr, count: ptr.count)
+                DeviceType.MemoryOperatorType.assign(from: ptr, to: self.gradient!, count: ptr.count)
             }
         } else {
             self.gradient = nil
         }
         
         values.withUnsafeBufferPointer { ptr in
-            self.values.assign(from: ptr, count: ptr.count)
+            DeviceType.MemoryOperatorType.assign(from: ptr, to: self.values, count: ptr.count)
         }
     }
     
     deinit {
         if parent == nil {
-            CPUAllocator.free(values)
-            gradient.map(CPUAllocator.free)
+            DeviceType.MemoryOperatorType.free(values)
+            gradient.map(DeviceType.MemoryOperatorType.free)
         }
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
+        var valueContainer = Array<Element>(repeating: 0, count: self.count)
+        valueContainer.withUnsafeMutableBufferPointer { ptr in
+            DeviceType.MemoryOperatorType.assign(from: self.values, to: ptr, count: self.count)
+        }
+        
         try container.encode(shape, forKey: .shape)
-        try container.encode(Array(self.values), forKey: .values)
+        try container.encode(valueContainer, forKey: .values)
         
         if let gradient = self.gradient {
-            try container.encode(Array(gradient), forKey: .gradient)
+            var gradientContainer = Array<Element>(repeating: 0, count: self.count)
+            gradientContainer.withUnsafeMutableBufferPointer { ptr in
+                DeviceType.MemoryOperatorType.assign(from: gradient, to: ptr, count: self.count)
+            }
+            try container.encode(gradientContainer, forKey: .gradient)
         } else {
             try container.encode([Element]?.none, forKey: .gradient)
         }
     }
     
-    func resignOwnership(to parent: Tensor<Element>) {
+    func resignOwnership(to parent: Tensor<Element, DeviceType>) {
         self.parent = parent
     }
     
@@ -276,12 +287,12 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         let existingValues = self.values
         let existingGradient = self.gradient
         
-        self.values = CPUAllocator.allocate(count: count)
-        self.values.assign(from: existingValues.immutable, count: count)
+        self.values = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: count, type: Element.self)
+        DeviceType.MemoryOperatorType.assign(from: existingValues, to: self.values, count: count)
         
         if let gradient = existingGradient {
-            self.gradient = CPUAllocator.allocate(count: count)
-            self.gradient!.assign(from: gradient.immutable, count: count)
+            self.gradient = DeviceType.MemoryOperatorType.allocateBuffer(withCapacity: count, type: Element.self)
+            DeviceType.MemoryOperatorType.assign(from: gradient, to: self.gradient!, count: count)
         }
         
         self.parent = nil
@@ -291,7 +302,7 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         guard let gradient = self.gradient else {
             return
         }
-        Element.fill(value: 0, result: gradient, count: count)
+        DeviceType.EngineType.fill(value: 0, result: gradient, count: count)
         context?.zeroGradient()
     }
     
@@ -303,10 +314,10 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         guard let gradient = self.gradient else {
             return
         }
-        Element.fill(value: 1, result: gradient, count: count)
+        DeviceType.EngineType.fill(value: 1, result: gradient, count: count)
         
-        var ordering: [Tensor<Element>] = []
-        var visited: Set<Tensor<Element>> = []
+        var ordering: [Tensor<Element, DeviceType>] = []
+        var visited: Set<Tensor<Element, DeviceType>> = []
         sorted(sorting: &ordering, visited: &visited)
         
         for tensor in ordering.reversed() {
@@ -333,17 +344,17 @@ public class Tensor<Element: NumericType>: ExpressibleByFloatLiteral, Expressibl
         }
     }
     
-    public func detached() -> Tensor<Element> {
+    public func detached() -> Tensor<Element, DeviceType> {
         let copy = Tensor(values: values, gradient: gradient, shape: shape, parent: self, context: nil)
         copy.ensureOwnership()
         return copy
     }
     
-    static func sameIdentity(_ vector1: Tensor<Element>, _ vector2: Tensor<Element>) -> Bool {
+    static func sameIdentity(_ vector1: Tensor<Element, DeviceType>, _ vector2: Tensor<Element, DeviceType>) -> Bool {
         return vector1.values == vector2.values && vector1.gradient == vector2.gradient
     }
     
-    static func sameIdentity(_ vector1: Tensor<Element>?, _ vector2: Tensor<Element>?) -> Bool {
+    static func sameIdentity(_ vector1: Tensor<Element, DeviceType>?, _ vector2: Tensor<Element, DeviceType>?) -> Bool {
         if let vector1 = vector1, let vector2 = vector2 {
             return sameIdentity(vector1, vector2)
         } else {

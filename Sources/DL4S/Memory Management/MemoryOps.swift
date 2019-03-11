@@ -8,7 +8,7 @@
 import Foundation
 
 
-private func recursiveRead<Element>(
+func recursiveRead<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
     srcIndex: [Int?],
@@ -63,7 +63,7 @@ private func recursiveRead<Element>(
     }
 }
 
-private func recursiveRead<Element>(
+func recursiveRead<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
     srcIndex: [Range<Int>?],
@@ -132,7 +132,7 @@ private func recursiveRead<Element>(
     }
 }
 
-private func recursiveWrite<Element>(
+func recursiveWrite<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
     dstIndex: [Int?],
@@ -186,7 +186,7 @@ private func recursiveWrite<Element>(
     }
 }
 
-private func recursiveWrite<Element>(
+func recursiveWrite<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
     dstIndex: [Range<Int>?],

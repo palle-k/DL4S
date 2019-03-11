@@ -8,15 +8,15 @@
 import Foundation
 
 
-fileprivate struct Conv2DOperation<Element: NumericType>: TensorOperation {
-    var sourceTensors: [Tensor<Element>] {
+fileprivate struct Conv2DOperation<Element: NumericType, DeviceType: Device>: TensorOperation {
+    var sourceTensors: [Tensor<Element, DeviceType>] {
         return [image, kernel]
     }
     
-    var image: Tensor<Element>
-    var kernel: Tensor<Element>
+    var image: Tensor<Element, DeviceType>
+    var kernel: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         fatalError()
     }
     
@@ -26,20 +26,20 @@ fileprivate struct Conv2DOperation<Element: NumericType>: TensorOperation {
 }
 
 
-public func conv2d<Element>(input: Tensor<Element>, kernel: Tensor<Element>) -> Tensor<Element> {
+public func conv2d<Element, DeviceType>(input: Tensor<Element, DeviceType>, kernel: Tensor<Element, DeviceType>) -> Tensor<Element, DeviceType> {
     precondition(4 ~= input.dim)
     precondition(kernel.dim == 4)
     
-    let result = Tensor<Element>(
+    let result = Tensor<Element, DeviceType>(
         shape: input.shape,
         parent: nil,
         context: Conv2DOperation(image: input, kernel: kernel).asAny()
     )
     
     fatalError("TODO: Batch processing")
-    Element.conv2d(
-        input: input.values.immutable,
-        filter: kernel.values.immutable,
+    DeviceType.EngineType.conv2d(
+        input: input.values,
+        filter: kernel.values,
         result: result.values,
         width: input.shape[3],
         height: input.shape[2],

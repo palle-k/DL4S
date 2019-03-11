@@ -8,10 +8,10 @@
 import Foundation
 
 
-private struct SumContext<Element: NumericType>: UnaryTensorOperation {
-    let source: Tensor<Element>
+private struct SumContext<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    let source: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradientItem, let sourceGradient = source.gradient else {
             return
         }
@@ -23,12 +23,12 @@ private struct SumContext<Element: NumericType>: UnaryTensorOperation {
     }
 }
 
-public func sum<Element>(_ vector: Tensor<Element>, axis: Int? = nil) -> Tensor<Element> {
+public func sum<Element, DeviceType>(_ vector: Tensor<Element, DeviceType>, axis: Int? = nil) -> Tensor<Element, DeviceType> {
     if let axis = axis {
         var resultShape: [Int] = vector.shape
         resultShape.remove(at: axis)
         
-        var result: Tensor<Element> = 0
+        var result: Tensor<Element, DeviceType> = 0
         
         for i in 0 ..< vector.shape[axis] {
             var idx = Array(repeating: Int?.none, count: vector.dim)
@@ -39,7 +39,7 @@ public func sum<Element>(_ vector: Tensor<Element>, axis: Int? = nil) -> Tensor<
         
         return result
     } else {
-        let result = Tensor<Element>(
+        let result = Tensor<Element, DeviceType>(
             shape: [],
             parent: nil,
             context: vector.requiresGradient ? SumContext(source: vector).asAny() : nil
@@ -49,11 +49,11 @@ public func sum<Element>(_ vector: Tensor<Element>, axis: Int? = nil) -> Tensor<
     }
 }
 
-private struct MaxContext<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+private struct MaxContext<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     let maxI: Int
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let sourceGradient = source.gradient, let vectorGradient = vector.gradientItem else {
             return
         }
@@ -65,11 +65,11 @@ private struct MaxContext<Element: NumericType>: UnaryTensorOperation {
     }
 }
 
-private struct MaxAxisContext<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+private struct MaxAxisContext<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     let maxIdxs: [[Int]]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         
     }
     
@@ -78,12 +78,12 @@ private struct MaxAxisContext<Element: NumericType>: UnaryTensorOperation {
     }
 }
 
-public func max<Element>(_ vector: Tensor<Element>, axis: Int? = nil) -> Tensor<Element> {
+public func max<Element, DeviceType>(_ vector: Tensor<Element, DeviceType>, axis: Int? = nil) -> Tensor<Element, DeviceType> {
     if let axis = axis {
         var resultShape: [Int] = vector.shape
         resultShape.remove(at: axis)
         
-        var result: Tensor<Element> = Tensor(repeating: 0, shape: resultShape)
+        var result: Tensor<Element, DeviceType> = Tensor(repeating: 0, shape: resultShape)
         
         for idx in iterate(resultShape) {
             var srcIdx: [Int?] = idx.map {$0}
@@ -104,15 +104,15 @@ public func max<Element>(_ vector: Tensor<Element>, axis: Int? = nil) -> Tensor<
 }
 
 
-public func argmax<Element>(_ vector: Tensor<Element>) -> Int {
+public func argmax<Element, DeviceType>(_ vector: Tensor<Element, DeviceType>) -> Int {
     let (arg, _) = Element.argmax(values: vector.values.immutable, count: vector.count)
     return arg
 }
 
-private struct StackOperation<Element: NumericType>: TensorOperation {
-    var sourceTensors: [Tensor<Element>]
+private struct StackOperation<Element: NumericType, DeviceType: Device>: TensorOperation {
+    var sourceTensors: [Tensor<Element, DeviceType>]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
@@ -133,12 +133,12 @@ private struct StackOperation<Element: NumericType>: TensorOperation {
     }
 }
 
-public func stack<Element>(_ vectors: [Tensor<Element>]) -> Tensor<Element> {
+public func stack<Element, DeviceType>(_ vectors: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
     precondition(vectors.allSatisfy {$0.shape.dropFirst() == vectors[0].shape.dropFirst()}, "All vectors must have same shape except for first dimension")
     
     let resultShape = [vectors.reduce(0, {$0 + $1.shape[0]})] + Array(vectors[0].shape.dropFirst())
     
-    let resultVector = Tensor<Element>(
+    let resultVector = Tensor<Element, DeviceType>(
         shape: resultShape,
         parent: nil,
         context: vectors.contains(where: {$0.requiresGradient}) ? StackOperation(sourceTensors: vectors).asAny() : nil
@@ -155,6 +155,6 @@ public func stack<Element>(_ vectors: [Tensor<Element>]) -> Tensor<Element> {
     return resultVector
 }
 
-public func stack<Element>(_ vectors: Tensor<Element>...) -> Tensor<Element> {
+public func stack<Element, DeviceType>(_ vectors: Tensor<Element, DeviceType>...) -> Tensor<Element, DeviceType> {
     return stack(vectors)
 }

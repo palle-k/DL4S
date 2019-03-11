@@ -7,15 +7,15 @@
 
 import Foundation
 
-fileprivate struct ReshapeOperation<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+fileprivate struct ReshapeOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let sourceGradient = source.gradient, let vectorGradient = vector.gradient else {
             return
         }
         if !Tensor.sameIdentity(source, vector) {
-            Element.vAdd(lhs: vectorGradient.immutable, rhs: sourceGradient.immutable, result: sourceGradient, count: source.count)
+            DeviceType.EngineType.vAdd(lhs: vectorGradient, rhs: sourceGradient, result: sourceGradient, count: source.count)
         }
     }
     
@@ -25,11 +25,11 @@ fileprivate struct ReshapeOperation<Element: NumericType>: UnaryTensorOperation 
 }
 
 public extension Tensor {
-    func view(as shape: Int...) -> Tensor<Element> {
+    func view(as shape: Int...) -> Tensor<Element, DeviceType> {
         return view(as: shape)
     }
     
-    func view(as shape: [Int]) -> Tensor<Element> {
+    func view(as shape: [Int]) -> Tensor<Element, DeviceType> {
         precondition(shape.count(where: {$0 == -1}) <= 1, "The size of at most one dimension can be unknown (-1).")
         precondition(shape.allSatisfy {$0 >= -1}, "All dimensions must be greater than or equal to -1.")
         precondition(shape.contains(-1) || shape.reduce(1, *) == self.count, "Number of elements in result must be equal to number of elements in source")
@@ -49,18 +49,18 @@ public extension Tensor {
         )
     }
     
-    func viewAsScalar() -> Tensor<Element> {
+    func viewAsScalar() -> Tensor<Element, DeviceType> {
         precondition(count == 1, "Only vectors with exactly one element can be viewed as a scalar.")
         
         return Tensor(values: values, gradient: gradient, shape: [], parent: self, context: ReshapeOperation(source: self).asAny())
     }
 }
 
-fileprivate struct ReplaceOperation<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+fileprivate struct ReplaceOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     let location: [Int?]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         
     }
     
@@ -69,19 +69,19 @@ fileprivate struct ReplaceOperation<Element: NumericType>: UnaryTensorOperation 
     }
 }
 
-fileprivate struct SelectOperation<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+fileprivate struct SelectOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     
     let location: [Int?]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
         guard let (buffer, isCopy, _) = source.gradient(from: location) else {
             return
         }
-        Element.vAdd(lhs: buffer.immutable, rhs: vectorGradient.immutable, result: buffer, count: vector.count)
+        DeviceType.EngineType.vAdd(lhs: buffer, rhs: vectorGradient, result: buffer, count: vector.count)
         
         if isCopy {
             source.setGradient(at: location, source: buffer.immutable, sourceShape: vector.shape)
@@ -93,11 +93,11 @@ fileprivate struct SelectOperation<Element: NumericType>: UnaryTensorOperation {
     }
 }
 
-fileprivate struct RangeReplaceOperation<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+fileprivate struct RangeReplaceOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     let location: [Range<Int>?]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         
     }
     
@@ -106,22 +106,22 @@ fileprivate struct RangeReplaceOperation<Element: NumericType>: UnaryTensorOpera
     }
 }
 
-fileprivate struct RangeSelectOperation<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+fileprivate struct RangeSelectOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     
     let location: [Range<Int>?]
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
         guard let (buffer, isCopy, _) = source.gradient(from: location) else {
             return
         }
-        Element.vAdd(lhs: buffer.immutable, rhs: vectorGradient.immutable, result: buffer, count: vector.count)
+        DeviceType.EngineType.vAdd(lhs: buffer, rhs: vectorGradient, result: buffer, count: vector.count)
         
         if isCopy {
-            source.setGradient(at: location, source: buffer.immutable, sourceShape: vector.shape)
+            source.setGradient(at: location, source: buffer, sourceShape: vector.shape)
         }
     }
     
@@ -131,7 +131,7 @@ fileprivate struct RangeSelectOperation<Element: NumericType>: UnaryTensorOperat
 }
 
 public extension Tensor {
-    subscript(index: [Int?]) -> Tensor<Element> {
+    subscript(index: [Int?]) -> Tensor<Element, DeviceType> {
         get {
             let index = zip(index, shape).map { idx, dim -> Int? in
                 if let idx = idx, idx < 0 {
@@ -140,10 +140,10 @@ public extension Tensor {
                     return idx
                 }
             }
-            let (val, isCopy, shape) = MemoryOps.get(slice: index, of: values, with: self.shape)
-            let grad: UnsafeMutableBufferPointer<Element>?
+            let (val, isCopy, shape) = DeviceType.MemoryOperatorType.get(slice: index, of: values, with: self.shape)
+            let grad: Buffer<Element, DeviceType>?
             if let gradient = self.gradient {
-                let (g, _, _) = MemoryOps.get(slice: index, of: gradient, with: self.shape)
+                let (g, _, _) = DeviceType.MemoryOperatorType.get(slice: index, of: gradient, with: self.shape)
                 grad = g
             } else {
                 grad = nil
@@ -168,15 +168,15 @@ public extension Tensor {
                 fatalError("Assigning from a single value not supported yet.")
             }
             
-            MemoryOps.set(slice: index, of: values, with: shape, from: slice.values.immutable, with: slice.shape)
+            DeviceType.MemoryOperatorType.set(slice: index, of: values, with: shape, from: slice.values, with: slice.shape)
             if let gradient = self.gradient, let sliceGradient = slice.gradient {
-                MemoryOps.set(slice: index, of: gradient, with: shape, from: sliceGradient.immutable, with: slice.shape)
+                DeviceType.MemoryOperatorType.set(slice: index, of: gradient, with: shape, from: sliceGradient, with: slice.shape)
             }
             self.context = ReplaceOperation(source: slice, location: index).asAny()
         }
     }
     
-    subscript(index: Int?...) -> Tensor<Element> {
+    subscript(index: Int?...) -> Tensor<Element, DeviceType> {
         get {
             return self[index]
         }
@@ -188,12 +188,12 @@ public extension Tensor {
 
 
 public extension Tensor {
-    subscript(index: [Range<Int>?]) -> Tensor<Element> {
+    subscript(index: [Range<Int>?]) -> Tensor<Element, DeviceType> {
         get {
-            let (val, isCopy, shape) = MemoryOps.get(slice: index, of: values, with: self.shape)
-            let grad: UnsafeMutableBufferPointer<Element>?
+            let (val, isCopy, shape) = DeviceType.MemoryOperatorType.get(slice: index, of: values, with: self.shape)
+            let grad: Buffer<Element, DeviceType>?
             if let gradient = self.gradient {
-                let (g, _, _) = MemoryOps.get(slice: index, of: gradient, with: self.shape)
+                let (g, _, _) = DeviceType.MemoryOperatorType.get(slice: index, of: gradient, with: self.shape)
                 grad = g
             } else {
                 grad = nil
@@ -211,15 +211,15 @@ public extension Tensor {
                 fatalError("Assigning from a single value not supported yet.")
             }
             
-            MemoryOps.set(slice: index, of: values, with: shape, from: slice.values.immutable, with: slice.shape)
+            DeviceType.MemoryOperatorType.set(slice: index, of: values, with: shape, from: slice.values, with: slice.shape)
             if let gradient = self.gradient, let sliceGradient = slice.gradient {
-                MemoryOps.set(slice: index, of: gradient, with: shape, from: sliceGradient.immutable, with: slice.shape)
+                DeviceType.MemoryOperatorType.set(slice: index, of: gradient, with: shape, from: sliceGradient, with: slice.shape)
             }
             self.context = RangeReplaceOperation(source: slice, location: index).asAny()
         }
     }
     
-    subscript(index: Range<Int>?...) -> Tensor<Element> {
+    subscript(index: Range<Int>?...) -> Tensor<Element, DeviceType> {
         get {
             return self[index]
         }
@@ -231,11 +231,11 @@ public extension Tensor {
 
 
 public extension Tensor {
-    func squeeze() -> Tensor<Element> {
+    func squeeze() -> Tensor<Element, DeviceType> {
         return self.view(as: shape.filter {$0 != 1})
     }
     
-    func unsqueeze(at index: Int) -> Tensor<Element> {
+    func unsqueeze(at index: Int) -> Tensor<Element, DeviceType> {
         var newShape = shape
         newShape.insert(1, at: index)
         

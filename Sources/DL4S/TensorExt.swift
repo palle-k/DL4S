@@ -172,48 +172,48 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
 
 // Memory operation extensions
 extension Tensor {
-    func buffer(from indices: [Int?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
-        return MemoryOps.get(slice: indices, of: values, with: shape)
+    func buffer(from indices: [Int?]) -> (Buffer<Element, DeviceType>, Bool, [Int]) {
+        return DeviceType.EngineType.get(slice: indices, of: values, with: shape)
     }
     
-    func setBuffer(at indices: [Int?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
-        MemoryOps.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
+    func setBuffer(at indices: [Int?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
+        DeviceType.EngineType.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
     }
     
-    func gradient(from indices: [Int?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int])? {
+    func gradient(from indices: [Int?]) -> (Buffer<Element, DeviceType>, Bool, [Int])? {
         guard let gradient = self.gradient else {
             return nil
         }
-        return MemoryOps.get(slice: indices, of: gradient, with: shape)
+        return DeviceType.EngineType.get(slice: indices, of: gradient, with: shape)
     }
     
-    func setGradient(at indices: [Int?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
+    func setGradient(at indices: [Int?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
         guard let gradient = self.gradient else {
             return
         }
-        MemoryOps.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
+        DeviceType.EngineType.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
     }
     
-    func buffer(from indices: [Range<Int>?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
-        return MemoryOps.get(slice: indices, of: values, with: shape)
+    func buffer(from indices: [Range<Int>?]) -> (Buffer<Element, DeviceType>, Bool, [Int]) {
+        return DeviceType.EngineType.get(slice: indices, of: values, with: shape)
     }
     
-    func setBuffer(at indices: [Range<Int>?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
-        MemoryOps.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
+    func setBuffer(at indices: [Range<Int>?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
+        DeviceType.EngineType.set(slice: indices, of: values, with: shape, from: source, with: sourceShape)
     }
     
-    func gradient(from indices: [Range<Int>?]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int])? {
+    func gradient(from indices: [Range<Int>?]) -> (Buffer<Element, DeviceType>, Bool, [Int])? {
         guard let gradient = self.gradient else {
             return nil
         }
-        return MemoryOps.get(slice: indices, of: gradient, with: shape)
+        return DeviceType.EngineType.get(slice: indices, of: gradient, with: shape)
     }
     
-    func setGradient(at indices: [Range<Int>?], source: UnsafeBufferPointer<Element>, sourceShape: [Int]) {
+    func setGradient(at indices: [Range<Int>?], source: Buffer<Element, DeviceType>, sourceShape: [Int]) {
         guard let gradient = self.gradient else {
             return
         }
-        MemoryOps.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
+        DeviceType.EngineType.set(slice: indices, of: gradient, with: shape, from: source, with: sourceShape)
     }
 }
 
@@ -231,15 +231,15 @@ extension Tensor: Hashable {
         }
     }
     
-    public static func == (lhs: Tensor<Element>, rhs: Tensor<Element>) -> Bool {
+    public static func == (lhs: Tensor<Element, DeviceType>, rhs: Tensor<Element, DeviceType>) -> Bool {
         return lhs.shape == rhs.shape && lhs.values == rhs.values && lhs.gradient == rhs.gradient
     }
 }
 
 public extension Tensor {
-    static func diagonal(size: Int, value: Element) -> Tensor<Element> {
-        let matrix = Tensor<Element>(repeating: 0, shape: size, size)
-        Element.fill(value: value, result: matrix.values, stride: size + 1, count: matrix.count)
+    static func diagonal(size: Int, value: Element) -> Tensor<Element, DeviceType> {
+        let matrix = Tensor<Element, DeviceType>(repeating: 0, shape: size, size)
+        DeviceType.EngineType.fill(value: value, result: matrix.values, stride: size + 1, count: matrix.count)
         return matrix
     }
 }
@@ -258,7 +258,7 @@ public extension Tensor {
 }
 
 extension Tensor {
-    func sorted(sorting: inout [Tensor<Element>], visited: inout Set<Tensor<Element>>) {
+    func sorted(sorting: inout [Tensor<Element, DeviceType>], visited: inout Set<Tensor<Element, DeviceType>>) {
         guard !visited.contains(self), self.requiresGradient else {
             return
         }
@@ -273,8 +273,8 @@ extension Tensor {
 }
 
 extension Tensor where Element == Int32 {
-    func toOneHot(dim: Int) -> Tensor<Float> {
-        let result = Tensor<Float>(repeating: 0, shape: self.shape + [dim])
+    func toOneHot(dim: Int) -> Tensor<Float, DeviceType> {
+        let result = Tensor<Float, DeviceType>(repeating: 0, shape: self.shape + [dim])
         
         for idx in iterate(self.shape) {
             let target = Int(self[idx].item)
@@ -286,13 +286,13 @@ extension Tensor where Element == Int32 {
 }
 
 extension Tensor {
-    func toLabels() -> Tensor<Int32> {
-        let result = Tensor<Int32>(repeating: 0, shape: shape.dropLast())
+    func toLabels() -> Tensor<Int32, DeviceType> {
+        let result = Tensor<Int32, DeviceType>(repeating: 0, shape: shape.dropLast())
         
         for idx in iterate(self.shape.dropLast()) {
             let slice = self[idx]
-            let (arg, _) = Element.argmax(values: slice.values.immutable, count: slice.count)
-            result[idx] = Tensor<Int32>(Int32(arg))
+            let (arg, _) = DeviceType.EngineType.argmax(values: slice.values, count: slice.count)
+            result[idx] = Tensor<Int32, DeviceType>(Int32(arg))
         }
         
         return result

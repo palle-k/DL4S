@@ -8,18 +8,18 @@
 import Foundation
 
 
-private struct MatmulOperation<Element: NumericType>: BinaryTensorOperation {
-    var lhs: Tensor<Element>
-    var rhs: Tensor<Element>
+private struct MatmulOperation<Element: NumericType, DeviceType: Device>: BinaryTensorOperation {
+    var lhs: Tensor<Element, DeviceType>
+    var rhs: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient else {
             return
         }
         
         if let lhsGradient = lhs.gradient {
-            let temp2: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
-            let temp3: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
+            let temp2: UnsafeMutableBufferPointer<Element, DeviceType> = CPUAllocator.allocate(count: rhs.count)
+            let temp3: UnsafeMutableBufferPointer<Element, DeviceType> = CPUAllocator.allocate(count: lhs.count)
             
             Element.transpose(val: rhs.values.immutable, result: temp2, srcRows: rhs.shape[0], srcCols: rhs.shape[1])
             Element.matMul(lhs: vectorGradient.immutable, rhs: temp2.immutable, result: temp3, lhsRows: vector.shape[0], lhsCols: vector.shape[1], rhsCols: rhs.shape[0])
@@ -29,8 +29,8 @@ private struct MatmulOperation<Element: NumericType>: BinaryTensorOperation {
             CPUAllocator.free(temp3)
         }
         if let rhsGradient = rhs.gradient {
-            let temp1: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: lhs.count)
-            let temp4: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: rhs.count)
+            let temp1: UnsafeMutableBufferPointer<Element, DeviceType> = CPUAllocator.allocate(count: lhs.count)
+            let temp4: UnsafeMutableBufferPointer<Element, DeviceType> = CPUAllocator.allocate(count: rhs.count)
             
             Element.transpose(val: lhs.values.immutable, result: temp1, srcRows: lhs.shape[0], srcCols: lhs.shape[1])
             Element.matMul(lhs: temp1.immutable, rhs: vectorGradient.immutable, result: temp4, lhsRows: lhs.shape[1], lhsCols: lhs.shape[0], rhsCols: vector.shape[1])
@@ -47,7 +47,7 @@ private struct MatmulOperation<Element: NumericType>: BinaryTensorOperation {
 }
 
 
-public func mmul<Element: NumericType>(_ lhs: Tensor<Element>, _ rhs: Tensor<Element>) -> Tensor<Element> {
+public func mmul<Element: NumericType, DeviceType: Device>(_ lhs: Tensor<Element, DeviceType>, _ rhs: Tensor<Element, DeviceType>) -> Tensor<Element, DeviceType> {
     precondition(1 ... 2 ~= lhs.dim && 1 ... 2 ~= rhs.dim, "Matrix multiplication operands must both be one or two dimensional.")
     // lhs.dim == 2 and rhs.dim == 2 implies matching shapes
     precondition(!(lhs.dim == 2 && rhs.dim == 2) || lhs.shape[1] == rhs.shape[0], "Matrix multiplication operands must have matching shapes.")
@@ -55,8 +55,8 @@ public func mmul<Element: NumericType>(_ lhs: Tensor<Element>, _ rhs: Tensor<Ele
     let resultShape: [Int]
     let resultViewShape: [Int]
     
-    let lhsView: Tensor<Element>
-    let rhsView: Tensor<Element>
+    let lhsView: Tensor<Element, DeviceType>
+    let rhsView: Tensor<Element, DeviceType>
     
     switch (lhs.dim, rhs.dim) {
     case (1, 1):
@@ -81,7 +81,7 @@ public func mmul<Element: NumericType>(_ lhs: Tensor<Element>, _ rhs: Tensor<Ele
         resultViewShape = [lhs.shape[0], rhs.shape[1]]
     }
     
-    let result = Tensor<Element>(
+    let result = Tensor<Element, DeviceType>(
         shape: resultShape,
         parent: nil,
         context: lhs.requiresGradient || rhs.requiresGradient ? MatmulOperation(lhs: lhsView, rhs: rhsView).asAny() : nil
@@ -92,14 +92,14 @@ public func mmul<Element: NumericType>(_ lhs: Tensor<Element>, _ rhs: Tensor<Ele
     return result.view(as: resultViewShape)
 }
 
-struct TransposeOperation<Element: NumericType>: UnaryTensorOperation {
-    var source: Tensor<Element>
+struct TransposeOperation<Element: NumericType, DeviceType: Device>: UnaryTensorOperation {
+    var source: Tensor<Element, DeviceType>
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         guard let vectorGradient = vector.gradient, let sourceGradient = source.gradient else {
             return
         }
-        let temp: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: vector.count)
+        let temp: UnsafeMutableBufferPointer<Element, DeviceType> = CPUAllocator.allocate(count: vector.count)
         Element.transpose(val: vectorGradient.immutable, result: temp, srcRows: vector.shape[0], srcCols: vector.shape[1])
         Element.vAdd(lhs: sourceGradient.immutable, rhs: temp.immutable, result: sourceGradient, count: vector.count)
         CPUAllocator.free(temp)
@@ -111,13 +111,13 @@ struct TransposeOperation<Element: NumericType>: UnaryTensorOperation {
 }
 
 public extension Tensor {
-    var T: Tensor<Element> {
+    var T: Tensor<Element, DeviceType> {
         precondition(dim <= 2, "Dimensionality for vector transpose must be smaller than or equal to 2")
         
         if dim <= 1 {
             return self
         } else {
-            let result = Tensor<Element>(
+            let result = Tensor<Element, DeviceType>(
                 shape: [self.shape[1], self.shape[0]],
                 parent: nil,
                 context: requiresGradient ? TransposeOperation(source: self).asAny() : nil

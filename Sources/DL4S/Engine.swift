@@ -8,22 +8,34 @@
 import Foundation
 
 
-protocol Device {
-    associatedtype AllocatorType: Allocator
-    associatedtype EngineType: Engine
+public protocol Device {
+    associatedtype MemoryOperatorType: MemoryOperators where MemoryOperatorType.DeviceType == Self
+    associatedtype EngineType: Engine where EngineType.DeviceType == Self
 }
 
 
-protocol Allocator {
-    associatedtype DeviceType: Device where DeviceType.AllocatorType == Self
-    associatedtype RawBufferType
+public protocol MemoryOperators {
+    associatedtype DeviceType: Device where DeviceType.MemoryOperatorType == Self
+    associatedtype RawBufferType: Hashable
     
     static func allocateBuffer<Element>(withCapacity: Int, type: Element.Type) -> Buffer<Element, DeviceType>
     static func free<Element>(_ buffer: Buffer<Element, DeviceType>)
+    
+    static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, DeviceType>, count: Int)
+    static func assign<Element>(from source: Buffer<Element, DeviceType>, to destination: Buffer<Element, DeviceType>, count: Int)
+    static func assign<Element>(from source: Buffer<Element, DeviceType>, to destination: UnsafeMutableBufferPointer<Element>, count: Int)
+    
+    static func getValue<Element>(from source: Buffer<Element, DeviceType>) -> Element
+    static func getSize<Element>(of buffer: Buffer<Element, DeviceType>) -> Int
+    
+    static func get<Element>(slice: [Int?], of buffer: Buffer<Element, DeviceType>, with shape: [Int]) -> (Buffer<Element, DeviceType>, Bool, [Int])
+    static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, DeviceType>, with shape: [Int]) -> (Buffer<Element, DeviceType>, Bool, [Int])
+    static func set<Element>(slice: [Int?], of buffer: Buffer<Element, DeviceType>, with dstShape: [Int], from source: Buffer<Element, DeviceType>, with sourceShape: [Int])
+    static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, DeviceType>, with dstShape: [Int], from source: Buffer<Element, DeviceType>, with sourceShape: [Int])
 }
 
 
-protocol Engine {
+public protocol Engine {
     associatedtype DeviceType: Device where DeviceType.EngineType == Self
     
     static func sqrt<N: NumericType>(_ value: N) -> N
@@ -68,43 +80,43 @@ protocol Engine {
 }
 
 extension Engine {
-    static func sqrt<N: NumericType>(_ value: N) -> N {
+    public static func sqrt<N: NumericType>(_ value: N) -> N {
         return value.sqrt()
     }
     
-    static func log<N: NumericType>(_ value: N) -> N {
+    public static func log<N: NumericType>(_ value: N) -> N {
         return value.log()
     }
     
-    static func exp<N: NumericType>(_ value: N) -> N {
+    public static func exp<N: NumericType>(_ value: N) -> N {
         return value.exp()
     }
     
-    static func sin<N: NumericType>(_ value: N) -> N {
+    public static func sin<N: NumericType>(_ value: N) -> N {
         return value.sin()
     }
     
-    static func cos<N: NumericType>(_ value: N) -> N {
+    public static func cos<N: NumericType>(_ value: N) -> N {
         return value.cos()
     }
     
-    static func tan<N: NumericType>(_ value: N) -> N {
+    public static func tan<N: NumericType>(_ value: N) -> N {
         return value.tan()
     }
     
-    static func sinh<N: NumericType>(_ value: N) -> N {
+    public static func sinh<N: NumericType>(_ value: N) -> N {
         return value.sinh()
     }
     
-    static func cosh<N: NumericType>(_ value: N) -> N {
+    public static func cosh<N: NumericType>(_ value: N) -> N {
         return value.cosh()
     }
     
-    static func tanh<N: NumericType>(_ value: N) -> N {
+    public static func tanh<N: NumericType>(_ value: N) -> N {
         return value.tanh()
     }
     
-    static func pow<N: NumericType>(base: N, exponent: N) -> N {
+    public static func pow<N: NumericType>(base: N, exponent: N) -> N {
         return N.pow(base: base, exponent: exponent)
     }
 }

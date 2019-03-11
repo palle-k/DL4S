@@ -10,9 +10,10 @@ import Foundation
 
 protocol TensorOperation {
     associatedtype Element: NumericType
+    associatedtype DeviceType: Device
     
-    var sourceTensors: [Tensor<Element>] { get }
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>)
+    var sourceTensors: [Tensor<Element, DeviceType>] { get }
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>)
     func zeroGradient()
     
     var symbol: String { get }
@@ -25,30 +26,30 @@ extension TensorOperation {
         }
     }
     
-    func asAny() -> AnyTensorOperation<Element> {
+    func asAny() -> AnyTensorOperation<Element, DeviceType> {
         return AnyTensorOperation(operation: self)
     }
     
 }
 
-struct AnyTensorOperation<Element: NumericType>: TensorOperation {
-    var sourceTensors: [Tensor<Element>] {
+struct AnyTensorOperation<Element: NumericType, DeviceType: Device>: TensorOperation {
+    var sourceTensors: [Tensor<Element, DeviceType>] {
         return _getSource()
     }
     
-    private let _getSource: () -> [Tensor<Element>]
-    private let _fillGradients: (Tensor<Element>) -> ()
+    private let _getSource: () -> [Tensor<Element, DeviceType>]
+    private let _fillGradients: (Tensor<Element, DeviceType>) -> ()
     private let _zeroGrad: () -> ()
     private let _getSymbol: () -> String
     
-    init<Op: TensorOperation>(operation: Op) where Op.Element == Element {
+    init<Op: TensorOperation>(operation: Op) where Op.Element == Element, Op.DeviceType == DeviceType {
         self._getSource = {operation.sourceTensors}
         self._fillGradients = operation.fillSourceGradients
         self._zeroGrad = operation.zeroGradient
         self._getSymbol = {operation.symbol}
     }
     
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element>) {
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, DeviceType>) {
         _fillGradients(vector)
     }
     
@@ -62,22 +63,22 @@ struct AnyTensorOperation<Element: NumericType>: TensorOperation {
 }
 
 protocol UnaryTensorOperation: TensorOperation {
-    var source: Tensor<Element> { get }
+    var source: Tensor<Element, DeviceType> { get }
 }
 
 extension UnaryTensorOperation {
-    var sourceTensors: [Tensor<Element>] {
+    var sourceTensors: [Tensor<Element, DeviceType>] {
         return [source]
     }
 }
 
 protocol BinaryTensorOperation: TensorOperation {
-    var lhs: Tensor<Element> { get }
-    var rhs: Tensor<Element> { get }
+    var lhs: Tensor<Element, DeviceType> { get }
+    var rhs: Tensor<Element, DeviceType> { get }
 }
 
 extension BinaryTensorOperation {
-    var sourceTensors: [Tensor<Element>] {
+    var sourceTensors: [Tensor<Element, DeviceType>] {
         return [lhs, rhs]
     }
 }

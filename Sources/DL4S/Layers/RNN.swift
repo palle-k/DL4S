@@ -8,29 +8,29 @@
 import Foundation
 
 
-public class LSTM<Element: RandomizableType>: Layer, Codable {
+public class LSTM<Element: RandomizableType, DeviceType: Device>: Layer, Codable {
     public var trainable: Bool = true
     
-    let W_i: Tensor<Element>
-    let W_o: Tensor<Element>
-    let W_f: Tensor<Element>
-    let W_c: Tensor<Element>
+    let W_i: Tensor<Element, DeviceType>
+    let W_o: Tensor<Element, DeviceType>
+    let W_f: Tensor<Element, DeviceType>
+    let W_c: Tensor<Element, DeviceType>
     
-    let U_i: Tensor<Element>
-    let U_o: Tensor<Element>
-    let U_f: Tensor<Element>
-    let U_c: Tensor<Element>
+    let U_i: Tensor<Element, DeviceType>
+    let U_o: Tensor<Element, DeviceType>
+    let U_f: Tensor<Element, DeviceType>
+    let U_c: Tensor<Element, DeviceType>
     
-    let b_i: Tensor<Element>
-    let b_o: Tensor<Element>
-    let b_f: Tensor<Element>
-    let b_c: Tensor<Element>
+    let b_i: Tensor<Element, DeviceType>
+    let b_o: Tensor<Element, DeviceType>
+    let b_f: Tensor<Element, DeviceType>
+    let b_c: Tensor<Element, DeviceType>
     
     public let hiddenSize: Int
     public let inputSize: Int
     public let shouldReturnFullSequence: Bool
     
-    public var parameters: [Tensor<Element>] {
+    public var parameters: [Tensor<Element, DeviceType>] {
         return trainable ? [
             W_i, U_i, b_i,
             W_o, U_o, b_o,
@@ -40,20 +40,20 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
     }
     
     public init(inputSize: Int, hiddenSize: Int, shouldReturnFullSequence: Bool = false) {
-        W_i = Tensor<Element>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
-        W_o = Tensor<Element>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
-        W_f = Tensor<Element>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
-        W_c = Tensor<Element>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
+        W_i = Tensor<Element, DeviceType>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
+        W_o = Tensor<Element, DeviceType>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
+        W_f = Tensor<Element, DeviceType>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
+        W_c = Tensor<Element, DeviceType>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         
-        U_i = Tensor<Element>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
-        U_o = Tensor<Element>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
-        U_f = Tensor<Element>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
-        U_c = Tensor<Element>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
+        U_i = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
+        U_o = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
+        U_f = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
+        U_c = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, hiddenSize, requiresGradient: true)
         
-        b_i = Tensor<Element>(repeating: 0, shape: hiddenSize, requiresGradient: true)
-        b_o = Tensor<Element>(repeating: 0, shape: hiddenSize, requiresGradient: true)
-        b_f = Tensor<Element>(repeating: 0, shape: hiddenSize, requiresGradient: true)
-        b_c = Tensor<Element>(repeating: 0, shape: hiddenSize, requiresGradient: true)
+        b_i = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, requiresGradient: true)
+        b_o = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, requiresGradient: true)
+        b_f = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, requiresGradient: true)
+        b_c = Tensor<Element, DeviceType>(repeating: 0, shape: hiddenSize, requiresGradient: true)
         
         W_i.tag = "W_i"
         W_o.tag = "W_o"
@@ -81,7 +81,7 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
         }
     }
     
-    public func forward(_ inputs: [Tensor<Element>]) -> Tensor<Element> {
+    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
         // Expects one or three inputs
         // Either:
         // - input sequence, [initial hidden state and cell state] vector
@@ -99,8 +99,8 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
         let seqlen = x.shape[0]
         let batchSize = x.shape[1]
         
-        let h0: Tensor<Element>
-        let c0: Tensor<Element>
+        let h0: Tensor<Element, DeviceType>
+        let c0: Tensor<Element, DeviceType>
         
         if inputs.count == 1 {
             h0 = Tensor(repeating: 0, shape: batchSize, hiddenSize)
@@ -110,8 +110,8 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
             c0 = inputs[1][1]
         }
         
-        var hiddenStates: [Tensor<Element>] = []
-        var lstmStates: [Tensor<Element>] = []
+        var hiddenStates: [Tensor<Element, DeviceType>] = []
+        var lstmStates: [Tensor<Element, DeviceType>] = []
         
         var h_p = h0
         var c_p = c0
@@ -144,20 +144,20 @@ public class LSTM<Element: RandomizableType>: Layer, Codable {
 }
 
 
-public class GRU<Element: RandomizableType>: Layer, Codable {
-    let W_z: Tensor<Element>
-    let W_r: Tensor<Element>
-    let W_h: Tensor<Element>
+public class GRU<Element: RandomizableType, DeviceType: Device>: Layer, Codable {
+    let W_z: Tensor<Element, DeviceType>
+    let W_r: Tensor<Element, DeviceType>
+    let W_h: Tensor<Element, DeviceType>
     
-    let U_z: Tensor<Element>
-    let U_r: Tensor<Element>
-    let U_h: Tensor<Element>
+    let U_z: Tensor<Element, DeviceType>
+    let U_r: Tensor<Element, DeviceType>
+    let U_h: Tensor<Element, DeviceType>
     
-    let b_z: Tensor<Element>
-    let b_r: Tensor<Element>
-    let b_h: Tensor<Element>
+    let b_z: Tensor<Element, DeviceType>
+    let b_r: Tensor<Element, DeviceType>
+    let b_h: Tensor<Element, DeviceType>
     
-    public var parameters: [Tensor<Element>] {
+    public var parameters: [Tensor<Element, DeviceType>] {
         return trainable ? [W_z, W_r, W_h, U_z, U_r, U_h, b_z, b_r, b_h] : []
     }
     
@@ -203,13 +203,13 @@ public class GRU<Element: RandomizableType>: Layer, Codable {
         }
     }
     
-    public func forward(_ inputs: [Tensor<Element>]) -> Tensor<Element> {
+    public func forward(_ inputs: [Tensor<Element, DeviceType>]) -> Tensor<Element, DeviceType> {
         precondition(1 ... 2 ~= inputs.count)
         
         // Input: Either [input, hidden state] or input
         // Input shape: SequencLength x BatchSize x NumFeatures
         
-        let h_0: Tensor<Element>
+        let h_0: Tensor<Element, DeviceType>
         let x = inputs[0]
         
         let seqlen = x.shape[0]
@@ -221,7 +221,7 @@ public class GRU<Element: RandomizableType>: Layer, Codable {
             h_0 = inputs[1]
         }
         
-        var hiddenStates: [Tensor<Element>] = []
+        var hiddenStates: [Tensor<Element, DeviceType>] = []
         var h_p = h_0
         
         for i in 0 ..< seqlen {
