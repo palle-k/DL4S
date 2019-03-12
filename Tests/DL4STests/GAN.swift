@@ -44,8 +44,8 @@ class GANTests: XCTestCase {
         
         let network = Sequential(generator.asAny(), discriminator.asAny())
         
-        let optimGen = Adam(parameters: generator.parameters, learningRate: 0.0003)
-        let optimDis = Adam(parameters: discriminator.parameters, learningRate: 0.0003)
+        let optimGen = Adam(parameters: generator.trainableParameters, learningRate: 0.0003)
+        let optimDis = Adam(parameters: discriminator.trainableParameters, learningRate: 0.0003)
         
         let batchSize = 32
         let epochs = 10_000
@@ -90,14 +90,14 @@ class GANTests: XCTestCase {
             }
 
             if epoch % 1000 == 0 {
-                d1.isTrainingMode = false
-                d2.isTrainingMode = false
+                d1.isActive = false
+                d2.isActive = false
 
                 Random.fillNormal(genInputs)
                 let genResult = generator.forward(genInputs)
 
-                d1.isTrainingMode = true
-                d2.isTrainingMode = true
+                d1.isActive = true
+                d2.isActive = true
 
                 for i in 0 ..< batchSize {
                     let slice = genResult[i].T.unsqueeze(at: 0)

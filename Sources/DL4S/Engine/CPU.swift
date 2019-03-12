@@ -325,4 +325,124 @@ public struct CPUEngine: EngineType {
             dstMem[ldIdx] = addMem[ldIdx] + sourceMem[lsIdx]
         }
     }
+    
+    public static func maxPool2d<N>(
+        input: Buffer<N, CPU>,
+        result: Buffer<N, CPU>,
+        resultContext: Buffer<Int32, CPU>,
+        inputSize: (batchSize: Int, depth: Int, height: Int, width: Int),
+        kernelSize: (height: Int, width: Int),
+        stride: (vertical: Int, horizontal: Int)
+    ) where N : NumericType {
+        let dstWidth = (inputSize.width - kernelSize.width) / stride.horizontal + 1
+        let dstHeight = (inputSize.height - kernelSize.height) / stride.vertical + 1
+        
+        let srcRowStride = inputSize.width
+        let srcZStride = srcRowStride * inputSize.height
+        let srcBatchStride = srcZStride * inputSize.depth
+        
+        let dstRowStride = dstWidth
+        let dstZStride = dstRowStride * dstHeight
+        let dstBatchStride = dstZStride * inputSize.depth
+        
+        let src = input.memory.bindMemory(to: N.self)
+            .pointer(capacity: srcBatchStride * inputSize.batchSize)
+        let dst = result.memory.bindMemory(to: N.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        let ctx = resultContext.memory.bindMemory(to: Int32.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        
+        
+        for batch in 0 ..< inputSize.batchSize {
+            let srcBatch = src.advanced(by: srcBatchStride * batch)
+            let dstBatch = dst.advanced(by: dstBatchStride * batch)
+            let ctxBatch = ctx.advanced(by: dstBatchStride * batch)
+            
+            for z in 0 ..< inputSize.depth {
+                let srcMatrix = srcBatch.advanced(by: z * srcZStride)
+                let dstMatrix = dstBatch.advanced(by: z * dstZStride)
+                let ctxMatrix = ctxBatch.advanced(by: z * dstZStride)
+                
+                for dstRow in 0 ..< dstHeight {
+                    let srcRow = dstRow * stride.vertical
+                    
+                    for dstCol in 0 ..< dstWidth {
+                        let srcCol = dstCol * stride.horizontal
+                        
+                        var min = srcMatrix[srcRow * srcRowStride + srcCol]
+                        var minI = 0
+                        
+                        for i in 0 ..< kernelSize.height * kernelSize.width {
+                            let x = i % kernelSize.width
+                            let y = i / kernelSize.width
+                            
+                            let candidate = srcMatrix[(srcRow + y) * srcRowStride + srcCol + x]
+                            
+                            if candidate < min {
+                                min = candidate
+                                minI = i
+                            }
+                        }
+                        
+                        dstMatrix[dstRow * dstRowStride + dstCol] = min
+                        ctxMatrix[dstRow * dstRowStride + dstCol] = Int32(minI)
+                    }
+                }
+            }
+        }
+    }
+    
+    public static func maxPool2DRevAdd<N>(pooled: Buffer<N, CPU>, poolCtx: Buffer<Int32, CPU>, add: Buffer<Int32, CPU>, target: Buffer<Int32, CPU>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType {
+        let dstWidth = (inputSize.width - kernelSize.width) / stride.horizontal + 1
+        let dstHeight = (inputSize.height - kernelSize.height) / stride.vertical + 1
+        
+        let srcRowStride = inputSize.width
+        let srcZStride = srcRowStride * inputSize.height
+        let srcBatchStride = srcZStride * inputSize.depth
+        
+        let dstRowStride = dstWidth
+        let dstZStride = dstRowStride * dstHeight
+        let dstBatchStride = dstZStride * inputSize.depth
+        
+        let dst = target.memory.bindMemory(to: N.self)
+            .pointer(capacity: srcBatchStride * inputSize.batchSize)
+        let addBase = add.memory.bindMemory(to: N.self)
+            .pointer(capacity: srcBatchStride * inputSize.batchSize)
+        let grad = pooled.memory.bindMemory(to: N.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        let ctx = poolCtx.memory.bindMemory(to: Int32.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        
+        
+        for batch in 0 ..< inputSize.batchSize {
+            let dstBatch = dst.advanced(by: srcBatchStride * batch)
+            let addBatch = addBase.advanced(by: srcBatchStride * batch)
+            let gradBatch = grad.advanced(by: dstBatchStride * batch)
+            let ctxBatch = ctx.advanced(by: dstBatchStride * batch)
+            
+            for z in 0 ..< inputSize.depth {
+                let dstMatrix = dstBatch.advanced(by: z * srcZStride)
+                let addMatrix = addBatch.advanced(by: z * srcZStride)
+                let gradMatrix = gradBatch.advanced(by: z * dstZStride)
+                let ctxMatrix = ctxBatch.advanced(by: z * dstZStride)
+                
+                for dstRow in 0 ..< dstHeight {
+                    let srcRow = dstRow * stride.vertical
+                    
+                    for dstCol in 0 ..< dstWidth {
+                        let srcCol = dstCol * stride.horizontal
+                        
+                        let i = Int(ctxMatrix[dstRow * dstRowStride + dstCol])
+                        let g = gradMatrix[dstRow * dstRowStride + dstCol]
+                        
+                        let x = i % kernelSize.width
+                        let y = i / kernelSize.width
+                        
+                        let a = addMatrix[(srcRow + y) * srcRowStride + srcCol + x]
+                        dstMatrix[(srcRow + y) * srcRowStride + srcCol + x] = a + g
+                    }
+                }
+            }
+        }
+    }
 }

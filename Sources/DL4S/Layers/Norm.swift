@@ -12,7 +12,7 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
     
     public typealias Input = Element
     
-    public var trainable: Bool = true
+    public var isTrainable: Bool = true
     
     public var parameters: [Tensor<Element, Device>] {
         return [shift, scale]

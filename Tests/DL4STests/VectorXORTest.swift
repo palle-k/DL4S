@@ -27,7 +27,7 @@ class VectorXORTest: XCTestCase {
         
         let expectedOutputs = Tensor<Float, CPU>([0, 1, 1, 0])
         
-        let optimizer = MomentumOptimizer(parameters: net.parameters, learningRate: 0.05)
+        let optimizer = MomentumOptimizer(parameters: net.trainableParameters, learningRate: 0.05)
         // let optimizer = Adam(parameters: net.parameters, learningRate: 0.05)
         
         let epochs = 1000

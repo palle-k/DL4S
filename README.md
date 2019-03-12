@@ -1,6 +1,6 @@
 # DL4S
 
-This package contains an implementation of reverse mode autodifferentiation as well as vectorized implementations of common matrix and vector operations as well as high level neural network operations.
+This package contains an implementation of reverse mode automatic differentiation as well as vectorized implementations of common matrix and vector operations as well as high level neural network operations.
 
 ## Features
 
@@ -14,7 +14,8 @@ This package contains an implementation of reverse mode autodifferentiation as w
 - [x] Softmax
 - [x] Embedding
 - [x] Batchnorm
-- [x] Lambda
+- [x] Lambda 
+- [x] Sequential
 - [ ] Convolution
 - [ ] Pooling
 
@@ -30,65 +31,109 @@ This package contains an implementation of reverse mode autodifferentiation as w
 - [x] L1 & L2 regularization
 
 ### Tensor Operations
-- [x] Add, Subtract, Multiply, Divide, Negate
-- [x] exp, log, sqrt
-- [x] Subscripting
-- [x] Transpose, Axis permutation
-- [x] Sum, Max
+- [x] add
+- [x] sub
+- [x] mul 
+- [x] div
+- [x] neg
+- [x] exp
+- [x] log
+- [x] sqrt
+- [x] subscript
+- [x] subscript range
+- [x] transpose
+- [x] axis permute
+- [x] sum
+- [x] max
+- [x] reduce sum
+- [ ] reduce max
+- [ ] conv2d
+- [ ] max pool
+- [ ] avg pool
+
+
+
+### Engines.
+- [x] CPU (Accelerate framework)
+- [ ] GPU (Metal)
 
 
 ## Examples
 
-```swift
-let ((train_inputs, train_expected), (validation_inputs, validation_expected)) = MNistTest.images(from: "/Users/Palle/Downloads/")
+### Arithmetic & Differentiation
 
-let model = Sequential<Float>(
-    Flatten().asAny(),
-    Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
-    Tanh().asAny(),
+```swift
+let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+let prod = mmul(a.T, a)
+let s = sum(prod)
+let l = log(s)
+print(l) // 5.1873856
+
+
+// Backpropagate
+l.backwards()
+
+print(a.gradientDescription!)
+/*
+[[0.03351955, 0.03351955],
+ [0.07821229, 0.07821229],
+ [0.12290502, 0.12290502]]
+*/
+```
+
+### Feed Forward Networks
+
+Example for MNIST classification
+
+```swift
+let model = Sequential<Float, CPU>(
+    Flatten().asAny() // Flatten batchSize x 28 x 28 image to batchSize x 784 vector
+    Dense(inputFeatures: 784, outputFeatures: 500).asAny(),
+    Relu().asAny(),
     Dense(inputFeatures: 500, outputFeatures: 300).asAny(),
-    Tanh().asAny(),
+    Relu().asAny(),
     Dense(inputFeatures: 300, outputFeatures: 10).asAny(),
     Softmax().asAny()
 )
 
-let epochs = 5_000
-let batchSize = 128
+let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
 
-let optimizer = Adam(parameters: model.parameters, learningRate: 0.001)
+// Single iteration of minibatch gradient descent
+optimizer.zeroGradient()
 
-for epoch in 1 ... epochs {
-    optimizer.zeroGradient()
-    let (batch, expected) = Random.minibatch(from: train_inputs, labels: train_expected, count: batchSize)
-    
-    let y_pred = model.forward(batch)
-    let y_true = expected
-    
-    let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
-    
-    loss.backwards()
-    optimizer.step()
-    
-    if epoch % 100 == 0 {
-        let avgLoss = loss.item
-        print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
-    }
-}
+let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
+let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
 
-var correctCount = 0
+let pred = model.forward(batch)
+let loss = categoricalCrossEntropy(expected: y_true, actual: pred)
 
-for i in 0 ..< ds_val.0.shape[0] {
-    let x = validation_inputs[i].unsqueeze(at: 0)
-    let pred = argmax(model.forward(x).squeeze())
-    let actual = Int(validation_expected.item)
+loss.backwards()
+optimizer.step()
+```
 
-    if pred == actual {
-        correctCount += 1
-    }
-}
+### Recurrent Networks
 
-let accuracy = Float(correctCount) / Float(ds_val.0.shape[0])
-print("Accuracy: \(accuracy)")
+Example for MNIST classification
 
-try model.saveWeights(to: URL(fileURLWithPath: "mnist_params.json"))
+```swift
+let model = Sequential<Float, CPU>(
+    LSTM(inputSize: 28, hiddenSize: 128).asAny(),
+    Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
+    Softmax().asAny()
+)
+
+let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+
+// Single iteration of minibatch gradient descent
+optimizer.zeroGradient()
+
+let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
+let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
+
+let x = batch.permuted(to: 1, 0, 2) // Swap first and second axis
+let pred = model.forward(x)
+let loss = categoricalCrossEntropy(expected: y_true, actual: pred)
+
+loss.backwards()
+optimizer.step()
 ```

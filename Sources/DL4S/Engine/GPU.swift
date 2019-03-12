@@ -204,6 +204,14 @@ public struct GPUEngine: EngineType {
     public static func permuteAxesAdd<N>(input: Buffer<N, GPU>, arangement: [Int], shape: [Int], add: Buffer<N, GPU>, destination: Buffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
+    
+    public static func maxPool2d<N>(input: Buffer<N, GPU>, result: Buffer<N, GPU>, resultContext: Buffer<Int32, GPU>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func maxPool2DRevAdd<N>(pooled: Buffer<N, GPU>, poolCtx: Buffer<Int32, GPU>, add: Buffer<Int32, GPU>, target: Buffer<Int32, GPU>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
 }
 
 

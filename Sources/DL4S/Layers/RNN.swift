@@ -8,8 +8,11 @@
 import Foundation
 
 
+/// Long short-term memory layer (mono-directional) for sequence to sequence transformation with arbitrary length.
 public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
-    public var trainable: Bool = true
+    public var isTrainable: Bool = true
+    
+    // LSTM weights
     
     let W_i: Tensor<Element, Device>
     let W_o: Tensor<Element, Device>
@@ -26,19 +29,36 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
     let b_f: Tensor<Element, Device>
     let b_c: Tensor<Element, Device>
     
+    /// Number of elements in each hidden state
     public let hiddenSize: Int
+    
+    /// Size of each input in the input sequence
     public let inputSize: Int
+    
+    /// Indicates whether the LSTM should return its full state sequence or only the last hidden state
     public let shouldReturnFullSequence: Bool
     
     public var parameters: [Tensor<Element, Device>] {
-        return trainable ? [
+        return [
             W_i, U_i, b_i,
             W_o, U_o, b_o,
             W_f, U_f, b_f,
             W_c, U_c, b_c
-        ] : []
+        ]
     }
     
+    
+    /// Initializes an LSTM layer with the given input and hidden size at each timestep.
+    ///
+    /// If the LSTM is instructed to return full sequences, the LSTM hidden state sequence and cell state sequence
+    /// is returned by the forward operation.
+    /// If the LSTM is not instructed to return full sequences, only the last hidden state is returned.
+    /// The latter may be computationally less intensive and should be preferred if possible.
+    ///
+    /// - Parameters:
+    ///   - inputSize: Number of inputs at each timestep
+    ///   - hiddenSize: Number of elements in each hidden and cell state
+    ///   - shouldReturnFullSequence: Indicates whether the LSTM should return its full state sequence or only the last hidden state
     public init(inputSize: Int, hiddenSize: Int, shouldReturnFullSequence: Bool = false) {
         W_i = Tensor<Element, Device>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         W_o = Tensor<Element, Device>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
@@ -81,6 +101,23 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
         }
     }
     
+    
+    /// Forwards the given input sequence through the LSTM.
+    ///
+    /// Expects either one or three inputs.
+    /// The first input must be the input sequence.
+    /// The optional second and third parameter contain the initial hidden and cell state.
+    ///
+    /// The input sequence must be in the shape [SequenceLength x BatchSize x InputSize].
+    ///
+    /// If the LSTM should return full sequences, the output has the shape [2 x SequenceLength x BatchSize x HiddenSize]
+    /// and contains two stacked tensors [hiddenStateSequence, cellStateSequence], which each have the shape
+    /// [SequenceLength x BatchSize x HiddenSize].
+    ///
+    /// If the LSTM should not return full sequences, the output has the shape [BatchSize x HiddenSize] and only contains the last hidden state.
+    ///
+    /// - Parameter inputs: Input sequence and optional initial hidden and cell state.
+    /// - Returns: If the LSTM should return full sequences, all hidden and cell states, otherwise the last hidden state.
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         // Expects one or three inputs
         // Either:
@@ -143,8 +180,11 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
     }
 }
 
-
+/// Gated recurrent unit layer (mono-directional) for sequence to sequence transformation with arbitrary length.
 public class GRU<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
+    
+    // GRU weights
+    
     let W_z: Tensor<Element, Device>
     let W_r: Tensor<Element, Device>
     let W_h: Tensor<Element, Device>
@@ -158,15 +198,33 @@ public class GRU<Element: RandomizableType, Device: DeviceType>: Layer, Codable 
     let b_h: Tensor<Element, Device>
     
     public var parameters: [Tensor<Element, Device>] {
-        return trainable ? [W_z, W_r, W_h, U_z, U_r, U_h, b_z, b_r, b_h] : []
+        return [W_z, W_r, W_h, U_z, U_r, U_h, b_z, b_r, b_h]
     }
     
-    public var trainable: Bool = true
+    public var isTrainable: Bool = true
     
+    
+    /// Number of elements in each hidden state
     public let hiddenSize: Int
+    
+    /// Size of each input in the input sequence
     public let inputSize: Int
+    
+    /// Indicates whether the GRU should return its full state sequence or only the last hidden state
     public let shouldReturnFullSequence: Bool
     
+    
+    /// Initializes a gated recurrent unit layer with the given input and hidden size at each timestep.
+    ///
+    /// If the GRU is instructed to return full sequences, the GRU hidden state sequence
+    /// is returned by the forward operation.
+    /// If the GRU is not instructed to return full sequences, only the last hidden state is returned.
+    /// The latter may be computationally less intensive and should be preferred if possible.
+    ///
+    /// - Parameters:
+    ///   - inputSize: Number of inputs at each timestep
+    ///   - hiddenSize: Number of elements in each hidden
+    ///   - shouldReturnFullSequence: Indicates whether the GRU should return its full state sequence or only the last hidden state
     public init(inputSize: Int, hiddenSize: Int, shouldReturnFullSequence: Bool = false) {
         self.inputSize = inputSize
         self.hiddenSize = hiddenSize
@@ -203,6 +261,22 @@ public class GRU<Element: RandomizableType, Device: DeviceType>: Layer, Codable 
         }
     }
     
+    /// Forwards the given input sequence through the GRU.
+    ///
+    /// Expects either one or three inputs.
+    /// The first input must be the input sequence.
+    /// The optional second and third parameter contain the initial hidden and cell state.
+    ///
+    /// The input sequence must be in the shape [SequenceLength x BatchSize x InputSize].
+    ///
+    /// If the GRU should return full sequences, the output has the shape [1 x SequenceLength x BatchSize x HiddenSize]
+    /// and contains one tensor [hiddenStateSequence], which has the shape
+    /// [SequenceLength x BatchSize x HiddenSize].
+    ///
+    /// If the GRU should not return full sequences, the output has the shape [BatchSize x HiddenSize] and only contains the last hidden state.
+    ///
+    /// - Parameter inputs: Input sequence and optional initial hidden and cell state.
+    /// - Returns: If the GRU should return full sequences, all hidden and cell states, otherwise the last hidden state.
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(1 ... 2 ~= inputs.count)
         

@@ -15,7 +15,7 @@ public class Relu<Element: NumericType, Device: DeviceType>: Layer, Codable {
         return []
     }
     
-    public var trainable: Bool {
+    public var isTrainable: Bool {
         get {
             return false
         }
@@ -40,7 +40,7 @@ public class Tanh<Element: NumericType, Device: DeviceType>: Layer, Codable {
         return []
     }
     
-    public var trainable: Bool {
+    public var isTrainable: Bool {
         get {
             return false
         }
@@ -65,7 +65,7 @@ public class Sigmoid<Element: NumericType, Device: DeviceType>: Layer, Codable {
         return []
     }
     
-    public var trainable: Bool {
+    public var isTrainable: Bool {
         get {
             return false
         }
@@ -92,7 +92,7 @@ public class Softmax<Element: NumericType, Device: DeviceType>: Layer, Codable {
         return []
     }
     
-    public var trainable: Bool {
+    public var isTrainable: Bool {
         get {
             return false
         }
@@ -121,7 +121,7 @@ public class Flatten<Element: NumericType, Device: DeviceType>: Layer, Codable {
         return []
     }
     
-    public var trainable: Bool {
+    public var isTrainable: Bool {
         get {
             return false
         }
@@ -145,7 +145,7 @@ public class Reshape<Element: NumericType, Device: DeviceType>: Layer, Codable {
         return []
     }
     
-    public var trainable: Bool {
+    public var isTrainable: Bool {
         get {
             return false
         }

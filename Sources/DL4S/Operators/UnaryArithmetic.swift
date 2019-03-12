@@ -175,6 +175,11 @@ public func relu<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<E
     return result
 }
 
+public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakage: Element) -> Tensor<Element, Device> {
+    // -relu(-vector) = min(0, vector)
+    return relu(vector) - Tensor(leakage) * relu(-vector)
+}
+
 
 public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let e = expected.view(as: -1)

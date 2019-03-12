@@ -75,9 +75,9 @@ class MNistTest: XCTestCase {
         let model = Sequential<Float, CPU>(
             Flatten().asAny(),
             Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
-            Tanh().asAny(),
+            Relu().asAny(),
             Dense(inputFeatures: 500, outputFeatures: 300).asAny(),
-            Tanh().asAny(),
+            Relu().asAny(),
             Dense(inputFeatures: 300, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )
@@ -85,7 +85,7 @@ class MNistTest: XCTestCase {
         let epochs = 5_000
         let batchSize = 128
         
-        let optimizer = Adam(parameters: model.parameters, learningRate: 0.001)
+        let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
         
         for epoch in 1 ... epochs {
             optimizer.zeroGradient()
@@ -121,7 +121,7 @@ class MNistTest: XCTestCase {
         
         print("Accuracy: \(accuracy)")
         
-        try? model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_params.json"))
+        // try? model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_params.json"))
     }
     
     func testMNistLstm() {
@@ -136,7 +136,7 @@ class MNistTest: XCTestCase {
         let epochs = 10_000
         let batchSize = 128
         
-        let optimizer = Adam(parameters: model.parameters, learningRate: 0.001)
+        let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
         
         print("Training...")
         

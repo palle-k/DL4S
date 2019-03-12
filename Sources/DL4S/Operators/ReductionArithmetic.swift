@@ -67,7 +67,7 @@ private struct MaxContext<Element: NumericType, Device: DeviceType>: UnaryTensor
 
 private struct MaxAxisContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var source: Tensor<Element, Device>
-    let maxIdxs: [[Int]]
+    let maxIdxs: [Int]
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
         
@@ -83,17 +83,28 @@ public func max<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? =
         var resultShape: [Int] = vector.shape
         resultShape.remove(at: axis)
         
-        var result: Tensor<Element, Device> = Tensor(repeating: 0, shape: resultShape)
+        let result: Tensor<Element, Device> = Tensor(repeating: 0, shape: resultShape)
+        var maxIdxs: [Int] = []
         
         for idx in iterate(resultShape) {
             var srcIdx: [Int?] = idx.map {$0}
             srcIdx.insert(nil, at: axis)
             
-            let slice = vector[srcIdx]
-            let (arg, max) = Device.Engine.argmax(values: slice.values, count: slice.count)
+            //let slice = vector[srcIdx]
+            let (slice, isCopy, _) = vector.buffer(from: srcIdx)
+            
+            let (arg, max) = Device.Engine.argmax(values: slice, count: slice.count)
+            maxIdxs.append(arg)
+            result.values[zip(idx, result.strides).map(*).reduce(0, +)] = max
+            
+            if isCopy {
+                Device.Memory.free(slice)
+            }
         }
         
-        fatalError()
+        result.context = vector.requiresGradient ? MaxAxisContext(source: vector, maxIdxs: maxIdxs).asAny() : nil
+        
+        return result
     } else {
         let (arg, max) = Device.Engine.argmax(values: vector.values, count: vector.count)
         

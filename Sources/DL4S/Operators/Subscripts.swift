@@ -61,7 +61,7 @@ fileprivate struct ReplaceOperation<Element: NumericType, Device: DeviceType>: U
     let location: [Int?]
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        
+        fatalError("\(#function) is not implemented.")
     }
     
     var symbol: String {
@@ -98,7 +98,7 @@ fileprivate struct RangeReplaceOperation<Element: NumericType, Device: DeviceTyp
     let location: [Range<Int>?]
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        
+        fatalError("\(#function) is not implemented.")
     }
     
     var symbol: String {

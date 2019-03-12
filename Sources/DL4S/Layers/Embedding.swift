@@ -8,18 +8,22 @@
 import Foundation
 
 
+/// Transforms discrete values, such as word indices, into a lower dimensional embedding.
 public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Int32
     
     public var parameters: [Tensor<Element, Device>] {
-        return trainable ? [embeddingMatrix] : []
+        return [embeddingMatrix]
     }
     
-    public var trainable: Bool = true
+    public var isTrainable: Bool = true
     
     let embeddingMatrix: Tensor<Element, Device>
     
+    
+    /// Number of input features
     public let inputFeatures: Int
+    /// Size of embedded input features
     public let outputSize: Int
     
     public init(inputFeatures: Int, outputSize: Int) {
