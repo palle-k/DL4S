@@ -264,7 +264,7 @@ kernel void vPositive_Float32(
     result_vals[pos] = src_vals[pos] > 0.0f ? 1.0f : 0.0f;
 }
 
-kernel void mmul_Broadcast_Float32(
+kernel void mMul_Broadcast_Float32(
     const device float* lhs_vals [[buffer(0)]],
     constant int &lhs_dim [[buffer(1)]],
     const device int* lhs_shape [[buffer(2)]],
@@ -292,4 +292,54 @@ kernel void mmul_Broadcast_Float32(
     
     int dstIdx = result_shape[1] * row + column;
     result_vals[dstIdx] = result;
+}
+
+kernel void mTrans_Float32(
+    const device float* src_vals [[buffer(0)]],
+    constant int &src_width [[buffer(1)]],
+    constant int &src_height [[buffer(2)]],
+    device float* dst_vals [[buffer(3)]],
+    uint2 pos [[thread_position_in_grid]]
+) {
+    int column = pos.x;
+    int row = pos.y;
+    
+    int src_idx = src_width * row + column;
+    int dst_idx = src_height * column + row;
+    
+    dst_vals[dst_idx] = src_vals[src_idx];
+}
+
+
+kernel void conv2d_Float32(
+    const device float* src_vals [[buffer(0)]],
+    constant int3 &src_dim [[buffer(1)]],
+    const device float* kernel_vals [[buffer(3)]],
+    constant int3 &kernel_dim [[buffer(4)]],
+    constant int2 &padding [[buffer(6)]],
+    constant int2 &stride [[buffer(7)]],
+    device float* result_vals [[buffer(8)]],
+    uint3 pos [[thread_position_in_grid]]
+) {
+    // row-major arangement, shape: (z, row, column)
+    // const uint col = pos.w;
+    const uint row = pos.z;
+    const uint z = pos.y;
+    const uint batch_idx = pos.x;
+    
+    const uint col_stride = stride.y;
+    const uint row_stride = stride.x;
+    
+    const uint kern_width = kernel_dim.z;
+    const uint kern_height = kernel_dim.y;
+    const uint kern_depth = kernel_dim.x;
+    
+    const uint src_width = src_dim.z;
+    const uint src_height = src_dim.y;
+    
+    
+    const uint kern_idx = kern_width * kern_height * kern_depth * z;
+    const device float* kern = &kernel_vals[kern_idx];
+    
+    
 }
