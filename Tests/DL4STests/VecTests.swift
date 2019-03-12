@@ -256,8 +256,7 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>(repeating: 0, shape: 10)
         Random.fillNormal(a)
         
-        let elements = (0 ..< 10).map { (x: Int) in Variable(value: a[x].item)}
-        
+        let elements = (0 ..< 10).map { (x: Int) in a[x].item}
         
         let ref = elements.map {1 / (1 + exp(-$0))}
         let result = 1 / (1 + exp(-a))
@@ -265,7 +264,7 @@ class VecTests: XCTestCase {
         print(a, ref)
         
         for i in 0 ..< 10 {
-            XCTAssertEqual(result[i].item, ref[i].value, accuracy: 0.0001)
+            XCTAssertEqual(result[i].item, ref[i], accuracy: 0.0001)
         }
     }
     
@@ -323,20 +322,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip($0, refB).map(+).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -351,20 +341,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip(refB, $0).map(+).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -399,20 +380,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip($0, refB).map(-).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -427,20 +399,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip(refB, $0).map(-).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[-2.0, -2.0], [-2.0, -2.0], [-2.0, -2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -475,20 +438,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip($0, refB).map(*).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -503,20 +457,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip(refB, $0).map(*).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -551,20 +496,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip($0, refB).map(/).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[2.0, 1.0], [2.0, 1.0], [2.0, 1.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -579,20 +515,11 @@ class VecTests: XCTestCase {
         print(a.gradientDescription!)
         print(b.gradientDescription!)
         
-        let refA: [[Variable]] = [[1,2],[3,4],[5,6]]
-        let refB: [Variable] = [1,2]
-        
-        let refResult = refA.map {zip(refB, $0).map(/).map {$0 * 2}}
-        
-        for row in refResult {
-            for v in row {
-                v.backwards()
-            }
-        }
+        let refGrad: [[Float]] = [[-2.0, -1.0], [-0.22222222, -0.25], [-0.08, -0.11111111]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refA[row][column].gradient, accuracy: 0.0001)
+                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
