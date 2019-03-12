@@ -194,9 +194,9 @@ let generator = Sequential<Float, CPU>(
 let discriminator = Sequential<Float, CPU>(
     Flatten().asAny(),
     Dense(inputFeatures: 28 * 28, outputFeatures: 400).asAny(),
-    Relu().asAny(),
+    Tanh().asAny(),
     Dense(inputFeatures: 400, outputFeatures: 100).asAny(),
-    Relu().asAny(),
+    Tanh().asAny(),
     Dense(inputFeatures: 100, outputFeatures: 1).asAny(),
     Sigmoid().asAny()
 )
