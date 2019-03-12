@@ -1,7 +1,7 @@
 # DL4S
 
 This package contains an implementation of reverse mode automatic differentiation, 
-vectorized implementations of common matrix and vector operations and high level neural network operations.
+vectorized implementations of common matrix and vector operators and high level neural network operations.
 
 This project is a work in progress. While all the shown examples work, there are important things missing, such as GPU acceleration and convolution operators.
 
@@ -46,6 +46,7 @@ Then add `DL4S` as a dependency to your target:
 - [x] Batchnorm
 - [x] Lambda 
 - [x] Sequential
+- [x] Dropout
 - [ ] Convolution
 - [ ] Pooling
 
