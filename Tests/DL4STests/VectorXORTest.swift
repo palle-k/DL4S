@@ -11,21 +11,21 @@ import XCTest
 class VectorXORTest: XCTestCase {
     func testXOR() {
         
-        let net = Sequential<Float>(
+        let net = Sequential<Float, CPU>(
             Dense(inputFeatures: 2, outputFeatures: 6).asAny(),
             Sigmoid().asAny(),
             Dense(inputFeatures: 6, outputFeatures: 1).asAny(),
             Sigmoid().asAny()
         )
         
-        let inputs = Tensor<Float>([
+        let inputs = Tensor<Float, CPU>([
             [0, 0],
             [0, 1],
             [1, 0],
             [1, 1]
         ])
         
-        let expectedOutputs = Tensor<Float>([0, 1, 1, 0])
+        let expectedOutputs = Tensor<Float, CPU>([0, 1, 1, 0])
         
         let optimizer = MomentumOptimizer(parameters: net.parameters, learningRate: 0.05)
         // let optimizer = Adam(parameters: net.parameters, learningRate: 0.05)

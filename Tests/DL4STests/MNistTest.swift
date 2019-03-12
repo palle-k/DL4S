@@ -9,7 +9,7 @@ import XCTest
 @testable import DL4S
 
 class MNistTest: XCTestCase {
-    static func readSamples(from bytes: [UInt8], labels: [UInt8], count: Int) -> (Tensor<Float>, Tensor<Int32>) {
+    static func readSamples(from bytes: [UInt8], labels: [UInt8], count: Int) -> (Tensor<Float, CPU>, Tensor<Int32, CPU>) {
         let imageOffset = 16
         let labelOffset = 8
         
@@ -32,8 +32,8 @@ class MNistTest: XCTestCase {
             let label = Int(labels[labelOffset + i])
             
             //let sampleMatrix = Matrix3(values: pixelData, width: imageWidth, height: imageHeight, depth: 1)
-            //let sampleMatrix = Tensor<Float>(pixelData, shape: imageHeight, imageWidth)
-            //let expectedValue = Tensor<Int32>(Int32(label))
+            //let sampleMatrix = Tensor<Float, CPU>(pixelData, shape: imageHeight, imageWidth)
+            //let expectedValue = Tensor<Int32, CPU>(Int32(label))
             
             var e = [Float](repeating: 0, count: 10)
             e[label] = Float(1)
@@ -45,7 +45,7 @@ class MNistTest: XCTestCase {
         return (Tensor(Array(samples.joined()), shape: samples.count, imageWidth, imageHeight), Tensor(labelVectors))
     }
     
-    static func images(from path: String) -> ((Tensor<Float>, Tensor<Int32>), (Tensor<Float>, Tensor<Int32>)) {
+    static func images(from path: String) -> ((Tensor<Float, CPU>, Tensor<Int32, CPU>), (Tensor<Float, CPU>, Tensor<Int32, CPU>)) {
         guard
             let trainingData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte")),
             let trainingLabelData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte")),
@@ -72,7 +72,7 @@ class MNistTest: XCTestCase {
     func testMNist() {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
-        let model = Sequential<Float>(
+        let model = Sequential<Float, CPU>(
             Flatten().asAny(),
             Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
             Tanh().asAny(),
@@ -127,7 +127,7 @@ class MNistTest: XCTestCase {
     func testMNistLstm() {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
-        let model = Sequential<Float>(
+        let model = Sequential<Float, CPU>(
             GRU(inputSize: 28, hiddenSize: 128).asAny(),
             Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
             Softmax().asAny()
@@ -140,23 +140,40 @@ class MNistTest: XCTestCase {
         
         print("Training...")
         
-        for epoch in 1 ... epochs {
+        let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 128)
+        let workers = 3
+
+        for i in 0 ..< workers {
+            DispatchQueue.global().async {
+                print("starting worker \(i)")
+                while !queue.isStopped {
+                    let (batch, expected) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
+                    let x = batch.permuted(to: 1, 0, 2)
+                    queue.enqueue((x, expected))
+                }
+                print("stopping worker \(i)")
+            }
+        }
+        
+        
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        
+        for _ in 1 ... epochs {
             optimizer.zeroGradient()
             
-            let (batch, expected) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
-            
-            let x = batch.permuted(to: 1, 0, 2)
+            let (x, y_true) = queue.dequeue()!
+
             let y_pred = model.forward(x)
-            let loss = categoricalCrossEntropy(expected: expected, actual: y_pred)
+            let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
             loss.backwards()
             
             optimizer.step()
             
-            if epoch % 100 == 0 {
-                let avgLoss = loss.item
-                print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
-            }
+            bar.next(userInfo: loss.item)
         }
+        bar.complete()
+        
+        queue.stop()
         
         var correctCount = 0
         
@@ -174,11 +191,11 @@ class MNistTest: XCTestCase {
         
         print("Accuracy: \(accuracy)")
         
-        try? model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_gru_params2.json"))
+        try? model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_gru_params3.json"))
     }
     
     func testGenerative() throws {
-        let model = Sequential<Float>(
+        let model = Sequential<Float, CPU>(
             Flatten().asAny(),
             Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
             Tanh().asAny(),
@@ -190,8 +207,8 @@ class MNistTest: XCTestCase {
         
         try model.loadWeights(from: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_params.json"))
         
-        let input = Tensor<Float>(repeating: 0, shape: [1, 28, 28], requiresGradient: true)
-        let expected = Tensor<Int32>([5])
+        let input = Tensor<Float, CPU>(repeating: 0, shape: [1, 28, 28], requiresGradient: true)
+        let expected = Tensor<Int32, CPU>([5])
         
         Random.fill(input, a: 0, b: 1)
         

@@ -243,8 +243,14 @@ public struct CPUEngine: EngineType {
         N.relu(val: val.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
     }
     
-    public static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: UnsafeMutablePointer<N>, count: Int) {
-        fatalError("isPositive operator not available for CPU device")
+    public static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        // Use non-Buffer pointer to avoid repeated bound checking, bounds are checked initially
+        let src = val.memory.bindMemory(to: N.self).pointer(capacity: count)
+        let dst = result.memory.bindMemory(to: N.self).pointer(capacity: count)
+        
+        for i in 0 ..< count {
+            dst[i] = src[i] > 0 ? 1 : 0
+        }
     }
     
     public static func tanh<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {

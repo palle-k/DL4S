@@ -10,7 +10,7 @@ import XCTest
 
 class MemTests: XCTestCase {
     func testSliceRead() {
-        let a: Tensor<Float> = Tensor((0..<16).map(Float.init), shape: 4, 4)
+        let a: Tensor<Float, CPU> = Tensor((0..<16).map(Float.init), shape: 4, 4)
         
         print(a[0, nil])
         print(a[1, nil])

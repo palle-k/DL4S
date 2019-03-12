@@ -17,10 +17,10 @@ class GANTests: XCTestCase {
         
         print("Creating networks...")
         
-        let d1 = Dropout<Float>(rate: 0.5)
-        let d2 = Dropout<Float>(rate: 0.5)
+        let d1 = Dropout<Float, CPU>(rate: 0.5)
+        let d2 = Dropout<Float, CPU>(rate: 0.5)
         
-        let generator = Sequential<Float>(
+        let generator = Sequential<Float, CPU>(
             Dense(inputFeatures: 20, outputFeatures: 200).asAny(),
             Tanh().asAny(),
             d1.asAny(),
@@ -32,7 +32,7 @@ class GANTests: XCTestCase {
             Reshape(shape: 28, 28).asAny()
         )
         
-        let discriminator = Sequential<Float>(
+        let discriminator = Sequential<Float, CPU>(
             Flatten().asAny(),
             Dense(inputFeatures: 28 * 28, outputFeatures: 400).asAny(),
             Tanh().asAny(),
@@ -51,7 +51,7 @@ class GANTests: XCTestCase {
         let epochs = 10_000
         let regularization: Float = 0.001
         
-        let genInputs = Tensor<Float>(repeating: 0, shape: batchSize, 20)
+        let genInputs = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 20)
         
         print("Training...")
         
@@ -70,7 +70,7 @@ class GANTests: XCTestCase {
             discriminatorLoss.backwards()
             optimDis.step()
 
-            var generatorLoss = Tensor<Float>(0)
+            var generatorLoss = Tensor<Float, CPU>(0)
 
             for _ in 0 ..< 4 {
                 optimGen.zeroGradient()

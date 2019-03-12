@@ -75,18 +75,9 @@ private struct ReluContext<Element: NumericType, Device: DeviceType>: UnaryTenso
         }
         
         let temp1 = Device.Memory.allocateBuffer(withCapacity: vector.count, type: Element.self)
-        let temp2 = Device.Memory.allocateBuffer(withCapacity: vector.count, type: Element.self)
-        
-        Device.Engine.fill(value: 0.5, result: temp1, count: vector.count)
-        Device.Engine.fill(value: 0.5, result: temp2, count: vector.count)
-        Device.Engine.copysign(values: temp1, signs: source.values, result: temp1, count: vector.count)
-        
-        // temp1[x] == 0 if source[x] <= 0 else temp1[x] == 1 (Relu mask)
-        Device.Engine.vAdd(lhs: temp1, rhs: temp2, result: temp1, count: vector.count)
+        Device.Engine.isPositive(val: source.values, result: temp1, count: source.count)
         Device.Engine.vMA(lhs: temp1, rhs: vectorGradient, add: sourceGradient, result: sourceGradient, count: source.count)
-        
         Device.Memory.free(temp1)
-        Device.Memory.free(temp2)
     }
     
     var symbol: String {

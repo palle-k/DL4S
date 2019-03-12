@@ -72,7 +72,7 @@ public protocol EngineType {
     static func log<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func exp<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func relu<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: UnsafeMutablePointer<N>, count: Int)
+    static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func tanh<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func sqrt<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N
