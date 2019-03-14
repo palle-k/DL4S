@@ -96,7 +96,7 @@ public protocol EngineType {
     static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N
     static func copysign<N: NumericType>(values: Buffer<N, Device>, signs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N)
-    static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
+    static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
     static func permuteAxes<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], destination: Buffer<N, Device>)
     static func permuteAxesAdd<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], add: Buffer<N, Device>, destination: Buffer<N, Device>)
     
@@ -146,5 +146,3 @@ extension EngineType {
         return N.pow(base: base, exponent: exponent)
     }
 }
-
-

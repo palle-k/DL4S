@@ -211,7 +211,7 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
+    public static func conv2d<N>(input: Buffer<N, GPU>, filter: Buffer<N, GPU>, result: Buffer<N, GPU>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
     

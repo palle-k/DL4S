@@ -54,6 +54,9 @@ Then add `DL4S` as a dependency to your target:
 - [x] SGD
 - [x] Momentum
 - [x] Adam
+- [ ] AdaGrad
+- [ ] AdaDelta
+- [ ] RMSProp
 
 ### Losses
 - [x] Binary Cross-Entropy
@@ -237,7 +240,7 @@ for epoch in 1 ... epochs {
 
         let genResult = network.forward(genInputs)
 
-        let gRegLoss = optimDis.parameters.map {l2loss($0, loss: regularization)}.reduce(0, +)
+        let gRegLoss = optimGen.parameters.map {l2loss($0, loss: regularization)}.reduce(0, +)
         generatorLoss = -0.5 * mean(log(genResult)) + gRegLoss // heuristic non-saturating loss
 
         generatorLoss.backwards()

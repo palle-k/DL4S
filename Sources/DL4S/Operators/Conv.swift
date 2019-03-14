@@ -48,19 +48,22 @@ public func conv2d<Element, Device>(input: Tensor<Element, Device>, kernel: Tens
     precondition(4 ~= input.dim)
     precondition(kernel.dim == 4)
     
+    // batchSize x numberOfKernels x rows x columns
+    let outputShape = [input.shape[0], kernel.shape[0], input.shape[2], input.shape[3]]
+    
     let result = Tensor<Element, Device>(
-        shape: input.shape,
+        shape: outputShape,
         parent: nil,
         context: Conv2DOperation(image: input, kernel: kernel).asAny()
     )
     
-    fatalError("TODO: Batch processing")
     Device.Engine.conv2d(
         input: input.values,
         filter: kernel.values,
         result: result.values,
         width: input.shape[3],
         height: input.shape[2],
+        batchSize: input.shape[0],
         kernelWidth: kernel.shape[3],
         kernelHeight: kernel.shape[2],
         kernelDepth: kernel.shape[1],

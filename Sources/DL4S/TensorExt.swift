@@ -288,7 +288,7 @@ extension Tensor {
     }
 }
 
-extension Tensor where Element == Int32 {
+public extension Tensor where Element == Int32 {
     func toOneHot(dim: Int) -> Tensor<Float, Device> {
         let result = Tensor<Float, Device>(repeating: 0, shape: self.shape + [dim])
         
@@ -301,7 +301,7 @@ extension Tensor where Element == Int32 {
     }
 }
 
-extension Tensor {
+public extension Tensor {
     func toLabels() -> Tensor<Int32, Device> {
         let result = Tensor<Int32, Device>(repeating: 0, shape: shape.dropLast())
         

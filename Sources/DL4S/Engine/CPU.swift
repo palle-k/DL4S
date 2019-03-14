@@ -36,6 +36,13 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     public typealias RawBuffer = UnsafeMutableRawBufferPointer
     public typealias Device = CPU
     
+    static var traceAllocations: Bool = false {
+        didSet {
+            allocations.removeAll()
+        }
+    }
+    private static var allocations: [UnsafeMutableRawBufferPointer: [String]] = [:]
+    
     static func strides(from shape: [Int]) -> [Int] {
         let dim = shape.count
         
@@ -66,11 +73,29 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: stride * capacity, alignment: alignment)
         
+        if traceAllocations {
+            let trace = Thread.callStackSymbols
+            allocations[buffer] = trace
+            
+            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(5)) {
+                if let trace = allocations[buffer] {
+                    print("[ALLOC TRACE]: buffer of size \(capacity) not freed after 3 seconds.")
+                    print("[ALLOC TRACE] [begin callstack]")
+                    print(trace.joined(separator: "\n"))
+                    print("[ALLOC TRACE] [end callstack]")
+                }
+            }
+        }
+        
         return Buffer<Element, CPU>(memory: buffer)
     }
     
     public static func free<Element>(_ buffer: Buffer<Element, CPU>) where Element : NumericType {
         buffer.memory.deallocate()
+        
+        if traceAllocations {
+            allocations.removeValue(forKey: buffer.memory)
+        }
     }
     
     
@@ -291,8 +316,22 @@ public struct CPUEngine: EngineType {
         return N.argmax(values: values.memory.bindMemory(to: N.self).immutable, count: count)
     }
     
-    public static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
-        N.conv2d(input: input.memory.bindMemory(to: N.self).immutable, filter: filter.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), width: width, height: height, kernelWidth: kernelWidth, kernelHeight: kernelHeight, kernelDepth: kernelDepth, kernelCount: kernelCount)
+    public static func conv2d<N>(input: Buffer<N, CPU>, filter: Buffer<N, CPU>, result: Buffer<N, CPU>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) where N : NumericType {
+        let batchStride = width * height * kernelDepth
+        for b in 0 ..< batchSize {
+            let batchOffset = batchStride * b
+            N.conv2d(
+                input: input.advanced(by: batchOffset).memory.bindMemory(to: N.self).immutable,
+                filter: filter.memory.bindMemory(to: N.self).immutable,
+                result: result.advanced(by: batchOffset).memory.bindMemory(to: N.self),
+                width: width,
+                height: height,
+                kernelWidth: kernelWidth,
+                kernelHeight: kernelHeight,
+                kernelDepth: kernelDepth,
+                kernelCount: kernelCount
+            )
+        }
     }
     
     public static func permuteAxes<N>(input: Buffer<N, CPU>, arangement: [Int], shape: [Int], destination: Buffer<N, CPU>) where N : NumericType {

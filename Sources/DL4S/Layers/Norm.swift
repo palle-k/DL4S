@@ -59,11 +59,11 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
         let x = inputs[0]
         
 //        if self.trainable {
-//            runningMean = Tensor(momentum) * runningMean + Tensor(1 - momentum) * mean(x, axis: 0)
-//            runningVar = Tensor(momentum) * runningVar + Tensor(1 - momentum) * variance(x, axis: 0)
+//            runningMean = Tensor(momentum) * runningMean + Tensor(1 - momentum) * mean(x, axis: 0).detached()
+//            runningVar = Tensor(momentum) * runningVar + Tensor(1 - momentum) * variance(x, axis: 0).detached()
 //        }
         
-        let normalized = (x - mean(x, axis: 0)) / sqrt(variance(x, axis: 0))
-        return normalized * scale + shift
+        // let normalized = (x - mean(x, axis: 0)) / sqrt(variance(x, axis: 0))
+        return x * scale + shift
     }
 }

@@ -43,7 +43,13 @@ func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
     
     let twoPiB = 2 * 3.141592653589 * b
     
-    return (scale * twoPiB.sin() + mean, scale * twoPiB.cos() + mean)
+    let (x, y) = (scale * twoPiB.sin() + mean, scale * twoPiB.cos() + mean)
+    
+    if x.isFinite && !x.isNaN && y.isFinite && !y.isNaN {
+        return (x, y)
+    } else {
+        return randNormal(stdev: stdev, mean: mean)
+    }
 }
 
 public enum Random {

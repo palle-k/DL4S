@@ -51,6 +51,34 @@ public class Relu<Element: NumericType, Device: DeviceType>: Layer, Codable {
 }
 
 
+public class LeakyRelu<Element: NumericType, Device: DeviceType>: Layer, Codable {
+    public typealias Input = Element
+    
+    public var parameters: [Tensor<Element, Device>] {
+        return []
+    }
+    
+    public var isTrainable: Bool {
+        get {
+            return false
+        }
+        set {
+            // noop
+        }
+    }
+    
+    public var leakage: Element
+    
+    public init(_ leakage: Element) {
+        self.leakage = leakage
+    }
+    
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        return leakyRelu(inputs[0], leakage: self.leakage)
+    }
+}
+
+
 public class Tanh<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     

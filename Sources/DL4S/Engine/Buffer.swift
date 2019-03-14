@@ -56,3 +56,15 @@ public struct Buffer<Element: NumericType, Device: DeviceType>: Hashable {
         }
     }
 }
+
+extension Buffer: CustomLeafReflectable {
+    public var customMirror: Mirror {
+        let b = UnsafeMutableBufferPointer<Element>.allocate(capacity: self.count)
+        defer {
+            b.deallocate()
+        }
+        Device.Memory.assign(from: self, to: b, count: self.count)
+        let a = Array(b)
+        return Mirror(self, unlabeledChildren: a, displayStyle: .collection)
+    }
+}

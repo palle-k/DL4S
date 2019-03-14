@@ -192,7 +192,7 @@ public class Sequential<Element: NumericType, Device: DeviceType>: Layer {
     }
     
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        return layers.reduce(inputs[0]) {$1.forward([$0])}
+        return layers.reduce(inputs) {[$1.forward($0)]}[0]
     }
 }
 
@@ -260,5 +260,48 @@ public class Lambda<Element: NumericType, Input: NumericType, Device: DeviceType
     
     public func forward(_ inputs: [Tensor<Input, Device>]) -> Tensor<Element, Device> {
         return transform(inputs[0])
+    }
+}
+
+
+public class Debug<Element: NumericType, Device: DeviceType>: Layer {
+    public var parameters: [Tensor<Element, Device>] {
+        return []
+    }
+    
+    public var isTrainable: Bool {
+        get {
+            return false
+        }
+        set {
+            // noop
+        }
+    }
+    
+    public var checkNaN: Bool
+    public var checkInfinity: Bool
+    
+    public init(checkNaN: Bool = true, checkInfinity: Bool = true) {
+        self.checkNaN = checkNaN
+        self.checkInfinity = checkInfinity
+    }
+    
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        if checkNaN {
+            let sum = DL4S.sum(inputs[0]).item
+            if sum.isNaN {
+                fatalError("Found NaN")
+            }
+        }
+        if checkInfinity {
+            let max = DL4S.max(inputs[0]).item
+            let min = -DL4S.max(-inputs[0]).item
+            
+            if !max.isFinite || !min.isFinite {
+                fatalError("Found Infinity")
+            }
+        }
+        
+        return inputs[0]
     }
 }

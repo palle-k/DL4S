@@ -28,6 +28,14 @@ import Accelerate
 
 
 extension Int32: NumericType {
+    public var isFinite: Bool {
+        return true
+    }
+    
+    public var isNaN: Bool {
+        return false
+    }
+    
     public func toUInt8() -> UInt8 {
         return UInt8(self)
     }

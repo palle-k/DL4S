@@ -49,6 +49,9 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     func cosh() -> Self
     func tanh() -> Self
     
+    var isFinite: Bool { get }
+    var isNaN: Bool { get }
+    
     static func pow(base: Self, exponent: Self) -> Self
     
     init(_ float: Float)

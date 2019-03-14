@@ -35,4 +35,31 @@ class MemTests: XCTestCase {
         print(a[2, nil])
         print(a[3, nil])
     }
+    
+    func testSumLeak() {
+        CPU.Memory.traceAllocations = true
+        
+        for _ in 0 ..< 1000 {
+            usleep(1_100_000)
+            print("\n")
+            
+            let t = Tensor<Float, CPU>([[1,2],[3,4]])
+            let s = sum(t, axis: 0)
+            print(s)
+        }
+    }
+    
+    func testSubscriptLeak() {
+        CPU.Memory.traceAllocations = true
+        
+        for _ in 0 ..< 1000 {
+            usleep(1_100_000)
+            print("\n")
+            
+            let t = Tensor<Float, CPU>([[1,2],[3,4]])
+            let s = t[0]
+//            print(s)
+            dump(s)
+        }
+    }
 }
