@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 11.03.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 import Accelerate
@@ -17,6 +35,13 @@ public struct CPU: DeviceType {
 public struct CPUMemoryOperators: MemoryOperatorsType {
     public typealias RawBuffer = UnsafeMutableRawBufferPointer
     public typealias Device = CPU
+    
+    static var traceAllocations: Bool = false {
+        didSet {
+            allocations.removeAll()
+        }
+    }
+    private static var allocations: [UnsafeMutableRawBufferPointer: [String]] = [:]
     
     static func strides(from shape: [Int]) -> [Int] {
         let dim = shape.count
@@ -48,11 +73,29 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: stride * capacity, alignment: alignment)
         
+        if traceAllocations {
+            let trace = Thread.callStackSymbols
+            allocations[buffer] = trace
+            
+            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(5)) {
+                if let trace = allocations[buffer] {
+                    print("[ALLOC TRACE]: buffer of size \(capacity) not freed after 3 seconds.")
+                    print("[ALLOC TRACE] [begin callstack]")
+                    print(trace.joined(separator: "\n"))
+                    print("[ALLOC TRACE] [end callstack]")
+                }
+            }
+        }
+        
         return Buffer<Element, CPU>(memory: buffer)
     }
     
     public static func free<Element>(_ buffer: Buffer<Element, CPU>) where Element : NumericType {
         buffer.memory.deallocate()
+        
+        if traceAllocations {
+            allocations.removeValue(forKey: buffer.memory)
+        }
     }
     
     
@@ -273,8 +316,22 @@ public struct CPUEngine: EngineType {
         return N.argmax(values: values.memory.bindMemory(to: N.self).immutable, count: count)
     }
     
-    public static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
-        N.conv2d(input: input.memory.bindMemory(to: N.self).immutable, filter: filter.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), width: width, height: height, kernelWidth: kernelWidth, kernelHeight: kernelHeight, kernelDepth: kernelDepth, kernelCount: kernelCount)
+    public static func conv2d<N>(input: Buffer<N, CPU>, filter: Buffer<N, CPU>, result: Buffer<N, CPU>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) where N : NumericType {
+        let batchStride = width * height * kernelDepth
+        for b in 0 ..< batchSize {
+            let batchOffset = batchStride * b
+            N.conv2d(
+                input: input.advanced(by: batchOffset).memory.bindMemory(to: N.self).immutable,
+                filter: filter.memory.bindMemory(to: N.self).immutable,
+                result: result.advanced(by: batchOffset).memory.bindMemory(to: N.self),
+                width: width,
+                height: height,
+                kernelWidth: kernelWidth,
+                kernelHeight: kernelHeight,
+                kernelDepth: kernelDepth,
+                kernelCount: kernelCount
+            )
+        }
     }
     
     public static func permuteAxes<N>(input: Buffer<N, CPU>, arangement: [Int], shape: [Int], destination: Buffer<N, CPU>) where N : NumericType {
@@ -323,6 +380,126 @@ public struct CPUEngine: EngineType {
             let ldIdx = CPUMemoryOperators.linearIndex(from: dstIdx, shape: dstShape)
             
             dstMem[ldIdx] = addMem[ldIdx] + sourceMem[lsIdx]
+        }
+    }
+    
+    public static func maxPool2d<N>(
+        input: Buffer<N, CPU>,
+        result: Buffer<N, CPU>,
+        resultContext: Buffer<Int32, CPU>,
+        inputSize: (batchSize: Int, depth: Int, height: Int, width: Int),
+        kernelSize: (height: Int, width: Int),
+        stride: (vertical: Int, horizontal: Int)
+    ) where N : NumericType {
+        let dstWidth = (inputSize.width - kernelSize.width) / stride.horizontal + 1
+        let dstHeight = (inputSize.height - kernelSize.height) / stride.vertical + 1
+        
+        let srcRowStride = inputSize.width
+        let srcZStride = srcRowStride * inputSize.height
+        let srcBatchStride = srcZStride * inputSize.depth
+        
+        let dstRowStride = dstWidth
+        let dstZStride = dstRowStride * dstHeight
+        let dstBatchStride = dstZStride * inputSize.depth
+        
+        let src = input.memory.bindMemory(to: N.self)
+            .pointer(capacity: srcBatchStride * inputSize.batchSize)
+        let dst = result.memory.bindMemory(to: N.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        let ctx = resultContext.memory.bindMemory(to: Int32.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        
+        
+        for batch in 0 ..< inputSize.batchSize {
+            let srcBatch = src.advanced(by: srcBatchStride * batch)
+            let dstBatch = dst.advanced(by: dstBatchStride * batch)
+            let ctxBatch = ctx.advanced(by: dstBatchStride * batch)
+            
+            for z in 0 ..< inputSize.depth {
+                let srcMatrix = srcBatch.advanced(by: z * srcZStride)
+                let dstMatrix = dstBatch.advanced(by: z * dstZStride)
+                let ctxMatrix = ctxBatch.advanced(by: z * dstZStride)
+                
+                for dstRow in 0 ..< dstHeight {
+                    let srcRow = dstRow * stride.vertical
+                    
+                    for dstCol in 0 ..< dstWidth {
+                        let srcCol = dstCol * stride.horizontal
+                        
+                        var min = srcMatrix[srcRow * srcRowStride + srcCol]
+                        var minI = 0
+                        
+                        for i in 0 ..< kernelSize.height * kernelSize.width {
+                            let x = i % kernelSize.width
+                            let y = i / kernelSize.width
+                            
+                            let candidate = srcMatrix[(srcRow + y) * srcRowStride + srcCol + x]
+                            
+                            if candidate < min {
+                                min = candidate
+                                minI = i
+                            }
+                        }
+                        
+                        dstMatrix[dstRow * dstRowStride + dstCol] = min
+                        ctxMatrix[dstRow * dstRowStride + dstCol] = Int32(minI)
+                    }
+                }
+            }
+        }
+    }
+    
+    public static func maxPool2DRevAdd<N>(pooled: Buffer<N, CPU>, poolCtx: Buffer<Int32, CPU>, add: Buffer<Int32, CPU>, target: Buffer<Int32, CPU>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType {
+        let dstWidth = (inputSize.width - kernelSize.width) / stride.horizontal + 1
+        let dstHeight = (inputSize.height - kernelSize.height) / stride.vertical + 1
+        
+        let srcRowStride = inputSize.width
+        let srcZStride = srcRowStride * inputSize.height
+        let srcBatchStride = srcZStride * inputSize.depth
+        
+        let dstRowStride = dstWidth
+        let dstZStride = dstRowStride * dstHeight
+        let dstBatchStride = dstZStride * inputSize.depth
+        
+        let dst = target.memory.bindMemory(to: N.self)
+            .pointer(capacity: srcBatchStride * inputSize.batchSize)
+        let addBase = add.memory.bindMemory(to: N.self)
+            .pointer(capacity: srcBatchStride * inputSize.batchSize)
+        let grad = pooled.memory.bindMemory(to: N.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        let ctx = poolCtx.memory.bindMemory(to: Int32.self)
+            .pointer(capacity: dstBatchStride * inputSize.batchSize)
+        
+        
+        for batch in 0 ..< inputSize.batchSize {
+            let dstBatch = dst.advanced(by: srcBatchStride * batch)
+            let addBatch = addBase.advanced(by: srcBatchStride * batch)
+            let gradBatch = grad.advanced(by: dstBatchStride * batch)
+            let ctxBatch = ctx.advanced(by: dstBatchStride * batch)
+            
+            for z in 0 ..< inputSize.depth {
+                let dstMatrix = dstBatch.advanced(by: z * srcZStride)
+                let addMatrix = addBatch.advanced(by: z * srcZStride)
+                let gradMatrix = gradBatch.advanced(by: z * dstZStride)
+                let ctxMatrix = ctxBatch.advanced(by: z * dstZStride)
+                
+                for dstRow in 0 ..< dstHeight {
+                    let srcRow = dstRow * stride.vertical
+                    
+                    for dstCol in 0 ..< dstWidth {
+                        let srcCol = dstCol * stride.horizontal
+                        
+                        let i = Int(ctxMatrix[dstRow * dstRowStride + dstCol])
+                        let g = gradMatrix[dstRow * dstRowStride + dstCol]
+                        
+                        let x = i % kernelSize.width
+                        let y = i / kernelSize.width
+                        
+                        let a = addMatrix[(srcRow + y) * srcRowStride + srcCol + x]
+                        dstMatrix[(srcRow + y) * srcRowStride + srcCol + x] = a + g
+                    }
+                }
+            }
         }
     }
 }

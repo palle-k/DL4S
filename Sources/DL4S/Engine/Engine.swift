@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 10.03.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 
@@ -76,9 +94,12 @@ public protocol EngineType {
     static func sqrt<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N
     static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N)
-    static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
+    static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
     static func permuteAxes<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], destination: Buffer<N, Device>)
     static func permuteAxesAdd<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], add: Buffer<N, Device>, destination: Buffer<N, Device>)
+    
+    static func maxPool2d<N>(input: Buffer<N, Device>, result: Buffer<N, Device>, resultContext: Buffer<Int32, Device>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType
+    static func maxPool2DRevAdd<N>(pooled: Buffer<N, Device>, poolCtx: Buffer<Int32, Device>, add: Buffer<Int32, Device>, target: Buffer<Int32, Device>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int))
 }
 
 
@@ -123,5 +144,3 @@ extension EngineType {
         return N.pow(base: base, exponent: exponent)
     }
 }
-
-

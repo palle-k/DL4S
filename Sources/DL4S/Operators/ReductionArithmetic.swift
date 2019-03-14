@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 27.02.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 
@@ -67,7 +85,7 @@ private struct MaxContext<Element: NumericType, Device: DeviceType>: UnaryTensor
 
 private struct MaxAxisContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var source: Tensor<Element, Device>
-    let maxIdxs: [[Int]]
+    let maxIdxs: [Int]
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
         
@@ -83,17 +101,28 @@ public func max<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? =
         var resultShape: [Int] = vector.shape
         resultShape.remove(at: axis)
         
-        var result: Tensor<Element, Device> = Tensor(repeating: 0, shape: resultShape)
+        let result: Tensor<Element, Device> = Tensor(repeating: 0, shape: resultShape)
+        var maxIdxs: [Int] = []
         
         for idx in iterate(resultShape) {
             var srcIdx: [Int?] = idx.map {$0}
             srcIdx.insert(nil, at: axis)
             
-            let slice = vector[srcIdx]
-            let (arg, max) = Device.Engine.argmax(values: slice.values, count: slice.count)
+            //let slice = vector[srcIdx]
+            let (slice, isCopy, _) = vector.buffer(from: srcIdx)
+            
+            let (arg, max) = Device.Engine.argmax(values: slice, count: slice.count)
+            maxIdxs.append(arg)
+            result.values[zip(idx, result.strides).map(*).reduce(0, +)] = max
+            
+            if isCopy {
+                Device.Memory.free(slice)
+            }
         }
         
-        fatalError()
+        result.context = vector.requiresGradient ? MaxAxisContext(source: vector, maxIdxs: maxIdxs).asAny() : nil
+        
+        return result
     } else {
         let (arg, max) = Device.Engine.argmax(values: vector.values, count: vector.count)
         
