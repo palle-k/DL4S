@@ -300,6 +300,13 @@ extension Tensor {
         
         return sorting
     }
+    
+    public func detachAll() {
+        let sorted = Tensor.performSorting(from: self)
+        for tensor in sorted {
+            tensor.context = nil
+        }
+    }
 }
 
 public extension Tensor where Element == Int32 {
