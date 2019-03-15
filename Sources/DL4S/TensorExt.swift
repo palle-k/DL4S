@@ -273,18 +273,32 @@ public extension Tensor {
     }
 }
 
-extension Tensor {
-    func sorted(sorting: inout [Tensor<Element, Device>], visited: inout Set<Tensor<Element, Device>>) {
-        guard !visited.contains(self), self.requiresGradient else {
-            return
+extension Tensor {    
+    static func performSorting(from initialTensor: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
+        var stack: [(Tensor<Element, Device>, Int)] = []
+        var sorting: [Tensor<Element, Device>] = []
+        var visited: Set<Tensor<Element, Device>> = []
+        
+        stack.append((initialTensor, 0))
+        
+        while let (current, idx) = stack.last {
+            if visited.contains(current) || !current.requiresGradient {
+                stack.removeLast()
+                continue
+            }
+            
+            if let context = current.context, context.sourceTensors.indices ~= idx {
+                stack.removeLast()
+                stack.append((current, idx + 1))
+                stack.append((context.sourceTensors[idx], 0))
+            } else {
+                visited.insert(current)
+                sorting.append(current)
+                stack.removeLast()
+            }
         }
         
-        for source in context?.sourceTensors ?? [] {
-            source.sorted(sorting: &sorting, visited: &visited)
-        }
-        
-        visited.insert(self)
-        sorting.append(self)
+        return sorting
     }
 }
 

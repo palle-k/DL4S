@@ -357,9 +357,7 @@ public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloa
         }
         Device.Engine.fill(value: 1, result: gradient, count: count)
         
-        var ordering: [Tensor<Element, Device>] = []
-        var visited: Set<Tensor<Element, Device>> = []
-        sorted(sorting: &ordering, visited: &visited)
+        let ordering = Tensor.performSorting(from: self)
         
         for tensor in ordering.reversed() {
             tensor._backwards()
