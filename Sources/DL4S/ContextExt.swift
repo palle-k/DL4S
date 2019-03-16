@@ -34,7 +34,7 @@ private enum GraphNode<Element: NumericType, Device: DeviceType> {
         case .operation(let op):
             return op.id
         case .tensor(let t):
-            return String(t.values.hashValue ?? 0).replacingOccurrences(of: "-", with: "z")
+            return String(t.values.hashValue).replacingOccurrences(of: "-", with: "z")
         }
     }
     

@@ -335,3 +335,17 @@ public extension Tensor {
         return result
     }
 }
+
+extension Tensor {
+    var shapedValues: ShapedBuffer<Element, Device> {
+        return ShapedBuffer(values: self.values, shape: self.shape)
+    }
+    
+    var shapedGradient: ShapedBuffer<Element, Device>? {
+        if let gradient = self.gradient {
+            return ShapedBuffer(values: gradient, shape: self.shape)
+        } else {
+            return nil
+        }
+    }
+}

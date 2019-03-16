@@ -114,6 +114,9 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (Buffer<Element, CPU>, Bool, [Int]) where Element : NumericType {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         
+        // Prevent unneccessary copies when index ends with nil
+        let slice = slice.reversed().drop(while: {$0 == nil}).reversed()
+        
         let nonNilIndices = slice.compactMap {$0}
         let strides = CPUMemoryOperators.strides(from: shape)
         

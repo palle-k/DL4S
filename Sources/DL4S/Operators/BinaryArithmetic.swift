@@ -314,13 +314,7 @@ private struct DivisionOperation<Element: NumericType, Device: DeviceType>: Bina
 
 public extension Tensor {
     static func + (lhs: Tensor<Element, Device>, rhs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        precondition(
-            (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
-                (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
-            "Suffix of shape of one operand must match shape of other operand"
-        )
-        
-        let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
+        let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         
         let result = Tensor<Element, Device>(
             shape: resultShape,
@@ -328,37 +322,13 @@ public extension Tensor {
             context: AdditionOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
-        if lhs.dim == 0 {
-            Device.Engine.vsAdd(lhs: rhs.values, rhs: lhs.values.pointee, result: result.values, count: result.count)
-        } else if rhs.dim == 0 {
-            Device.Engine.vsAdd(lhs: lhs.values, rhs: rhs.values.pointee, result: result.values, count: result.count)
-        } else if lhs.dim < rhs.dim {
-            assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
-            let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vAdd(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
-            }
-        } else /*if lhs.dim > rhs.dim*/ {
-            assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
-            let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vAdd(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
-            }
-        }
+        Device.Engine.broadcastAdd(lhs: lhs.shapedValues, rhs: rhs.shapedValues, result: result.shapedValues)
         
         return result
     }
     
     static func - (lhs: Tensor<Element, Device>, rhs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        precondition(
-            (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
-                (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
-            "Suffix of shape of one operand must match shape of other operand"
-        )
-        
-        let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
+        let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         
         let result = Tensor<Element, Device>(
             shape: resultShape,
@@ -366,38 +336,13 @@ public extension Tensor {
             context: SubtractionOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
-        if lhs.dim == 0 {
-            Device.Engine.vsAdd(lhs: rhs.values, rhs: -lhs.values.pointee, result: result.values, count: result.count)
-            Device.Engine.vNeg(val: result.values, result: result.values, count: result.count)
-        } else if rhs.dim == 0 {
-            Device.Engine.vsAdd(lhs: lhs.values, rhs: -rhs.values.pointee, result: result.values, count: result.count)
-        } else if lhs.dim < rhs.dim {
-            assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
-            let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vSub(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
-            }
-        } else /*if lhs.dim > rhs.dim*/ {
-            assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
-            let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vSub(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
-            }
-        }
+        Device.Engine.broadcastSub(lhs: lhs.shapedValues, rhs: rhs.shapedValues, result: result.shapedValues)
         
         return result
     }
     
     static func * (lhs: Tensor<Element, Device>, rhs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        precondition(
-            (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
-                (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
-            "Suffix of shape of one operand must match shape of other operand"
-        )
-        
-        let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
+        let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         
         let result = Tensor<Element, Device>(
             shape: resultShape,
@@ -405,37 +350,13 @@ public extension Tensor {
             context: MultiplicationOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
-        if lhs.dim == 0 {
-            Device.Engine.vsMul(lhs: rhs.values, rhs: lhs.values.pointee, result: result.values, count: result.count)
-        } else if rhs.dim == 0 {
-            Device.Engine.vsMul(lhs: lhs.values, rhs: rhs.values.pointee, result: result.values, count: result.count)
-        } else if lhs.dim < rhs.dim {
-            assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
-            let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vMul(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
-            }
-        } else /*if lhs.dim > rhs.dim*/ {
-            assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
-            let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vMul(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
-            }
-        }
+        Device.Engine.broadcastMul(lhs: lhs.shapedValues, rhs: rhs.shapedValues, result: result.shapedValues)
         
         return result
     }
     
     static func / (lhs: Tensor<Element, Device>, rhs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        precondition(
-            (lhs.dim >= rhs.dim && Array(lhs.shape.dropFirst(lhs.dim - rhs.dim)) == rhs.shape) ||
-                (rhs.dim > lhs.dim && Array(rhs.shape.dropFirst(rhs.dim - lhs.dim)) == lhs.shape),
-            "Suffix of shape of one operand must match shape of other operand"
-        )
-        
-        let resultShape = lhs.dim >= rhs.dim ? lhs.shape : rhs.shape
+        let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         
         let result = Tensor<Element, Device>(
             shape: resultShape,
@@ -443,25 +364,7 @@ public extension Tensor {
             context: DivisionOperation(lhs: lhs, rhs: rhs).asAny()
         )
         
-        if lhs.dim == 0 {
-            Device.Engine.svDiv(lhs: lhs.values.pointee, rhs: rhs.values, result: result.values, count: result.count)
-        } else if rhs.dim == 0 {
-            Device.Engine.vsMul(lhs: lhs.values, rhs: 1 / rhs.values.pointee, result: result.values, count: result.count)
-        } else if lhs.dim < rhs.dim {
-            assert(rhs.shape.suffix(lhs.dim) == lhs.shape)
-            let shapePrefix = rhs.shape.prefix(rhs.dim - lhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, rhs.strides.prefix(rhs.dim - lhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vDiv(lhs: lhs.values, rhs: rhs.values.advanced(by: offset), result: result.values.advanced(by: offset), count: lhs.count)
-            }
-        } else /*if lhs.dim > rhs.dim*/ {
-            assert(lhs.shape.suffix(rhs.dim) == rhs.shape)
-            let shapePrefix = lhs.shape.prefix(lhs.dim - rhs.dim)
-            for idx in iterate(Array(shapePrefix)) {
-                let offset = zip(idx, lhs.strides.prefix(lhs.dim - rhs.dim)).map(*).reduce(0, +)
-                Device.Engine.vDiv(lhs: lhs.values.advanced(by: offset), rhs: rhs.values, result: result.values.advanced(by: offset), count: rhs.count)
-            }
-        }
+        Device.Engine.broadcastDiv(lhs: lhs.shapedValues, rhs: rhs.shapedValues, result: result.shapedValues)
         
         return result
     }

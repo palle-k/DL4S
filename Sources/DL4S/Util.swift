@@ -32,6 +32,13 @@ extension Sequence {
     }
 }
 
+func shapeForBroadcastedOperands(_ lhs: [Int], _ rhs: [Int]) -> [Int] {
+    let dim = Swift.max(lhs.count, rhs.count)
+    let pLhs = Array(repeating: 1, count: dim - lhs.count) + lhs
+    let pRhs = Array(repeating: 1, count: dim - rhs.count) + rhs
+    return zip(pLhs, pRhs).map(Swift.max)
+}
+
 func iterate(_ shape: [Int]) -> AnySequence<[Int]> {
     func increment<S: RandomAccessCollection>(_ list: S, shape: S) -> ([Int], Bool) where S.Element == Int {
         guard let first = list.first, let firstDim = shape.first else {
@@ -68,8 +75,6 @@ extension Slice: Equatable where Element: Hashable {
 }
 
 extension Slice: Hashable where Element: Hashable {
-    
-    
     public func hash(into hasher: inout Hasher) {
         for element in self {
             hasher.combine(element)
@@ -271,3 +276,5 @@ public struct Progress<Element>: Sequence {
         return AnyIterator(progressIterator)
     }
 }
+
+

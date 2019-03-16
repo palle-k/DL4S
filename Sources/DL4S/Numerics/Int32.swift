@@ -254,4 +254,19 @@ extension Int32: NumericType {
     public static func conv2d(input: UnsafeBufferPointer<Int32>, filter: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
         fatalError("Conv2D is not available for data type Int32")
     }
+    
+    public static func argmin(values: UnsafeBufferPointer<Int32>, count: Int) -> (Int, Int32) {
+        precondition(count > 0)
+        var minI = 0
+        var minV = values[0]
+        
+        for i in 0 ..< count {
+            if minV > values[i] {
+                minI = i
+                minV = values[i]
+            }
+        }
+        
+        return (minI, minV)
+    }
 }

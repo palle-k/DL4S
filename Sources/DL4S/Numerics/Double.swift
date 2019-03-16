@@ -223,5 +223,14 @@ extension Double: NumericType {
             }
         }
     }
+    
+    public static func argmin(values: UnsafeBufferPointer<Double>, count: Int) -> (Int, Double) {
+        var minI: UInt = 0
+        var minV: Double = 0
+        
+        vDSP_minviD(values.pointer(capacity: count), 1, &minV, &minI, UInt(count))
+        
+        return (Int(minI), minV)
+    }
 }
 

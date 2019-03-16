@@ -3,7 +3,7 @@
 //  DL4STests
 //
 //  Created by Palle Klewitz on 07.03.19.
-////  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal

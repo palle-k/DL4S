@@ -28,7 +28,7 @@ import Foundation
 
 public protocol DeviceType {
     associatedtype Memory: MemoryOperatorsType where Memory.Device == Self
-    associatedtype Engine: EngineType where Engine.Device == Self
+    associatedtype Engine: EngineType & EngineTypeV2 where Engine.Device == Self
 }
 
 
@@ -102,6 +102,7 @@ public protocol EngineType {
     
     static func maxPool2d<N>(input: Buffer<N, Device>, result: Buffer<N, Device>, resultContext: Buffer<Int32, Device>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType
     static func maxPool2DRevAdd<N>(pooled: Buffer<N, Device>, poolCtx: Buffer<Int32, Device>, add: Buffer<Int32, Device>, target: Buffer<Int32, Device>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int))
+    
 }
 
 

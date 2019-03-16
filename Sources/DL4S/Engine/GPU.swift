@@ -246,3 +246,165 @@ public struct VRAMBuffer: Hashable {
     var buffer: MTLBuffer
     var offset: Int
 }
+
+extension GPUEngine: EngineTypeV2 {
+    public static func matMul<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func matMulAdd<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func broadcastAdd<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func broadcastSub<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func broadcastMul<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func broadcastDiv<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceSum<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceMax<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceMin<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceMean<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func sum<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func mean<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func max<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) -> Int where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func min<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) -> Int where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func square<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func relu<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func heaviside<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func permuteAxes<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, arangement: [Int]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func permuteAxesAdd<N>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, arangement: [Int]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func subscriptRead<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func subscriptWrite<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func subscriptReadAdd<N>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func subscriptWriteAdd<N>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func stack<N>(buffers: [ShapedBuffer<N, GPU>], result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func conv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func revConv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func kernelGradConv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func maxPool2D<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func avgPool2D<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func revMaxPool2D<N>(values: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func revAvgPool2D<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func exp<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func log<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+
+    public static func sqrt<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func sin<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func cos<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func tan<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func sinh<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func cosh<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func tanh<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+}

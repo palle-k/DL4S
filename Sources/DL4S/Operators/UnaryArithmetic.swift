@@ -198,36 +198,6 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
     return relu(vector) - Tensor(leakage) * relu(-vector)
 }
 
-
-public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let e = expected.view(as: -1)
-    let a = actual.view(as: -1)
-    
-    let p1 = e * log(a)
-    let p2 = (1 - e) * log(1 - a)
-    return mean(-(p1 + p2))
-}
-
-public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let expectedView = expected.view(as: -1)
-    let actualView = actual.view(as: expectedView.shape[0], -1)
-    
-    var result = Tensor<Element, Device>(0)
-    
-    for i in 0 ..< expectedView.shape[0] {
-        // expected is not included in compute graph
-        result = result - log(actualView[i, Int(expectedView[i].item)])
-    }
-    
-    return result / Tensor<Element, Device>(Element(expected.count))
-}
-
-public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let diff = expected - actual
-    let s = sum(diff * diff)
-    return s  / Tensor(Element(expected.dim > 1 ? expected.shape[0] : 1))
-}
-
 public func mean<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? = nil) -> Tensor<Element, Device> {
     let s = sum(vector, axis: axis)
     return s / Tensor(Element(axis.map {vector.shape[$0]} ?? vector.count))
@@ -237,16 +207,6 @@ public func variance<Element, Device>(_ vector: Tensor<Element, Device>, axis: I
     let m = mean(vector, axis: axis)
     return mean(vector * vector, axis: axis) - m * m
 }
-
-public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
-    return mean(vector * vector) * Tensor(loss)
-}
-
-public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
-    // abs(x) = sqrt(x * x)
-    return mean(sqrt(vector * vector)) * Tensor(loss)
-}
-
 
 private struct SoftmaxContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var source: Tensor<Element, Device>
@@ -286,7 +246,7 @@ private struct SoftmaxContext<Element: NumericType, Device: DeviceType>: UnaryTe
     }
 }
 
-public func softmax<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+func softmax<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let result = Tensor<Element, Device>(
         shape: vector.shape,
         parent: nil,

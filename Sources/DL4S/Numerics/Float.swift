@@ -223,4 +223,13 @@ extension Float: NumericType {
             }
         }
     }
+    
+    public static func argmin(values: UnsafeBufferPointer<Float>, count: Int) -> (Int, Float) {
+        var minI: UInt = 0
+        var minV: Float = 0
+        
+        vDSP_minvi(values.pointer(capacity: count), 1, &minV, &minI, UInt(count))
+        
+        return (Int(minI), minV)
+    }
 }

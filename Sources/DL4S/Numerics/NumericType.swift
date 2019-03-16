@@ -99,6 +99,7 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func copysign(values: UnsafeBufferPointer<Self>, signs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func argmax(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
+    static func argmin(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
     
     static func conv2d(input: UnsafeBufferPointer<Self>, filter: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
 }
