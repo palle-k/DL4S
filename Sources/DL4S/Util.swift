@@ -39,27 +39,19 @@ func shapeForBroadcastedOperands(_ lhs: [Int], _ rhs: [Int]) -> [Int] {
     return zip(pLhs, pRhs).map(Swift.max)
 }
 
-func iterate(_ shape: [Int]) -> AnySequence<[Int]> {
-    func increment<S: RandomAccessCollection>(_ list: S, shape: S) -> ([Int], Bool) where S.Element == Int {
-        guard let first = list.first, let firstDim = shape.first else {
-            return ([], true)
-        }
-        let (rest, overflows) = increment(list.dropFirst(), shape: shape.dropFirst())
-        if overflows {
-            if first + 1 >= firstDim {
-                return ([0] + rest, true)
-            } else {
-                return ([first + 1] + rest, false)
-            }
-        } else {
-            return ([first] + rest, false)
-        }
+func iterate(_ shape: [Int]) -> [[Int]] {
+    var result: [[Int]] = []
+    
+    let count = shape.reduce(1, *)
+    result.reserveCapacity(count)
+    
+    let strides = MemoryOps.strides(from: shape)
+    
+    for i in 0 ..< count {
+        result.append(zip(shape, strides).map {(i / $1) % $0})
     }
     
-    return AnySequence(sequence(first: Array(repeating: 0, count: shape.count)) { state -> [Int]? in
-        let (incremented, overflows) = increment(state, shape: shape)
-        return overflows ? nil : incremented
-    })
+    return result
 }
 
 prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parameters) -> Bool {

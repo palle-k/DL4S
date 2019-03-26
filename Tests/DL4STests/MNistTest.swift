@@ -117,7 +117,7 @@ class MNistTest: XCTestCase {
             loss.backwards()
             optimizer.step()
             
-            if epoch % 100 == 0 {
+            if epoch % 1 == 0 {
                 let avgLoss = loss.item
                 print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
             }

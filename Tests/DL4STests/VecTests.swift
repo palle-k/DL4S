@@ -433,6 +433,9 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a * b) * 2
+        
+        print(a * b)
+        
         result.backwards()
         
         print(a.gradientDescription!)

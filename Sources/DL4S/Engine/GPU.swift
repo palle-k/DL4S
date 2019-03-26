@@ -53,7 +53,16 @@ public struct VRAMAllocator: MemoryOperatorsType {
         return Buffer<Element, GPU>(memory: VRAMBuffer(buffer: buffer, offset: 0))
     }
     
+    public static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, GPU> where Element : NumericType {
+        let count = shape.reduce(1, *)
+        return ShapedBuffer(values: allocateBuffer(withCapacity: count, type: Element.self), shape: shape)
+    }
+    
     public static func free<Element>(_ buffer: Buffer<Element, GPU>) where Element : NumericType {
+        // Noop, MTLBuffer is reference counted
+    }
+    
+    public static func free<Element>(_ buffer: ShapedBuffer<Element, GPU>) where Element : NumericType {
         // Noop, MTLBuffer is reference counted
     }
     
@@ -248,6 +257,7 @@ public struct VRAMBuffer: Hashable {
 }
 
 extension GPUEngine: EngineTypeV2 {
+    
     public static func matMul<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
@@ -285,6 +295,22 @@ extension GPUEngine: EngineTypeV2 {
     }
     
     public static func reduceMean<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceSum<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axes: [Int]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceMax<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, axes: [Int]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceMin<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, axes: [Int]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reduceMean<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axes: [Int]) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
     

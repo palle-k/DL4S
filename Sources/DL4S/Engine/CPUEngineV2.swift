@@ -65,16 +65,18 @@ extension CPUEngine: EngineTypeV2 {
             mode = .vectorVector
             sliceCount = matchingShapeSuffix.reduce(1, *)
             iterShape = Array(resultShapePrefix)
-            
-        } else if lhs.shape[resultShapePrefix.count - 1] == 1 {
+        } else if lhs.shape.suffix(matchingShapeSuffix.count + 1).allSatisfy({$0 == 1}) {
             mode = .scalarVector
             sliceCount = matchingShapeSuffix.reduce(1, *) * rhs.shape[resultShapePrefix.count - 1]
             iterShape = Array(resultShapePrefix.dropLast())
-            
-        } else {
+        } else if rhs.shape.suffix(matchingShapeSuffix.count + 1).allSatisfy({$0 == 1}) {
             mode = .vectorScalar
             sliceCount = matchingShapeSuffix.reduce(1, *) * lhs.shape[resultShapePrefix.count - 1]
             iterShape = Array(resultShapePrefix.dropLast())
+        } else {
+            mode = .vectorVector
+            sliceCount = matchingShapeSuffix.reduce(1, *)
+            iterShape = Array(resultShapePrefix)
         }
         
         for resultIdx in iterate(iterShape) {
@@ -135,6 +137,133 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @inline(__always)
+    private static func reduce<N>(
+        values: ShapedBuffer<N, CPU>,
+        result: ShapedBuffer<N, CPU>,
+        axis: Int,
+        reduceOperator: (_ buffer: UnsafeBufferPointer<N>, _  stride: Int, _ count: Int) -> N
+    ) {
+        #if DEBUG
+        var shape = values.shape
+        shape.remove(at: axis)
+        precondition(shape == result.shape)
+        #endif
+        
+        let srcStrides = CPU.Memory.strides(from: values.shape)
+        let reductionStride = srcStrides[axis]
+        let axisSize = values.shape[axis]
+        let dstStrides = CPU.Memory.strides(from: result.shape)
+        
+        for idx in iterate(result.shape) {
+            let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
+            let suffixOffset = zip(srcStrides.suffix(from: axis+1), idx.suffix(from: axis)).map(*).reduce(0, +)
+            let totalOffset = prefixOffset + suffixOffset
+            
+            let reduced = reduceOperator(values.immutable.advanced(by: totalOffset), reductionStride, axisSize)
+            let linearIndex = zip(idx, dstStrides).map(*).reduce(0,+)
+            result.values[linearIndex] = reduced
+        }
+    }
+    
+    @inline(__always)
+    private static func reduceMultiAxis<N>(
+        values: ShapedBuffer<N, CPU>,
+        result: ShapedBuffer<N, CPU>,
+        axes: [Int],
+        reduceOperator: (UnsafeBufferPointer<N>, Int) -> N
+    ) {
+        #if DEBUG
+        var shape = values.shape
+        for axis in axes.reversed() {
+            shape.remove(at: axis)
+        }
+        precondition(shape == result.shape)
+        #endif
+        
+        let dstStrides = CPU.Memory.strides(from: result.shape)
+        let sliceCount = axes.map {values.shape[$0]}.reduce(1, *)
+        
+        for idx in iterate(result.shape) {
+            var srcIdx: [Int?] = idx
+            
+            for axis in axes {
+                srcIdx.insert(nil, at: axis)
+            }
+            
+            let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
+            
+            let reduced = reduceOperator(slice.immutable, sliceCount)
+            
+            let linearIndex = zip(dstStrides, idx).map(*).reduce(0, +)
+            result.values[linearIndex] = reduced
+            
+            if isCopy {
+                CPU.Memory.free(slice)
+            }
+        }
+    }
+    
+    @inline(__always)
+    private static func reduceMultiAxis<N>(
+        values: ShapedBuffer<N, CPU>,
+        result: ShapedBuffer<N, CPU>,
+        axes: [Int],
+        reduceOperator: (_ buffer: UnsafeBufferPointer<N>, _  stride: Int, _ count: Int) -> N,
+        reduceCombine: (N, N) -> N
+    ) {
+        #if DEBUG
+        var shape = values.shape
+        for axis in axes.reversed() {
+            shape.remove(at: axis)
+        }
+        precondition(shape == result.shape)
+        #endif
+        
+        let srcStrides = CPU.Memory.strides(from: values.shape)
+        let dstStrides = CPU.Memory.strides(from: result.shape)
+        
+        var reducedShape = [Int]()
+        var reducedStrides = [Int]()
+        var srcStridesDstIdx = srcStrides
+        
+        reducedShape.reserveCapacity(axes.count)
+        reducedStrides.reserveCapacity(axes.count)
+        for a in axes {
+            reducedShape.append(values.shape[a])
+            reducedStrides.append(srcStrides[a])
+        }
+        
+        let reductionStride = reducedStrides.last ?? 1
+        let reductionCount = reducedShape.last ?? 1
+        
+        for a in axes.reversed() {
+            srcStridesDstIdx.remove(at: a)
+        }
+        
+        for idx in iterate(result.shape) {
+            let dstIdx = zip(dstStrides, idx).map(*).reduce(0, +)
+            let srcOffset = zip(srcStridesDstIdx, idx).map(*).reduce(0, +)
+            
+            var reduced: N = 0
+            
+            for srcReduceIndex in iterate(reducedShape.dropLast()) {
+                let srcAddOffset = zip(reducedStrides, srcReduceIndex).map(*).reduce(0, +)
+                
+                reduced = reduceCombine(
+                    reduced,
+                    reduceOperator(
+                        values.immutable.advanced(by: srcOffset + srcAddOffset),
+                        reductionStride,
+                        reductionCount
+                    )
+                )
+            }
+            
+            result.values[dstIdx] = reduced
+        }
+    }
+    
+    @inline(__always)
     private static func reduceWithContext<N, Context>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
@@ -156,6 +285,48 @@ extension CPUEngine: EngineTypeV2 {
         for idx in iterate(result.shape) {
             var srcIdx: [Int?] = idx
             srcIdx.insert(nil, at: axis)
+            
+            let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
+            
+            let (reduced, ctxValue) = reduceOperator(slice.immutable, sliceCount)
+            
+            let linearIndex = zip(dstStrides, idx).map(*).reduce(0, +)
+            result.values[linearIndex] = reduced
+            context.values[linearIndex] = ctxValue
+            
+            if isCopy {
+                CPU.Memory.free(slice)
+            }
+        }
+    }
+    
+    @inline(__always)
+    private static func reduceMultiAxisWithContext<N, Context>(
+        values: ShapedBuffer<N, CPU>,
+        result: ShapedBuffer<N, CPU>,
+        context: ShapedBuffer<Context, CPU>,
+        axes: [Int],
+        reduceOperator: (UnsafeBufferPointer<N>, Int) -> (N, Context)
+        ) {
+        #if DEBUG
+        precondition(result.shape == context.shape)
+        
+        var shape = values.shape
+        for axis in axes.reversed() {
+            shape.remove(at: axis)
+        }
+        precondition(shape == result.shape)
+        #endif
+        
+        let dstStrides = CPU.Memory.strides(from: result.shape)
+        let sliceCount = axes.map {values.shape[$0]}.reduce(1, *)
+        
+        for idx in iterate(result.shape) {
+            var srcIdx: [Int?] = idx
+            
+            for axis in axes {
+                srcIdx.insert(nil, at: axis)
+            }
             
             let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
             
@@ -199,7 +370,7 @@ extension CPUEngine: EngineTypeV2 {
             result: result,
             operator: N.vSub,
             scalarOperatorA: {
-                N.vsAdd(lhs: $1, rhs: $0, result: $2, count: $3)
+                N.vsAdd(lhs: $1, rhs: -$0, result: $2, count: $3)
                 N.vNeg(val: $2.immutable, result: $2, count: $3)
             },
             scalarOperatorB: {N.vsAdd(lhs: $0, rhs: -$1, result: $2, count: $3)}
@@ -233,7 +404,7 @@ extension CPUEngine: EngineTypeV2 {
             values: values,
             result: result,
             axis: axis,
-            reduceOperator: N.sum
+            reduceOperator: N.sum(val:stride:count:)
         )
     }
     
@@ -266,7 +437,7 @@ extension CPUEngine: EngineTypeV2 {
                 reduceOperator: { buffer, count -> (N, Int32) in
                     let (arg, min) = N.argmin(values: buffer, count: count)
                     return (min, Int32(arg))
-            }
+                }
             )
         } else {
             reduce(values: values, result: result, axis: axis) {
@@ -279,6 +450,60 @@ extension CPUEngine: EngineTypeV2 {
         reduceSum(values: values, result: result, axis: axis)
         let axisCount = values.shape[axis]
         N.vsMul(lhs: result.immutable, rhs: 1 / N(axisCount), result: result.pointer, count: result.count)
+    }
+    
+    public static func reduceSum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) where N : NumericType {
+        reduceMultiAxis(
+            values: values,
+            result: result,
+            axes: axes,
+            reduceOperator: N.sum,
+            reduceCombine: +
+        )
+    }
+    
+    public static func reduceMean<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) where N : NumericType {
+        reduceSum(values: values, result: result, axes: axes)
+        let axisCount = axes.map {values.shape[$0]}.reduce(1, *)
+        N.vsMul(lhs: result.immutable, rhs: 1 / N(axisCount), result: result.pointer, count: result.count)
+    }
+    
+    public static func reduceMax<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) where N : NumericType {
+        if let context = context {
+            reduceMultiAxisWithContext(
+                values: values,
+                result: result,
+                context: context,
+                axes: axes,
+                reduceOperator: { buffer, count -> (N, Int32) in
+                    let (arg, max) = N.argmax(values: buffer, count: count)
+                    return (max, Int32(arg))
+                }
+            )
+        } else {
+            reduceMultiAxis(values: values, result: result, axes: axes) {
+                N.argmax(values: $0, count: $1).1
+            }
+        }
+    }
+    
+    public static func reduceMin<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) where N : NumericType {
+        if let context = context {
+            reduceMultiAxisWithContext(
+                values: values,
+                result: result,
+                context: context,
+                axes: axes,
+                reduceOperator: { buffer, count -> (N, Int32) in
+                    let (arg, min) = N.argmin(values: buffer, count: count)
+                    return (min, Int32(arg))
+                }
+            )
+        } else {
+            reduceMultiAxis(values: values, result: result, axes: axes) {
+                N.argmin(values: $0, count: $1).1
+            }
+        }
     }
     
     public static func sum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {

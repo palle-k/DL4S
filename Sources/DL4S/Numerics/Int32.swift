@@ -164,6 +164,14 @@ extension Int32: NumericType {
         return result
     }
     
+    public static func sum(val: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> Int32 {
+        var result: Int32 = 0
+        for i in 0 ..< count {
+            result += val[i * stride]
+        }
+        return result
+    }
+    
     public static func copysign(values: UnsafeBufferPointer<Int32>, signs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             if signs[i] < 0 {

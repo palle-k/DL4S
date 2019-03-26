@@ -38,27 +38,32 @@ public protocol EngineTypeV2 {
     static func broadcastMul<N>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func broadcastDiv<N>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    static func reduceSum <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axis: Int)
-    static func reduceMax <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
-    static func reduceMin <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
+    static func reduceSum<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    static func reduceMax<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
+    static func reduceMin<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
     static func reduceMean<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    
+    static func reduceSum<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axes: [Int])
+    static func reduceMax<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axes: [Int])
+    static func reduceMin<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axes: [Int])
+    static func reduceMean<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axes: [Int])
     
     static func sum<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func mean<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     @discardableResult static func max<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>) -> Int
     @discardableResult static func min<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>) -> Int
     
-    static func exp   <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
-    static func log   <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
-    static func sqrt  <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func exp<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func log<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func sqrt<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func square<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
     static func relu<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func heaviside<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    static func sin <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
-    static func cos <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
-    static func tan <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func sin<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func cos<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func tan<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func sinh<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func cosh<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func tanh<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
@@ -66,9 +71,9 @@ public protocol EngineTypeV2 {
     static func permuteAxes<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, arangement: [Int])
     static func permuteAxesAdd<N>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, arangement: [Int])
     
-    static func subscriptRead    <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
-    static func subscriptWrite   <N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
-    static func subscriptReadAdd <N>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    static func subscriptRead<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    static func subscriptWrite<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    static func subscriptReadAdd<N>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
     static func subscriptWriteAdd<N>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
     
     static func stack<N>(buffers: [ShapedBuffer<N, Device>], result: ShapedBuffer<N, Device>, axis: Int)

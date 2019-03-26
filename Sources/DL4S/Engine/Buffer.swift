@@ -103,3 +103,39 @@ public struct ShapedBuffer<Element: NumericType, Device: DeviceType>: Hashable {
         return ShapedBuffer(values: values, shape: shape)
     }
 }
+
+extension Buffer: CustomStringConvertible {
+    public var description: String {
+        return "Buffer(\(generateDescription()))"
+    }
+    
+    func generateDescription() -> String {
+        return "[\(array.map {"\($0)"}.joined(separator: ", "))]"
+    }
+}
+
+extension ShapedBuffer: CustomStringConvertible {
+    public var description: String {
+        return "ShapedBuffer(\(generateDescription()))"
+    }
+    
+    func generateDescription() -> String {
+        if dim == 0 {
+            return "\(values.pointee)"
+        } else if dim == 1 {
+            let dim = self.shape[0]
+            return "[\((0 ..< dim).map {"\(values[$0])"}.joined(separator: ", "))]"
+        } else {
+            let firstDim = shape.first!
+            let restDim = Array(shape.dropFirst())
+            
+            let stride = restDim.reduce(1, *)
+            
+            let slices = (0 ..< firstDim).map {
+                ShapedBuffer(values: values.advanced(by: stride * $0), shape: restDim).generateDescription()
+            }
+            
+            return "[\(slices.joined(separator: "\n").replacingOccurrences(of: "\n", with: "\n "))]"
+        }
+    }
+}

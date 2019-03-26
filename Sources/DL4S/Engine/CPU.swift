@@ -90,12 +90,21 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         return Buffer<Element, CPU>(memory: buffer)
     }
     
+    public static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, CPU> where Element : NumericType {
+        let count = shape.reduce(1, *)
+        return ShapedBuffer(values: allocateBuffer(withCapacity: count, type: Element.self), shape: shape)
+    }
+    
     public static func free<Element>(_ buffer: Buffer<Element, CPU>) where Element : NumericType {
         buffer.memory.deallocate()
         
         if traceAllocations {
             allocations.removeValue(forKey: buffer.memory)
         }
+    }
+    
+    public static func free<Element>(_ buffer: ShapedBuffer<Element, CPU>) where Element : NumericType {
+        free(buffer.values)
     }
     
     
@@ -138,7 +147,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
             let resultCount = flattenedResultShape.reduce(1, *)
             let resultBuffer = allocateBuffer(withCapacity: resultCount, type: Element.self)
             
-            recursiveRead(source: buffer.memory.bindMemory(to: Element.self).immutable, destination: resultBuffer.memory.bindMemory(to: Element.self), srcIndex: padded, srcStrides: strides, srcShape: shape)
+            iterativeRead(source: buffer.memory.bindMemory(to: Element.self).immutable, destination: resultBuffer.memory.bindMemory(to: Element.self), srcIndex: padded, srcStrides: strides, srcShape: shape)
             
             return (resultBuffer, true, flattenedResultShape)
         }

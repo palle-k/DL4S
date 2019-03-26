@@ -122,6 +122,12 @@ extension Double: NumericType {
         return result
     }
     
+    public static func sum(val: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> Double {
+        var result: Double = 0
+        vDSP_sveD(val.pointer(capacity: count), stride, &result, UInt(count))
+        return result
+    }
+    
     public static func copysign(values: UnsafeBufferPointer<Double>, signs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         vvcopysign(result.pointer(capacity: count), values.pointer(capacity: count), signs.pointer(capacity: count), [Int32(count)])
     }

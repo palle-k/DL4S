@@ -95,6 +95,7 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func sqrt(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func sum(val: UnsafeBufferPointer<Self>, count: Int) -> Self
+    static func sum(val: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> Self
     
     static func copysign(values: UnsafeBufferPointer<Self>, signs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     

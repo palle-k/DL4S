@@ -37,7 +37,9 @@ public protocol MemoryOperatorsType {
     associatedtype RawBuffer: Hashable
     
     static func allocateBuffer<Element>(withCapacity: Int, type: Element.Type) -> Buffer<Element, Device>
+    static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, Device>
     static func free<Element>(_ buffer: Buffer<Element, Device>)
+    static func free<Element>(_ buffer: ShapedBuffer<Element, Device>)
     
     static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, Device>, count: Int)
     static func assign<Element>(from source: Buffer<Element, Device>, to destination: Buffer<Element, Device>, count: Int)
