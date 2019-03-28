@@ -37,6 +37,7 @@ private enum BroadcastMode: Int {
 
 extension CPUEngine: EngineTypeV2 {    
     @inline(__always)
+    @_specialize(where N == Float)
     private static func broadcast<N>(
         lhs: ShapedBuffer<N, CPU>,
         rhs: ShapedBuffer<N, CPU>,
@@ -50,7 +51,9 @@ extension CPUEngine: EngineTypeV2 {
         let lhs = lhs.reshaped(to: [Int](repeating: 1, count: dim - lhs.dim) + lhs.shape)
         let rhs = rhs.reshaped(to: [Int](repeating: 1, count: dim - rhs.dim) + rhs.shape)
         
+        #if DEBUG
         assert(zip(lhs.shape, rhs.shape).map {$0 == $1 || $0 == 1 || $1 == 1}.allSatisfy {$0 == true})
+        #endif
         
         let matchingShapeSuffix = zip(lhs.shape, rhs.shape).reversed().prefix(while: {$0 == $1}).map {$1}.reversed()
         let resultShapePrefix = result.shape.prefix(result.dim - matchingShapeSuffix.count)
@@ -104,6 +107,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @inline(__always)
+    @_specialize(where N == Float)
     private static func reduce<N>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
@@ -137,6 +141,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @inline(__always)
+    @_specialize(where N == Float)
     private static func reduce<N>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
@@ -166,6 +171,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @inline(__always)
+    @_specialize(where N == Float)
     private static func reduceMultiAxis<N>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
@@ -204,6 +210,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @inline(__always)
+    @_specialize(where N == Float)
     private static func reduceMultiAxis<N>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
@@ -226,8 +233,8 @@ extension CPUEngine: EngineTypeV2 {
         var reducedStrides = [Int]()
         var srcStridesDstIdx = srcStrides
         
-        reducedShape.reserveCapacity(axes.count)
-        reducedStrides.reserveCapacity(axes.count)
+        // reducedShape.reserveCapacity(axes.count)
+        // reducedStrides.reserveCapacity(axes.count)
         for a in axes {
             reducedShape.append(values.shape[a])
             reducedStrides.append(srcStrides[a])
@@ -240,14 +247,29 @@ extension CPUEngine: EngineTypeV2 {
             srcStridesDstIdx.remove(at: a)
         }
         
+        let srcReduceIndices = iterate(reducedShape.dropLast())
+        
+        let dstPtr = result.values.pointer.pointer(capacity: result.count)
+        
+        var dstIdx: Int
+        var srcOffset: Int
+        var srcAddOffset: Int
+        
         for idx in iterate(result.shape) {
-            let dstIdx = zip(dstStrides, idx).map(*).reduce(0, +)
-            let srcOffset = zip(srcStridesDstIdx, idx).map(*).reduce(0, +)
+            dstIdx = 0
+            srcOffset = 0
+            for i in 0 ..< idx.count {
+                dstIdx += dstStrides[i] * idx[i]
+                srcOffset += srcStridesDstIdx[i] * idx[i]
+            }
             
             var reduced: N = 0
             
-            for srcReduceIndex in iterate(reducedShape.dropLast()) {
-                let srcAddOffset = zip(reducedStrides, srcReduceIndex).map(*).reduce(0, +)
+            for srcReduceIndex in srcReduceIndices {
+                srcAddOffset = 0
+                for i in 0 ..< srcReduceIndex.count {
+                    srcAddOffset += reducedStrides[i] * srcReduceIndex[i]
+                }
                 
                 reduced = reduceCombine(
                     reduced,
@@ -259,11 +281,12 @@ extension CPUEngine: EngineTypeV2 {
                 )
             }
             
-            result.values[dstIdx] = reduced
+            dstPtr[dstIdx] = reduced
         }
     }
     
     @inline(__always)
+    @_specialize(where N == Float, Context == Int32)
     private static func reduceWithContext<N, Context>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
@@ -301,6 +324,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @inline(__always)
+    @_specialize(where N == Float, Context == Int32)
     private static func reduceMultiAxisWithContext<N, Context>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
@@ -342,15 +366,18 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @_specialize(where N == Float)
     public static func matMul<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         N.matMul(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, lhsRows: lhs.shape[0], lhsCols: lhs.shape[1], rhsCols: rhs.shape[1])
     }
     
+    @_specialize(where N == Float)
     public static func matMulAdd<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         matMul(lhs: lhs, rhs: rhs, result: result)
         broadcastAdd(lhs: result, rhs: add, result: result)
     }
     
+    @_specialize(where N == Float)
     public static func broadcastAdd<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         broadcast(
             lhs:
@@ -363,6 +390,7 @@ extension CPUEngine: EngineTypeV2 {
         )
     }
     
+    @_specialize(where N == Float)
     public static func broadcastSub<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         broadcast(
             lhs: lhs,
@@ -377,6 +405,7 @@ extension CPUEngine: EngineTypeV2 {
         )
     }
     
+    @_specialize(where N == Float)
     public static func broadcastMul<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         broadcast(
             lhs: lhs,
@@ -388,6 +417,7 @@ extension CPUEngine: EngineTypeV2 {
         )
     }
     
+    @_specialize(where N == Float)
     public static func broadcastDiv<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         broadcast(
             lhs: lhs,
@@ -399,6 +429,7 @@ extension CPUEngine: EngineTypeV2 {
         )
     }
     
+    @_specialize(where N == Float)
     public static func reduceSum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
         reduce(
             values: values,
@@ -408,6 +439,7 @@ extension CPUEngine: EngineTypeV2 {
         )
     }
     
+    @_specialize(where N == Float)
     public static func reduceMax<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axis: Int) where N : NumericType {
         if let context = context {
             reduceWithContext(
@@ -427,6 +459,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @_specialize(where N == Float)
     public static func reduceMin<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axis: Int) where N : NumericType {
         if let context = context {
             reduceWithContext(
@@ -446,12 +479,14 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @_specialize(where N == Float)
     public static func reduceMean<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
         reduceSum(values: values, result: result, axis: axis)
         let axisCount = values.shape[axis]
         N.vsMul(lhs: result.immutable, rhs: 1 / N(axisCount), result: result.pointer, count: result.count)
     }
     
+    @_specialize(where N == Float)
     public static func reduceSum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) where N : NumericType {
         reduceMultiAxis(
             values: values,
@@ -462,12 +497,14 @@ extension CPUEngine: EngineTypeV2 {
         )
     }
     
+    @_specialize(where N == Float)
     public static func reduceMean<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) where N : NumericType {
         reduceSum(values: values, result: result, axes: axes)
         let axisCount = axes.map {values.shape[$0]}.reduce(1, *)
         N.vsMul(lhs: result.immutable, rhs: 1 / N(axisCount), result: result.pointer, count: result.count)
     }
     
+    @_specialize(where N == Float)
     public static func reduceMax<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) where N : NumericType {
         if let context = context {
             reduceMultiAxisWithContext(
@@ -487,6 +524,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @_specialize(where N == Float)
     public static func reduceMin<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) where N : NumericType {
         if let context = context {
             reduceMultiAxisWithContext(
@@ -506,15 +544,18 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @_specialize(where N == Float)
     public static func sum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         result.values.pointee = N.sum(val: values.immutable, count: values.count)
     }
     
+    @_specialize(where N == Float)
     public static func mean<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         result.values.pointee = N.sum(val: values.immutable, count: values.count) / N(values.count)
     }
     
     @discardableResult
+    @_specialize(where N == Float)
     public static func max<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) -> Int where N : NumericType {
         let (arg, max) = N.argmax(values: values.immutable, count: values.count)
         result.values.pointee = max
@@ -522,6 +563,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @discardableResult
+    @_specialize(where N == Float)
     public static func min<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) -> Int where N : NumericType {
         let (arg, min) = N.argmin(values: values.immutable, count: values.count)
         result.values.pointee = min

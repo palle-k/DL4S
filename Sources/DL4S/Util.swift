@@ -39,6 +39,7 @@ func shapeForBroadcastedOperands(_ lhs: [Int], _ rhs: [Int]) -> [Int] {
     return zip(pLhs, pRhs).map(Swift.max)
 }
 
+@inline(__always)
 func iterate(_ shape: [Int]) -> [[Int]] {
     var result: [[Int]] = []
     
@@ -47,8 +48,14 @@ func iterate(_ shape: [Int]) -> [[Int]] {
     
     let strides = MemoryOps.strides(from: shape)
     
+    
     for i in 0 ..< count {
-        result.append(zip(shape, strides).map {(i / $1) % $0})
+        var next: [Int] = Array(repeating: 0, count: shape.count)
+        for axis in 0 ..< shape.count {
+            next[axis] = (i / strides[axis]) % shape[axis]
+        }
+        
+        result.append(next)
     }
     
     return result

@@ -26,10 +26,12 @@
 import Foundation
 
 
+
 private struct AdditionOperation<Element: NumericType, Device: DeviceType>: BinaryTensorOperation {
     var lhs: Tensor<Element, Device>
     var rhs: Tensor<Element, Device>
     
+    @_specialize(where Element == Float, Device == CPU)
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
         guard let vectorGradient = vector.shapedGradient else {
             return

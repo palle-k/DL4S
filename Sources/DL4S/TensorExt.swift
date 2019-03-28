@@ -273,7 +273,9 @@ public extension Tensor {
     }
 }
 
-extension Tensor {    
+extension Tensor {
+    @_specialize(where Element == Float, Device == CPU)
+    @inline(__always)
     static func performSorting(from initialTensor: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
         var stack: [(Tensor<Element, Device>, Int)] = []
         var sorting: [Tensor<Element, Device>] = []
