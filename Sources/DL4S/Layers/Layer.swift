@@ -28,6 +28,7 @@ import Foundation
 
 
 /// Protocol for an arbitrary neural network layer
+@dynamicCallable
 public protocol Layer {
     /// Type of elements of input tensor
     associatedtype Input: NumericType
@@ -109,6 +110,10 @@ public extension Layer {
                 Device.Memory.assign(from: srcGrad, to: dstGrad, count: dst.count)
             }
         }
+    }
+    
+    func dynamicallyCall(withArguments args: [Tensor<Input, Device>]) -> Tensor<Element, Device> {
+        return forward(args)
     }
 }
 

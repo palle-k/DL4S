@@ -35,7 +35,7 @@ private enum BroadcastMode: Int {
     case scalarVector
 }
 
-extension CPUEngine: EngineTypeV2 {    
+extension CPUEngine: EngineTypeV2 {
     @inline(__always)
     @_specialize(where N == Float)
     private static func broadcast<N>(
@@ -286,6 +286,29 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @inline(__always)
+    @_specialize(where N == Float)
+    private static func reducePrefix<N>(
+        values: ShapedBuffer<N, CPU>,
+        result: ShapedBuffer<N, CPU>,
+        reduceColumns: (UnsafeBufferPointer<N>, UnsafeBufferPointer<N>, UnsafeMutableBufferPointer<N>, Int) -> ()
+    ) {
+        if result.count == 0 {
+            return
+        }
+        
+        let stride = result.count
+        let count = values.count / stride
+        
+        N.fill(value: 0, result: result.pointer, count: result.count)
+        
+        for i in 0 ..< count {
+            let offset = stride * i
+            
+            reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, stride)
+        }
+    }
+    
+    @inline(__always)
     @_specialize(where N == Float, Context == Int32)
     private static func reduceWithContext<N, Context>(
         values: ShapedBuffer<N, CPU>,
@@ -431,12 +454,17 @@ extension CPUEngine: EngineTypeV2 {
     
     @_specialize(where N == Float)
     public static func reduceSum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
-        reduce(
-            values: values,
-            result: result,
-            axis: axis,
-            reduceOperator: N.sum(val:stride:count:)
-        )
+        // Choose the operation that performs better
+        if axis == 0 && result.shape.reduce(1, *) > 1 {
+            reducePrefix(values: values, result: result, reduceColumns: N.vAdd)
+        } else {
+            reduce(
+                values: values,
+                result: result,
+                axis: axis,
+                reduceOperator: N.sum(val:stride:count:)
+            )
+        }
     }
     
     @_specialize(where N == Float)
@@ -488,13 +516,21 @@ extension CPUEngine: EngineTypeV2 {
     
     @_specialize(where N == Float)
     public static func reduceSum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) where N : NumericType {
-        reduceMultiAxis(
-            values: values,
-            result: result,
-            axes: axes,
-            reduceOperator: N.sum,
-            reduceCombine: +
-        )
+        if axes.elementsEqual(0 ..< axes.count) && result.shape.reduce(1, *) > 1 {
+            reducePrefix(
+                values: values,
+                result: result,
+                reduceColumns: N.vAdd
+            )
+        } else {
+            reduceMultiAxis(
+                values: values,
+                result: result,
+                axes: axes,
+                reduceOperator: N.sum,
+                reduceCombine: +
+            )
+        }
     }
     
     @_specialize(where N == Float)

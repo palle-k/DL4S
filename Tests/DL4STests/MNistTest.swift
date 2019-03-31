@@ -109,7 +109,7 @@ class MNistTest: XCTestCase {
             optimizer.zeroGradient()
             let (batch, expected) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
 
-            let y_pred = model.forward(batch)
+            let y_pred = model(batch)
             let y_true = expected
             
             let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
@@ -117,7 +117,7 @@ class MNistTest: XCTestCase {
             loss.backwards()
             optimizer.step()
             
-            if epoch % 1 == 0 {
+            if epoch % 100 == 0 {
                 let avgLoss = loss.item
                 print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
             }
@@ -127,7 +127,7 @@ class MNistTest: XCTestCase {
         
         for i in 0 ..< ds_val.0.shape[0] {
             let x = ds_val.0[i].unsqueeze(at: 0)
-            let pred = argmax(model.forward(x).squeeze())
+            let pred = argmax(model(x).squeeze())
             let actual = Int(ds_val.1[i].item)
             
             if pred == actual {
