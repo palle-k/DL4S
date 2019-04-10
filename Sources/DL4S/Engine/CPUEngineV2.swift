@@ -48,50 +48,96 @@ extension CPUEngine: EngineTypeV2 {
     ) {
         let dim = Swift.max(lhs.dim, rhs.dim)
         
+        // Reshape operands to their broadcasting shape by padding shape with ones from the left
         let lhs = lhs.reshaped(to: [Int](repeating: 1, count: dim - lhs.dim) + lhs.shape)
         let rhs = rhs.reshaped(to: [Int](repeating: 1, count: dim - rhs.dim) + rhs.shape)
         
         #if DEBUG
+        // Result must have same dimensionality as broadcasted operands
+        assert(dim == result.dim)
+        // Check, whether lhs and rhs have compatible shapes.
+        // Every dimension must be either equal or 1 for one of the operands
         assert(zip(lhs.shape, rhs.shape).map {$0 == $1 || $0 == 1 || $1 == 1}.allSatisfy {$0 == true})
+        // Check whether shape of result buffer matches combined operands
+        assert(zip(zip(lhs.shape, rhs.shape), result.shape).map {Swift.max($0.0, $0.1) == $1}.allSatisfy {$0 == true})
         #endif
         
-        let matchingShapeSuffix = zip(lhs.shape, rhs.shape).reversed().prefix(while: {$0 == $1}).map {$1}.reversed()
-        let resultShapePrefix = result.shape.prefix(result.dim - matchingShapeSuffix.count)
+        // Determine, whether both operands have a suffix with more than 1 element
+        // If that is the case, vector-vector mode is used
+        
+        let vectorSuffix = zip(lhs.shape, rhs.shape).suffix(while: {$0 == $1}).map {$1}
         
         let iterShape: [Int]
-        
         let sliceCount: Int
-        
         let mode: BroadcastMode
         
-        if resultShapePrefix.count == 0 {
+        let sc = vectorSuffix.reduce(1, *)
+        
+        if sc > 1 {
+            // Iteration shape contains all dimensions from zero through the first non-equal sized dimension from the back
+            iterShape = result.shape.dropLast(vectorSuffix.count)
+            sliceCount = sc
             mode = .vectorVector
-            sliceCount = matchingShapeSuffix.reduce(1, *)
-            iterShape = Array(resultShapePrefix)
-        } else if lhs.shape.suffix(matchingShapeSuffix.count + 1).allSatisfy({$0 == 1}) {
-            mode = .scalarVector
-            sliceCount = matchingShapeSuffix.reduce(1, *) * rhs.shape[resultShapePrefix.count - 1]
-            iterShape = Array(resultShapePrefix.dropLast())
-        } else if rhs.shape.suffix(matchingShapeSuffix.count + 1).allSatisfy({$0 == 1}) {
-            mode = .vectorScalar
-            sliceCount = matchingShapeSuffix.reduce(1, *) * lhs.shape[resultShapePrefix.count - 1]
-            iterShape = Array(resultShapePrefix.dropLast())
         } else {
-            mode = .vectorVector
-            sliceCount = matchingShapeSuffix.reduce(1, *)
-            iterShape = Array(resultShapePrefix)
+            // Determine at which dimension the shape difference occurs and select the mode to either scalar-vector or vector-scalar
+            // depending on whether the lhs or rhs operand is bigger in that dimension
+            var m: BroadcastMode? = nil
+            var devIndex = 0
+            for i in result.shape.indices.reversed() {
+                devIndex = i
+                if lhs.shape[i] > rhs.shape[i] {
+                    m = .vectorScalar
+                    break
+                } else if rhs.shape[i] > lhs.shape[i] {
+                    m = .scalarVector
+                    break
+                }
+            }
+            if let m = m {
+                mode = m
+                
+                // Determine the maximum suffix that can be processed in a single scalar-vector / vector-scalar operation
+                var prefixCount = 0
+                var sc = result.shape[devIndex]
+                
+                loop: for i in (0 ..< devIndex).reversed() {
+                    switch mode {
+                    case .scalarVector:
+                        if lhs.shape[i] > 1 {
+                            break loop
+                        }
+                        sc *= rhs.shape[i]
+                    case .vectorScalar:
+                        if rhs.shape[i] > 1 {
+                            break loop
+                        }
+                        sc *= lhs.shape[i]
+                    default:
+                        break
+                    }
+                    prefixCount = i
+                }
+                iterShape = Array(result.shape.prefix(prefixCount))
+                sliceCount = sc
+            } else {
+                // All dimensions equally 1, thereby the operation is a scalar-scalar operation, which is not implemented separately
+                mode = .vectorVector
+                iterShape = []
+                sliceCount = 1
+            }
         }
         
+        // Perform broadcast according to previously determined broadcasting rules
         for resultIdx in iterate(iterShape) {
             let lhsIdx = zip(resultIdx, lhs.shape).map {Swift.min($0, $1 - 1)}
             let rhsIdx = zip(resultIdx, rhs.shape).map {Swift.min($0, $1 - 1)}
             
-            let (lhsSlice, lhsIsCopy, _) = CPU.Memory.get(slice: lhsIdx, of: lhs.values, with: lhs.shape)
-            let (rhsSlice, rhsIsCopy, _) = CPU.Memory.get(slice: rhsIdx, of: rhs.values, with: rhs.shape)
+            // All the slicing operations return a pointer to the same underlying memory region.
+            // Therefore, slices must not be deallocated.
+            let (lhsSlice, _, _) = CPU.Memory.get(slice: lhsIdx, of: lhs.values, with: lhs.shape)
+            let (rhsSlice, _, _) = CPU.Memory.get(slice: rhsIdx, of: rhs.values, with: rhs.shape)
             
-            let (resultSlice, resultIsCopy, _) = CPU.Memory.get(slice: resultIdx, of: result.values, with: result.shape)
-            
-            assert(!lhsIsCopy && !rhsIsCopy && !resultIsCopy, "[internal]: Tensor slicing violation")
+            let (resultSlice, _, _) = CPU.Memory.get(slice: resultIdx, of: result.values, with: result.shape)
             
             switch mode {
             case .vectorVector:

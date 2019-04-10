@@ -276,4 +276,47 @@ public struct Progress<Element>: Sequence {
     }
 }
 
+extension Collection {
+    // @_specialize(where Self == Array<Int>)
+    public func dropLast(`while` predicate: (Element) throws -> Bool) rethrows -> SubSequence {
+        var index = self.index(self.endIndex, offsetBy: -1)
+        
+        while index > self.startIndex {
+            if try predicate(self[index]) {
+                index = self.index(index, offsetBy: -1)
+            } else {
+                return self[...index]
+            }
+        }
+        
+        return self[..<index]
+    }
+    
+    // @_specialize(where Self == Array<Int>)
+    public func suffix(`while` predicate: (Element) throws -> Bool) rethrows -> SubSequence {
+        var index = self.endIndex
+        
+        while index > self.startIndex {
+            let nextIndex = self.index(index, offsetBy: -1)
+            if try predicate(self[nextIndex]) {
+                index = nextIndex
+            } else {
+                return self[index...]
+            }
+        }
+        
+        return self[...]
+    }
+}
 
+extension Sequence {
+    @inline(__always)
+    public func suffix(`while` predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
+        return try Array(self).suffix(while: predicate)
+    }
+    
+    @inline(__always)
+    public func dropLast(`while` predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
+        return try Array(self).dropLast(while: predicate)
+    }
+}

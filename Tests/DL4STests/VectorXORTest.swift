@@ -33,7 +33,7 @@ class VectorXORTest: XCTestCase {
             Dense(inputFeatures: 2, outputFeatures: 6).asAny(),
             Sigmoid().asAny(),
             Dense(inputFeatures: 6, outputFeatures: 1).asAny(),
-            Logging().asAny(),
+            // Logging().asAny(),
             Sigmoid().asAny()
         )
         
@@ -49,7 +49,7 @@ class VectorXORTest: XCTestCase {
         let optimizer = MomentumOptimizer(parameters: net.trainableParameters, learningRate: 0.05)
         // let optimizer = Adam(parameters: net.parameters, learningRate: 0.05)
         
-        let epochs = 1
+        let epochs = 1000
         
         for epoch in 1 ... epochs {
             let predictions = net.forward(inputs)
