@@ -158,7 +158,7 @@ class MNistTest: XCTestCase {
         
         print("Training...")
         
-        let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 128)
+        let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
         let workers = 3
 
         for i in 0 ..< workers {

@@ -238,5 +238,9 @@ extension Double: NumericType {
         
         return (Int(minI), minV)
     }
+    
+    public static func copy(values: UnsafeBufferPointer<Double>, srcStride: Int, result: UnsafeMutableBufferPointer<Double>, dstStride: Int, count: Int) {
+        cblas_dcopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
+    }
 }
 

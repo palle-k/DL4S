@@ -238,4 +238,28 @@ extension Float: NumericType {
         
         return (Int(minI), minV)
     }
+    
+    public static func heavisideManual(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        let srcPtr = values.pointer(capacity: count)
+        let dstPtr = result.pointer(capacity: count)
+        
+        var i = 0
+        while i < count {
+            dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
+            i += 1
+        }
+    }
+    
+    public static func heaviside(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        let srcPtr = values.pointer(capacity: count)
+        let dstPtr = result.pointer(capacity: count)
+        
+         for i in 0 ..< count {
+             dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
+         }
+    }
+    
+    public static func copy(values: UnsafeBufferPointer<Float>, srcStride: Int, result: UnsafeMutableBufferPointer<Float>, dstStride: Int, count: Int) {
+        cblas_scopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
+    }
 }

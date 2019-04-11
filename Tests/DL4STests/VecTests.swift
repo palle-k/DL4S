@@ -530,7 +530,7 @@ class VecTests: XCTestCase {
     func testAxisSum() {
         let a = Tensor<Float, CPU>([[1,2,3],[4,5,6]])
         
-        let result = sum(a, axis: 0)
+        let result = sum(a, axes: [0])
         print(result)
     }
     

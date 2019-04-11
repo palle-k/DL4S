@@ -233,6 +233,37 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
     }
 }
 
+func iterativeWrite<Element>(
+    source: UnsafeBufferPointer<Element>,
+    destination: UnsafeMutableBufferPointer<Element>,
+    dstIndex: [Int?],
+    dstStrides: [Int],
+    dstShape: [Int]
+    ) {
+    // print("Using iterativeWrite")
+    let dstIndex = dstIndex.reversed().drop(while: {$0 == nil}).reversed()
+    
+    if dstIndex.count == 0 {
+        let count = dstShape[0] * dstStrides[0]
+        destination.assign(from: source, count: count)
+        return
+    }
+    
+    let copyCount = dstStrides[dstIndex.count - 1]
+    
+    let iterShape = zip(dstIndex, dstShape).map { idx, dim in
+        idx == nil ? dim : 1
+    }
+    
+    for (i, index) in iterate(iterShape).enumerated() {
+        let index = zip(dstIndex, index).map {$0 ?? $1}
+        let baseIndex = zip(index, dstStrides).map(*).reduce(0, +)
+        let srcIndex = i * copyCount
+        destination.advanced(by: baseIndex)
+            .assign(from: source.advanced(by: srcIndex), count: copyCount)
+    }
+}
+
 func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -400,7 +431,7 @@ enum MemoryOps {
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
         
         let dstStrides = MemoryOps.strides(from: dstShape)
-        recursiveWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
+        iterativeWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
     
     static func set<Element>(slice: [Range<Int>?], of buffer: UnsafeMutableBufferPointer<Element>, with dstShape: [Int], from source: UnsafeBufferPointer<Element>, with sourceShape: [Int]) {

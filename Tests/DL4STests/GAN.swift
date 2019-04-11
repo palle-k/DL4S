@@ -46,11 +46,11 @@ class GANTests: XCTestCase {
             Concat().asAny(),
             Dense(inputFeatures: latentSize + 10, outputFeatures: 200).asAny(),
             BatchNorm(inputSize: 200).asAny(),
-            Tanh().asAny(),
+            LeakyRelu(0.2).asAny(),
             d1.asAny(),
             Dense(inputFeatures: 200, outputFeatures: 800).asAny(),
             BatchNorm(inputSize: 800).asAny(),
-            Tanh().asAny(),
+            LeakyRelu(0.2).asAny(),
             d2.asAny(),
             Dense(inputFeatures: 800, outputFeatures: 28 * 28).asAny(),
             Sigmoid().asAny()//,
@@ -64,13 +64,13 @@ class GANTests: XCTestCase {
             Concat().asAny(),
             Dense(inputFeatures: 28 * 28 + 10, outputFeatures: 400).asAny(),
             BatchNorm(inputSize: 400).asAny(),
-            Tanh().asAny(),
+            Relu().asAny(),
             Dense(inputFeatures: 400, outputFeatures: 100).asAny(),
             BatchNorm(inputSize: 100).asAny(),
-            Tanh().asAny(),
+            Relu().asAny(),
             Dense(inputFeatures: 100, outputFeatures: 1).asAny(),
-            Sigmoid().asAny(),
-            Debug().asAny()
+            Sigmoid().asAny()
+            // Debug().asAny()
         )
         
         let optimGen = Adam(parameters: generator.trainableParameters, learningRate: 0.0003)

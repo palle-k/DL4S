@@ -98,9 +98,9 @@ extension CPUEngine: EngineTypeV2 {
                 
                 // Determine the maximum suffix that can be processed in a single scalar-vector / vector-scalar operation
                 var prefixCount = 0
-                var sc = result.shape[devIndex]
+                var sc = 1
                 
-                loop: for i in (0 ..< devIndex).reversed() {
+                loop: for i in (0 ... devIndex).reversed() {
                     switch mode {
                     case .scalarVector:
                         if lhs.shape[i] > 1 {
@@ -127,27 +127,44 @@ extension CPUEngine: EngineTypeV2 {
             }
         }
         
+        let lhsStrides = CPU.Memory.strides(from: lhs.shape)
+        let rhsStrides = CPU.Memory.strides(from: rhs.shape)
+        let dstStrides = CPU.Memory.strides(from: result.shape)
+        
         // Perform broadcast according to previously determined broadcasting rules
         for resultIdx in iterate(iterShape) {
-            let lhsIdx = zip(resultIdx, lhs.shape).map {Swift.min($0, $1 - 1)}
-            let rhsIdx = zip(resultIdx, rhs.shape).map {Swift.min($0, $1 - 1)}
+            // let lhsIdx = zip(resultIdx, lhs.shape).map {Swift.min($0, $1 - 1)}
+            // let rhsIdx = zip(resultIdx, rhs.shape).map {Swift.min($0, $1 - 1)}
             
             // All the slicing operations return a pointer to the same underlying memory region.
             // Therefore, slices must not be deallocated.
-            let (lhsSlice, _, _) = CPU.Memory.get(slice: lhsIdx, of: lhs.values, with: lhs.shape)
-            let (rhsSlice, _, _) = CPU.Memory.get(slice: rhsIdx, of: rhs.values, with: rhs.shape)
+            // let (lhsSlice, _, _) = CPU.Memory.get(slice: lhsIdx, of: lhs.values, with: lhs.shape)
+            // let (rhsSlice, _, _) = CPU.Memory.get(slice: rhsIdx, of: rhs.values, with: rhs.shape)
+            //
+            // let (resultSlice, _, _) = CPU.Memory.get(slice: resultIdx, of: result.values, with: result.shape)
+            var lhsIdx = 0
+            var rhsIdx = 0
+            var dstIdx = 0
             
-            let (resultSlice, _, _) = CPU.Memory.get(slice: resultIdx, of: result.values, with: result.shape)
+            for i in 0 ..< resultIdx.count {
+                lhsIdx += lhsStrides[i] * Swift.min(lhs.shape[i] - 1, resultIdx[i])
+                rhsIdx += rhsStrides[i] * Swift.min(rhs.shape[i] - 1, resultIdx[i])
+                dstIdx += dstStrides[i] * resultIdx[i]
+            }
+            
+            let lhsSlice = lhs.immutable.advanced(by: lhsIdx)
+            let rhsSlice = rhs.immutable.advanced(by: rhsIdx)
+            let resultSlice = result.pointer.advanced(by: dstIdx)
             
             switch mode {
             case .vectorVector:
-                `operator`(lhsSlice.immutable, rhsSlice.immutable, resultSlice.memory.bindMemory(to: N.self), sliceCount)
+                `operator`(lhsSlice, rhsSlice, resultSlice, sliceCount)
                 
             case .scalarVector:
-                scalarOperatorA(lhsSlice.pointee, rhsSlice.immutable, resultSlice.pointer, sliceCount)
+                scalarOperatorA(lhsSlice.pointee, rhsSlice, resultSlice, sliceCount)
                 
             case .vectorScalar:
-                scalarOperatorB(lhsSlice.immutable, rhsSlice.pointee, resultSlice.pointer, sliceCount)
+                scalarOperatorB(lhsSlice, rhsSlice.pointee, resultSlice, sliceCount)
             }
         }
     }
@@ -712,20 +729,20 @@ extension CPUEngine: EngineTypeV2 {
         
         let shape = values.shape
         var dstShape = [Int](repeating: 0, count: dim)
-        
+
         for i in dstShape.indices {
             dstShape[arangement[i]] = shape[i]
         }
-        
+
         for index in iterate(shape) {
             var dstIdx = [Int](repeating: 0, count: dim)
             for i in dstIdx.indices {
                 dstIdx[arangement[i]] = index[i]
             }
-            
+
             let lsIdx = CPUMemoryOperators.linearIndex(from: index, shape: shape)
             let ldIdx = CPUMemoryOperators.linearIndex(from: dstIdx, shape: dstShape)
-            
+
             dstMem[ldIdx] = sourceMem[lsIdx]
         }
     }

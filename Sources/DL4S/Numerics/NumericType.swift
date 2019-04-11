@@ -103,6 +103,8 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func argmin(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
     
     static func conv2d(input: UnsafeBufferPointer<Self>, filter: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
+    
+    static func copy(values: UnsafeBufferPointer<Self>, srcStride: Int, result: UnsafeMutableBufferPointer<Self>, dstStride: Int, count: Int)
 }
 
 extension UInt8 {

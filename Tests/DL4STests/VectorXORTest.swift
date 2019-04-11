@@ -52,13 +52,11 @@ class VectorXORTest: XCTestCase {
         let epochs = 1000
         
         for epoch in 1 ... epochs {
+            optimizer.zeroGradient()
             let predictions = net.forward(inputs)
-            
             let loss = binaryCrossEntropy(expected: expectedOutputs, actual: predictions)
             
-            loss.zeroGradient()
             loss.backwards()
-            
             optimizer.step()
             
             let lossValue = loss.item

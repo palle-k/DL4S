@@ -46,6 +46,16 @@ class EngineV2Tests: XCTestCase {
         print(result.squeeze())
     }
     
+    func testBroadcast5() {
+        let a = Tensor<Float, CPU>(repeating: 0, shape: 16, 16)
+        let b = Tensor<Float, CPU>(repeating: 0, shape: 16, 1)
+        Random.fill(b, a: 0, b: 1)
+        
+        let result = a + b
+        
+        print(result)
+    }
+    
     func testReduceSum1() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.shapedValues

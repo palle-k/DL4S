@@ -198,14 +198,24 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
     return relu(vector) - Tensor(leakage) * relu(-vector)
 }
 
-public func mean<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? = nil) -> Tensor<Element, Device> {
-    let s = sum(vector, axis: axis)
-    return s / Tensor(Element(axis.map {vector.shape[$0]} ?? vector.count))
+public func mean<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
+    let s = sum(vector, axes: axes)
+    return s / Tensor(Element(axes.map {vector.shape[$0]}.reduce(1, *)))
 }
 
-public func variance<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? = nil) -> Tensor<Element, Device> {
-    let m = mean(vector, axis: axis)
-    return mean(vector * vector, axis: axis) - m * m
+public func mean<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let s = sum(vector)
+    return s / Tensor(Element(vector.count))
+}
+
+public func variance<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
+    let m = mean(vector, axes: axes)
+    return mean(vector * vector, axes: axes) - m * m
+}
+
+public func variance<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let m = mean(vector)
+    return mean(vector * vector) - m * m
 }
 
 private struct SoftmaxContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {

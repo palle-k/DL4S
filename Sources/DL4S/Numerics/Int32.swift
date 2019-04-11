@@ -277,4 +277,13 @@ extension Int32: NumericType {
         
         return (minI, minV)
     }
+    
+    public static func copy(values: UnsafeBufferPointer<Int32>, srcStride: Int, result: UnsafeMutableBufferPointer<Int32>, dstStride: Int, count: Int) {
+        let srcPtr = values.pointer(capacity: srcStride * count)
+        let dstPtr = result.pointer(capacity: dstStride * count)
+        
+        for i in 0 ..< count {
+            dstPtr[i * dstStride] = srcPtr[i * srcStride]
+        }
+    }
 }

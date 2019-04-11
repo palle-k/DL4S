@@ -41,30 +41,57 @@ private struct SumContext<Element: NumericType, Device: DeviceType>: UnaryTensor
     }
 }
 
-public func sum<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? = nil) -> Tensor<Element, Device> {
-    if let axis = axis {
-        var resultShape: [Int] = vector.shape
-        resultShape.remove(at: axis)
+public func sum<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: [],
+        parent: nil,
+        context: vector.requiresGradient ? SumContext(source: vector).asAny() : nil
+    )
+    result.values.pointee = Device.Engine.sum(val: vector.values, count: vector.count)
+    return result
+}
+
+private struct ReduceSumContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    var axes: [Int]
+    
+    var symbol: String {
+        return "reduceSum"
+    }
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        var broadcastShape = source.shape
         
-        var result: Tensor<Element, Device> = 0
-        
-        for i in 0 ..< vector.shape[axis] {
-            var idx = Array(repeating: Int?.none, count: vector.dim)
-            idx[axis] = i
-            
-            result = result + vector[idx]
+        for a in axes {
+            broadcastShape[a] = 1
         }
         
-        return result
-    } else {
-        let result = Tensor<Element, Device>(
-            shape: [],
-            parent: nil,
-            context: vector.requiresGradient ? SumContext(source: vector).asAny() : nil
-        )
-        result.values.pointee = Device.Engine.sum(val: vector.values, count: vector.count)
-        return result
+        guard let gradient = vector.shapedGradient?.reshaped(to: broadcastShape), let sourceGradient = source.shapedGradient else {
+            return
+        }
+        
+        Device.Engine.broadcastAdd(lhs: gradient, rhs: sourceGradient, result: sourceGradient)
     }
+}
+
+public func sum<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
+    if axes.isEmpty {
+        return vector
+    }
+    
+    var resultShape = vector.shape
+    for a in axes.reversed() {
+        resultShape.remove(at: a)
+    }
+    let result = Tensor<Element, Device>(
+        shape: resultShape,
+        parent: nil,
+        context: ReduceSumContext(source: vector, axes: axes).asAny()
+    )
+    
+    Device.Engine.reduceSum(values: vector.shapedValues, result: result.shapedValues, axes: axes)
+    
+    return result
 }
 
 private struct MaxContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {

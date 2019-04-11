@@ -180,7 +180,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
         
         let dstStrides = CPUMemoryOperators.strides(from: dstShape)
-        recursiveWrite(source: source.memory.bindMemory(to: Element.self).immutable, destination: buffer.memory.bindMemory(to: Element.self), dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
+        iterativeWrite(source: source.memory.bindMemory(to: Element.self).immutable, destination: buffer.memory.bindMemory(to: Element.self), dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
     
     public static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) where Element : NumericType {

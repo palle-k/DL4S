@@ -154,7 +154,7 @@ public class Softmax<Element: NumericType, Device: DeviceType>: Layer, Codable {
         // TODO: Normalize inputs to make exp more stable
         let norm = inputs[0] - max(inputs[0]).detached()
         let e = exp(norm)
-        let s = sum(e, axis: 1)
+        let s = sum(e, axes: [1])
         return (e.T / s).T
     }
 }
