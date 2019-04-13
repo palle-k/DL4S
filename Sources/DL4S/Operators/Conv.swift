@@ -57,18 +57,7 @@ public func conv2d<Element, Device>(input: Tensor<Element, Device>, kernel: Tens
         context: Conv2DOperation(image: input, kernel: kernel).asAny()
     )
     
-    Device.Engine.conv2d(
-        input: input.values,
-        filter: kernel.values,
-        result: result.values,
-        width: input.shape[3],
-        height: input.shape[2],
-        batchSize: input.shape[0],
-        kernelWidth: kernel.shape[3],
-        kernelHeight: kernel.shape[2],
-        kernelDepth: kernel.shape[1],
-        kernelCount: kernel.shape[0]
-    )
+    Device.Engine.conv2d(values: input.shapedValues, filters: kernel.shapedValues, result: result.shapedValues, strides: (1, 1))
     
     return result
 }

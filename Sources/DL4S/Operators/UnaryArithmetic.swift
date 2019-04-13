@@ -178,7 +178,9 @@ public func tanh<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<E
 }
 
 public func sigmoid<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    return 1 / (1 + exp(-vector))
+    // return 1 / (1 + exp(-vector))
+    // Using tanh for improved numeric stability
+    return 0.5 * tanh(vector * 0.5) + 0.5
 }
 
 public func relu<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {

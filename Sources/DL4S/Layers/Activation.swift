@@ -125,7 +125,6 @@ public class Sigmoid<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         let out = sigmoid(inputs[0])
-        assert(out.shape == inputs[0].shape)
         return out
     }
 }

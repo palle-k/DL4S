@@ -29,7 +29,11 @@ import Accelerate
 
 extension Float: NumericType {
     public func toUInt8() -> UInt8 {
-        return UInt8(max(min(self, 255), 0))
+        return UInt8(Swift.max(Swift.min(self, 255), 0))
+    }
+    
+    public func toInt() -> Int {
+        return Int(self)
     }
     
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {
@@ -261,5 +265,17 @@ extension Float: NumericType {
     
     public static func copy(values: UnsafeBufferPointer<Float>, srcStride: Int, result: UnsafeMutableBufferPointer<Float>, dstStride: Int, count: Int) {
         cblas_scopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
+    }
+    
+    public static func arange(start: Float, end: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vDSP_vramp([start], [end], result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func max(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vDSP_vmax(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func min(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vDSP_vmin(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
 }

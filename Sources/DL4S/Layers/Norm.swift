@@ -63,7 +63,7 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
 //            runningVar = Tensor(momentum) * runningVar + Tensor(1 - momentum) * variance(x, axis: 0).detached()
 //        }
         
-        let normalized = (x - mean(x, axes: [0])) / sqrt(variance(x, axes: [0]))
+        let normalized = (x - mean(x, axes: [0])) / (sqrt(variance(x, axes: [0])) + 1e-5)
         return normalized * scale + shift
     }
 }

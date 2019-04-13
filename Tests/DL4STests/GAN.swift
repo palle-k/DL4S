@@ -63,10 +63,10 @@ class GANTests: XCTestCase {
         let discriminator = Sequential<Float, CPU>(
             Concat().asAny(),
             Dense(inputFeatures: 28 * 28 + 10, outputFeatures: 400).asAny(),
-            BatchNorm(inputSize: 400).asAny(),
+            // BatchNorm(inputSize: 400).asAny(),
             Relu().asAny(),
             Dense(inputFeatures: 400, outputFeatures: 100).asAny(),
-            BatchNorm(inputSize: 100).asAny(),
+            // BatchNorm(inputSize: 100).asAny(),
             Relu().asAny(),
             Dense(inputFeatures: 100, outputFeatures: 1).asAny(),
             Sigmoid().asAny()

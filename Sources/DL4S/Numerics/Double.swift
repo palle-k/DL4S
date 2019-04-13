@@ -32,6 +32,10 @@ extension Double: NumericType {
         return UInt8(self)
     }
     
+    public func toInt() -> Int {
+        return Int(self)
+    }
+    
     public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, stride: Int, count: Int) {
         vDSP_vfillD([value], result.pointer(capacity: count), stride, UInt(count))
     }
@@ -241,6 +245,18 @@ extension Double: NumericType {
     
     public static func copy(values: UnsafeBufferPointer<Double>, srcStride: Int, result: UnsafeMutableBufferPointer<Double>, dstStride: Int, count: Int) {
         cblas_dcopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
+    }
+    
+    public static func arange(start: Double, end: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vDSP_vrampD([start], [end], result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func max(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vDSP_vmaxD(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func min(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vDSP_vminD(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
 }
 

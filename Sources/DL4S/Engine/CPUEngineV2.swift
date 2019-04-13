@@ -452,6 +452,31 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @inline(__always)
+    @_specialize(where N == Float, Context == Int32)
+    private static func reducePrefixWithContext<N, Context>(
+        values: ShapedBuffer<N, CPU>,
+        result: ShapedBuffer<N, CPU>,
+        context: ShapedBuffer<Context, CPU>,
+        reduceColumns: (UnsafeBufferPointer<N>, UnsafeBufferPointer<N>, UnsafeMutableBufferPointer<N>, UnsafeMutableBufferPointer<Context>, Int) -> ()
+    ) {
+        if result.count == 0 {
+            return
+        }
+        
+        let stride = result.count
+        let count = values.count / stride
+        
+        N.fill(value: 0, result: result.pointer, count: result.count)
+        Context.fill(value: 0, result: context.pointer, count: context.count)
+        
+        for i in 0 ..< count {
+            let offset = stride * i
+            
+            reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, context.pointer, stride)
+        }
+    }
+    
     @_specialize(where N == Float)
     public static func matMul<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
         N.matMul(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, lhsRows: lhs.shape[0], lhsCols: lhs.shape[1], rhsCols: rhs.shape[1])
@@ -543,8 +568,14 @@ extension CPUEngine: EngineTypeV2 {
                     return (max, Int32(arg))
                 }
             )
+        } else if axis == 0 && result.shape.reduce(1, *) > 1 {
+            reducePrefix(values: values, result: result, reduceColumns: N.max)
         } else {
-            reduce(values: values, result: result, axis: axis) {
+            reduce(
+                values: values,
+                result: result,
+                axis: axis
+            ) {
                 N.argmax(values: $0, count: $1).1
             }
         }
@@ -563,8 +594,14 @@ extension CPUEngine: EngineTypeV2 {
                     return (min, Int32(arg))
                 }
             )
+        } else if axis == 0 && result.shape.reduce(1, *) > 1 {
+            reducePrefix(values: values, result: result, reduceColumns: N.min)
         } else {
-            reduce(values: values, result: result, axis: axis) {
+            reduce(
+                values: values,
+                result: result,
+                axis: axis
+            ) {
                 N.argmin(values: $0, count: $1).1
             }
         }
@@ -723,27 +760,50 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     public static func permuteAxes<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) where N : NumericType {
-        let sourceMem = values.immutable
-        let dstMem = result.pointer
         let dim = values.dim
         
-        let shape = values.shape
-        var dstShape = [Int](repeating: 0, count: dim)
-
-        for i in dstShape.indices {
-            dstShape[arangement[i]] = shape[i]
+        if dim == 2 && arangement == [1, 0] {
+            // Fast path if operation is matrix transpose
+            N.transpose(val: values.immutable, result: result.pointer, srcRows: values.shape[0], srcCols: values.shape[1])
+            return
         }
+        
+        let sourceMem = values.immutable.pointer(capacity: values.count)
+        let dstMem = result.pointer.pointer(capacity: result.count)
+        
+        let shape = values.shape
+        let dstShape = result.shape
+        
+        let suffix = zip(shape.indices, arangement).suffix(while: {$0 == $1}).count
+        // let suffix = 0
+        
+        let copyCount = shape.suffix(suffix).reduce(1, *)
+        let iterShape = shape.dropLast(suffix) as Array
 
-        for index in iterate(shape) {
-            var dstIdx = [Int](repeating: 0, count: dim)
-            for i in dstIdx.indices {
-                dstIdx[arangement[i]] = index[i]
+        let srcStrides = CPU.Memory.strides(from: shape)
+        let dstStrides = CPU.Memory.strides(from: dstShape)
+
+        for index in iterate(iterShape) {
+            var srcIdx = 0
+            var dstIdx = 0
+            for i in 0 ..< index.count {
+                srcIdx += index[i] * srcStrides[i]
+                dstIdx += index[i] * dstStrides[i]
             }
-
-            let lsIdx = CPUMemoryOperators.linearIndex(from: index, shape: shape)
-            let ldIdx = CPUMemoryOperators.linearIndex(from: dstIdx, shape: dstShape)
-
-            dstMem[ldIdx] = sourceMem[lsIdx]
+            
+            //dstMem[dstIdx] = sourceMem[srcIdx]
+            dstMem.advanced(by: dstIdx).assign(from: sourceMem.advanced(by: srcIdx), count: copyCount)
+            
+            //N.copy(values: sourceMem.advanced(by: srcIdx * copyCount), srcStride: 1, result: dstMem.advanced(by: dstIdx * copyCount), dstStride: 1, count: copyCount)
+//            var dstIdx = [Int](repeating: 0, count: dim)
+//            for i in dstIdx.indices {
+//                dstIdx[arangement[i]] = index[i]
+//            }
+//
+//            let lsIdx = CPUMemoryOperators.linearIndex(from: index, shape: shape)
+//            let ldIdx = CPUMemoryOperators.linearIndex(from: dstIdx, shape: dstShape)
+//
+//            dstMem[ldIdx] = sourceMem[lsIdx]
         }
     }
     
@@ -773,6 +833,10 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    public static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, CPU>) where N : NumericType {
+        N.arange(start: lowerBound, end: upperBound, result: result.pointer, count: result.count)
+    }
+    
     public static func subscriptRead<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) where N : NumericType {
         let (buffer, isCopy, bufferShape) = CPU.Memory.get(slice: index, of: values.values, with: values.shape)
         
@@ -799,8 +863,80 @@ extension CPUEngine: EngineTypeV2 {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
+    private static func img2col<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelEdgeLength: Int, kernelCount: Int, padding: Int, stride: Int) {
+        precondition(values.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
+        
+        let batchSize = values.shape[0]
+        let channels = values.shape[1]
+        let height = values.shape[2]
+        let width = values.shape[3]
+        
+        let verticalStride = width
+        let depthStride = width * height
+        let featureMapStride = depthStride * channels
+        
+        let rows = result.shape[0]
+        let cols = result.shape[1]
+        
+        let outputHeight = (height + 2 * padding - kernelEdgeLength) / stride + 1
+        let outputWidth = (width + 2 * padding - kernelEdgeLength) / stride + 1
+        
+        #if DEBUG
+        precondition(rows == kernelEdgeLength * kernelEdgeLength * channels)
+        precondition(cols == outputWidth * outputHeight * batchSize)
+        #endif
+        
+        let srcPtr = values.immutable.pointer(capacity: featureMapStride * batchSize)
+        let dstPtr = result.pointer.pointer(capacity: rows * cols)
+        
+        let patchesPerKernel = outputWidth * outputHeight
+        let patchesPerFeatureMap = patchesPerKernel * kernelCount
+        
+        for c in 0 ..< cols {
+            let patchIdx = c % patchesPerKernel
+            let featureMapIdx = c / patchesPerFeatureMap
+            
+            let baseDstCol = patchIdx % outputWidth
+            let baseDstRow = (patchIdx / outputWidth) % outputHeight
+            
+            let baseSrcCol = baseDstCol * stride - padding
+            let baseSrcRow = baseDstRow * stride - padding
+            
+            let featureMap = srcPtr.advanced(by: featureMapStride * featureMapIdx)
+            
+            for r in 0 ..< rows {
+                let row = baseSrcRow + (r / kernelEdgeLength)
+                let col = baseSrcCol + (r % kernelEdgeLength)
+                let chan = r / (kernelEdgeLength * kernelEdgeLength)
+                
+                if row < 0 || row >= height || col < 0 || col >= width {
+                    dstPtr[r * cols + c] = 0
+                } else {
+                    dstPtr[r * cols + c] = featureMap[chan * depthStride + row * verticalStride + col]
+                }
+            }
+        }
+    }
+    
     public static func conv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) is not implemented for type \(self)")
+        let tmp = CPU.Memory.allocateBuffer(
+            withShape: [
+                filters.shape[1] * filters.shape[2] * filters.shape[3],
+                result.count / filters.shape[0]
+            ],
+            type: N.self
+        )
+        defer {
+            CPU.Memory.free(tmp)
+        }
+        
+        img2col(values: values, result: tmp, kernelEdgeLength: filters.shape[2], kernelCount: filters.shape[0], padding: (filters.shape[2] - 1) / 2, stride: strides.vertical)
+        matMul(
+            lhs: filters.reshaped(to: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]]),
+            rhs: tmp,
+            result: result
+        )
+        permuteAxes(values: result.reshaped(to: [filters.shape[0], values.shape[0], values.shape[2], values.shape[3]]), result: result, arangement: [1, 0, 2, 3])
     }
     
     public static func revConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {

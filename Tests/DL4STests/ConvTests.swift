@@ -44,22 +44,22 @@ class ConvTests: XCTestCase {
         
         let filters = Tensor<Float, CPU>([
             [
+                [[1, 2, 1],
+                 [2, 4, 2],
+                 [1, 2, 1]]
+            ],
+            [
                 [[-1, 0, 1],
                 [-2, 0, 2],
                 [-1, 0, 1]]
-            ],
-            [
-                [[-1, -2, -1],
-                [0, 0, 0],
-                [1, 2, 1]]
             ]
-        ]) / 8
+        ]) / Tensor<Float, CPU>([16, 4]).view(as: -1, 1, 1, 1)
         
         print(filters.shape)
         
-        let ((images, _), _) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let ((images, _), _) = MNistTest.images(from: "/Users/Palle/Downloads/", maxCount: 32)
         
-        let batch = Random.minibatch(from: images, count: 16).unsqueeze(at: 1) // add depth dimension
+        let batch = Random.minibatch(from: images, count: 64).unsqueeze(at: 1) // add depth dimension
         
         let filtered = conv2d(input: batch, kernel: filters)
         
@@ -71,9 +71,8 @@ class ConvTests: XCTestCase {
             try? srcImg?.save(to: "/Users/Palle/Desktop/conv/src_\(i).png")
             
             for j in 0 ..< dst.shape[0] {
-                let dstImg = NSImage(dst[i].unsqueeze(at: 0))
+                let dstImg = NSImage(dst[j].unsqueeze(at: 0))
                 try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j).png")
-                
             }
         }
     }

@@ -112,7 +112,8 @@ private struct MaxContext<Element: NumericType, Device: DeviceType>: UnaryTensor
 
 private struct MaxAxisContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var source: Tensor<Element, Device>
-    let maxIdxs: [Int]
+    let context: Tensor<Int32, Device>
+    let axis: Int
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
         
@@ -128,26 +129,15 @@ public func max<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? =
         var resultShape: [Int] = vector.shape
         resultShape.remove(at: axis)
         
-        let result: Tensor<Element, Device> = Tensor(repeating: 0, shape: resultShape)
-        var maxIdxs: [Int] = []
+        let result: Tensor<Element, Device> = Tensor(shape: resultShape, parent: nil, context: nil)
         
-        for idx in iterate(resultShape) {
-            var srcIdx: [Int?] = idx.map {$0}
-            srcIdx.insert(nil, at: axis)
-            
-            //let slice = vector[srcIdx]
-            let (slice, isCopy, _) = vector.buffer(from: srcIdx)
-            
-            let (arg, max) = Device.Engine.argmax(values: slice, count: slice.count)
-            maxIdxs.append(arg)
-            result.values[zip(idx, result.strides).map(*).reduce(0, +)] = max
-            
-            if isCopy {
-                Device.Memory.free(slice)
-            }
+        if vector.requiresGradient {
+            let ctx = Tensor<Int32, Device>(shape: resultShape, parent: nil, context: nil)
+            Device.Engine.reduceMax(values: vector.shapedValues, result: result.shapedValues, context: ctx.shapedValues, axis: axis)
+            result.context = MaxAxisContext(source: vector, context: ctx, axis: axis).asAny()
+        } else {
+            Device.Engine.reduceMax(values: vector.shapedValues, result: result.shapedValues, context: nil, axis: axis)
         }
-        
-        result.context = vector.requiresGradient ? MaxAxisContext(source: vector, maxIdxs: maxIdxs).asAny() : nil
         
         return result
     } else {

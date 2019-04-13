@@ -370,6 +370,10 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func conv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }

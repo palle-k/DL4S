@@ -78,6 +78,8 @@ public protocol EngineTypeV2 {
     
     static func stack<N>(buffers: [ShapedBuffer<N, Device>], result: ShapedBuffer<N, Device>, axis: Int)
     
+    static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, Device>)
+    
     static func conv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))
     static func revConv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))
     static func kernelGradConv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))

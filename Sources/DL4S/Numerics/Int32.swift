@@ -40,6 +40,10 @@ extension Int32: NumericType {
         return UInt8(self)
     }
     
+    public func toInt() -> Int {
+        return Int(self)
+    }
+    
     public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, stride: Int, count: Int) {
         vDSP_vfilli([value], result.pointer(capacity: count), stride, UInt(count))
     }
@@ -284,6 +288,33 @@ extension Int32: NumericType {
         
         for i in 0 ..< count {
             dstPtr[i * dstStride] = srcPtr[i * srcStride]
+        }
+    }
+    
+    public static func arange(start: Int32, end: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        let ptr = result.pointer(capacity: count)
+        for i in 0 ..< Int32(count) {
+            ptr[Int(i)] = (end - start) * Int32(count) / i
+        }
+    }
+    
+    public static func max(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        let lhsPtr = lhs.pointer(capacity: count)
+        let rhsPtr = rhs.pointer(capacity: count)
+        let resPtr = result.pointer(capacity: count)
+        
+        for i in 0 ..< count {
+            resPtr[i] = Swift.max(lhsPtr[i], rhsPtr[i])
+        }
+    }
+    
+    public static func min(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        let lhsPtr = lhs.pointer(capacity: count)
+        let rhsPtr = rhs.pointer(capacity: count)
+        let resPtr = result.pointer(capacity: count)
+        
+        for i in 0 ..< count {
+            resPtr[i] = Swift.min(lhsPtr[i], rhsPtr[i])
         }
     }
 }

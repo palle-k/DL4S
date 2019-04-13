@@ -63,7 +63,7 @@ class MNistTest: XCTestCase {
         return (Tensor(Array(samples.joined()), shape: samples.count, imageWidth, imageHeight), Tensor(labelVectors))
     }
     
-    static func images(from path: String) -> ((Tensor<Float, CPU>, Tensor<Int32, CPU>), (Tensor<Float, CPU>, Tensor<Int32, CPU>)) {
+    static func images(from path: String, maxCount: Int? = nil) -> ((Tensor<Float, CPU>, Tensor<Int32, CPU>), (Tensor<Float, CPU>, Tensor<Int32, CPU>)) {
         guard
             let trainingData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte")),
             let trainingLabelData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte")),
@@ -78,8 +78,8 @@ class MNistTest: XCTestCase {
         let testingBytes = Array<UInt8>(testingData)
         let testingLabels = Array<UInt8>(testingLabelData)
         
-        let trainingSampleCount = 60_000
-        let testingSampleCount = 10_000
+        let trainingSampleCount = maxCount ?? 60_000
+        let testingSampleCount = maxCount ?? 10_000
         
         let trainingSamples = readSamples(from: trainingBytes, labels: trainingLabels, count: trainingSampleCount)
         let testingSamples = readSamples(from: testingBytes, labels: testingLabels, count: testingSampleCount)

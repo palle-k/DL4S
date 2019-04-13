@@ -60,6 +60,7 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     init(_ uint8: UInt8)
     
     func toUInt8() -> UInt8
+    func toInt() -> Int
     
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
@@ -102,9 +103,13 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func argmax(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
     static func argmin(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
     
+    static func max(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func min(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    
     static func conv2d(input: UnsafeBufferPointer<Self>, filter: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
     
     static func copy(values: UnsafeBufferPointer<Self>, srcStride: Int, result: UnsafeMutableBufferPointer<Self>, dstStride: Int, count: Int)
+    static func arange(start: Self, end: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
 }
 
 extension UInt8 {
