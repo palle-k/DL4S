@@ -788,22 +788,10 @@ extension CPUEngine: EngineTypeV2 {
             var dstIdx = 0
             for i in 0 ..< index.count {
                 srcIdx += index[i] * srcStrides[i]
-                dstIdx += index[i] * dstStrides[i]
+                dstIdx += index[i] * dstStrides[arangement[i]]
             }
             
-            //dstMem[dstIdx] = sourceMem[srcIdx]
             dstMem.advanced(by: dstIdx).assign(from: sourceMem.advanced(by: srcIdx), count: copyCount)
-            
-            //N.copy(values: sourceMem.advanced(by: srcIdx * copyCount), srcStride: 1, result: dstMem.advanced(by: dstIdx * copyCount), dstStride: 1, count: copyCount)
-//            var dstIdx = [Int](repeating: 0, count: dim)
-//            for i in dstIdx.indices {
-//                dstIdx[arangement[i]] = index[i]
-//            }
-//
-//            let lsIdx = CPUMemoryOperators.linearIndex(from: index, shape: shape)
-//            let ldIdx = CPUMemoryOperators.linearIndex(from: dstIdx, shape: dstShape)
-//
-//            dstMem[ldIdx] = sourceMem[lsIdx]
         }
     }
     
@@ -811,25 +799,27 @@ extension CPUEngine: EngineTypeV2 {
         let sourceMem = values.immutable
         let addMem = add.immutable
         let dstMem = result.pointer
-        let dim = values.dim
         
         let shape = values.shape
-        var dstShape = [Int](repeating: 0, count: dim)
+        let dstShape = result.shape
         
-        for i in dstShape.indices {
-            dstShape[arangement[i]] = shape[i]
-        }
+        let suffix = zip(shape.indices, arangement).suffix(while: {$0 == $1}).count
         
-        for index in iterate(shape) {
-            var dstIdx = [Int](repeating: 0, count: dim)
-            for i in dstIdx.indices {
-                dstIdx[arangement[i]] = index[i]
+        let copyCount = shape.suffix(suffix).reduce(1, *)
+        let iterShape = shape.dropLast(suffix) as Array
+        
+        let srcStrides = CPU.Memory.strides(from: shape)
+        let dstStrides = CPU.Memory.strides(from: dstShape)
+        
+        for index in iterate(iterShape) {
+            var srcIdx = 0
+            var dstIdx = 0
+            for i in 0 ..< index.count {
+                srcIdx += index[i] * srcStrides[i]
+                dstIdx += index[i] * dstStrides[arangement[i]]
             }
             
-            let lsIdx = CPUMemoryOperators.linearIndex(from: index, shape: shape)
-            let ldIdx = CPUMemoryOperators.linearIndex(from: dstIdx, shape: dstShape)
-            
-            dstMem[ldIdx] = addMem[ldIdx] + sourceMem[lsIdx]
+            N.vAdd(lhs: sourceMem.advanced(by: srcIdx), rhs: addMem.advanced(by: dstIdx), result: dstMem.advanced(by: dstIdx), count: copyCount)
         }
     }
     
@@ -863,7 +853,7 @@ extension CPUEngine: EngineTypeV2 {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    private static func img2col<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelEdgeLength: Int, kernelCount: Int, padding: Int, stride: Int) {
+    public static func img2col<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(values.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
         
         let batchSize = values.shape[0]
@@ -878,11 +868,11 @@ extension CPUEngine: EngineTypeV2 {
         let rows = result.shape[0]
         let cols = result.shape[1]
         
-        let outputHeight = (height + 2 * padding - kernelEdgeLength) / stride + 1
-        let outputWidth = (width + 2 * padding - kernelEdgeLength) / stride + 1
+        let outputHeight = (height + 2 * padding - kernelHeight) / stride + 1
+        let outputWidth = (width + 2 * padding - kernelWidth) / stride + 1
         
         #if DEBUG
-        precondition(rows == kernelEdgeLength * kernelEdgeLength * channels)
+        precondition(rows == kernelWidth * kernelHeight * channels)
         precondition(cols == outputWidth * outputHeight * batchSize)
         #endif
         
@@ -890,11 +880,11 @@ extension CPUEngine: EngineTypeV2 {
         let dstPtr = result.pointer.pointer(capacity: rows * cols)
         
         let patchesPerKernel = outputWidth * outputHeight
-        let patchesPerFeatureMap = patchesPerKernel * kernelCount
+        // let patchesPerFeatureMap = patchesPerKernel * kernelCount
         
         for c in 0 ..< cols {
             let patchIdx = c % patchesPerKernel
-            let featureMapIdx = c / patchesPerFeatureMap
+            let featureMapIdx = c / patchesPerKernel
             
             let baseDstCol = patchIdx % outputWidth
             let baseDstRow = (patchIdx / outputWidth) % outputHeight
@@ -905,9 +895,9 @@ extension CPUEngine: EngineTypeV2 {
             let featureMap = srcPtr.advanced(by: featureMapStride * featureMapIdx)
             
             for r in 0 ..< rows {
-                let row = baseSrcRow + (r / kernelEdgeLength)
-                let col = baseSrcCol + (r % kernelEdgeLength)
-                let chan = r / (kernelEdgeLength * kernelEdgeLength)
+                let row = baseSrcRow + (r / kernelWidth)
+                let col = baseSrcCol + (r % kernelWidth)
+                let chan = r / (kernelWidth * kernelHeight)
                 
                 if row < 0 || row >= height || col < 0 || col >= width {
                     dstPtr[r * cols + c] = 0
@@ -918,7 +908,64 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func conv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func col2img<N>(matrix: ShapedBuffer<N, CPU>, image: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
+        precondition(image.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
+        
+        let batchSize = image.shape[0]
+        let channels = image.shape[1]
+        let height = image.shape[2]
+        let width = image.shape[3]
+        
+        let verticalStride = width
+        let depthStride = width * height
+        let featureMapStride = depthStride * channels
+        
+        let rows = matrix.shape[0]
+        let cols = matrix.shape[1]
+        
+        let outputHeight = (height + 2 * padding - kernelHeight) / stride + 1
+        let outputWidth = (width + 2 * padding - kernelWidth) / stride + 1
+        
+        #if DEBUG
+        precondition(rows == kernelWidth * kernelHeight * channels)
+        precondition(cols == outputWidth * outputHeight * batchSize)
+        #endif
+        
+        let dstPtr = image.pointer.pointer(capacity: featureMapStride * batchSize)
+        let srcPtr = matrix.immutable.pointer(capacity: rows * cols)
+        
+        let patchesPerKernel = outputWidth * outputHeight
+        // let patchesPerFeatureMap = patchesPerKernel * kernelCount
+        
+        // Zero fill image
+        N.fill(value: 0, result: image.pointer, count: image.count)
+        
+        for c in 0 ..< cols {
+            let patchIdx = c % patchesPerKernel
+            let featureMapIdx = c / patchesPerKernel
+            
+            let baseSrcCol = patchIdx % outputWidth
+            let baseSrcRow = (patchIdx / outputWidth) % outputHeight
+            
+            let baseDstCol = baseSrcCol * stride - padding
+            let baseDstRow = baseSrcRow * stride - padding
+            
+            let featureMap = dstPtr.advanced(by: featureMapStride * featureMapIdx)
+            
+            for r in 0 ..< rows {
+                let row = baseDstRow + (r / kernelWidth)
+                let col = baseDstCol + (r % kernelWidth)
+                let chan = r / (kernelWidth * kernelHeight)
+                
+                if row >= 0 && row < height && col >= 0 && col < width {
+                    featureMap[chan * depthStride + row * verticalStride + col] += srcPtr[r * cols + c]
+                }
+            }
+        }
+    }
+    
+    
+    public static func conv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, padding: Int, stride: Int) where N : NumericType  {
         let tmp = CPU.Memory.allocateBuffer(
             withShape: [
                 filters.shape[1] * filters.shape[2] * filters.shape[3],
@@ -926,17 +973,24 @@ extension CPUEngine: EngineTypeV2 {
             ],
             type: N.self
         )
+        let tmpResult = CPU.Memory.allocateBuffer(
+            withShape: [filters.shape[0], result.count / filters.shape[0]],
+            type: N.self
+        )
         defer {
             CPU.Memory.free(tmp)
+            CPU.Memory.free(tmpResult)
         }
         
-        img2col(values: values, result: tmp, kernelEdgeLength: filters.shape[2], kernelCount: filters.shape[0], padding: (filters.shape[2] - 1) / 2, stride: strides.vertical)
+        img2col(values: values, result: tmp, kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
         matMul(
             lhs: filters.reshaped(to: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]]),
             rhs: tmp,
-            result: result
+            result: tmpResult
         )
-        permuteAxes(values: result.reshaped(to: [filters.shape[0], values.shape[0], values.shape[2], values.shape[3]]), result: result, arangement: [1, 0, 2, 3])
+        // result layout: [num-filters, num-patches]
+        // target: [batch-size, num-filters, height, width]
+        permuteAxes(values: tmpResult.reshaped(to: [result.shape[1], result.shape[0], result.shape[2], result.shape[3]]), result: result, arangement: [1, 0, 2, 3])
     }
     
     public static func revConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {

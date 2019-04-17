@@ -80,7 +80,11 @@ public protocol EngineTypeV2 {
     
     static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, Device>)
     
-    static func conv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))
+    static func img2col<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+    static func col2img<N>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+    
+    static func conv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, padding: Int, stride: Int)
+    
     static func revConv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))
     static func kernelGradConv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))
     

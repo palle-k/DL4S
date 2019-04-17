@@ -204,3 +204,69 @@ public func stack<Element, Device>(_ vectors: [Tensor<Element, Device>]) -> Tens
 public func stack<Element, Device>(_ vectors: Tensor<Element, Device>...) -> Tensor<Element, Device> {
     return stack(vectors)
 }
+
+public func mean<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
+    let s = sum(vector, axes: axes)
+    return s / Tensor(Element(axes.map {vector.shape[$0]}.reduce(1, *)))
+}
+
+public func mean<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let s = sum(vector)
+    return s / Tensor(Element(vector.count))
+}
+
+public func variance<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
+    let m = mean(vector, axes: axes)
+    return mean(vector * vector, axes: axes) - m * m
+}
+
+public func variance<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let m = mean(vector)
+    return mean(vector * vector) - m * m
+}
+
+public extension Tensor {
+    static func stack(_ tensors: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        return DL4S.stack(tensors)
+    }
+    
+    func sum() -> Tensor<Element, Device> {
+        return DL4S.sum(self)
+    }
+    
+    func sum(axes: [Int]) -> Tensor<Element, Device> {
+        return DL4S.sum(self, axes: axes)
+    }
+    
+    func sum(axes: Int...) -> Tensor<Element, Device> {
+        return DL4S.sum(self, axes: axes)
+    }
+    
+    func max() -> Tensor<Element, Device> {
+        return DL4S.max(self)
+    }
+    
+    func mean() -> Tensor<Element, Device> {
+        return DL4S.mean(self)
+    }
+    
+    func mean(axes: [Int]) -> Tensor<Element, Device> {
+        return DL4S.mean(self, axes: axes)
+    }
+    
+    func mean(axes: Int...) -> Tensor<Element, Device> {
+        return DL4S.mean(self, axes: axes)
+    }
+    
+    func variance() -> Tensor<Element, Device> {
+        return DL4S.variance(self)
+    }
+    
+    func variance(axes: [Int]) -> Tensor<Element, Device> {
+        return DL4S.variance(self, axes: axes)
+    }
+    
+    func variance(axes: Int...) -> Tensor<Element, Device> {
+        return DL4S.variance(self, axes: axes)
+    }
+}

@@ -117,3 +117,37 @@ extension UInt8 {
         self = element.toUInt8()
     }
 }
+
+extension NumericType {
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func += (lhs: inout Self, rhs: Self) {
+        lhs = lhs + rhs
+    }
+    
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func -= (lhs: inout Self, rhs: Self) {
+        lhs = lhs - rhs
+    }
+    
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func *= (lhs: inout Self, rhs: Self) {
+        lhs = lhs * rhs
+    }
+    
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func /= (lhs: inout Self, rhs: Self) {
+        lhs = lhs / rhs
+    }
+}

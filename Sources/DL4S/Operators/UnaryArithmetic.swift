@@ -200,80 +200,37 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
     return relu(vector) - Tensor(leakage) * relu(-vector)
 }
 
-public func mean<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
-    let s = sum(vector, axes: axes)
-    return s / Tensor(Element(axes.map {vector.shape[$0]}.reduce(1, *)))
-}
 
-public func mean<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let s = sum(vector)
-    return s / Tensor(Element(vector.count))
-}
-
-public func variance<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
-    let m = mean(vector, axes: axes)
-    return mean(vector * vector, axes: axes) - m * m
-}
-
-public func variance<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let m = mean(vector)
-    return mean(vector * vector) - m * m
-}
-
-private struct SoftmaxContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
-    var source: Tensor<Element, Device>
-    
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        guard let sourceGradient = source.gradient, let vectorGradient = vector.gradient else {
-            return
-        }
-        precondition(vector.dim == 2)
-        
-        let diag = Tensor<Element, Device>.diagonal(size: vector.shape[1], value: 1)
-        let stride = vector.strides[0]
-        let temp = Device.Memory.allocateBuffer(withCapacity: stride, type: Element.self)
-        
-        for i in 0 ..< vector.shape[0] {
-            let filled = diag * vector[i]
-            let outer = mmul(vector.view(as: -1, 1), vector.view(as: 1, -1))
-            let jac = filled - outer
-            
-            Device.Engine.matMul(
-                lhs: vectorGradient.advanced(by: i * stride),
-                rhs: jac.values,
-                result: temp,
-                lhsRows: 1,
-                lhsCols: jac.shape[0],
-                rhsCols: jac.shape[1]
-            )
-            
-            Device.Engine.vAdd(lhs: sourceGradient.advanced(by: stride * i), rhs: temp, result: sourceGradient.advanced(by: stride * i), count: stride)
-        }
-        
-        Device.Memory.free(temp)
+public extension Tensor {
+    func exp() -> Tensor<Element, Device> {
+        return DL4S.exp(self)
     }
     
-    var symbol: String {
-        return "softmax"
-    }
-}
-
-func softmax<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let result = Tensor<Element, Device>(
-        shape: vector.shape,
-        parent: nil,
-        context: vector.requiresGradient ? SoftmaxContext(source: vector).asAny() : nil
-    )
-    
-    let (_, max) = Device.Engine.argmax(values: vector.values, count: result.count)
-    Device.Engine.vsAdd(lhs: vector.values, rhs: -max, result: result.values, count: result.count)
-    Device.Engine.exp(val: result.values, result: result.values, count: result.count)
-    
-    let stride = vector.strides[0]
-    for i in 0 ..< vector.shape[0] {
-        let sum = Device.Engine.sum(val: result.values.advanced(by: stride * i), count: stride)
-        Device.Engine.vsMul(lhs: result.values.advanced(by: stride * i), rhs: 1 / sum, result: result.values.advanced(by: stride * i), count: stride)
+    func log() -> Tensor<Element, Device> {
+        return DL4S.log(self)
     }
     
-    return result
+    func sqrt() -> Tensor<Element, Device> {
+        return DL4S.sqrt(self)
+    }
+    
+    func log(base: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.log(self, base: base)
+    }
+    
+    func tanh() -> Tensor<Element, Device> {
+        return DL4S.tanh(self)
+    }
+    
+    func sigmoid() -> Tensor<Element, Device> {
+        return DL4S.sigmoid(self)
+    }
+    
+    func relu() -> Tensor<Element, Device> {
+        return DL4S.relu(self)
+    }
+    
+    func leakyRelu(_ leak: Element) -> Tensor<Element, Device> {
+        return DL4S.leakyRelu(self, leakage: leak)
+    }
 }

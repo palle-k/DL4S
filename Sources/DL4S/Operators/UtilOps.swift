@@ -37,3 +37,21 @@ public func pad<Element, Device>(_ tensor: Tensor<Element, Device>, padding: [In
     
     return result
 }
+
+public extension Tensor {
+    static func repeating(_ tensor: Tensor<Element, Device>, count: Int) -> Tensor<Element, Device> {
+        return `repeat`(tensor, count: count)
+    }
+    
+    static func arange(lowerBound: Element = 0, upperBound: Element, by stride: Element = 1) -> Tensor<Element, Device> {
+        return DL4S.arange(lowerBound: lowerBound, upperBound: upperBound, by: stride)
+    }
+    
+    func padded(_ padding: [(Int, Int)], value: Element = 0) -> Tensor<Element, Device> {
+        return DL4S.pad(self, padding: padding, value: value)
+    }
+    
+    func padded(_ padding: [Int], value: Element = 0) -> Tensor<Element, Device> {
+        return DL4S.pad(self, padding: padding, value: value)
+    }
+}

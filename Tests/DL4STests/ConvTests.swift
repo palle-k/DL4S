@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
-import DL4S
+@testable import DL4S
 import AppKit
 
 extension NSImage {
@@ -40,8 +40,36 @@ extension NSImage {
 }
 
 class ConvTests: XCTestCase {
-    func testConv() {
+    func testIm2col() {
+        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let c = `repeat`(a, count: 4)
+        let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
+        print(d)
+        
+        let result = Tensor<Float, CPU>(repeating: 0, shape: 9, 64)
+        CPU.Engine.img2col(values: d.shapedValues, result: result.shapedValues, kernelWidth: 3, kernelHeight: 3, padding: 1, stride: 1)
+        print(result.permuted(to: 1, 0))
+    }
+    
+    func testConv1() {
+        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let c = `repeat`(a, count: 4)
+        let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
+        
+        let filters = Tensor<Float, CPU>([
+            [
+                [[1]]
+            ],
+            [
+                [[-1]]
+            ]
+        ])
+        
+        print(conv2d(images: d, filters: filters))
+    }
+    
+    func testConv() {
         let filters = Tensor<Float, CPU>([
             [
                 [[1, 2, 1],
@@ -61,7 +89,7 @@ class ConvTests: XCTestCase {
         
         let batch = Random.minibatch(from: images, count: 64).unsqueeze(at: 1) // add depth dimension
         
-        let filtered = conv2d(input: batch, kernel: filters)
+        let filtered = conv2d(images: batch, filters: filters)
         
         for i in 0 ..< batch.shape[0] {
             let src = batch[i]
@@ -71,7 +99,7 @@ class ConvTests: XCTestCase {
             try? srcImg?.save(to: "/Users/Palle/Desktop/conv/src_\(i).png")
             
             for j in 0 ..< dst.shape[0] {
-                let dstImg = NSImage(dst[j].unsqueeze(at: 0))
+                let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueeze(at: 0))
                 try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j).png")
             }
         }

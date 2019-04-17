@@ -374,7 +374,15 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func conv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func img2col<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func col2img<N>(matrix: ShapedBuffer<N, GPU>, image: ShapedBuffer<N, GPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func conv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, padding: Int, stride: Int) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
     

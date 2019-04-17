@@ -142,6 +142,61 @@ class MNistTest: XCTestCase {
         // try? model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_params.json"))
     }
     
+    func testMNistConvnet() {
+        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        
+        let model = Sequential<Float, CPU>(
+            Conv2D(inputChannels: 1, outputChannels: 8, kernelSize: 3, stride: 2, padding: 1).asAny(),
+            Conv2D(inputChannels: 8, outputChannels: 16, kernelSize: 3, stride: 2, padding: 1).asAny(),
+            Conv2D(inputChannels: 16, outputChannels: 32, kernelSize: 3, stride: 2, padding: 1).asAny(),
+            Flatten().asAny(),
+            Dense(inputFeatures: 512, outputFeatures: 100).asAny(),
+            Relu().asAny(),
+            Dense(inputFeatures: 100, outputFeatures: 10).asAny(),
+            Softmax().asAny()
+        )
+        
+        let epochs = 20_000
+        let batchSize = 128
+        
+        let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+        
+        for epoch in 1 ... epochs {
+            optimizer.zeroGradient()
+            let (batch, expected) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
+            
+            let x = batch.unsqueeze(at: 1)
+            let y_pred = model(x)
+            let y_true = expected
+            
+            let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
+            
+            loss.backwards()
+            optimizer.step()
+            
+            if epoch % 100 == 0 {
+                let avgLoss = loss.item
+                print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
+            }
+        }
+        
+        var correctCount = 0
+        
+        for i in 0 ..< ds_val.0.shape[0] {
+            let x = ds_val.0[i].view(as: 1, 1, 28, 28)
+            let pred = argmax(model(x).squeeze())
+            let actual = Int(ds_val.1[i].item)
+            
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(ds_val.0.shape[0])
+        
+        print("Accuracy: \(accuracy)")
+    }
+    
     func testMNistLstm() {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
@@ -159,7 +214,7 @@ class MNistTest: XCTestCase {
         print("Training...")
         
         let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
-        let workers = 3
+        let workers = 1
 
         for i in 0 ..< workers {
             DispatchQueue.global().async {
@@ -173,15 +228,16 @@ class MNistTest: XCTestCase {
             }
         }
         
-        
         var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
         
         for _ in 1 ... epochs {
             optimizer.zeroGradient()
             
             let (x, y_true) = queue.dequeue()!
+//            let (batch, y_true) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
+//            let x = batch.permuted(to: 1, 0, 2)
 
-            let y_pred = model.forward(x)
+            let y_pred = model(x)
             let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
             loss.backwards()
             
@@ -191,7 +247,7 @@ class MNistTest: XCTestCase {
         }
         bar.complete()
         
-        queue.stop()
+        // queue.stop()
         
         var correctCount = 0
         

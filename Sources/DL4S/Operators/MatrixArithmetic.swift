@@ -110,6 +110,13 @@ public func mmul<Element: NumericType, Device: DeviceType>(_ lhs: Tensor<Element
     return result.view(as: resultViewShape)
 }
 
+public extension Tensor {
+    @inline(__always)
+    func mmul(_ other: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.mmul(self, other)
+    }
+}
+
 struct TransposeOperation<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var source: Tensor<Element, Device>
     

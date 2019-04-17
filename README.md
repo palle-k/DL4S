@@ -47,7 +47,7 @@ Then add `DL4S` as a dependency to your target:
 - [x] Lambda 
 - [x] Sequential
 - [x] Dropout
-- [ ] Convolution
+- [x] Convolution
 - [ ] Pooling
 
 ### Optimizers
@@ -81,7 +81,7 @@ Then add `DL4S` as a dependency to your target:
 - [x] max
 - [x] reduce sum
 - [ ] reduce max
-- [ ] conv2d
+- [x] conv2d
 - [ ] max pool
 - [ ] avg pool
 
