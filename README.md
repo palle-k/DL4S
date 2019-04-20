@@ -14,7 +14,7 @@ This project is a work in progress. While all the shown examples work, there are
     4. [Tensor Operations](#tensor-operations)
     5. [Engines](#engines)
 3. [Examples](#examples)
-    1. [Feed Forward Network](#feed-forward-networks)
+    1. [Convolutional Networks](#convolutional-networks)
     2. [Recurrent Network (LSTM)](#recurrent-networks)
     3. [Generative Adversarial Network](#generative-adversarial-networks)
 
@@ -48,7 +48,8 @@ Then add `DL4S` as a dependency to your target:
 - [x] Sequential
 - [x] Dropout
 - [x] Convolution
-- [ ] Pooling
+- [x] Max Pooling
+- [x] Average Pooling
 
 ### Optimizers
 - [x] SGD
@@ -80,10 +81,10 @@ Then add `DL4S` as a dependency to your target:
 - [x] sum
 - [x] max
 - [x] reduce sum
-- [ ] reduce max
+- [x] reduce max
 - [x] conv2d
-- [ ] max pool
-- [ ] avg pool
+- [x] max pool
+- [x] avg pool
 
 
 ### Engines
@@ -114,18 +115,23 @@ print(a.gradientDescription!)
 */
 ```
 
-### Feed Forward Networks
+### Convolutional Networks
 
 Example for MNIST classification
 
 ```swift
+// Input must be 1x28x28
 let model = Sequential<Float, CPU>(
-    Flatten().asAny() // Flatten batchSize x 28 x 28 image to batchSize x 784 vector
-    Dense(inputFeatures: 784, outputFeatures: 500).asAny(),
+    Conv2D(inputChannels: 1, outputChannels: 6, kernelSize: 5, padding: 0).asAny(), // 4x24x24
     Relu().asAny(),
-    Dense(inputFeatures: 500, outputFeatures: 300).asAny(),
+    MaxPool2D(windowSize: 2, stride: 2).asAny(), // 4x12x12
+    Conv2D(inputChannels: 6, outputChannels: 16, kernelSize: 5, padding: 0).asAny(), // 16x8x8
     Relu().asAny(),
-    Dense(inputFeatures: 300, outputFeatures: 10).asAny(),
+    MaxPool2D(windowSize: 2, stride: 2).asAny(), // 16x4x4
+    Flatten().asAny(), // 256
+    Dense(inputFeatures: 256, outputFeatures: 120).asAny(),
+    Relu().asAny(),
+    Dense(inputFeatures: 120, outputFeatures: 10).asAny(),
     Softmax().asAny()
 )
 

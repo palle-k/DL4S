@@ -243,15 +243,22 @@ extension Float: NumericType {
         return (Int(minI), minV)
     }
     
-    public static func heavisideManual(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        let srcPtr = values.pointer(capacity: count)
-        let dstPtr = result.pointer(capacity: count)
+    public static func argmax(values: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> (Int, Float) {
+        var minI: UInt = 0
+        var minV: Float = 0
         
-        var i = 0
-        while i < count {
-            dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
-            i += 1
-        }
+        vDSP_maxvi(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
+        
+        return (Int(minI) / stride, minV)
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> (Int, Float) {
+        var minI: UInt = 0
+        var minV: Float = 0
+        
+        vDSP_minvi(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
+        
+        return (Int(minI) / stride, minV)
     }
     
     public static func heaviside(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {

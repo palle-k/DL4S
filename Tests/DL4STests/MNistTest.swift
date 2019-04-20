@@ -146,17 +146,20 @@ class MNistTest: XCTestCase {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
         let model = Sequential<Float, CPU>(
-            Conv2D(inputChannels: 1, outputChannels: 8, kernelSize: 3, stride: 2, padding: 1).asAny(),
-            Conv2D(inputChannels: 8, outputChannels: 16, kernelSize: 3, stride: 2, padding: 1).asAny(),
-            Conv2D(inputChannels: 16, outputChannels: 32, kernelSize: 3, stride: 2, padding: 1).asAny(),
-            Flatten().asAny(),
-            Dense(inputFeatures: 512, outputFeatures: 100).asAny(),
+            Conv2D(inputChannels: 1, outputChannels: 6, kernelSize: 5, padding: 0).asAny(), // 4x24x24
             Relu().asAny(),
-            Dense(inputFeatures: 100, outputFeatures: 10).asAny(),
+            MaxPool2D(windowSize: 2, stride: 2).asAny(), // 4x12x12
+            Conv2D(inputChannels: 6, outputChannels: 16, kernelSize: 5, padding: 0).asAny(), // 16x8x8
+            Relu().asAny(),
+            MaxPool2D(windowSize: 2, stride: 2).asAny(), // 16x4x4
+            Flatten().asAny(), // 256
+            Dense(inputFeatures: 256, outputFeatures: 120).asAny(),
+            Relu().asAny(),
+            Dense(inputFeatures: 120, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )
         
-        let epochs = 20_000
+        let epochs = 5_000
         let batchSize = 128
         
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
@@ -174,7 +177,7 @@ class MNistTest: XCTestCase {
             loss.backwards()
             optimizer.step()
             
-            if epoch % 100 == 0 {
+            if epoch % 10 == 0 {
                 let avgLoss = loss.item
                 print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
             }
@@ -195,6 +198,8 @@ class MNistTest: XCTestCase {
         let accuracy = Float(correctCount) / Float(ds_val.0.shape[0])
         
         print("Accuracy: \(accuracy)")
+        
+        try! model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_lenet.json"))
     }
     
     func testMNistLstm() {
@@ -315,5 +320,41 @@ class MNistTest: XCTestCase {
             fatalError()
         }
         try png.write(to: URL(fileURLWithPath: "/Users/Palle/Desktop/input.png"))
+    }
+}
+
+
+class ResidualBlock<Element: RandomizableType, Device: DeviceType>: Layer {
+    let conv1: Conv2D<Element, Device>
+    let conv2: Conv2D<Element, Device>
+    let bn1: BatchNorm<Element, Device>
+    let bn2: BatchNorm<Element, Device>
+    
+    var isTrainable: Bool = true
+    
+    var parameters: [Tensor<Element, Device>] {
+        return Array([conv1.parameters, conv2.parameters, bn1.parameters, bn2.parameters].joined())
+    }
+    
+    init(inputShape: [Int]) {
+        conv1 = Conv2D(inputChannels: inputShape[0], outputChannels: inputShape[0], kernelSize: 3)
+        conv2 = Conv2D(inputChannels: inputShape[0], outputChannels: inputShape[0], kernelSize: 3)
+        bn1 = BatchNorm(inputSize: inputShape)
+        bn2 = BatchNorm(inputSize: inputShape)
+    }
+    
+    func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        var x = inputs[0]
+        let res = x
+        
+        x = conv1(x)
+        x = bn1(x)
+        x = relu(x)
+        x = conv2(x)
+        x = bn2(x)
+        x = x + res
+        x = relu(x)
+        
+        return x
     }
 }

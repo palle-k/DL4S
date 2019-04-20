@@ -44,7 +44,7 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
     
     public var momentum: Element
     
-    public init(inputSize: Int, momentum: Element = 0.1) {
+    public init(inputSize: [Int], momentum: Element = 0.1) {
         shift = Tensor(repeating: 0, shape: inputSize, requiresGradient: true)
         scale = Tensor(repeating: 1, shape: inputSize, requiresGradient: true)
         

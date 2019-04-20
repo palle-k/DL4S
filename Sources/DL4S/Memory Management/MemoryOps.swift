@@ -81,6 +81,10 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
     }
 }
 
+@_specialize(where Element == Float)
+@_specialize(where Element == Int32)
+@_specialize(where Element == Double)
+@inline(__always)
 func iterativeRead<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -88,7 +92,7 @@ func iterativeRead<Element>(
     srcStrides: [Int],
     srcShape: [Int]
 ) {
-    let srcIndex = srcIndex.reversed().drop(while: {$0 == nil}).reversed()
+    let srcIndex = srcIndex.dropLast(while: {$0 == nil})
     
     if srcIndex.count == 0 {
         let count = srcShape[0] * srcStrides[0]
@@ -102,11 +106,24 @@ func iterativeRead<Element>(
         idx == nil ? dim : 1
     }
     
-    for (i, index) in iterate(iterShape).enumerated() {
-        let index = zip(srcIndex, index).map {$0 ?? $1}
-        let baseIndex = zip(index, srcStrides).map(*).reduce(0, +)
+//    for (i, index) in iterate(iterShape).enumerated() {
+//        let index = zip(srcIndex, index).map {$0 ?? $1}
+//        let baseIndex = zip(index, srcStrides).map(*).reduce(0, +)
+//        let dstIndex = i * copyCount
+//        destination.advanced(by: dstIndex)
+//            .assign(from: source.advanced(by: baseIndex), count: copyCount)
+//    }
+    let indices = iterate(iterShape)
+    
+    for i in 0 ..< indices.count {
+        let index = indices[i]
+        var baseIndex = 0
         let dstIndex = i * copyCount
-        destination.advanced(by: dstIndex)
+        for j in 0 ..< index.count {
+            baseIndex += (srcIndex[j] ?? index[j]) * srcStrides[j]
+        }
+        destination
+            .advanced(by: dstIndex)
             .assign(from: source.advanced(by: baseIndex), count: copyCount)
     }
 }

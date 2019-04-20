@@ -120,6 +120,10 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         destination.assign(from: source.memory.bindMemory(to: Element.self).immutable, count: count)
     }
     
+    @inline(__always)
+    @_specialize(where Element == Float)
+    @_specialize(where Element == Int32)
+    @_specialize(where Element == Double)
     public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (Buffer<Element, CPU>, Bool, [Int]) where Element : NumericType {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         

@@ -351,3 +351,9 @@ extension Tensor {
         }
     }
 }
+
+public extension Tensor {
+    func copied<Destination>(to device: Destination.Type) -> Tensor<Element, Destination> {
+        return Tensor<Element, Destination>(self)
+    }
+}

@@ -48,6 +48,8 @@ public protocol EngineTypeV2 {
     static func reduceMin<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axes: [Int])
     static func reduceMean<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axes: [Int])
     
+    static func expandContext<N>(reduced: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    
     static func sum<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func mean<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     @discardableResult static func max<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>) -> Int

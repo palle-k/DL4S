@@ -45,11 +45,11 @@ class GANTests: XCTestCase {
         let generator = Sequential<Float, CPU>(
             Concat().asAny(),
             Dense(inputFeatures: latentSize + 10, outputFeatures: 200).asAny(),
-            BatchNorm(inputSize: 200).asAny(),
+            BatchNorm(inputSize: [200]).asAny(),
             LeakyRelu(0.2).asAny(),
             d1.asAny(),
             Dense(inputFeatures: 200, outputFeatures: 800).asAny(),
-            BatchNorm(inputSize: 800).asAny(),
+            BatchNorm(inputSize: [800]).asAny(),
             LeakyRelu(0.2).asAny(),
             d2.asAny(),
             Dense(inputFeatures: 800, outputFeatures: 28 * 28).asAny(),

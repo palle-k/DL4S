@@ -26,95 +26,6 @@
 import Foundation
 
 
-//fileprivate struct Conv2DOperation<Element: NumericType, Device: DeviceType>: TensorOperation {
-//    var sourceTensors: [Tensor<Element, Device>] {
-//        return [image, kernel]
-//    }
-//
-//    var image: Tensor<Element, Device>
-//    var kernel: Tensor<Element, Device>
-//    var strides: (horizontal: Int, vertical: Int)
-//    var padding: (horizontal: Int, vertical: Int)
-//
-//    var symbol: String {
-//        return "Conv2D"
-//    }
-//
-//    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-//        guard let vectorGradient = vector.shapedGradient else {
-//            return
-//        }
-//
-//        if let imageGradient = image.shapedGradient {
-//            // TODO: Incorporate padding
-//            Device.Engine.revConv2d(values: vectorGradient, filters: kernel.shapedValues, result: imageGradient, strides: (vertical: strides.vertical, horizontal: strides.horizontal))
-//        }
-//        if let kernelGradient = kernel.shapedGradient {
-//            // TODO: Incorporate padding
-//            Device.Engine.kernelGradConv2d(values: vectorGradient, filters: image.shapedValues, result: kernelGradient, strides: (vertical: strides.vertical, horizontal: strides.horizontal))
-//        }
-//    }
-//}
-//
-//
-//public func conv2d<Element, Device>(input: Tensor<Element, Device>, kernel: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
-//    precondition(kernel.dim == 4)
-//    precondition(kernel.dim == 4)
-//
-//    let padding = padding ?? ((kernel.shape[2] - 1) / 2)
-//
-//    let outputShape = [
-//        input.shape[0],
-//        kernel.shape[0],
-//        (input.shape[2] + 2 * padding - kernel.shape[2]) / stride + 1,
-//        (input.shape[3] + 2 * padding - kernel.shape[3]) / stride + 1
-//    ]
-//
-//    let result = Tensor<Element, Device>(
-//        shape: outputShape,
-//        parent: nil,
-//        context: Conv2DOperation(image: input, kernel: kernel).asAny()
-//    )
-//
-//    Device.Engine.conv2d(values: input.shapedValues, filters: kernel.shapedValues, result: result.shapedValues, padding: padding, stride: stride)
-//
-//    return result
-//}
-//
-//fileprivate struct Pool2DOperation<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
-//    var source: Tensor<Element, Device>
-//
-//    var symbol: String {
-//        return "Pool2D"
-//    }
-//
-//    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-//        fatalError()
-//    }
-//}
-//
-//
-//public func pool2d<Element, Device>(input: Tensor<Element, Device>, windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
-//    let stride = stride ?? windowSize
-//    let padding = padding ?? ((windowSize - 1) / 2)
-//
-//    let outputShape = [
-//        input.shape[0],
-//        input.shape[1],
-//        (input.shape[2] + 2 * padding - windowSize) / stride + 1,
-//        (input.shape[3] + 2 * padding - windowSize) / stride + 1
-//    ]
-//
-//    let result = Tensor<Element, Device>(
-//        shape: outputShape,
-//        parent: nil,
-//        context: Pool2DOperation(source: input).asAny()
-//    )
-//
-//    fatalError()
-//}
-
-
 private struct Im2ColOperation<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var source: Tensor<Element, Device>
     let kernelWidth: Int
@@ -189,7 +100,8 @@ public func img2col<Element, Device>(images: Tensor<Element, Device>, kernelWidt
         kernelWidth: kernelWidth,
         kernelHeight: kernelHeight,
         padding: padding,
-        stride: stride)
+        stride: stride
+    )
     
     return result
 }
@@ -214,9 +126,64 @@ public func conv2d<Element, Device>(images: Tensor<Element, Device>, filters: Te
 }
 
 
+public func maxPool2d<Element, Device>(images: Tensor<Element, Device>, windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
+    let padding = padding ?? ((windowSize - 1) / 2)
+    let stride = stride ?? windowSize
+    
+    let outputShape = [
+        images.shape[0],
+        images.shape[1],
+        (images.shape[2] + 2 * padding - windowSize) / stride + 1,
+        (images.shape[3] + 2 * padding - windowSize) / stride + 1
+    ]
+    
+    let cols = img2col(
+        images: images.view(as: images.shape[0] * images.shape[1], 1, images.shape[2], images.shape[3]),
+        kernelWidth: windowSize,
+        kernelHeight: windowSize,
+        padding: padding,
+        stride: stride
+    )
+    let pooled = max(cols, axis: 0)
+    return pooled.view(as: outputShape)
+}
+
+public func avgPool2d<Element, Device>(images: Tensor<Element, Device>, windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
+    let padding = padding ?? ((windowSize - 1) / 2)
+    let stride = stride ?? windowSize
+    
+    let outputShape = [
+        images.shape[0],
+        images.shape[1],
+        (images.shape[2] + 2 * padding - windowSize) / stride + 1,
+        (images.shape[3] + 2 * padding - windowSize) / stride + 1
+    ]
+    
+    let cols = img2col(
+        images: images.view(as: images.shape[0] * images.shape[1], 1, images.shape[2], images.shape[3]),
+        kernelWidth: windowSize,
+        kernelHeight: windowSize,
+        padding: padding,
+        stride: stride
+    )
+    let pooled = mean(cols, axes: [0])
+    return pooled.view(as: outputShape)
+}
+
+
 public extension Tensor {
     @inline(__always)
     func convolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         return DL4S.conv2d(images: self, filters: filters, padding: padding, stride: stride)
+    }
+    
+    @inline(__always)
+    func maxPooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
+        return DL4S.maxPool2d(images: self, windowSize: windowSize, padding: padding, stride: stride)
+    }
+    
+    @inline(__always)
+    func avgPooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
+        return DL4S.avgPool2d(images: self, windowSize: windowSize, padding: padding, stride: stride)
     }
 }

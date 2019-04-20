@@ -131,17 +131,7 @@ extension CPUEngine: EngineTypeV2 {
         let rhsStrides = CPU.Memory.strides(from: rhs.shape)
         let dstStrides = CPU.Memory.strides(from: result.shape)
         
-        // Perform broadcast according to previously determined broadcasting rules
         for resultIdx in iterate(iterShape) {
-            // let lhsIdx = zip(resultIdx, lhs.shape).map {Swift.min($0, $1 - 1)}
-            // let rhsIdx = zip(resultIdx, rhs.shape).map {Swift.min($0, $1 - 1)}
-            
-            // All the slicing operations return a pointer to the same underlying memory region.
-            // Therefore, slices must not be deallocated.
-            // let (lhsSlice, _, _) = CPU.Memory.get(slice: lhsIdx, of: lhs.values, with: lhs.shape)
-            // let (rhsSlice, _, _) = CPU.Memory.get(slice: rhsIdx, of: rhs.values, with: rhs.shape)
-            //
-            // let (resultSlice, _, _) = CPU.Memory.get(slice: resultIdx, of: result.values, with: result.shape)
             var lhsIdx = 0
             var rhsIdx = 0
             var dstIdx = 0
@@ -169,6 +159,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @available(*, deprecated, message: "Don't use this one, it is slow")
     @inline(__always)
     @_specialize(where N == Float)
     private static func reduce<N>(
@@ -233,6 +224,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @available(*, deprecated, message: "Don't use this one, it is slow")
     @inline(__always)
     @_specialize(where N == Float)
     private static func reduceMultiAxis<N>(
@@ -371,6 +363,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @available(*, deprecated, message: "Don't use this one, it is slow")
     @inline(__always)
     @_specialize(where N == Float, Context == Int32)
     private static func reduceWithContext<N, Context>(
@@ -409,6 +402,48 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    @inline(__always)
+    @_specialize(where N == Float, Context == Int32)
+    private static func reduceWithContext<N, Context>(
+        values: ShapedBuffer<N, CPU>,
+        result: ShapedBuffer<N, CPU>,
+        context: ShapedBuffer<Context, CPU>,
+        axis: Int,
+        reduceOperator: (UnsafeBufferPointer<N>, Int, Int) -> (N, Context)
+    ) {
+        #if DEBUG
+        precondition(result.shape == context.shape)
+        
+        var shape = values.shape
+        shape.remove(at: axis)
+        precondition(shape == result.shape)
+        #endif
+        
+        let srcPtr = values.immutable
+        let dstPtr = result.pointer
+        let ctxPtr = context.pointer
+        
+        let dstStrides = CPU.Memory.strides(from: result.shape)
+        var srcStrides = CPU.Memory.strides(from: values.shape)
+        let reductionStride = srcStrides.remove(at: axis)
+        let reductionCount = values.shape[axis]
+        
+        for idx in iterate(result.shape) {
+            var srcBase = 0
+            var dstIdx = 0
+            
+            for i in 0 ..< idx.count {
+                srcBase += srcStrides[i] * idx[i]
+                dstIdx += dstStrides[i] * idx[i]
+            }
+            
+            let (val, ctx) = reduceOperator(srcPtr.advanced(by: srcBase), reductionStride, reductionCount)
+            dstPtr[dstIdx] = val
+            ctxPtr[dstIdx] = ctx
+        }
+    }
+    
+    @available(*, deprecated, message: "Don't use this one, it is slow")
     @inline(__always)
     @_specialize(where N == Float, Context == Int32)
     private static func reduceMultiAxisWithContext<N, Context>(
@@ -563,8 +598,8 @@ extension CPUEngine: EngineTypeV2 {
                 result: result,
                 context: context,
                 axis: axis,
-                reduceOperator: { buffer, count -> (N, Int32) in
-                    let (arg, max) = N.argmax(values: buffer, count: count)
+                reduceOperator: { buffer, stride, count -> (N, Int32) in
+                    let (arg, max) = N.argmax(values: buffer, stride: stride, count: count)
                     return (max, Int32(arg))
                 }
             )
@@ -575,8 +610,8 @@ extension CPUEngine: EngineTypeV2 {
                 values: values,
                 result: result,
                 axis: axis
-            ) {
-                N.argmax(values: $0, count: $1).1
+            ) { buffer, stride, count in
+                N.argmax(values: buffer, stride: stride, count: stride).1
             }
         }
     }
@@ -589,8 +624,8 @@ extension CPUEngine: EngineTypeV2 {
                 result: result,
                 context: context,
                 axis: axis,
-                reduceOperator: { buffer, count -> (N, Int32) in
-                    let (arg, min) = N.argmin(values: buffer, count: count)
+                reduceOperator: { buffer, stride, count -> (N, Int32) in
+                    let (arg, min) = N.argmin(values: buffer, stride: stride, count: count)
                     return (min, Int32(arg))
                 }
             )
@@ -601,8 +636,8 @@ extension CPUEngine: EngineTypeV2 {
                 values: values,
                 result: result,
                 axis: axis
-            ) {
-                N.argmin(values: $0, count: $1).1
+            ) { values, stride, count in
+                N.argmin(values: values, stride: stride, count: count).1
             }
         }
     }
@@ -677,6 +712,28 @@ extension CPUEngine: EngineTypeV2 {
             reduceMultiAxis(values: values, result: result, axes: axes) {
                 N.argmin(values: $0, count: $1).1
             }
+        }
+    }
+    
+    public static func expandContext<N>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
+        let srcStrides = CPUMemoryOperators.strides(from: reduced.shape)
+        var dstStrides = CPUMemoryOperators.strides(from: result.shape)
+        let axisStride = dstStrides.remove(at: axis)
+        
+        let srcPtr = reduced.immutable.pointer(capacity: reduced.count)
+        let ctxPtr = context.immutable.pointer(capacity: reduced.count)
+        let dstPtr = result.pointer.pointer(capacity: result.count)
+        
+        for index in iterate(reduced.shape) {
+            var srcIdx = 0
+            var dstIdx = 0
+            for i in 0 ..< index.count {
+                srcIdx += index[i] * srcStrides[i]
+                dstIdx += index[i] * dstStrides[i]
+            }
+            
+            dstIdx += axisStride * Int(ctxPtr[srcIdx])
+            dstPtr[dstIdx] = srcPtr[srcIdx]
         }
     }
     

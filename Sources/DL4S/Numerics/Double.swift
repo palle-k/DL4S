@@ -243,6 +243,24 @@ extension Double: NumericType {
         return (Int(minI), minV)
     }
     
+    public static func argmax(values: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> (Int, Double) {
+        var maxI: UInt = 0
+        var maxV: Double = 0
+        
+        vDSP_maxviD(values.pointer(capacity: count), stride, &maxV, &maxI, UInt(count))
+        
+        return (Int(maxI) / stride, maxV)
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> (Int, Double) {
+        var maxI: UInt = 0
+        var maxV: Double = 0
+        
+        vDSP_minviD(values.pointer(capacity: count), stride, &maxV, &maxI, UInt(count))
+        
+        return (Int(maxI) / stride, maxV)
+    }
+    
     public static func copy(values: UnsafeBufferPointer<Double>, srcStride: Int, result: UnsafeMutableBufferPointer<Double>, dstStride: Int, count: Int) {
         cblas_dcopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
     }

@@ -116,7 +116,17 @@ private struct MaxAxisContext<Element: NumericType, Device: DeviceType>: UnaryTe
     let axis: Int
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let vectorGradient = vector.shapedGradient, let sourceGradient = source.shapedGradient else {
+            return
+        }
         
+        let tmp = Device.Memory.allocateBuffer(withShape: source.shape, type: Element.self)
+        
+        Device.Engine.fill(value: 0, result: tmp.values, count: tmp.count)
+        Device.Engine.expandContext(reduced: vectorGradient, context: context.shapedValues, result: tmp, axis: axis)
+        Device.Engine.vAdd(lhs: tmp.values, rhs: sourceGradient.values, result: sourceGradient.values, count: source.count)
+        
+        Device.Memory.free(tmp)
     }
     
     var symbol: String {
@@ -135,6 +145,7 @@ public func max<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? =
             let ctx = Tensor<Int32, Device>(shape: resultShape, parent: nil, context: nil)
             Device.Engine.reduceMax(values: vector.shapedValues, result: result.shapedValues, context: ctx.shapedValues, axis: axis)
             result.context = MaxAxisContext(source: vector, context: ctx, axis: axis).asAny()
+            result.requiresGradient = true
         } else {
             Device.Engine.reduceMax(values: vector.shapedValues, result: result.shapedValues, context: nil, axis: axis)
         }

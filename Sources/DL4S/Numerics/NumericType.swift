@@ -103,6 +103,9 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func argmax(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
     static func argmin(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
     
+    static func argmax(values: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> (Int, Self)
+    static func argmin(values: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> (Int, Self)
+    
     static func max(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func min(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     

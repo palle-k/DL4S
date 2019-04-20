@@ -314,6 +314,10 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func expandContext<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func sum<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }

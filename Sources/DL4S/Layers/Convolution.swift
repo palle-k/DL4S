@@ -36,33 +36,3 @@ public class Conv2D<Element: RandomizableType, Device: DeviceType>: Layer {
     }
 }
 
-
-public class MaxPool2D<Element: NumericType, Device: DeviceType>: Layer {
-    public let stride: Int
-    public let padding: Int
-    public let windowSize: Int
-    
-    public var isTrainable: Bool {
-        get {
-            return false
-        }
-        set {
-            // noop
-        }
-    }
-    
-    public var parameters: [Tensor<Element, Device>] {
-        return []
-    }
-    
-    public init(windowSize: Int, stride: Int? = nil, padding: Int? = nil) {
-        self.stride = stride ?? windowSize
-        self.padding = padding ?? ((windowSize - 1) / 2)
-        self.windowSize = windowSize
-    }
-    
-    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        fatalError()
-        // return pool2d(input: inputs[0], windowSize: windowSize, padding: padding, stride: stride)
-    }
-}
