@@ -154,22 +154,22 @@ extension Float: NumericType {
         precondition((transposeFirst ? lhsShape.1 : lhsShape.0) == resultShape.0)
         precondition((transposeSecond ? rhsShape.0 : rhsShape.1) == resultShape.1)
         precondition((transposeFirst ? lhsShape.0 : lhsShape.1) == (transposeSecond ? rhsShape.1 : rhsShape.0))
-        
+ 
         cblas_sgemm(
             CblasRowMajor,
             transposeFirst ? CblasTrans : CblasNoTrans,
             transposeSecond ? CblasTrans : CblasNoTrans,
-            Int32(lhsShape.0), // rows in op(lhs)
-            Int32(rhsShape.1), // columns in op(rhs)
-            Int32(lhsShape.1), // columns in op(lhs) and op(rhs)
-            1, // Scale for product of lhs and rhs
+            Int32(resultShape.0),
+            Int32(resultShape.1),
+            Int32(transposeFirst ? lhsShape.0 : lhsShape.1),
+            1.0,
             lhs.pointer(capacity: lhsShape.0 * lhsShape.1),
-            Int32(lhsShape.0), // Size of first dimension of lhs
+            Int32(lhsShape.1),
             rhs.pointer(capacity: rhsShape.0 * rhsShape.1),
-            Int32(rhsShape.0), // Size of first dimension of rhs
-            1, // Scale for addition of result
+            Int32(rhsShape.1),
+            1.0,
             result.pointer(capacity: resultShape.0 * resultShape.1),
-            Int32(resultShape.0) // Size of first dimension of result
+            Int32(resultShape.1)
         )
     }
     

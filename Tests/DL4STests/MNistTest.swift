@@ -100,10 +100,12 @@ class MNistTest: XCTestCase {
             Softmax().asAny()
         )
         
-        let epochs = 5_000
+        let epochs = 1_000
         let batchSize = 128
         
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+        
+        let t1 = CACurrentMediaTime()
         
         for epoch in 1 ... epochs {
             optimizer.zeroGradient()
@@ -122,6 +124,10 @@ class MNistTest: XCTestCase {
                 print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
             }
         }
+        
+        let t2 = CACurrentMediaTime()
+        
+        print("\(t2 - t1)s")
         
         var correctCount = 0
         
@@ -160,7 +166,7 @@ class MNistTest: XCTestCase {
         )
         
         let epochs = 5_000
-        let batchSize = 128
+        let batchSize = 512
         
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
         
@@ -200,6 +206,54 @@ class MNistTest: XCTestCase {
         print("Accuracy: \(accuracy)")
         
         try! model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_lenet.json"))
+    }
+    
+    func testMNistResnet() {
+        var (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        ds_train.0 = pad(ds_train.0, padding: [0, 2, 2])
+        ds_val.0 = pad(ds_val.0, padding: [0, 2, 2])
+        
+        let epochs = 500
+        let batchSize = 32
+        
+        let model = ResNet<Float, CPU>(inputShape: [1, 32, 32], classCount: 10)
+        let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+        
+        for epoch in 1 ... epochs {
+            optimizer.zeroGradient()
+            let (batch, expected) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
+            
+            let x = batch.unsqueeze(at: 1)
+            let y_pred = model(x)
+            let y_true = expected
+            
+            let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
+            
+            loss.backwards()
+            optimizer.step()
+            
+            if epoch % 1 == 0 {
+                let avgLoss = loss.item
+                print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
+            }
+        }
+        
+        var correctCount = 0
+        
+        for i in 0 ..< ds_val.0.shape[0] {
+            let x = ds_val.0[i].view(as: 1, 1, 28, 28)
+            let pred = argmax(model(x).squeeze())
+            let actual = Int(ds_val.1[i].item)
+            
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(ds_val.0.shape[0])
+        
+        print("Accuracy: \(accuracy)")
+        try! model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_resnet18.json"))
     }
     
     func testMNistLstm() {

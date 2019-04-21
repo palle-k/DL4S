@@ -180,7 +180,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     }
     
     public static func set<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) where Element : NumericType {
-        precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Shape of source must be equal to source of destination minus number of knowns in slice")
+        precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Dimensionality of source must be equal to dimensionality of destination minus number of knowns in slice")
         
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
         
@@ -189,7 +189,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     }
     
     public static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) where Element : NumericType {
-        precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Shape of source must be equal to source of destination minus number of knowns in slice")
+        precondition(sourceShape.count == dstShape.count, "Dimensionality of source must be equal to dimensionality of destination")
         
         let padded = slice + [Range<Int>?](repeating: nil, count: dstShape.count - slice.count)
         let dstStrides = CPUMemoryOperators.strides(from: dstShape)

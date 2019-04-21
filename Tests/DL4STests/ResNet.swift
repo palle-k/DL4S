@@ -94,17 +94,17 @@ class ResNet<Element: RandomizableType, Device: DeviceType>: Layer {
     }
     
     init(inputShape: [Int], classCount: Int) {
-        let l1out = ConvUtil.outputShape(for: inputShape, kernelCount: 64, kernelWidth: 7, kernelHeight: 7, stride: 2, padding: 3)
+        let startOut = ConvUtil.outputShape(for: inputShape, kernelCount: 64, kernelWidth: 7, kernelHeight: 7, stride: 2, padding: 3)
         
         start = Sequential(
             Conv2D(inputChannels: inputShape[0], outputChannels: 64, kernelSize: 7, stride: 2, padding: 3).asAny(),
-            BatchNorm(inputSize: l1out).asAny(),
+            BatchNorm(inputSize: startOut).asAny(),
             Relu().asAny()
         )
-        l1 = ResNet<Element, Device>.makeResidualLayer(inputShape: l1out, outPlanes: 64, downsample: 1, blocks: 2)
-        l2 = ResNet<Element, Device>.makeResidualLayer(inputShape: [64, l1out[1], l1out[2]], outPlanes: 128, downsample: 2, blocks: 2)
-        l3 = ResNet<Element, Device>.makeResidualLayer(inputShape: [128, l1out[1] / 2, l1out[2] / 2], outPlanes: 256, downsample: 2, blocks: 2)
-        l4 = ResNet<Element, Device>.makeResidualLayer(inputShape: [256, l1out[1] / 4, l1out[2] / 4], outPlanes: 512, downsample: 2, blocks: 2)
+        l1 = ResNet<Element, Device>.makeResidualLayer(inputShape: startOut, outPlanes: 64, downsample: 1, blocks: 2)
+        l2 = ResNet<Element, Device>.makeResidualLayer(inputShape: [64, startOut[1], startOut[2]], outPlanes: 128, downsample: 2, blocks: 2)
+        l3 = ResNet<Element, Device>.makeResidualLayer(inputShape: [128, startOut[1] / 2, startOut[2] / 2], outPlanes: 256, downsample: 2, blocks: 2)
+        l4 = ResNet<Element, Device>.makeResidualLayer(inputShape: [256, startOut[1] / 4, startOut[2] / 4], outPlanes: 512, downsample: 2, blocks: 2)
         end = Sequential(
             AdaptiveAvgPool2D(targetSize: 1).asAny(),
             Flatten().asAny(),
@@ -117,11 +117,17 @@ class ResNet<Element: RandomizableType, Device: DeviceType>: Layer {
         var x = inputs[0]
         
         x = start(x)
+        print(x.shape)
         x = l1(x)
+        print(x.shape)
         x = l2(x)
+        print(x.shape)
         x = l3(x)
+        print(x.shape)
         x = l4(x)
+        print(x.shape)
         x = end(x)
+        print(x.shape)
         
         return x
     }
@@ -142,11 +148,11 @@ class ResNet<Element: RandomizableType, Device: DeviceType>: Layer {
 
 class ResNetTests: XCTestCase {
     func testResNet() {
-        let resnet = ResNet<Float, CPU>(inputShape: [3, 256, 256], classCount: 32)
+        let resnet = ResNet<Float, CPU>(inputShape: [3, 32, 32], classCount: 32)
         let optim = Adam(parameters: resnet.trainableParameters, learningRate: 0.001)
         optim.zeroGradient()
         
-        let t = Tensor<Float, CPU>(repeating: 0, shape: 4, 3, 256, 256)
+        let t = Tensor<Float, CPU>(repeating: 0, shape: 4, 3, 32, 32)
         t.tag = "input"
         Random.fill(t, a: 0, b: 1)
         

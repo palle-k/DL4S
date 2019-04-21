@@ -971,7 +971,9 @@ extension CPUEngine: EngineTypeV2 {
             
             let featureMap = srcPtr.advanced(by: featureMapStride * featureMapIdx)
             
-            for r in 0 ..< rows {
+            // Using a while-loop gives a ~5% performance gain
+            var r = 0
+            while r < rows {
                 let row = baseSrcRow + rowBuffer[r]
                 let col = baseSrcCol + colBuffer[r]
                 
@@ -980,6 +982,7 @@ extension CPUEngine: EngineTypeV2 {
                 } else {
                     dstPtr[rColsBuffer[r] + c] = featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col]
                 }
+                r += 1
             }
         }
     }
@@ -1041,13 +1044,15 @@ extension CPUEngine: EngineTypeV2 {
             
             let featureMap = dstPtr.advanced(by: featureMapStride * featureMapIdx)
             
-            for r in 0 ..< rows {
+            var r = 0
+            while r < rows {
                 let row = baseDstRow + rowBuffer[r]
                 let col = baseDstCol + colBuffer[r]
                 
                 if row >= 0 && row < height && col >= 0 && col < width {
                     featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col] += srcPtr[rColsBuffer[r] + c]
                 }
+                r += 1
             }
         }
     }

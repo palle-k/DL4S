@@ -36,26 +36,28 @@ private struct MatmulOperation<Element: NumericType, Device: DeviceType>: Binary
         }
         
         if let lhsGradient = lhs.gradient {
-            let temp2: Buffer<Element, Device> = Device.Memory.allocateBuffer(withCapacity: rhs.count, type: Element.self)
-            let temp3: Buffer<Element, Device> = Device.Memory.allocateBuffer(withCapacity: lhs.count, type: Element.self)
-            
-            Device.Engine.transpose(val: rhs.values, result: temp2, srcRows: rhs.shape[0], srcCols: rhs.shape[1])
-            Device.Engine.matMul(lhs: vectorGradient, rhs: temp2, result: temp3, lhsRows: vector.shape[0], lhsCols: vector.shape[1], rhsCols: rhs.shape[0])
-            Device.Engine.vAdd(lhs: temp3, rhs: lhsGradient, result: lhsGradient, count: lhs.count)
-            
-            Device.Memory.free(temp2)
-            Device.Memory.free(temp3)
+            Device.Engine.matMulAddInPlace(
+                lhs: vectorGradient,
+                rhs: rhs.values,
+                result: lhsGradient,
+                lhsShape: (vector.shape[0], vector.shape[1]),
+                rhsShape: (rhs.shape[0], rhs.shape[1]),
+                resultShape: (lhs.shape[0], lhs.shape[1]),
+                transposeFirst: false,
+                transposeSecond: true
+            )
         }
         if let rhsGradient = rhs.gradient {
-            let temp1: Buffer<Element, Device> = Device.Memory.allocateBuffer(withCapacity: lhs.count, type: Element.self)
-            let temp4: Buffer<Element, Device> = Device.Memory.allocateBuffer(withCapacity: rhs.count, type: Element.self)
-            
-            Device.Engine.transpose(val: lhs.values, result: temp1, srcRows: lhs.shape[0], srcCols: lhs.shape[1])
-            Device.Engine.matMul(lhs: temp1, rhs: vectorGradient, result: temp4, lhsRows: lhs.shape[1], lhsCols: lhs.shape[0], rhsCols: vector.shape[1])
-            Device.Engine.vAdd(lhs: temp4, rhs: rhsGradient, result: rhsGradient, count: rhs.count)
-            
-            Device.Memory.free(temp1)
-            Device.Memory.free(temp4)
+            Device.Engine.matMulAddInPlace(
+                lhs: lhs.values,
+                rhs: vectorGradient,
+                result: rhsGradient,
+                lhsShape: (lhs.shape[0], lhs.shape[1]),
+                rhsShape: (vector.shape[0], vector.shape[1]),
+                resultShape: (rhs.shape[0], rhs.shape[1]),
+                transposeFirst: true,
+                transposeSecond: false
+            )
         }
     }
     

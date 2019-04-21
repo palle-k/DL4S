@@ -539,4 +539,10 @@ class VecTests: XCTestCase {
         
         print(a[nil, -3])
     }
+    
+    func testPadding() {
+        let a = Tensor<Float, CPU>(repeating: 1, shape: 1, 28, 28)
+        let padded = a.padded([0, 2, 2])
+        print(padded)
+    }
 }
