@@ -322,39 +322,3 @@ class MNistTest: XCTestCase {
         try png.write(to: URL(fileURLWithPath: "/Users/Palle/Desktop/input.png"))
     }
 }
-
-
-class ResidualBlock<Element: RandomizableType, Device: DeviceType>: Layer {
-    let conv1: Conv2D<Element, Device>
-    let conv2: Conv2D<Element, Device>
-    let bn1: BatchNorm<Element, Device>
-    let bn2: BatchNorm<Element, Device>
-    
-    var isTrainable: Bool = true
-    
-    var parameters: [Tensor<Element, Device>] {
-        return Array([conv1.parameters, conv2.parameters, bn1.parameters, bn2.parameters].joined())
-    }
-    
-    init(inputShape: [Int]) {
-        conv1 = Conv2D(inputChannels: inputShape[0], outputChannels: inputShape[0], kernelSize: 3)
-        conv2 = Conv2D(inputChannels: inputShape[0], outputChannels: inputShape[0], kernelSize: 3)
-        bn1 = BatchNorm(inputSize: inputShape)
-        bn2 = BatchNorm(inputSize: inputShape)
-    }
-    
-    func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        var x = inputs[0]
-        let res = x
-        
-        x = conv1(x)
-        x = bn1(x)
-        x = relu(x)
-        x = conv2(x)
-        x = bn2(x)
-        x = x + res
-        x = relu(x)
-        
-        return x
-    }
-}

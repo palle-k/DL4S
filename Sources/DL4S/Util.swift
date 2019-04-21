@@ -61,6 +61,24 @@ func iterate(_ shape: [Int]) -> [[Int]] {
     return result
 }
 
+@inline(__always)
+func flatIterate(_ shape: [Int]) -> [Int] {
+    let count = shape.reduce(1, *)
+    let dim = shape.count
+    
+    let strides = MemoryOps.strides(from: shape)
+    var result = [Int](repeating: 0, count: count * dim)
+    
+    for i in 0 ..< count {
+        let b = i * dim
+        for axis in 0 ..< dim {
+            result[b + axis] = (i / strides[axis]) % shape[axis]
+        }
+    }
+    
+    return result
+}
+
 prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parameters) -> Bool {
     return { params in
         !predicate(params)
@@ -318,5 +336,16 @@ extension Sequence {
     @inline(__always)
     public func dropLast(`while` predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
         return try Array(self).dropLast(while: predicate)
+    }
+}
+
+
+public enum ConvUtil {
+    public static func outputShape(for inputShape: [Int], kernelCount: Int, kernelWidth: Int, kernelHeight: Int, stride: Int, padding: Int) -> [Int] {
+        return [
+            kernelCount,
+            (inputShape[1] + 2 * padding - kernelHeight) / stride + 1,
+            (inputShape[2] + 2 * padding - kernelWidth) / stride + 1
+        ]
     }
 }

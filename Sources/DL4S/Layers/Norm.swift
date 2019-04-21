@@ -52,6 +52,9 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
         runningVar = Tensor(repeating: 1, shape: inputSize)
         
         self.momentum = momentum
+        
+        shift.tag = "shift"
+        scale.tag = "scale"
     }
     
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {

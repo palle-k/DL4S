@@ -265,9 +265,9 @@ extension Float: NumericType {
         let srcPtr = values.pointer(capacity: count)
         let dstPtr = result.pointer(capacity: count)
         
-         for i in 0 ..< count {
-             dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
-         }
+        for i in 0 ..< count {
+            dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
+        }
     }
     
     public static func copy(values: UnsafeBufferPointer<Float>, srcStride: Int, result: UnsafeMutableBufferPointer<Float>, dstStride: Int, count: Int) {
@@ -284,5 +284,14 @@ extension Float: NumericType {
     
     public static func min(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         vDSP_vmin(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func submatrix(from values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int) {
+        let srcPtr = values.pointer(capacity: width * height)
+            .advanced(by: width * submatrixRow + submatrixColumn)
+        
+        let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
+        
+        vDSP_mmov(srcPtr, dstPtr, UInt(submatrixWidth), UInt(submatrixHeight), UInt(width), UInt(submatrixWidth))
     }
 }

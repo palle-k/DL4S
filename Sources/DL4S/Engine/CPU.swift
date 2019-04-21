@@ -43,6 +43,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     }
     private static var allocations: [UnsafeMutableRawBufferPointer: [String]] = [:]
     
+    @inline(__always)
     static func strides(from shape: [Int]) -> [Int] {
         let dim = shape.count
         

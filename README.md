@@ -3,7 +3,7 @@
 This package contains an implementation of reverse mode automatic differentiation, 
 vectorized implementations of common matrix and vector operators and high level neural network operations.
 
-This project is a work in progress. While all the shown examples work, there are important things missing, such as GPU acceleration and convolution operators.
+Note: While most features have already been implemented, the framework is still undergoing some optimization.
 
 ## Overview
 1. [Installation](#installation)
@@ -35,9 +35,12 @@ Then add `DL4S` as a dependency to your target:
 ## Features
 
 ### Layers
+- [x] Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
+- [x] Max Pooling
+- [x] Average Pooling
 - [x] Relu
 - [x] Tanh
 - [x] Sigmoid
@@ -47,9 +50,6 @@ Then add `DL4S` as a dependency to your target:
 - [x] Lambda 
 - [x] Sequential
 - [x] Dropout
-- [x] Convolution
-- [x] Max Pooling
-- [x] Average Pooling
 
 ### Optimizers
 - [x] SGD

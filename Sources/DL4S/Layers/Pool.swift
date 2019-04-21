@@ -66,3 +66,60 @@ public class AvgPool2D<Element: NumericType, Device: DeviceType>: Layer {
         return avgPool2d(images: inputs[0], windowSize: windowSize, padding: padding, stride: stride)
     }
 }
+
+
+public class AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Layer {
+    public let targetSize: Int
+    
+    public var isTrainable: Bool {
+        get {
+            return false
+        }
+        set {
+            // noop
+        }
+    }
+    
+    public var parameters: [Tensor<Element, Device>] {
+        return []
+    }
+    
+    public init(targetSize: Int) {
+        self.targetSize = targetSize
+    }
+    
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        let x = inputs[0]
+        let height = x.shape[2]
+        let windowSize = height / targetSize
+        return maxPool2d(images: x, windowSize: windowSize, padding: 0, stride: windowSize)
+    }
+}
+
+public class AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: Layer {
+    public let targetSize: Int
+    
+    public var isTrainable: Bool {
+        get {
+            return false
+        }
+        set {
+            // noop
+        }
+    }
+    
+    public var parameters: [Tensor<Element, Device>] {
+        return []
+    }
+    
+    public init(targetSize: Int) {
+        self.targetSize = targetSize
+    }
+    
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        let x = inputs[0]
+        let height = x.shape[2]
+        let windowSize = height / targetSize
+        return avgPool2d(images: x, windowSize: windowSize, padding: 0, stride: windowSize)
+    }
+}

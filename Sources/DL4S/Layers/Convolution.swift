@@ -29,6 +29,9 @@ public class Conv2D<Element: RandomizableType, Device: DeviceType>: Layer {
         self.bias = Tensor<Element, Device>(repeating: 0, shape: 1, outputChannels, 1, 1)
         
         Random.fillNormal(self.filters, mean: 0, stdev: (2 / Element(kernelSize * kernelSize * inputChannels)).sqrt())
+        
+        self.filters.tag = "W"
+        self.bias.tag = "b"
     }
     
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {

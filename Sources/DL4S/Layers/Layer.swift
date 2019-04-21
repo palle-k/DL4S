@@ -166,7 +166,7 @@ public class Sequential<Element: NumericType, Device: DeviceType>: Layer {
     
     
     /// Layers that are combined by the sequential layer
-    public let layers: [AnyLayer<Element, Element, Device>]
+    public var layers: [AnyLayer<Element, Element, Device>]
     
     public var isTrainable: Bool {
         get {
@@ -198,6 +198,10 @@ public class Sequential<Element: NumericType, Device: DeviceType>: Layer {
     
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         return layers.reduce(inputs) {[$1.forward($0)]}[0]
+    }
+    
+    public func append<L: Layer>(_ layer: L) where L.Input == Element, L.Device == Device, L.Element == Element {
+        self.layers.append(layer.asAny())
     }
 }
 

@@ -428,13 +428,16 @@ extension CPUEngine: EngineTypeV2 {
         let reductionStride = srcStrides.remove(at: axis)
         let reductionCount = values.shape[axis]
         
-        for idx in iterate(result.shape) {
+        let indices = flatIterate(result.shape)
+        let resultDim = result.dim
+        
+        for i in 0 ..< result.count {
             var srcBase = 0
             var dstIdx = 0
             
-            for i in 0 ..< idx.count {
-                srcBase += srcStrides[i] * idx[i]
-                dstIdx += dstStrides[i] * idx[i]
+            for j in 0 ..< result.dim {
+                srcBase += srcStrides[j] * indices[j + i * resultDim]
+                dstIdx += dstStrides[j] * indices[j + i * resultDim]
             }
             
             let (val, ctx) = reduceOperator(srcPtr.advanced(by: srcBase), reductionStride, reductionCount)
@@ -724,12 +727,16 @@ extension CPUEngine: EngineTypeV2 {
         let ctxPtr = context.immutable.pointer(capacity: reduced.count)
         let dstPtr = result.pointer.pointer(capacity: result.count)
         
-        for index in iterate(reduced.shape) {
+        let count = reduced.count
+        let dim = reduced.dim
+        let indices = flatIterate(reduced.shape)
+        
+        for i in 0 ..< count {
             var srcIdx = 0
             var dstIdx = 0
-            for i in 0 ..< index.count {
-                srcIdx += index[i] * srcStrides[i]
-                dstIdx += index[i] * dstStrides[i]
+            for j in 0 ..< dim {
+                srcIdx += indices[i * dim + j] * srcStrides[j]
+                dstIdx += indices[i * dim + j] * dstStrides[j]
             }
             
             dstIdx += axisStride * Int(ctxPtr[srcIdx])
@@ -910,6 +917,7 @@ extension CPUEngine: EngineTypeV2 {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
+    @_specialize(where N == Float)
     public static func img2col<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(values.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
         
@@ -939,6 +947,18 @@ extension CPUEngine: EngineTypeV2 {
         let patchesPerKernel = outputWidth * outputHeight
         // let patchesPerFeatureMap = patchesPerKernel * kernelCount
         
+        var rowBuffer = [Int](repeating: 0, count: rows)
+        var colBuffer = [Int](repeating: 0, count: rows)
+        var chanDepthStrideBuffer = [Int](repeating: 0, count: rows)
+        var rColsBuffer = [Int](repeating: 0, count: rows)
+        
+        for r in 0 ..< rows {
+            rowBuffer[r] = r / kernelWidth
+            colBuffer[r] = r % kernelWidth
+            chanDepthStrideBuffer[r] = (r / (kernelWidth * kernelHeight)) * depthStride
+            rColsBuffer[r] = r * cols
+        }
+        
         for c in 0 ..< cols {
             let patchIdx = c % patchesPerKernel
             let featureMapIdx = c / patchesPerKernel
@@ -952,19 +972,19 @@ extension CPUEngine: EngineTypeV2 {
             let featureMap = srcPtr.advanced(by: featureMapStride * featureMapIdx)
             
             for r in 0 ..< rows {
-                let row = baseSrcRow + (r / kernelWidth)
-                let col = baseSrcCol + (r % kernelWidth)
-                let chan = r / (kernelWidth * kernelHeight)
+                let row = baseSrcRow + rowBuffer[r]
+                let col = baseSrcCol + colBuffer[r]
                 
                 if row < 0 || row >= height || col < 0 || col >= width {
-                    dstPtr[r * cols + c] = 0
+                    dstPtr[rColsBuffer[r] + c] = 0
                 } else {
-                    dstPtr[r * cols + c] = featureMap[chan * depthStride + row * verticalStride + col]
+                    dstPtr[rColsBuffer[r] + c] = featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col]
                 }
             }
         }
     }
     
+    @_specialize(where N == Float)
     public static func col2img<N>(matrix: ShapedBuffer<N, CPU>, image: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(image.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
         
@@ -997,6 +1017,18 @@ extension CPUEngine: EngineTypeV2 {
         // Zero fill image
         N.fill(value: 0, result: image.pointer, count: image.count)
         
+        var rowBuffer = [Int](repeating: 0, count: rows)
+        var colBuffer = [Int](repeating: 0, count: rows)
+        var chanDepthStrideBuffer = [Int](repeating: 0, count: rows)
+        var rColsBuffer = [Int](repeating: 0, count: rows)
+        
+        for r in 0 ..< rows {
+            rowBuffer[r] = r / kernelWidth
+            colBuffer[r] = r % kernelWidth
+            chanDepthStrideBuffer[r] = (r / (kernelWidth * kernelHeight)) * depthStride
+            rColsBuffer[r] = r * cols
+        }
+        
         for c in 0 ..< cols {
             let patchIdx = c % patchesPerKernel
             let featureMapIdx = c / patchesPerKernel
@@ -1010,12 +1042,11 @@ extension CPUEngine: EngineTypeV2 {
             let featureMap = dstPtr.advanced(by: featureMapStride * featureMapIdx)
             
             for r in 0 ..< rows {
-                let row = baseDstRow + (r / kernelWidth)
-                let col = baseDstCol + (r % kernelWidth)
-                let chan = r / (kernelWidth * kernelHeight)
+                let row = baseDstRow + rowBuffer[r]
+                let col = baseDstCol + colBuffer[r]
                 
                 if row >= 0 && row < height && col >= 0 && col < width {
-                    featureMap[chan * depthStride + row * verticalStride + col] += srcPtr[r * cols + c]
+                    featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col] += srcPtr[rColsBuffer[r] + c]
                 }
             }
         }

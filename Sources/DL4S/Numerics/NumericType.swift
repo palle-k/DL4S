@@ -113,6 +113,8 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     
     static func copy(values: UnsafeBufferPointer<Self>, srcStride: Int, result: UnsafeMutableBufferPointer<Self>, dstStride: Int, count: Int)
     static func arange(start: Self, end: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    
+    static func submatrix(from values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int)
 }
 
 extension UInt8 {

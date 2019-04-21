@@ -353,6 +353,7 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
 }
 
 enum MemoryOps {
+    @inline(__always)
     static func strides(from shape: [Int]) -> [Int] {
         let dim = shape.count
         

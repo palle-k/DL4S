@@ -349,4 +349,20 @@ extension Int32: NumericType {
             resPtr[i] = Swift.min(lhsPtr[i], rhsPtr[i])
         }
     }
+    
+    public static func submatrix(from values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int) {
+        let srcPtr = values.pointer(capacity: width * height)
+        let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
+        
+        for row in 0 ..< submatrixHeight {
+            let srcOffset = (row + submatrixRow) * width + submatrixColumn
+            let dstOffset = row * submatrixWidth
+            
+            dstPtr.advanced(by: dstOffset)
+                .assign(
+                    from: srcPtr.advanced(by: srcOffset),
+                    count: submatrixWidth
+                )
+        }
+    }
 }

@@ -276,5 +276,14 @@ extension Double: NumericType {
     public static func min(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         vDSP_vminD(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
+    
+    public static func submatrix(from values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int) {
+        let srcPtr = values.pointer(capacity: width * height)
+            .advanced(by: width * submatrixRow + submatrixColumn)
+        
+        let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
+        
+        vDSP_mmovD(srcPtr, dstPtr, UInt(submatrixWidth), UInt(submatrixHeight), UInt(width), UInt(submatrixWidth))
+    }
 }
 
