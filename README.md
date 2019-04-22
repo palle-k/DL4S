@@ -55,9 +55,9 @@ Then add `DL4S` as a dependency to your target:
 - [x] SGD
 - [x] Momentum
 - [x] Adam
-- [ ] AdaGrad
-- [ ] AdaDelta
-- [ ] RMSProp
+- [x] AdaGrad
+- [x] AdaDelta
+- [x] RMSProp
 
 ### Losses
 - [x] Binary Cross-Entropy

@@ -103,9 +103,12 @@ class MNistTest: XCTestCase {
         let epochs = 1_000
         let batchSize = 128
         
-        let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
-        
-        let t1 = CACurrentMediaTime()
+        // let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+        // let optimizer = Adagrad(parameters: model.trainableParameters, learningRate: 0.001)
+        // let optimizer = GradientDescent(parameters: model.trainableParameters, learningRate: 0.001)
+        // let optimizer = Momentum(parameters: model.trainableParameters, learningRate: 0.001)
+        // let optimizer = RMSProp(parameters: model.trainableParameters, learningRate: 0.001, gamma: 0.9)
+        let optimizer = Adadelta(parameters: model.trainableParameters, learningRate: 0.001, gamma: 0.9, epsilon: 1e-8)
         
         for epoch in 1 ... epochs {
             optimizer.zeroGradient()
@@ -124,10 +127,6 @@ class MNistTest: XCTestCase {
                 print("[\(epoch)/\(epochs)] loss: \(avgLoss)")
             }
         }
-        
-        let t2 = CACurrentMediaTime()
-        
-        print("\(t2 - t1)s")
         
         var correctCount = 0
         

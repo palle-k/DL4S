@@ -1,8 +1,8 @@
 //
-//  Concat.swift
+//  Optim.swift
 //  DL4S
 //
-//  Created by Palle Klewitz on 12.03.19.
+//  Created by Palle Klewitz on 27.02.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,25 +26,30 @@
 import Foundation
 
 
-public class Concat<Element: NumericType, Device: DeviceType>: Layer, Codable {
-    public typealias Input = Element
+/// An optimizer updates the values of tensors to reduce the value of an arbitrary
+/// differentiable loss function
+public protocol Optimizer {
+    associatedtype Element: NumericType
+    associatedtype Device: DeviceType
     
-    public var parameters: [Tensor<Element, Device>] {
-        return []
-    }
+    /// Parameters that will be optimized in every step
+    var parameters: [Tensor<Element, Device>] { get }
     
-    public var isTrainable: Bool {
-        get {
-            return false
-        }
-        set {
-            // noop
-        }
-    }
+    /// Performs a single optimization step.
+    func step()
     
-    public init() {}
+    // Resets the internal state of the optimizer.
+    func reset()
     
-    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        return stack(inputs.map {$0.T}).T
-    }
+    // Fills the gradient of the optimized parameters with zeros as a preparation for the next optimization step
+    func zeroGradient()
 }
+
+// Using a default implementation crashes the compiler.
+// public extension Optimizer {
+//     func zeroGradient() {
+//         for param in parameters {
+//             param.zeroGradient()
+//         }
+//     }
+// }

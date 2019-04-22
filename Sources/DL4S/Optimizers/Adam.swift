@@ -1,8 +1,8 @@
 //
-//  Optim.swift
+//  Adam.swift
 //  DL4S
 //
-//  Created by Palle Klewitz on 27.02.19.
+//  Created by Palle Klewitz on 22.04.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,99 +24,6 @@
 //  SOFTWARE.
 
 import Foundation
-
-
-public protocol Optimizer {
-    associatedtype Element: NumericType
-    associatedtype Device: DeviceType
-    
-    var parameters: [Tensor<Element, Device>] { get }
-    
-    func step()
-    func reset()
-    func zeroGradient()
-}
-
-public class SGDOptimizer<Element: NumericType, Device: DeviceType>: Optimizer {
-    public var learningRate: Element
-    public var regularizationL2: Element = 0
-    
-    public let parameters: [Tensor<Element, Device>]
-    
-    public init(parameters: [Tensor<Element, Device>], learningRate: Element) {
-        self.learningRate = learningRate
-        self.parameters = parameters
-    }
-    
-    public func step() {
-        for parameter in self.parameters {
-            guard let gradient = parameter.gradient else {
-                continue
-            }
-            Device.Engine.vsMulVAdd(lhs: gradient, rhs: -self.learningRate, add: parameter.values, result: parameter.values, count: parameter.count)
-        }
-    }
-    
-    public func zeroGradient() {
-        for parameter in self.parameters {
-            parameter.zeroGradient()
-        }
-    }
-    
-    public func reset() {
-        // noop
-    }
-}
-
-
-public class MomentumOptimizer<Element: NumericType, Device: DeviceType>: Optimizer {
-    public var learningRate: Element
-    public var momentum: Element
-    
-    public let parameters: [Tensor<Element, Device>]
-    private let momentumParams: [Buffer<Element, Device>]
-    
-    public init(parameters: [Tensor<Element, Device>], learningRate: Element, momentum: Element = 0.8) {
-        self.learningRate = learningRate
-        self.momentum = momentum
-        self.parameters = parameters
-        self.momentumParams = parameters.map {Device.Memory.allocateBuffer(withCapacity: $0.count, type: Element.self)}
-        
-        for m in self.momentumParams {
-            Device.Engine.fill(value: 0, result: m, count: m.count)
-        }
-    }
-    
-    deinit {
-        self.momentumParams.forEach(Device.Memory.free)
-    }
-    
-    public func reset() {
-        for m in self.momentumParams {
-            Device.Engine.fill(value: 0, result: m, count: m.count)
-        }
-    }
-    
-    public func step() {
-        for (param, momentumParam) in zip(parameters, momentumParams) {
-            guard let gradient = param.gradient else {
-                continue
-            }
-            // m = momentum * m
-            Device.Engine.vsMul(lhs: momentumParam, rhs: self.momentum, result: momentumParam, count: param.count)
-            // m = lr * grad + m = lr * grad + momentum * m
-            Device.Engine.vsMulVAdd(lhs: gradient, rhs: self.learningRate, add: momentumParam, result: momentumParam, count: param.count)
-            // values = values - m
-            Device.Engine.vSub(lhs: param.values, rhs: momentumParam, result: param.values, count: param.count)
-        }
-    }
-    
-    public func zeroGradient() {
-        for parameter in self.parameters {
-            parameter.zeroGradient()
-        }
-    }
-}
 
 
 public class Adam<Element: NumericType, Device: DeviceType>: Optimizer {

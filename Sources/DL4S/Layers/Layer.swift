@@ -86,10 +86,12 @@ public extension Layer {
     /// - Parameter url: Location to store the parameters at
     /// - Throws: An error if the parameters could not be encoded (EncodingError) or if the data could not be written to the given URL.
     func saveWeights(to url: URL) throws {
-        let params = self.parameters
-        let encoder = JSONEncoder()
-        let encoded = try encoder.encode(params)
-        try encoded.write(to: url, options: .atomic)
+        try autoreleasepool {
+            let params = self.parameters
+            let encoder = JSONEncoder()
+            let encoded = try encoder.encode(params)
+            try encoded.write(to: url, options: .atomic)
+        }
     }
     
     
@@ -99,9 +101,12 @@ public extension Layer {
     /// - Throws: An error if the parametes could not be decoded (Decodingerror) or if no data could be read from the given URL.
     func loadWeights(from url: URL) throws {
         let params = self.parameters
-        let decoder = JSONDecoder()
-        let encoded = try Data(contentsOf: url)
-        let decodedParams = try decoder.decode([Tensor<Element, Device>].self, from: encoded)
+        
+        let decodedParams = try autoreleasepool { () -> [Tensor<Element, Device>] in
+            let decoder = JSONDecoder()
+            let encoded = try Data(contentsOf: url)
+            return try decoder.decode([Tensor<Element, Device>].self, from: encoded)
+        }
         
         for (dst, src) in zip(params, decodedParams) {
             Device.Memory.assign(from: src.values, to: dst.values, count: dst.count)
