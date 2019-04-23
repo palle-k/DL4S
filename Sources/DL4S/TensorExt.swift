@@ -24,13 +24,13 @@
 //  SOFTWARE.
 
 import Foundation
-import AppKit
+
+#if canImport(CoreGraphics)
+import CoreGraphics
 
 public extension Tensor {
-    convenience init?(_ image: NSImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return nil
-        }
+    convenience init?(_ image: CGImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
+        let cgImage = image
         
         let byteCount = cgImage.height * cgImage.bytesPerRow
         let data = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: 16)
@@ -75,8 +75,10 @@ public extension Tensor {
     }
 }
 
-public extension NSImage {
-    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+public extension Tensor {
+    func cgImage(normalizeFrom tensorRange: ClosedRange<Element> = 0 ... 1) -> CGImage? {
+        let tensor = self
+        
         let pixels = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: tensor.count)
         defer {
             pixels.deallocate()
@@ -123,12 +125,55 @@ public extension NSImage {
             ) else {
                 return nil
         }
-        guard let cgImage = ctx.makeImage() else {
+        return ctx.makeImage()
+    }
+}
+#endif
+
+#if canImport(AppKit)
+import AppKit
+
+public extension Tensor {
+    convenience init?(_ image: NSImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return nil
+        }
+        
+        self.init(cgImage, normalizeTo: range)
+    }
+}
+
+public extension NSImage {
+    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil
         }
         self.init(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
 }
+#endif
+
+#if canImport(UIKit)
+import UIKit
+
+public extension Tensor {
+    convenience init?(_ image: UIImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = image.cgImage else {
+            return nil
+        }
+        self.init(cgImage, normalizeTo: range)
+    }
+}
+
+public extension UIImage {
+    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
+            return nil
+        }
+        self.init(cgImage: cgImage)
+    }
+}
+#endif
 
 extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     private func generateDescription() -> String {

@@ -13,5 +13,5 @@ Pod::Spec.new do |s|
     s.ios.deployment_target = '11.0'
     s.tvos.deployment_target = '11.0'
 
-    s.source_files = 'Sources/DL4S/*.swift'
+    s.source_files = 'Sources/DL4S/**/*.swift'
 end
