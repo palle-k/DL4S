@@ -1,5 +1,9 @@
 # DL4S
 
+[![CocoaPods](https://img.shields.io/cocoapods/v/DL4S.svg)](https://cocoapods.org/pods/DL4S)
+![CocoaPods](https://img.shields.io/cocoapods/p/DL4S.svg)
+[![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
+
 This framework contains an implementation of reverse mode automatic differentiation,
 vectorized implementations of common matrix and vector operators and high level neural network operations,
 such as convolution, recurrent units, and more.
@@ -20,6 +24,18 @@ such as convolution, recurrent units, and more.
 
 
 ## Installation
+
+### CocoaPods
+
+```ruby
+target 'Your-App-Name' do
+    use_frameworks!
+    pod 'DL4S', '~> 0.1.0'
+end
+```
+
+
+### Swift Package Manager
 Add the dependency to your `Package.swift` file:
 
 ```swift
