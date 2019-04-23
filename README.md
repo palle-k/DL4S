@@ -1,7 +1,8 @@
 # DL4S
 
-This package contains an implementation of reverse mode automatic differentiation, 
-vectorized implementations of common matrix and vector operators and high level neural network operations.
+This framework contains an implementation of reverse mode automatic differentiation,
+vectorized implementations of common matrix and vector operators and high level neural network operations,
+such as convolution, recurrent units, and more.
 
 ## Overview
 1. [Installation](#installation)
