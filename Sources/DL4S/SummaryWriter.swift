@@ -13,12 +13,17 @@ public class SummaryWriter {
     
     public init(destination: URL) throws {
         let eventsFile = destination.appendingPathComponent("events.csv")
+        
+        if !FileManager.default.fileExists(atPath: eventsFile.path) {
+            FileManager.default.createFile(atPath: eventsFile.path, contents: nil, attributes: nil)
+        }
+        
         self.eventsFile = try FileHandle(forWritingTo: eventsFile)
-        self.eventsFile.seekToEndOfFile()
     }
     
     public func write<Scalar: NumericType>(_ scalar: Scalar, named name: String, at iteration: Int) {
         let milliseconds = Int(Date().timeIntervalSince1970 * 1000)
+        self.eventsFile.seekToEndOfFile()
         self.eventsFile.write("\(iteration),\(milliseconds),\(name),\(scalar)")
         self.eventsFile.synchronizeFile()
     }
