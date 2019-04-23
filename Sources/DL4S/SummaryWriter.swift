@@ -24,7 +24,7 @@ public class SummaryWriter {
     public func write<Scalar: NumericType>(_ scalar: Scalar, named name: String, at iteration: Int) {
         let milliseconds = Int(Date().timeIntervalSince1970 * 1000)
         self.eventsFile.seekToEndOfFile()
-        self.eventsFile.write("\(iteration),\(milliseconds),\(name),\(scalar)")
+        self.eventsFile.write("\(iteration),\(milliseconds),\(name),\(scalar)\n")
         self.eventsFile.synchronizeFile()
     }
 }
