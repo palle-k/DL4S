@@ -177,41 +177,6 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    @available(*, deprecated, message: "Don't use this one, it is slow")
-    @inline(__always)
-    @_specialize(where N == Float)
-    private static func reduce<N>(
-        values: ShapedBuffer<N, CPU>,
-        result: ShapedBuffer<N, CPU>,
-        axis: Int,
-        reduceOperator: (UnsafeBufferPointer<N>, Int) -> N
-    ) {
-        #if DEBUG
-        var shape = values.shape
-        shape.remove(at: axis)
-        precondition(shape == result.shape)
-        #endif
-        
-        let dstStrides = CPU.Memory.strides(from: result.shape)
-        let sliceCount = values.shape[axis]
-        
-        for idx in iterate(result.shape) {
-            var srcIdx: [Int?] = idx
-            srcIdx.insert(nil, at: axis)
-            
-            let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
-            
-            let reduced = reduceOperator(slice.immutable, sliceCount)
-            
-            let linearIndex = zip(dstStrides, idx).map(*).reduce(0, +)
-            result.values[linearIndex] = reduced
-            
-            if isCopy {
-                CPU.Memory.free(slice)
-            }
-        }
-    }
-    
     @inline(__always)
     @_specialize(where N == Float)
     private static func reduce<N>(
@@ -242,7 +207,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    @available(*, deprecated, message: "Don't use this one, it is slow")
+    // @available(*, deprecated, message: "Don't use this one, it is slow")
     @inline(__always)
     @_specialize(where N == Float)
     private static func reduceMultiAxis<N>(
@@ -381,45 +346,6 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    @available(*, deprecated, message: "Don't use this one, it is slow")
-    @inline(__always)
-    @_specialize(where N == Float, Context == Int32)
-    private static func reduceWithContext<N, Context>(
-        values: ShapedBuffer<N, CPU>,
-        result: ShapedBuffer<N, CPU>,
-        context: ShapedBuffer<Context, CPU>,
-        axis: Int,
-        reduceOperator: (UnsafeBufferPointer<N>, Int) -> (N, Context)
-    ) {
-        #if DEBUG
-        precondition(result.shape == context.shape)
-        
-        var shape = values.shape
-        shape.remove(at: axis)
-        precondition(shape == result.shape)
-        #endif
-        
-        let dstStrides = CPU.Memory.strides(from: result.shape)
-        let sliceCount = values.shape[axis]
-        
-        for idx in iterate(result.shape) {
-            var srcIdx: [Int?] = idx
-            srcIdx.insert(nil, at: axis)
-            
-            let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
-            
-            let (reduced, ctxValue) = reduceOperator(slice.immutable, sliceCount)
-            
-            let linearIndex = zip(dstStrides, idx).map(*).reduce(0, +)
-            result.values[linearIndex] = reduced
-            context.values[linearIndex] = ctxValue
-            
-            if isCopy {
-                CPU.Memory.free(slice)
-            }
-        }
-    }
-    
     @inline(__always)
     @_specialize(where N == Float, Context == Int32)
     private static func reduceWithContext<N, Context>(
@@ -464,7 +390,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    @available(*, deprecated, message: "Don't use this one, it is slow")
+    // @available(*, deprecated, message: "Don't use this one, it is slow")
     @inline(__always)
     @_specialize(where N == Float, Context == Int32)
     private static func reduceMultiAxisWithContext<N, Context>(
@@ -476,32 +402,32 @@ extension CPUEngine: EngineTypeV2 {
         ) {
         #if DEBUG
         precondition(result.shape == context.shape)
-        
+
         var shape = values.shape
         for axis in axes.reversed() {
             shape.remove(at: axis)
         }
         precondition(shape == result.shape)
         #endif
-        
+
         let dstStrides = CPU.Memory.strides(from: result.shape)
         let sliceCount = axes.map {values.shape[$0]}.reduce(1, *)
-        
+
         for idx in iterate(result.shape) {
             var srcIdx: [Int?] = idx
-            
+
             for axis in axes {
                 srcIdx.insert(nil, at: axis)
             }
-            
+
             let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
-            
+
             let (reduced, ctxValue) = reduceOperator(slice.immutable, sliceCount)
-            
+
             let linearIndex = zip(dstStrides, idx).map(*).reduce(0, +)
             result.values[linearIndex] = reduced
             context.values[linearIndex] = ctxValue
-            
+
             if isCopy {
                 CPU.Memory.free(slice)
             }

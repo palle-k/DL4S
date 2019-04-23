@@ -130,7 +130,7 @@ public extension Tensor {
 }
 #endif
 
-#if canImport(AppKit)
+#if os(macOS)
 import AppKit
 
 public extension Tensor {
@@ -153,7 +153,7 @@ public extension NSImage {
 }
 #endif
 
-#if canImport(UIKit)
+#if os(iOS) || os(tvOS) || os(watchOS)
 import UIKit
 
 public extension Tensor {
