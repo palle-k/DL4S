@@ -165,7 +165,7 @@ class MNistTest: XCTestCase {
         )
         
         let epochs = 5_000
-        let batchSize = 512
+        let batchSize = 128
         
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
         
@@ -204,7 +204,7 @@ class MNistTest: XCTestCase {
         
         print("Accuracy: \(accuracy)")
         
-        try! model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_lenet.json"))
+        // try! model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_lenet.json"))
     }
     
     func testMNistResnet() {

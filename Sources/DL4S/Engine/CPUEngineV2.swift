@@ -998,6 +998,8 @@ extension CPUEngine: EngineTypeV2 {
                 if row < 0 || row >= height || col < 0 || col >= width {
                     dstPtr[rColsBuffer[r] + c] = 0
                 } else {
+                    // TODO: Try advancing featureMap by baseSrcCol + baseSrcRow * verticalStride in advance
+                    // TODO: Also try advancing dstPtr by c in advance
                     dstPtr[rColsBuffer[r] + c] = featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col]
                 }
                 r += 1

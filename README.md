@@ -3,8 +3,6 @@
 This package contains an implementation of reverse mode automatic differentiation, 
 vectorized implementations of common matrix and vector operators and high level neural network operations.
 
-Note: While most features have already been implemented, the framework is still undergoing some optimization.
-
 ## Overview
 1. [Installation](#installation)
 2. [Features](#features)
@@ -13,6 +11,7 @@ Note: While most features have already been implemented, the framework is still 
     3. [Losses](#losses)
     4. [Tensor Operations](#tensor-operations)
     5. [Engines](#engines)
+    6. [Architectures](#architectures)
 3. [Examples](#examples)
     1. [Convolutional Networks](#convolutional-networks)
     2. [Recurrent Network (LSTM)](#recurrent-networks)
@@ -90,6 +89,13 @@ Then add `DL4S` as a dependency to your target:
 ### Engines
 - [x] CPU (Accelerate framework)
 - [ ] GPU (Metal)
+
+### Architectures
+Default implementations are provided for the following architectures:
+
+- [x] ResNet (currently only ResNet-18)
+- [x] VGG
+- [x] AlexNet
 
 
 ## Examples
