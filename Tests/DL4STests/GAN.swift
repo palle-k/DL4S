@@ -33,7 +33,7 @@ class GANTests: XCTestCase {
         print("Loading images...")
         let ((images, labels_cat), _) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
-        let labels = labels_cat.toOneHot(dim: 10)
+        let labels = labels_cat.toOneHot(dim: 10) as Tensor<Float, CPU>
         
         print("Creating networks...")
         
@@ -98,7 +98,7 @@ class GANTests: XCTestCase {
 
             let realResult = discriminator.forward(toFlatVector.forward(real), realLabels)
             
-            let gl = genLabels.toOneHot(dim: 10)
+            let gl = genLabels.toOneHot(dim: 10) as Tensor<Float, CPU>
             let fakeGenerated = generator.forward(genInputs, gl)
             let fakeResult = discriminator.forward(fakeGenerated, gl)
 
@@ -116,7 +116,7 @@ class GANTests: XCTestCase {
                 Random.fill(genLabels, a: 0, b: 9)
 
                 //let genResult = network.forward(genInputs, genLabels.toOneHot(dim: 10))
-                let gl = genLabels.toOneHot(dim: 10)
+                let gl = genLabels.toOneHot(dim: 10) as Tensor<Float, CPU>
                 let generated = generator.forward(genInputs, gl)
                 let genResult = discriminator.forward(generated, gl)
                 

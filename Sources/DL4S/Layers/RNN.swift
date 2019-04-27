@@ -26,8 +26,93 @@
 import Foundation
 
 
+public enum RNNDirection: Int, Codable, Hashable {
+    case forward = 0
+    case backward = 1
+}
+
+
+public protocol RNN: Layer {
+    associatedtype State
+    
+    var shouldReturnFullSequence: Bool { get }
+    var direction: RNNDirection { get }
+    
+    func createInitialState(fromLayerInputs inputs: [Tensor<Element, Device>]) -> State
+    func step(x: Tensor<Element, Device>, state: State) -> State
+    func output(for state: State) -> Tensor<Element, Device>
+}
+
+
+public extension RNN {
+    func process(_ inputs: [Tensor<Element, Device>]) -> ([Tensor<Element, Device>], State) {
+        precondition([1, 3].contains(inputs.count))
+        let x = inputs[0]
+        let seqlen = x.shape[0]
+        
+        var state = createInitialState(fromLayerInputs: inputs)
+        
+        var outputSequence: [Tensor<Element, Device>] = []
+        
+        for i in 0 ..< seqlen {
+            let x_t = x[direction == .forward ? i : (seqlen - i - 1)]
+            
+            state = step(x: x_t, state: state)
+            
+            outputSequence.append(output(for: state).unsqueeze(at: 0))
+        }
+        
+        if direction == .backward {
+            outputSequence.reverse()
+        }
+        
+        return (outputSequence, state)
+    }
+    
+    
+    /// Forwards the given input sequence through the LSTM.
+    ///
+    /// Expects either one or more inputs depending on whether an initial state is given or not.
+    /// The first input must be the input sequence.
+    /// Additional parameters are RNN states and depend on the RNN implementation
+    ///
+    /// The input sequence must be in the shape [SequenceLength x BatchSize x InputSize].
+    ///
+    /// If the RNN should return full sequences, the output has the shape [SequenceLength x BatchSize x HiddenSize].
+    ///
+    /// If the RNN should not return full sequences, the output has the shape [BatchSize x HiddenSize] and only contains the last hidden state.
+    ///
+    /// - Parameter inputs: Input sequence and optional initial RNN state.
+    /// - Returns: If the RNN should return full sequences, all RNN states, otherwise the last RNN state.
+    func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        // Expects one or three inputs
+        // Either:
+        // - input sequence, [initial hidden state and cell state] vector
+        // - input sequence
+        
+        // Produces one hidden state vector for every input vector
+        
+        // Input shape: SequencLength x BatchSize x NumFeatures
+        // Output shape: SequenceLength x BatchSize x HiddenSize
+        
+        let (outputSequence, state) = process(inputs)
+        
+        if shouldReturnFullSequence {
+            return stack(outputSequence)
+        } else {
+            return output(for: state)
+        }
+    }
+}
+
+
 /// Long short-term memory layer (mono-directional) for sequence to sequence transformation with arbitrary length.
-public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
+public class LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
+//    public typealias Element = Element
+//    public typealias Device = Device
+    public typealias Input = Element
+//    public typealias State = (h: Tensor<Element, Device>, c: Tensor<Element, Device>)
+    
     public var isTrainable: Bool = true
     
     // LSTM weights
@@ -53,6 +138,10 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
     /// Size of each input in the input sequence
     public let inputSize: Int
     
+    
+    public let direction: RNNDirection
+    
+    
     /// Indicates whether the LSTM should return its full state sequence or only the last hidden state
     public let shouldReturnFullSequence: Bool
     
@@ -77,7 +166,7 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
     ///   - inputSize: Number of inputs at each timestep
     ///   - hiddenSize: Number of elements in each hidden and cell state
     ///   - shouldReturnFullSequence: Indicates whether the LSTM should return its full state sequence or only the last hidden state
-    public init(inputSize: Int, hiddenSize: Int, shouldReturnFullSequence: Bool = false) {
+    public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward, shouldReturnFullSequence: Bool = false) {
         W_i = Tensor<Element, Device>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         W_o = Tensor<Element, Device>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         W_f = Tensor<Element, Device>(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
@@ -108,6 +197,7 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
         
         self.hiddenSize = hiddenSize
         self.inputSize = inputSize
+        self.direction = direction
         self.shouldReturnFullSequence = shouldReturnFullSequence
         
         for W in [W_i, W_o, W_f, W_c] {
@@ -120,38 +210,31 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
     }
     
     
-    /// Forwards the given input sequence through the LSTM.
-    ///
-    /// Expects either one or three inputs.
-    /// The first input must be the input sequence.
-    /// The optional second and third parameter contain the initial hidden and cell state.
-    ///
-    /// The input sequence must be in the shape [SequenceLength x BatchSize x InputSize].
-    ///
-    /// If the LSTM should return full sequences, the output has the shape [2 x SequenceLength x BatchSize x HiddenSize]
-    /// and contains two stacked tensors [hiddenStateSequence, cellStateSequence], which each have the shape
-    /// [SequenceLength x BatchSize x HiddenSize].
-    ///
-    /// If the LSTM should not return full sequences, the output has the shape [BatchSize x HiddenSize] and only contains the last hidden state.
-    ///
-    /// - Parameter inputs: Input sequence and optional initial hidden and cell state.
-    /// - Returns: If the LSTM should return full sequences, all hidden and cell states, otherwise the last hidden state.
-    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        // Expects one or three inputs
-        // Either:
-        // - input sequence, [initial hidden state and cell state] vector
-        // - input sequence
+    public func step(x: Tensor<Element, Device>, state: (h: Tensor<Element, Device>, c: Tensor<Element, Device>)) -> (h: Tensor<Element, Device>, c: Tensor<Element, Device>) {
+        let x_t = x
+        let h_p = state.h
+        let c_p = state.c
         
-        // Produces one hidden state vector for every input vector
+        // TODO: Unify W_* matrics, U_* matrices and b_* vectors, perform just two matrix multiplications and one addition, then select slices
+        let f_t = sigmoid(mmul(x_t, W_f) + mmul(h_p, U_f) + b_f)
+        let i_t = sigmoid(mmul(x_t, W_i) + mmul(h_p, U_i) + b_i)
+        let o_t = sigmoid(mmul(x_t, W_o) + mmul(h_p, U_o) + b_o)
         
-        // Input shape: SequencLength x BatchSize x NumFeatures
-        // Output shape: 2 x SequenceLength x BatchSize x HiddenSize
+        let c_t_partial_1 = f_t * c_p + i_t
+        let c_t_partial_2 = tanh(mmul(x_t, W_c) + mmul(h_p, U_c) + b_c)
+        let c_t = c_t_partial_1 * c_t_partial_2
+        let h_t = o_t * tanh(c_t)
         
-        precondition([1, 3].contains(inputs.count))
-        
+        return (h_t, c_t)
+    }
+    
+    public func output(for state: (h: Tensor<Element, Device>, c: Tensor<Element, Device>)) -> Tensor<Element, Device> {
+        return state.h
+    }
+    
+    
+    public func createInitialState(fromLayerInputs inputs: [Tensor<Element, Device>]) -> (h: Tensor<Element, Device>, c: Tensor<Element, Device>) {
         let x = inputs[0]
-        
-        let seqlen = x.shape[0]
         let batchSize = x.shape[1]
         
         let h0: Tensor<Element, Device>
@@ -165,41 +248,14 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: Layer, Codable
             c0 = inputs[1][1]
         }
         
-        var hiddenStates: [Tensor<Element, Device>] = []
-        var lstmStates: [Tensor<Element, Device>] = []
-        
-        var h_p = h0
-        var c_p = c0
-        
-        for i in 0 ..< seqlen {
-            let x_t = x[i]
-            
-            let f_t = sigmoid(mmul(x_t, W_f) + mmul(h_p, U_f) + b_f)
-            let i_t = sigmoid(mmul(x_t, W_i) + mmul(h_p, U_i) + b_i)
-            let o_t = sigmoid(mmul(x_t, W_o) + mmul(h_p, U_o) + b_o)
-            
-            let c_t_partial_1 = f_t * c_p + i_t
-            let c_t_partial_2 = tanh(mmul(x_t, W_c) + mmul(h_p, U_c) + b_c)
-            let c_t = c_t_partial_1 * c_t_partial_2
-            let h_t = o_t * tanh(c_t)
-            
-            h_p = h_t
-            c_p = c_t
-            
-            hiddenStates.append(h_t.unsqueeze(at: 0))
-            lstmStates.append(c_t.unsqueeze(at: 0))
-        }
-        
-        if shouldReturnFullSequence {
-            return stack(stack(hiddenStates).unsqueeze(at: 0), stack(lstmStates).unsqueeze(at: 0))
-        } else {
-            return h_p
-        }
+        return (h0, c0)
     }
+    
 }
 
 /// Gated recurrent unit layer (mono-directional) for sequence to sequence transformation with arbitrary length.
-public class GRU<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
+public class GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
+    public typealias Input = Element
     
     // GRU weights
     
@@ -232,6 +288,9 @@ public class GRU<Element: RandomizableType, Device: DeviceType>: Layer, Codable 
     public let shouldReturnFullSequence: Bool
     
     
+    public var direction: RNNDirection
+    
+    
     /// Initializes a gated recurrent unit layer with the given input and hidden size at each timestep.
     ///
     /// If the GRU is instructed to return full sequences, the GRU hidden state sequence
@@ -243,10 +302,11 @@ public class GRU<Element: RandomizableType, Device: DeviceType>: Layer, Codable 
     ///   - inputSize: Number of inputs at each timestep
     ///   - hiddenSize: Number of elements in each hidden
     ///   - shouldReturnFullSequence: Indicates whether the GRU should return its full state sequence or only the last hidden state
-    public init(inputSize: Int, hiddenSize: Int, shouldReturnFullSequence: Bool = false) {
+    public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward, shouldReturnFullSequence: Bool = false) {
         self.inputSize = inputSize
         self.hiddenSize = hiddenSize
         self.shouldReturnFullSequence = shouldReturnFullSequence
+        self.direction = direction
         
         W_z = Tensor(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
         W_r = Tensor(repeating: 0, shape: inputSize, hiddenSize, requiresGradient: true)
@@ -279,64 +339,40 @@ public class GRU<Element: RandomizableType, Device: DeviceType>: Layer, Codable 
         }
     }
     
-    /// Forwards the given input sequence through the GRU.
-    ///
-    /// Expects either one or three inputs.
-    /// The first input must be the input sequence.
-    /// The optional second and third parameter contain the initial hidden and cell state.
-    ///
-    /// The input sequence must be in the shape [SequenceLength x BatchSize x InputSize].
-    ///
-    /// If the GRU should return full sequences, the output has the shape [1 x SequenceLength x BatchSize x HiddenSize]
-    /// and contains one tensor [hiddenStateSequence], which has the shape
-    /// [SequenceLength x BatchSize x HiddenSize].
-    ///
-    /// If the GRU should not return full sequences, the output has the shape [BatchSize x HiddenSize] and only contains the last hidden state.
-    ///
-    /// - Parameter inputs: Input sequence and optional initial hidden and cell state.
-    /// - Returns: If the GRU should return full sequences, all hidden and cell states, otherwise the last hidden state.
-    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+    
+    public func step(x: Tensor<Element, Device>, state: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        let x_t = x
+        let h_p = state.view(as: x.shape[0], hiddenSize)
+        
+        let z_t = sigmoid(mmul(x_t, W_z) + mmul(h_p, U_z) + b_z)
+        let r_t = sigmoid(mmul(x_t, W_r) + mmul(h_p, U_r) + b_r)
+        
+        let h_t_partial_1 = (1 - z_t) * h_p
+        let h_t_partial_2 = tanh(mmul(x_t, W_h) + mmul(r_t * h_p, U_h) + b_h)
+        
+        let h_t = h_t_partial_1 + z_t * h_t_partial_2
+        
+        //hiddenStates.append(h_t.unsqueeze(at: 0))
+        return h_t.unsqueeze(at: 0)
+    }
+    
+    
+    public func createInitialState(fromLayerInputs inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(1 ... 2 ~= inputs.count)
         
-        // Input: Either [input, hidden state] or input
-        // Input shape: SequencLength x BatchSize x NumFeatures
-        
-        let h_0: Tensor<Element, Device>
         let x = inputs[0]
         
-        let seqlen = x.shape[0]
         let batchSize = x.shape[1]
         
         if inputs.count == 1 {
-            h_0 = Tensor(repeating: 0, shape: batchSize, hiddenSize)
+            return Tensor(repeating: 0, shape: batchSize, hiddenSize)
         } else {
-            h_0 = inputs[1]
+            return inputs[1]
         }
-        
-        var hiddenStates: [Tensor<Element, Device>] = []
-        var h_p = h_0
-        
-        for i in 0 ..< seqlen {
-            let x_t = x[i]
-            
-            let z_t = sigmoid(mmul(x_t, W_z) + mmul(h_p, U_z) + b_z)
-            let r_t = sigmoid(mmul(x_t, W_r) + mmul(h_p, U_r) + b_r)
-            
-            let h_t_partial_1 = (1 - z_t) * h_p
-            let h_t_partial_2 = tanh(mmul(x_t, W_h) + mmul(r_t * h_p, U_h) + b_h)
-            
-            let h_t = h_t_partial_1 + z_t * h_t_partial_2
-            h_p = h_t
-            
-            hiddenStates.append(h_t.unsqueeze(at: 0))
-        }
-        
-        if shouldReturnFullSequence {
-            // Output shape: 1 x SequenceLength x BatchSize x HiddenSize
-            return stack(hiddenStates).view(as: 1, seqlen, batchSize, hiddenSize)
-        } else {
-            // Output shape: BatchSize x HiddenSize
-            return h_p
-        }
+    }
+    
+    
+    public func output(for state: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return state.squeeze(at: 0)
     }
 }

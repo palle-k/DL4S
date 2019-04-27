@@ -858,7 +858,101 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     public static func stack<N>(buffers: [ShapedBuffer<N, CPU>], result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
-        fatalError("\(#function) is not implemented for type \(self)")
+        var offset = 0
+        
+        let dstPtr = result.pointer.pointer(capacity: buffers.map {$0.count}.reduce(0, +))
+        let dstStrides = CPU.Memory.strides(from: result.shape)
+        
+        for buffer in buffers {
+            let dst = dstPtr.advanced(by: offset)
+            let srcStrides = CPU.Memory.strides(from: buffer.shape)
+            let copyCount = buffer.shape[axis] * srcStrides[axis]
+            
+            let iterShape = Array(buffer.shape.prefix(upTo: axis))
+            let src = buffer.immutable.pointer(capacity: buffer.count)
+            
+            for idx in iterate(iterShape) {
+                var srcIdx = 0
+                var dstIdx = 0
+                
+                for i in 0 ..< idx.count {
+                    srcIdx += srcStrides[i] * idx[i]
+                    dstIdx += dstStrides[i] * idx[i]
+                }
+                
+                dst.advanced(by: dstIdx).assign(from: src.advanced(by: srcIdx), count: copyCount)
+            }
+            
+            offset += copyCount
+        }
+    }
+    
+    public static func unstackAdd<N>(stacked: ShapedBuffer<N, CPU>, add: [ShapedBuffer<N, CPU>], result: [ShapedBuffer<N, CPU>], axis: Int) {
+        var offset = 0
+        
+        let srcPtr = stacked.immutable
+        let srcStrides = CPU.Memory.strides(from: stacked.shape)
+        
+        for (buffer, addBuffer) in zip(result, add) {
+            let src = srcPtr.advanced(by: offset)
+            let dstStrides = CPU.Memory.strides(from: buffer.shape)
+            let copyCount = buffer.shape[axis] * dstStrides[axis]
+            
+            let iterShape = Array(buffer.shape.prefix(upTo: axis))
+            let dst = buffer.pointer
+            let a = addBuffer.immutable
+            
+            for idx in iterate(iterShape) {
+                var srcIdx = 0
+                var dstIdx = 0
+                
+                for i in 0 ..< idx.count {
+                    srcIdx += srcStrides[i] * idx[i]
+                    dstIdx += dstStrides[i] * idx[i]
+                }
+                
+                N.vAdd(lhs: src.advanced(by: srcIdx), rhs: a.advanced(by: dstIdx), result: dst.advanced(by: dstIdx), count: copyCount)
+            }
+            
+            offset += copyCount
+        }
+    }
+    
+    public static func reverse<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(values.shape == result.shape)
+        
+        let stride = CPU.Memory.strides(from: values.shape)[0]
+        let count = values.shape[0]
+        
+        let srcPtr = values.immutable.pointer(capacity: stride * count)
+        let dstPtr = values.pointer.pointer(capacity: stride * count)
+        
+        for srcIdx in 0 ..< count {
+            let dstIdx = count - srcIdx - 1
+            
+            dstPtr.advanced(by: dstIdx * stride).assign(from: srcPtr.advanced(by: srcIdx * stride), count: stride)
+        }
+    }
+    
+    public static func reverseAdd<N>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(values.shape == result.shape && values.shape == add.shape)
+        
+        let stride = CPU.Memory.strides(from: values.shape)[0]
+        let count = values.shape[0]
+        
+        let srcPtr = values.immutable
+        let addPtr = values.immutable
+        let dstPtr = values.pointer
+        
+        for srcIdx in 0 ..< count {
+            let dstIdx = count - srcIdx - 1
+            N.vAdd(
+                lhs: srcPtr.advanced(by: srcIdx * stride),
+                rhs: addPtr.advanced(by: dstIdx * stride),
+                result: dstPtr.advanced(by: dstIdx * stride),
+                count: stride
+            )
+        }
     }
     
     @_specialize(where N == Float)

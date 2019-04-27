@@ -166,56 +166,6 @@ public func argmax<Element, Device>(_ vector: Tensor<Element, Device>) -> Int {
     return arg
 }
 
-private struct StackOperation<Element: NumericType, Device: DeviceType>: TensorOperation {
-    var sourceTensors: [Tensor<Element, Device>]
-    
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        guard let vectorGradient = vector.gradient else {
-            return
-        }
-        var offset = 0
-        
-        for src in sourceTensors {
-            guard let srcGradient = src.gradient else {
-                continue
-            }
-            let numElements = src.count
-            Device.Engine.vAdd(lhs: srcGradient, rhs: vectorGradient.advanced(by: offset), result: srcGradient, count: numElements)
-            offset += numElements
-        }
-    }
-    
-    var symbol: String {
-        return "stack"
-    }
-}
-
-public func stack<Element, Device>(_ vectors: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-    precondition(vectors.allSatisfy {$0.shape.dropFirst() == vectors[0].shape.dropFirst()}, "All vectors must have same shape except for first dimension")
-    
-    let resultShape = [vectors.reduce(0, {$0 + $1.shape[0]})] + Array(vectors[0].shape.dropFirst())
-    
-    let resultVector = Tensor<Element, Device>(
-        shape: resultShape,
-        parent: nil,
-        context: vectors.contains(where: {$0.requiresGradient}) ? StackOperation(sourceTensors: vectors).asAny() : nil
-    )
-    
-    var offset = 0
-    
-    for vector in vectors {
-        let numElements = vector.count
-        Device.Memory.assign(from: vector.values, to: resultVector.values.advanced(by: offset), count: numElements)
-        offset += numElements
-    }
-    
-    return resultVector
-}
-
-public func stack<Element, Device>(_ vectors: Tensor<Element, Device>...) -> Tensor<Element, Device> {
-    return stack(vectors)
-}
-
 public func mean<Element, Device>(_ vector: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
     let s = sum(vector, axes: axes)
     return s / Tensor(Element(axes.map {vector.shape[$0]}.reduce(1, *)))
@@ -237,10 +187,6 @@ public func variance<Element, Device>(_ vector: Tensor<Element, Device>) -> Tens
 }
 
 public extension Tensor {
-    static func stack(_ tensors: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        return DL4S.stack(tensors)
-    }
-    
     func sum() -> Tensor<Element, Device> {
         return DL4S.sum(self)
     }

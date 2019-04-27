@@ -124,6 +124,7 @@ private struct SqrtContext<Element: NumericType, Device: DeviceType>: UnaryTenso
 }
 
 
+
 public func exp<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let result = Tensor<Element, Device>(
         shape: vector.shape,
@@ -199,6 +200,7 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
     // -relu(-vector) = min(0, vector)
     return relu(vector) - Tensor(leakage) * relu(-vector)
 }
+
 
 
 public extension Tensor {

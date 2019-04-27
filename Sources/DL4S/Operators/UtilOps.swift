@@ -56,6 +56,34 @@ public func pad<Element, Device>(_ tensor: Tensor<Element, Device>, padding: [In
     return result
 }
 
+
+private struct ReverseContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    
+    var symbol: String {
+        return "reverse"
+    }
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let srcGradient = source.shapedGradient, let vectorGradient = vector.shapedGradient else {
+            return
+        }
+        Device.Engine.reverseAdd(values: vectorGradient, add: srcGradient, result: srcGradient)
+    }
+}
+
+public func reverse<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: vector.shape,
+        parent: nil,
+        context: vector.requiresGradient ? ReverseContext(source: vector).asAny() : nil
+    )
+    
+    Device.Engine.reverse(values: vector.shapedValues, result: result.shapedValues)
+    
+    return result
+}
+
 public extension Tensor {
     static func repeating(_ tensor: Tensor<Element, Device>, count: Int) -> Tensor<Element, Device> {
         return `repeat`(tensor, count: count)
@@ -71,5 +99,9 @@ public extension Tensor {
     
     func padded(_ padding: [Int], value: Element = 0) -> Tensor<Element, Device> {
         return DL4S.pad(self, padding: padding, value: value)
+    }
+    
+    func reversed() -> Tensor<Element, Device> {
+        return DL4S.reverse(self)
     }
 }

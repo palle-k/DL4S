@@ -78,21 +78,14 @@ public protocol EngineTypeV2 {
     static func subscriptReadAdd<N>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
     static func subscriptWriteAdd<N>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
     
+    static func reverse<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func reverseAdd<N>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    
     static func stack<N>(buffers: [ShapedBuffer<N, Device>], result: ShapedBuffer<N, Device>, axis: Int)
+    static func unstackAdd<N>(stacked: ShapedBuffer<N, Device>, add: [ShapedBuffer<N, Device>], result: [ShapedBuffer<N, Device>], axis: Int)
     
     static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, Device>)
     
     static func img2col<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
     static func col2img<N>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
-    
-    static func conv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, padding: Int, stride: Int)
-    
-    static func revConv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))
-    static func kernelGradConv2d<N>(values: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int))
-    
-    static func maxPool2D<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int))
-    static func avgPool2D<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int))
-    
-    static func revMaxPool2D<N>(values: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int))
-    static func revAvgPool2D<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int))
 }

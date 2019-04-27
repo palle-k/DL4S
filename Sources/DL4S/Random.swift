@@ -53,7 +53,7 @@ func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
 }
 
 public enum Random {
-    public static func fill<Element: RandomizableType, Device: DeviceType>(_ vector: Tensor<Element, Device>, a: Element, b: Element) {
+    public static func fill<Element: RandomizableType, Device>(_ vector: Tensor<Element, Device>, a: Element, b: Element) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in 0 ..< vector.count {
             buffer[i] = Element.random(in: a ... b)
@@ -62,7 +62,7 @@ public enum Random {
         buffer.deallocate()
     }
     
-    public static func fillNormal<Element: RandomizableType, Device: DeviceType>(_ vector: Tensor<Element, Device>, mean: Element = 0, stdev: Element = 1) {
+    public static func fillNormal<Element: RandomizableType, Device>(_ vector: Tensor<Element, Device>, mean: Element = 0, stdev: Element = 1) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in stride(from: 0, to: vector.count, by: 2) {
             let (a, b) = randNormal(stdev: stdev, mean: mean)

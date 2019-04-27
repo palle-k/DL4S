@@ -55,6 +55,7 @@ Then add `DL4S` as a dependency to your target:
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
+- [x] Bidirectional RNNs
 - [x] Max Pooling
 - [x] Average Pooling
 - [x] Relu

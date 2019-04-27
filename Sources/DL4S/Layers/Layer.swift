@@ -89,11 +89,11 @@ public extension Layer {
         try autoreleasepool {
             let params = self.parameters
             let encoder = JSONEncoder()
+            encoder.dataEncodingStrategy = .base64
             let encoded = try encoder.encode(params)
             try encoded.write(to: url, options: .atomic)
         }
     }
-    
     
     /// Loads all parameters of the layer from a JSON file at the provided URL
     ///
@@ -104,6 +104,7 @@ public extension Layer {
         
         let decodedParams = try autoreleasepool { () -> [Tensor<Element, Device>] in
             let decoder = JSONDecoder()
+            decoder.dataDecodingStrategy = .base64
             let encoded = try Data(contentsOf: url)
             return try decoder.decode([Tensor<Element, Device>].self, from: encoded)
         }

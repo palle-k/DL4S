@@ -292,8 +292,6 @@ class MNistTest: XCTestCase {
             optimizer.zeroGradient()
             
             let (x, y_true) = queue.dequeue()!
-//            let (batch, y_true) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
-//            let x = batch.permuted(to: 1, 0, 2)
 
             let y_pred = model(x)
             let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
@@ -305,7 +303,7 @@ class MNistTest: XCTestCase {
         }
         bar.complete()
         
-        // queue.stop()
+        queue.stop()
         
         var correctCount = 0
         
@@ -324,6 +322,73 @@ class MNistTest: XCTestCase {
         print("Accuracy: \(accuracy)")
         
         try? model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_gru_params3.json"))
+    }
+    
+    func testMNISTBiRNN() {
+        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        
+        let model = Sequential<Float, CPU>(
+            BidirectionalRNN(forwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .forward), backwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .backward)).asAny(),
+            Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
+            Softmax().asAny()
+        )
+        
+        let epochs = 5_000
+        let batchSize = 128
+        
+        let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+        
+        print("Training...")
+        
+        let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
+        let workers = 1
+        
+        for i in 0 ..< workers {
+            DispatchQueue.global().async {
+                print("starting worker \(i)")
+                while !queue.isStopped {
+                    let (batch, expected) = Random.minibatch(from: ds_train.0, labels: ds_train.1, count: batchSize)
+                    let x = batch.permuted(to: 1, 0, 2)
+                    queue.enqueue((x, expected))
+                }
+                print("stopping worker \(i)")
+            }
+        }
+        
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        
+        for _ in 1 ... epochs {
+            optimizer.zeroGradient()
+            
+            let (x, y_true) = queue.dequeue()!
+
+            let y_pred = model(x)
+            let loss = categoricalCrossEntropy(expected: y_true, actual: y_pred)
+            loss.backwards()
+            
+            optimizer.step()
+            
+            bar.next(userInfo: loss.item)
+        }
+        bar.complete()
+        
+        queue.stop()
+        
+        var correctCount = 0
+        
+        for i in 0 ..< ds_val.0.shape[0] {
+            let x = ds_val.0[i].unsqueeze(at: 1)
+            let pred = argmax(model.forward(x).squeeze())
+            let actual = ds_val.1[i].item
+            
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(ds_val.0.shape[0])
+        
+        print("Accuracy: \(accuracy)")
     }
     
     func testGenerative() throws {

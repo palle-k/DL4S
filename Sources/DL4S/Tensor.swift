@@ -266,24 +266,24 @@ public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloa
     public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let shape = try container.decode([Int].self, forKey: .shape)
-        let values = try container.decode([Element].self, forKey: .values)
+        let values = try container.decode(Data.self, forKey: .values)
         
         self.shape = shape
         self.values = Device.Memory.allocateBuffer(withCapacity: shape.reduce(1, *), type: Element.self)
         self.context = nil
         self.parent = nil
         
-        if let gradient = try container.decode([Element]?.self, forKey: .gradient) {
+        if let gradient = try container.decode(Data?.self, forKey: .gradient) {
             self.gradient = Device.Memory.allocateBuffer(withCapacity: shape.reduce(1, *), type: Element.self)
-            gradient.withUnsafeBufferPointer { ptr in
-                Device.Memory.assign(from: ptr, to: self.gradient!, count: ptr.count)
+            gradient.withUnsafeBytes { ptr in
+                Device.Memory.assign(from: ptr.bindMemory(to: Element.self), to: self.gradient!, count: shape.reduce(1, *))
             }
         } else {
             self.gradient = nil
         }
-        
-        values.withUnsafeBufferPointer { ptr in
-            Device.Memory.assign(from: ptr, to: self.values, count: ptr.count)
+
+        values.withUnsafeBytes { ptr in
+            Device.Memory.assign(from: ptr.bindMemory(to: Element.self), to: self.values, count: shape.reduce(1, *))
         }
     }
     
@@ -297,18 +297,18 @@ public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloa
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
-        var valueContainer = Array<Element>(repeating: 0, count: self.count)
-        valueContainer.withUnsafeMutableBufferPointer { ptr in
-            Device.Memory.assign(from: self.values, to: ptr, count: self.count)
+        var valueContainer = Data(repeating: 0, count: MemoryLayout<Element>.stride * self.count)
+        valueContainer.withUnsafeMutableBytes { ptr in
+            Device.Memory.assign(from: self.values, to: ptr.bindMemory(to: Element.self), count: self.count)
         }
         
         try container.encode(shape, forKey: .shape)
         try container.encode(valueContainer, forKey: .values)
         
         if let gradient = self.gradient {
-            var gradientContainer = Array<Element>(repeating: 0, count: self.count)
-            gradientContainer.withUnsafeMutableBufferPointer { ptr in
-                Device.Memory.assign(from: gradient, to: ptr, count: self.count)
+            var gradientContainer = Data(repeating: 0, count: MemoryLayout<Element>.stride * self.count)
+            gradientContainer.withUnsafeMutableBytes { ptr in
+                Device.Memory.assign(from: gradient, to: ptr.bindMemory(to: Element.self), count: self.count)
             }
             try container.encode(gradientContainer, forKey: .gradient)
         } else {
@@ -357,7 +357,7 @@ public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloa
         }
         Device.Engine.fill(value: 1, result: gradient, count: count)
         
-        let ordering = Tensor.performSorting(from: self)
+        let ordering = Tensor.operationOrder(from: self)
         
         for tensor in ordering.reversed() {
             tensor._backwards()
@@ -366,7 +366,9 @@ public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloa
     
     /// Optains the element of the tensor
     /// Only applicable to zero-dimensional tensors (scalars)
-    /// The item is not further tracked with automatic differentiation
+    /// The item is not further tracked with automatic differentiation.
+    ///
+    /// To obtain all the elements of non-scalar tensors, use `tensor.flattenedArray`.
     public var item: Element {
         if dim == 0 {
             return values.pointee
@@ -375,6 +377,12 @@ public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloa
         }
     }
     
+    /// Obtains the gradient of the tensor
+    /// Only applicable to zero-dimensional tensors (scalars)
+    /// The gradient must have been computed previously using `result.backwards()` on
+    /// the result tensor.
+    ///
+    /// To obtain all the gradient values of non-scalar tensors, use `tensor.flattenedGradientArray`.
     public var gradientItem: Element? {
         if dim == 0 {
             return gradient?.pointee

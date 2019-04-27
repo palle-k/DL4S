@@ -370,7 +370,19 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func reverse<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func reverseAdd<N>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func stack<N>(buffers: [ShapedBuffer<N, GPU>], result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func unstackAdd<N>(stacked: ShapedBuffer<N, GPU>, add: [ShapedBuffer<N, GPU>], result: [ShapedBuffer<N, GPU>], axis: Int) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
     
@@ -383,34 +395,6 @@ extension GPUEngine: EngineTypeV2 {
     }
     
     public static func col2img<N>(matrix: ShapedBuffer<N, GPU>, image: ShapedBuffer<N, GPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func conv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, padding: Int, stride: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func revConv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func kernelGradConv2d<N>(values: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func maxPool2D<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func avgPool2D<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func revMaxPool2D<N>(values: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func revAvgPool2D<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
     

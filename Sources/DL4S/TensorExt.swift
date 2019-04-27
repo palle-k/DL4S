@@ -321,7 +321,7 @@ public extension Tensor {
 extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     @inline(__always)
-    static func performSorting(from initialTensor: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
+    static func operationOrder(from initialTensor: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
         var stack: [(Tensor<Element, Device>, Int)] = []
         var sorting: [Tensor<Element, Device>] = []
         var visited: Set<Tensor<Element, Device>> = []
@@ -349,7 +349,7 @@ extension Tensor {
     }
     
     public func detachAll() {
-        let sorted = Tensor.performSorting(from: self)
+        let sorted = Tensor.operationOrder(from: self)
         for tensor in sorted {
             tensor.context = nil
         }
@@ -357,8 +357,8 @@ extension Tensor {
 }
 
 public extension Tensor where Element == Int32 {
-    func toOneHot(dim: Int) -> Tensor<Float, Device> {
-        let result = Tensor<Float, Device>(repeating: 0, shape: self.shape + [dim])
+    func toOneHot<Target>(dim: Int) -> Tensor<Target, Device> {
+        let result = Tensor<Target, Device>(repeating: 0, shape: self.shape + [dim])
         
         for idx in iterate(self.shape) {
             let target = Int(self[idx].item)
@@ -400,5 +400,28 @@ extension Tensor {
 public extension Tensor {
     func copied<Destination>(to device: Destination.Type) -> Tensor<Element, Destination> {
         return Tensor<Element, Destination>(self)
+    }
+}
+
+public extension Tensor {
+    var flattenedArray: [Element] {
+        let ramBuffer = CPU.Memory.allocateBuffer(withCapacity: self.count, type: Element.self)
+        defer {
+            CPU.Memory.free(ramBuffer)
+        }
+        Device.Memory.assign(from: self.values, to: ramBuffer.pointer, count: self.count)
+        return Array(ramBuffer.immutable)
+    }
+    
+    var flattenedGradientArray: [Element]? {
+        guard let gradient = self.gradient else {
+            return nil
+        }
+        let ramBuffer = CPU.Memory.allocateBuffer(withCapacity: self.count, type: Element.self)
+        defer {
+            CPU.Memory.free(ramBuffer)
+        }
+        Device.Memory.assign(from: gradient, to: ramBuffer.pointer, count: self.count)
+        return Array(ramBuffer.immutable)
     }
 }
