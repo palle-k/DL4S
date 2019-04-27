@@ -66,8 +66,8 @@ public class BidirectionalRNN<Element: RandomizableType, Device, RNNLayer: RNN>:
         let backwardResult = backwardLayer.forward(x)
         
         if forwardLayer.shouldReturnFullSequence && backwardLayer.shouldReturnFullSequence {
-            // output of RNNs: [stateVectorCount, seqlen, batchSize, stateSize]
-            return stack(forwardResult, backwardResult, axis: 4)
+            // output of RNNs: [seqlen, batchSize, stateSize]
+            return stack(forwardResult, backwardResult, axis: 3)
         } else if !forwardLayer.shouldReturnFullSequence && !backwardLayer.shouldReturnFullSequence {
             // output of RNNs: [batchSize, stateSize]
             return stack(forwardResult, backwardResult, axis: 1)
