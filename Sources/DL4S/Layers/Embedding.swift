@@ -52,6 +52,45 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
         Random.fillNormal(embeddingMatrix, mean: 0, stdev: (2 / Element(outputSize)).sqrt())
     }
     
+    /// Loads pretrained word embeddings from the space / tab separated values file at the given path
+    /// and arranges them according to the order of words provided.
+    ///
+    /// The embeddings are expected to be arranged using the following format:
+    ///
+    ///     word1 num num num ... num
+    ///     word2 num num num ... num
+    ///     ...
+    ///
+    /// If a word is not found in the pretrained embeddings, it is randomly created using Xavier initialization
+    ///
+    /// - Parameters:
+    ///   - words: Provided word order.
+    ///   - embeddingsURL: Path to pretrained embeddings
+    public init?(words: [String], embeddingsURL: URL) {
+        guard let data = try? Data(contentsOf: embeddingsURL), let str = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        let lines = str.components(separatedBy: .newlines).filter {!$0.isEmpty}
+        let entries = lines
+            .map {$0.components(separatedBy: .whitespaces)}
+            .map {($0[0], Tensor<Element, Device>($0[1...].compactMap(Double.init).map(Element.init(_:))))}
+        let dict = Dictionary(entries, uniquingKeysWith: {$1})
+        
+        let outSize = dict.values.first?.count ?? 0
+        
+        self.inputFeatures = words.count
+        self.outputSize = outSize
+        self.embeddingMatrix = stack(words.map { word -> Tensor<Element, Device> in
+            if let embedding = dict[word] {
+                return embedding.unsqueeze(at: 0)
+            } else {
+                let t = Tensor<Element, Device>(repeating: 0, shape: 1, outSize)
+                Random.fillNormal(t, mean: 0, stdev: (2 / Element(outSize)).sqrt())
+                return t
+            }
+        })
+    }
+    
     public func forward(_ inputs: [Tensor<Int32, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         
@@ -64,3 +103,4 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
         return stack(embedded)
     }
 }
+
