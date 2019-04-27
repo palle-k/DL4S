@@ -1,9 +1,0 @@
-.DS_Store
-/.build
-/Packages
-/*.xcodeproj
-encoder*.json
-decoder*.json
-events*.csv
-deu.txt
-
