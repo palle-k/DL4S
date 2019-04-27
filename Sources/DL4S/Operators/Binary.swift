@@ -134,8 +134,14 @@ private struct MultiplicationOperation<Element: NumericType, Device: DeviceType>
             let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
+            var tmp1reducedShape = tmp1.shape
+            
+            for a in lhsReducedAxes.reversed() {
+                tmp1reducedShape.remove(at: a)
+            }
+            
             Device.Engine.broadcastMul(lhs: rhs.shapedValues, rhs: vectorGradient, result: tmp2)
-            Device.Engine.reduceSum(values: tmp2, result: tmp1, axes: lhsReducedAxes)
+            Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: lhsReducedAxes)
             Device.Engine.broadcastAdd(lhs: tmp1, rhs: lhsGradient, result: lhsGradient)
         }
         if let rhsGradient = rhs.shapedGradient {
@@ -150,8 +156,14 @@ private struct MultiplicationOperation<Element: NumericType, Device: DeviceType>
             let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
+            var tmp1reducedShape = tmp1.shape
+            
+            for a in rhsReducedAxes.reversed() {
+                tmp1reducedShape.remove(at: a)
+            }
+            
             Device.Engine.broadcastMul(lhs: lhs.shapedValues, rhs: vectorGradient, result: tmp2)
-            Device.Engine.reduceSum(values: tmp2, result: tmp1, axes: rhsReducedAxes)
+            Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: rhsReducedAxes)
             Device.Engine.broadcastAdd(lhs: tmp1, rhs: rhsGradient, result: rhsGradient)
         }
     }
