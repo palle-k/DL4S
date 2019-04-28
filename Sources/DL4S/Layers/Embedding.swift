@@ -67,14 +67,17 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
     ///   - words: Provided word order.
     ///   - embeddingsURL: Path to pretrained embeddings
     public init?(words: [String], embeddingsURL: URL) {
-        guard let data = try? Data(contentsOf: embeddingsURL), let str = String(data: data, encoding: .utf8) else {
+        guard var str = try? String(data: Data(contentsOf: embeddingsURL), encoding: .utf8) else {
             return nil
         }
-        let lines = str.components(separatedBy: .newlines).filter {!$0.isEmpty}
-        let entries = lines
+        var lines = str.components(separatedBy: .newlines).filter {!$0.isEmpty}
+        str = ""
+        var entries = lines
             .map {$0.components(separatedBy: .whitespaces)}
             .map {($0[0], Tensor<Element, Device>($0[1...].compactMap(Double.init).map(Element.init(_:))))}
+        lines = []
         let dict = Dictionary(entries, uniquingKeysWith: {$1})
+        entries = []
         
         let outSize = dict.values.first?.count ?? 0
         
