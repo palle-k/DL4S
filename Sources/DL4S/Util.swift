@@ -362,3 +362,53 @@ public extension Tensor {
         return AnySequence(seq)
     }
 }
+
+
+struct File: Sequence {
+    struct LineIterator: IteratorProtocol {
+        private var buffer: Data?
+        private let handle: FileHandle?
+        private var isCompleted = false
+        
+        init(handle: FileHandle?) {
+            self.handle = handle
+            self.buffer = nil
+        }
+        
+        mutating func next() -> String? {
+            guard let handle = self.handle, !isCompleted else {
+                return nil
+            }
+            
+            let chunkSize = 1024
+            
+            if let buffer = self.buffer, let index = buffer.firstIndex(where: {$0 == ("\n" as Character).asciiValue!}) {
+                let line = String(data: buffer.prefix(upTo: index), encoding: .utf8)
+                self.buffer = Data(buffer.dropFirst(index + 1)) // creating a copy resets the indexing, otherwise index points to the wrong position
+                return line
+            } else {
+                let nextChunk = handle.readData(ofLength: chunkSize)
+                
+                let buffer = (self.buffer ?? Data()) + nextChunk
+                self.buffer = buffer
+                
+                if nextChunk.count == 0 {
+                    isCompleted = true
+                    return String(data: buffer, encoding: .utf8)
+                }
+                
+                return next()
+            }
+        }
+    }
+    
+    let url: URL
+    
+    init(url: URL) {
+        self.url = url
+    }
+    
+    __consuming func makeIterator() -> LineIterator {
+        return LineIterator(handle: try? FileHandle(forReadingFrom: self.url))
+    }
+}

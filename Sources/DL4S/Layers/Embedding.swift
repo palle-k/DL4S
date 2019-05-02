@@ -67,31 +67,43 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
     ///   - words: Provided word order.
     ///   - embeddingsURL: Path to pretrained embeddings
     public init?(words: [String], embeddingsURL: URL) {
-        guard var str = try? String(data: Data(contentsOf: embeddingsURL), encoding: .utf8) else {
+        let wordToIndex = Dictionary(uniqueKeysWithValues: words.enumerated().map{($1, $0)})
+        
+        var tensors: [Tensor<Element, Device>?] = Array(repeating: nil, count: words.count)
+        
+        var embedDim: Int? = nil
+        
+        for line in File(url: embeddingsURL) {
+            let components = line.components(separatedBy: .whitespaces)
+            guard components.count >= 2 else {
+                continue
+            }
+            let word = components[0]
+            guard let index = wordToIndex[word] else {
+                continue
+            }
+            let values = Tensor<Element, Device>(components[1...].compactMap(Double.init).map(Element.init))
+            tensors[index] = values
+            embedDim = values.count
+        }
+        
+        guard let shape = embedDim else {
             return nil
         }
-        var lines = str.components(separatedBy: .newlines).filter {!$0.isEmpty}
-        str = ""
-        var entries = lines
-            .map {$0.components(separatedBy: .whitespaces)}
-            .map {($0[0], Tensor<Element, Device>($0[1...].compactMap(Double.init).map(Element.init(_:))))}
-        lines = []
-        let dict = Dictionary(entries, uniquingKeysWith: {$1})
-        entries = []
-        
-        let outSize = dict.values.first?.count ?? 0
-        
-        self.inputFeatures = words.count
-        self.outputSize = outSize
-        self.embeddingMatrix = stack(words.map { word -> Tensor<Element, Device> in
-            if let embedding = dict[word] {
-                return embedding.unsqueeze(at: 0)
-            } else {
-                let t = Tensor<Element, Device>(repeating: 0, shape: 1, outSize)
-                Random.fillNormal(t, mean: 0, stdev: (2 / Element(outSize)).sqrt())
-                return t
+        self.embeddingMatrix = Tensor.stack(
+            tensors.map { t in
+                if let t = t {
+                    return t
+                } else {
+                    let t = Tensor<Element, Device>(repeating: 0, shape: shape)
+                    Random.fillNormal(t, mean: 0, stdev: (2 / Element(shape)).sqrt())
+                    return t
+                }
             }
-        })
+        )
+        self.embeddingMatrix.requiresGradient = true
+        self.inputFeatures = words.count
+        self.outputSize = shape
     }
     
     public func forward(_ inputs: [Tensor<Int32, Device>]) -> Tensor<Element, Device> {
