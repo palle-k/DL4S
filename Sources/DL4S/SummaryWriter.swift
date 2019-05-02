@@ -11,9 +11,13 @@ import Foundation
 public class SummaryWriter {
     private let eventsFile: FileHandle
     
-    public init(destination: URL) throws {
-        let eventsFile = destination.appendingPathComponent("events.csv")
+    public init(destination: URL, runName: String) throws {
+        let dir = destination.appendingPathComponent(runName, isDirectory: true)
+        let eventsFile = dir.appendingPathComponent("summary.csv")
         
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try FileManager.default.createDirectory(atPath: dir.path, withIntermediateDirectories: true, attributes: nil)
+        }
         if !FileManager.default.fileExists(atPath: eventsFile.path) {
             FileManager.default.createFile(atPath: eventsFile.path, contents: nil, attributes: nil)
         }
