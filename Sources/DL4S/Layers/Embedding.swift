@@ -86,7 +86,7 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
                 }
                 
                 let values = Tensor<Element, Device>(components[1...].compactMap(Double.init).map(Element.init))
-                tensors[index] = values
+                tensors[index] = values.unsqueeze(at: 0)
                 embedDim = values.count
             }
         }
