@@ -74,17 +74,20 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
         var embedDim: Int? = nil
         
         for line in File(url: embeddingsURL) {
-            let components = line.components(separatedBy: .whitespaces)
-            guard components.count >= 2 else {
-                continue
+            autoreleasepool {
+                let components = line.components(separatedBy: .whitespaces)
+                guard components.count >= 2 else {
+                    return
+                }
+                let word = components[0]
+                guard let index = wordToIndex[word] else {
+                    return
+                }
+                
+                let values = Tensor<Element, Device>(components[1...].compactMap(Double.init).map(Element.init))
+                tensors[index] = values
+                embedDim = values.count
             }
-            let word = components[0]
-            guard let index = wordToIndex[word] else {
-                continue
-            }
-            let values = Tensor<Element, Device>(components[1...].compactMap(Double.init).map(Element.init))
-            tensors[index] = values
-            embedDim = values.count
         }
         
         guard let shape = embedDim else {

@@ -376,28 +376,30 @@ struct File: Sequence {
         }
         
         mutating func next() -> String? {
-            guard let handle = self.handle, !isCompleted else {
-                return nil
-            }
-            
-            let chunkSize = 1024
-            
-            if let buffer = self.buffer, let index = buffer.firstIndex(where: {$0 == ("\n" as Character).asciiValue!}) {
-                let line = String(data: buffer.prefix(upTo: index), encoding: .utf8)
-                self.buffer = Data(buffer.dropFirst(index + 1)) // creating a copy resets the indexing, otherwise index points to the wrong position
-                return line
-            } else {
-                let nextChunk = handle.readData(ofLength: chunkSize)
-                
-                let buffer = (self.buffer ?? Data()) + nextChunk
-                self.buffer = buffer
-                
-                if nextChunk.count == 0 {
-                    isCompleted = true
-                    return String(data: buffer, encoding: .utf8)
+            return autoreleasepool { () -> String? in
+                guard let handle = self.handle, !isCompleted else {
+                    return nil
                 }
                 
-                return next()
+                let chunkSize = 1024
+                
+                if let buffer = self.buffer, let index = buffer.firstIndex(where: {$0 == ("\n" as Character).asciiValue!}) {
+                    let line = String(data: buffer.prefix(upTo: index), encoding: .utf8)
+                    self.buffer = Data(buffer.dropFirst(index + 1)) // creating a copy resets the indexing, otherwise index points to the wrong position
+                    return line
+                } else {
+                    let nextChunk = handle.readData(ofLength: chunkSize)
+                    
+                    let buffer = (self.buffer ?? Data()) + nextChunk
+                    self.buffer = buffer
+                    
+                    if nextChunk.count == 0 {
+                        isCompleted = true
+                        return String(data: buffer, encoding: .utf8)
+                    }
+                    
+                    return self.next()
+                }
             }
         }
     }
