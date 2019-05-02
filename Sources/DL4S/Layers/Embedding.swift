@@ -75,11 +75,12 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
         
         for line in File(url: embeddingsURL) {
             autoreleasepool {
-                let components = line.components(separatedBy: .whitespaces)
+                let components = line.split(whereSeparator: {$0.isWhitespace})
+                
                 guard components.count >= 2 else {
                     return
                 }
-                let word = components[0]
+                let word = String(components[0])
                 guard let index = wordToIndex[word] else {
                     return
                 }

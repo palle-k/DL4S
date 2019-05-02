@@ -381,9 +381,9 @@ struct File: Sequence {
                     return nil
                 }
                 
-                let chunkSize = 1024
+                let chunkSize = 4096
                 
-                if let buffer = self.buffer, let index = buffer.firstIndex(where: {$0 == ("\n" as Character).asciiValue!}) {
+                if let buffer = self.buffer, let index = buffer.firstIndex(of: Character("\n").asciiValue!) {
                     let line = String(data: buffer.prefix(upTo: index), encoding: .utf8)
                     self.buffer = Data(buffer.dropFirst(index + 1)) // creating a copy resets the indexing, otherwise index points to the wrong position
                     return line
