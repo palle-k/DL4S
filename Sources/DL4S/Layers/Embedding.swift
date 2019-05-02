@@ -99,7 +99,7 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
                 if let t = t {
                     return t
                 } else {
-                    let t = Tensor<Element, Device>(repeating: 0, shape: shape)
+                    let t = Tensor<Element, Device>(repeating: 0, shape: 1, shape)
                     Random.fillNormal(t, mean: 0, stdev: (2 / Element(shape)).sqrt())
                     return t
                 }
