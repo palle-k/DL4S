@@ -76,6 +76,8 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
         
         var progress = verbose ? ProgressBar<()>(totalUnitCount: words.count, formatUserInfo: {""}, label: "loading embeddings") : nil
         
+        var completedCount = 0
+        
         for line in File(url: embeddingsURL) {
             autoreleasepool {
                 let components = line.split(whereSeparator: {$0.isWhitespace})
@@ -92,7 +94,13 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
                 tensors[index] = values.unsqueeze(at: 0)
                 embedDim = values.count
                 
+                completedCount += 1
+                
                 progress?.next(userInfo: ())
+            }
+            
+            if completedCount == words.count {
+                break
             }
         }
         
