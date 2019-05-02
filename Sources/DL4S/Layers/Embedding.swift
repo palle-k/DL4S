@@ -66,12 +66,15 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
     /// - Parameters:
     ///   - words: Provided word order.
     ///   - embeddingsURL: Path to pretrained embeddings
-    public init?(words: [String], embeddingsURL: URL) {
+    ///   - verbose: If set to true, print out loading progress
+    public init?(words: [String], embeddingsURL: URL, verbose: Bool = false) {
         let wordToIndex = Dictionary(uniqueKeysWithValues: words.enumerated().map{($1, $0)})
         
         var tensors: [Tensor<Element, Device>?] = Array(repeating: nil, count: words.count)
         
         var embedDim: Int? = nil
+        
+        var progress = verbose ? ProgressBar<()>(totalUnitCount: words.count, formatUserInfo: {""}, label: "loading embeddings") : nil
         
         for line in File(url: embeddingsURL) {
             autoreleasepool {
@@ -88,10 +91,21 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
                 let values = Tensor<Element, Device>(components[1...].compactMap(Double.init).map(Element.init))
                 tensors[index] = values.unsqueeze(at: 0)
                 embedDim = values.count
+                
+                progress?.next(userInfo: ())
             }
         }
         
+        progress?.complete()
+        
+        if verbose {
+            let unknownCount = tensors.count(where: {$0 == nil})
+            print("Unknown: \(unknownCount) of \(words.count)")
+            print("Embedding size: \(embedDim ?? -1)")
+        }
+        
         guard let shape = embedDim else {
+            print("No word from wordlist found in embedding file.")
             return nil
         }
         self.embeddingMatrix = Tensor.stack(
