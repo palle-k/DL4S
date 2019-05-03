@@ -121,31 +121,31 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func submatrix(from values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int)
 }
 
-extension UInt8 {
+public extension UInt8 {
     init<Element: NumericType>(_ element: Element) {
         self = element.toUInt8()
     }
 }
 
-extension Int32 {
+public extension Int32 {
     init<Element: NumericType>(element: Element) {
         self = element.intValue
     }
 }
 
-extension Float {
+public extension Float {
     init<Element: NumericType>(element: Element) {
         self = element.floatValue
     }
 }
 
-extension Double {
+public extension Double {
     init<Element: NumericType>(element: Element) {
         self = element.doubleValue
     }
 }
 
-extension NumericType {
+public extension NumericType {
     @inline(__always)
     @_specialize(where Self == Float)
     @_specialize(where Self == Double)
