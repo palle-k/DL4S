@@ -36,6 +36,18 @@ extension Double: NumericType {
         return Int(self)
     }
     
+    public var floatValue: Float {
+        return Float(self)
+    }
+    
+    public var doubleValue: Double {
+        return self
+    }
+    
+    public var intValue: Int32 {
+        return Int32(self)
+    }
+    
     public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, stride: Int, count: Int) {
         vDSP_vfillD([value], result.pointer(capacity: count), stride, UInt(count))
     }

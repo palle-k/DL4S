@@ -33,6 +33,10 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static var zero: Self { get }
     static var one: Self { get }
     
+    var floatValue: Float { get }
+    var doubleValue: Double { get }
+    var intValue: Int32 { get }
+    
     static prefix func - (value: Self) -> Self
     static func + (lhs: Self, rhs: Self) -> Self
     static func - (lhs: Self, rhs: Self) -> Self
@@ -120,6 +124,24 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
 extension UInt8 {
     init<Element: NumericType>(_ element: Element) {
         self = element.toUInt8()
+    }
+}
+
+extension Int32 {
+    init<Element: NumericType>(element: Element) {
+        self = element.intValue
+    }
+}
+
+extension Float {
+    init<Element: NumericType>(element: Element) {
+        self = element.floatValue
+    }
+}
+
+extension Double {
+    init<Element: NumericType>(element: Element) {
+        self = element.doubleValue
     }
 }
 
