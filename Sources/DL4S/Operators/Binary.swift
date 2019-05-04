@@ -38,42 +38,50 @@ private struct AdditionOperation<Element: NumericType, Device: DeviceType>: Bina
         }
         
         if let lhsGradient = lhs.shapedGradient {
-            let tmp = Device.Memory.allocateBuffer(withShape: lhs.shape, type: Element.self)
-            defer {
-                Device.Memory.free(tmp)
+            if lhs.shape == rhs.shape {
+                Device.Engine.broadcastAdd(lhs: vectorGradient, rhs: lhsGradient, result: lhsGradient)
+            } else {
+                let tmp = Device.Memory.allocateBuffer(withShape: lhs.shape, type: Element.self)
+                defer {
+                    Device.Memory.free(tmp)
+                }
+                
+                let lhsPadded = Array(repeating: 1, count: vector.dim - lhs.dim) + lhs.shape
+                let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
+                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                
+                var tmpReducedShape = lhsPadded
+                
+                for a in lhsReducedAxes.reversed() {
+                    tmpReducedShape.remove(at: a)
+                }
+                
+                Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
+                Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
             }
-            
-            let lhsPadded = Array(repeating: 1, count: vector.dim - lhs.dim) + lhs.shape
-            let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
-                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-            
-            var tmpReducedShape = tmp.shape
-            
-            for a in lhsReducedAxes.reversed() {
-                tmpReducedShape.remove(at: a)
-            }
-            
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
-            Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
         }
         if let rhsGradient = rhs.shapedGradient {
-            let tmp = Device.Memory.allocateBuffer(withShape: rhs.shape, type: Element.self)
-            defer {
-                Device.Memory.free(tmp)
+            if lhs.shape == rhs.shape {
+                Device.Engine.broadcastAdd(lhs: vectorGradient, rhs: rhsGradient, result: rhsGradient)
+            } else {
+                let tmp = Device.Memory.allocateBuffer(withShape: rhs.shape, type: Element.self)
+                defer {
+                    Device.Memory.free(tmp)
+                }
+                
+                let rhsPadded = Array(repeating: 1, count: vector.dim - rhs.dim) + rhs.shape
+                let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
+                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                
+                var tmpReducedShape = rhsPadded
+                
+                for a in rhsReducedAxes.reversed() {
+                    tmpReducedShape.remove(at: a)
+                }
+                
+                Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
+                Device.Engine.broadcastAdd(lhs: tmp, rhs: rhsGradient, result: rhsGradient)
             }
-            
-            let rhsPadded = Array(repeating: 1, count: vector.dim - rhs.dim) + rhs.shape
-            let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
-                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-            
-            var tmpReducedShape = tmp.shape
-            
-            for a in rhsReducedAxes.reversed() {
-                tmpReducedShape.remove(at: a)
-            }
-            
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
-            Device.Engine.broadcastAdd(lhs: tmp, rhs: rhsGradient, result: rhsGradient)
         }
     }
     
@@ -92,42 +100,50 @@ private struct SubtractionOperation<Element: NumericType, Device: DeviceType>: B
         }
         
         if let lhsGradient = lhs.shapedGradient {
-            let tmp = Device.Memory.allocateBuffer(withShape: lhs.shape, type: Element.self)
-            defer {
-                Device.Memory.free(tmp)
+            if lhs.shape == rhs.shape {
+                Device.Engine.broadcastAdd(lhs: vectorGradient, rhs: lhsGradient, result: lhsGradient)
+            } else {
+                let tmp = Device.Memory.allocateBuffer(withShape: lhs.shape, type: Element.self)
+                defer {
+                    Device.Memory.free(tmp)
+                }
+                
+                let lhsPadded = Array(repeating: 1, count: vector.dim - lhs.dim) + lhs.shape
+                let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
+                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                
+                var tmpReducedShape = lhsPadded
+                
+                for a in lhsReducedAxes.reversed() {
+                    tmpReducedShape.remove(at: a)
+                }
+                
+                Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
+                Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
             }
-            
-            let lhsPadded = Array(repeating: 1, count: vector.dim - lhs.dim) + lhs.shape
-            let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
-                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-            
-            var tmpReducedShape = tmp.shape
-            
-            for a in lhsReducedAxes.reversed() {
-                tmpReducedShape.remove(at: a)
-            }
-            
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
-            Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
         }
         if let rhsGradient = rhs.shapedGradient {
-            let tmp = Device.Memory.allocateBuffer(withShape: rhs.shape, type: Element.self)
-            defer {
-                Device.Memory.free(tmp)
+            if lhs.shape == rhs.shape {
+                Device.Engine.broadcastSub(lhs: rhsGradient, rhs: vectorGradient, result: rhsGradient)
+            } else {
+                let tmp = Device.Memory.allocateBuffer(withShape: rhs.shape, type: Element.self)
+                defer {
+                    Device.Memory.free(tmp)
+                }
+                
+                let rhsPadded = Array(repeating: 1, count: vector.dim - rhs.dim) + rhs.shape
+                let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
+                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                
+                var tmpReducedShape = rhsPadded
+                
+                for a in rhsReducedAxes.reversed() {
+                    tmpReducedShape.remove(at: a)
+                }
+                
+                Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
+                Device.Engine.broadcastSub(lhs: rhsGradient, rhs: tmp, result: rhsGradient)
             }
-            
-            let rhsPadded = Array(repeating: 1, count: vector.dim - rhs.dim) + rhs.shape
-            let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
-                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-            
-            var tmpReducedShape = tmp.shape
-            
-            for a in rhsReducedAxes.reversed() {
-                tmpReducedShape.remove(at: a)
-            }
-            
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
-            Device.Engine.broadcastSub(lhs: rhsGradient, rhs: tmp, result: rhsGradient)
         }
     }
     
@@ -147,48 +163,56 @@ private struct MultiplicationOperation<Element: NumericType, Device: DeviceType>
         }
         
         if let lhsGradient = lhs.shapedGradient {
-            let tmp1 = Device.Memory.allocateBuffer(withShape: lhs.shape, type: Element.self)
-            let tmp2 = Device.Memory.allocateBuffer(withShape: vector.shape, type: Element.self)
-            defer {
-                Device.Memory.free(tmp1)
-                Device.Memory.free(tmp2)
+            if lhs.shape == rhs.shape {
+                Device.Engine.vMA(lhs: rhs.values, rhs: vectorGradient.values, add: lhsGradient.values, result: lhsGradient.values, count: lhsGradient.count)
+            } else {
+                let tmp1 = Device.Memory.allocateBuffer(withShape: lhs.shape, type: Element.self)
+                let tmp2 = Device.Memory.allocateBuffer(withShape: vector.shape, type: Element.self)
+                defer {
+                    Device.Memory.free(tmp1)
+                    Device.Memory.free(tmp2)
+                }
+                
+                let lhsPadded = Array(repeating: 1, count: vector.dim - lhs.dim) + lhs.shape
+                let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
+                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                
+                var tmp1reducedShape = lhsPadded
+                
+                for a in lhsReducedAxes.reversed() {
+                    tmp1reducedShape.remove(at: a)
+                }
+                
+                Device.Engine.broadcastMul(lhs: rhs.shapedValues, rhs: vectorGradient, result: tmp2)
+                Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: lhsReducedAxes)
+                Device.Engine.broadcastAdd(lhs: tmp1, rhs: lhsGradient, result: lhsGradient)
             }
-            
-            let lhsPadded = Array(repeating: 1, count: vector.dim - lhs.dim) + lhs.shape
-            let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
-                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-            
-            var tmp1reducedShape = tmp1.shape
-            
-            for a in lhsReducedAxes.reversed() {
-                tmp1reducedShape.remove(at: a)
-            }
-            
-            Device.Engine.broadcastMul(lhs: rhs.shapedValues, rhs: vectorGradient, result: tmp2)
-            Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: lhsReducedAxes)
-            Device.Engine.broadcastAdd(lhs: tmp1, rhs: lhsGradient, result: lhsGradient)
         }
         if let rhsGradient = rhs.shapedGradient {
-            let tmp1 = Device.Memory.allocateBuffer(withShape: rhs.shape, type: Element.self)
-            let tmp2 = Device.Memory.allocateBuffer(withShape: vector.shape, type: Element.self)
-            defer {
-                Device.Memory.free(tmp1)
-                Device.Memory.free(tmp2)
+            if lhs.shape == rhs.shape {
+                Device.Engine.vMA(lhs: lhs.values, rhs: vectorGradient.values, add: rhsGradient.values, result: rhsGradient.values, count: rhsGradient.count)
+            } else {
+                let tmp1 = Device.Memory.allocateBuffer(withShape: rhs.shape, type: Element.self)
+                let tmp2 = Device.Memory.allocateBuffer(withShape: vector.shape, type: Element.self)
+                defer {
+                    Device.Memory.free(tmp1)
+                    Device.Memory.free(tmp2)
+                }
+                
+                let rhsPadded = Array(repeating: 1, count: vector.dim - rhs.dim) + rhs.shape
+                let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
+                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                
+                var tmp1reducedShape = rhsPadded
+                
+                for a in rhsReducedAxes.reversed() {
+                    tmp1reducedShape.remove(at: a)
+                }
+                
+                Device.Engine.broadcastMul(lhs: lhs.shapedValues, rhs: vectorGradient, result: tmp2)
+                Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: rhsReducedAxes)
+                Device.Engine.broadcastAdd(lhs: tmp1, rhs: rhsGradient, result: rhsGradient)
             }
-            
-            let rhsPadded = Array(repeating: 1, count: vector.dim - rhs.dim) + rhs.shape
-            let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
-                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-            
-            var tmp1reducedShape = tmp1.shape
-            
-            for a in rhsReducedAxes.reversed() {
-                tmp1reducedShape.remove(at: a)
-            }
-            
-            Device.Engine.broadcastMul(lhs: lhs.shapedValues, rhs: vectorGradient, result: tmp2)
-            Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: rhsReducedAxes)
-            Device.Engine.broadcastAdd(lhs: tmp1, rhs: rhsGradient, result: rhsGradient)
         }
     }
     
@@ -217,7 +241,7 @@ private struct DivisionOperation<Element: NumericType, Device: DeviceType>: Bina
             let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
-            var tmp1reducedShape = tmp1.shape
+            var tmp1reducedShape = lhsPadded
             
             for a in lhsReducedAxes.reversed() {
                 tmp1reducedShape.remove(at: a)
@@ -239,7 +263,7 @@ private struct DivisionOperation<Element: NumericType, Device: DeviceType>: Bina
             let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
-            var tmp1reducedShape = tmp1.shape
+            var tmp1reducedShape = rhsPadded
             
             for a in rhsReducedAxes.reversed() {
                 tmp1reducedShape.remove(at: a)
