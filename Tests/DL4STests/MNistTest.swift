@@ -259,13 +259,15 @@ class MNistTest: XCTestCase {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
         let model = Sequential<Float, CPU>(
-            GRU(inputSize: 28, hiddenSize: 128).asAny(),
-            Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
+            GRU(inputSize: 28, hiddenSize: 256).asAny(),
+            //LSTM(inputSize: 28, hiddenSize: 128).asAny(),
+            //BasicRNN(inputSize: 28, hiddenSize: 128).asAny(),
+            Dense(inputFeatures: 256, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )
         
         let epochs = 10_000
-        let batchSize = 128
+        let batchSize = 256
         
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
         

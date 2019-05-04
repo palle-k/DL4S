@@ -106,4 +106,48 @@ class EngineV2Tests: XCTestCase {
         
         print(result)
     }
+    
+    func testOps() {
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2,3,4], shape: 4, 1, requiresGradient: true)
+        
+        let s = a + b
+        let d1 = a - b
+        let d2 = b - a
+        let p = a * b
+        let q1 = a / b
+        let q2 = b / a
+        
+        let st = a + b.T
+        let dt1 = a - b.T
+        let dt2 = b.T - a
+        let pt = a * b.T
+        let qt1 = a / b.T
+        let qt2 = b.T / a
+        
+        XCTAssertEqual(s.shape, [4, 4])
+        XCTAssertEqual(d1.shape, [4, 4])
+        XCTAssertEqual(d2.shape, [4, 4])
+        XCTAssertEqual(p.shape, [4, 4])
+        XCTAssertEqual(q1.shape, [4, 4])
+        XCTAssertEqual(q2.shape, [4, 4])
+        
+        XCTAssertEqual(st.shape, [4, 4])
+        XCTAssertEqual(dt1.shape, [4, 4])
+        XCTAssertEqual(dt2.shape, [4, 4])
+        XCTAssertEqual(pt.shape, [4, 4])
+        XCTAssertEqual(qt1.shape, [4, 4])
+        XCTAssertEqual(qt2.shape, [4, 4])
+        
+        for x in [s, d1, d2, p, q1, q2, st, dt1, dt2, pt, qt1, qt2] {
+            a.zeroGradient()
+            b.zeroGradient()
+            
+            x.backwards()
+            
+            print(a.gradientDescription!)
+            print(b.gradientDescription!)
+            print()
+        }
+    }
 }

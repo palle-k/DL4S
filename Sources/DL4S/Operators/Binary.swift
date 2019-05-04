@@ -47,7 +47,13 @@ private struct AdditionOperation<Element: NumericType, Device: DeviceType>: Bina
             let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp, axes: lhsReducedAxes)
+            var tmpReducedShape = tmp.shape
+            
+            for a in lhsReducedAxes.reversed() {
+                tmpReducedShape.remove(at: a)
+            }
+            
+            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
             Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
         }
         if let rhsGradient = rhs.shapedGradient {
@@ -60,7 +66,13 @@ private struct AdditionOperation<Element: NumericType, Device: DeviceType>: Bina
             let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp, axes: rhsReducedAxes)
+            var tmpReducedShape = tmp.shape
+            
+            for a in rhsReducedAxes.reversed() {
+                tmpReducedShape.remove(at: a)
+            }
+            
+            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
             Device.Engine.broadcastAdd(lhs: tmp, rhs: rhsGradient, result: rhsGradient)
         }
     }
@@ -89,7 +101,13 @@ private struct SubtractionOperation<Element: NumericType, Device: DeviceType>: B
             let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp, axes: lhsReducedAxes)
+            var tmpReducedShape = tmp.shape
+            
+            for a in lhsReducedAxes.reversed() {
+                tmpReducedShape.remove(at: a)
+            }
+            
+            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
             Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
         }
         if let rhsGradient = rhs.shapedGradient {
@@ -102,7 +120,13 @@ private struct SubtractionOperation<Element: NumericType, Device: DeviceType>: B
             let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
-            Device.Engine.reduceSum(values: vectorGradient, result: tmp, axes: rhsReducedAxes)
+            var tmpReducedShape = tmp.shape
+            
+            for a in rhsReducedAxes.reversed() {
+                tmpReducedShape.remove(at: a)
+            }
+            
+            Device.Engine.reduceSum(values: vectorGradient, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
             Device.Engine.broadcastSub(lhs: rhsGradient, rhs: tmp, result: rhsGradient)
         }
     }
@@ -193,8 +217,14 @@ private struct DivisionOperation<Element: NumericType, Device: DeviceType>: Bina
             let lhsReducedAxes = zip(lhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
+            var tmp1reducedShape = tmp1.shape
+            
+            for a in lhsReducedAxes.reversed() {
+                tmp1reducedShape.remove(at: a)
+            }
+            
             Device.Engine.broadcastDiv(lhs: vectorGradient, rhs: rhs.shapedValues, result: tmp2)
-            Device.Engine.reduceSum(values: tmp2, result: tmp1, axes: lhsReducedAxes)
+            Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: lhsReducedAxes)
             Device.Engine.broadcastAdd(lhs: tmp1, rhs: lhsGradient, result: lhsGradient)
         }
         if let rhsGradient = rhs.shapedGradient {
@@ -209,10 +239,16 @@ private struct DivisionOperation<Element: NumericType, Device: DeviceType>: Bina
             let rhsReducedAxes = zip(rhsPadded, vector.shape).enumerated()
                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
             
+            var tmp1reducedShape = tmp1.shape
+            
+            for a in rhsReducedAxes.reversed() {
+                tmp1reducedShape.remove(at: a)
+            }
+            
             Device.Engine.broadcastMul(lhs: vectorGradient, rhs: lhs.shapedValues, result: tmp2)
             Device.Engine.broadcastDiv(lhs: tmp2, rhs: rhs.shapedValues, result: tmp2)
             Device.Engine.broadcastDiv(lhs: tmp2, rhs: rhs.shapedValues, result: tmp2)
-            Device.Engine.reduceSum(values: tmp2, result: tmp1, axes: rhsReducedAxes)
+            Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: rhsReducedAxes)
             Device.Engine.broadcastSub(lhs: rhsGradient, rhs: tmp1, result: rhsGradient)
         }
     }
