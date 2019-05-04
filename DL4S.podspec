@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
     s.name = 'DL4S'
-    s.version = '0.1.2'
+    s.version = '0.1.3'
     s.license = 'MIT'
     s.summary = 'Dynamic neural networks based on reverse mode automatic differentiation'
     s.homepage = 'https://github.com/palle-k/DL4S'
