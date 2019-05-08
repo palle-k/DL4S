@@ -28,6 +28,10 @@ import Accelerate
 
 
 extension Float: NumericType {
+    public func format(maxDecimals: Int) -> String {
+        return String(format: "%.\(maxDecimals)f", self)
+    }
+    
     public func toUInt8() -> UInt8 {
         return UInt8(Swift.max(Swift.min(self, 255), 0))
     }
@@ -287,7 +291,7 @@ extension Float: NumericType {
     }
     
     public static func arange(start: Float, end: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vramp([start], [end], result.pointer(capacity: count), 1, UInt(count))
+        vDSP_vramp([start], [end / Float(count)], result.pointer(capacity: count), 1, UInt(count))
     }
     
     public static func max(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
@@ -305,5 +309,17 @@ extension Float: NumericType {
         let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
         
         vDSP_mmov(srcPtr, dstPtr, UInt(submatrixWidth), UInt(submatrixHeight), UInt(width), UInt(submatrixWidth))
+    }
+    
+    public static func sin(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vvsinf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func cos(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vvcosf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func tan(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vvtanf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
     }
 }

@@ -27,6 +27,8 @@ import Foundation
 import Accelerate
 
 public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral, Codable, Comparable {
+    func format(maxDecimals: Int) -> String
+    
     init(_ floatValue: Double)
     init(_ integerValue: Int32)
     
@@ -119,6 +121,10 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func arange(start: Self, end: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func submatrix(from values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int)
+    
+    static func sin(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func cos(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func tan(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
 }
 
 public extension UInt8 {

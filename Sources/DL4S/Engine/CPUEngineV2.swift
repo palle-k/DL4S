@@ -744,15 +744,15 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     public static func sin<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
-        fatalError("\(#function) is not implemented for type \(self)")
+        N.sin(values: values.immutable, result: result.pointer, count: result.count)
     }
     
     public static func cos<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
-        fatalError("\(#function) is not implemented for type \(self)")
+        N.cos(values: values.immutable, result: result.pointer, count: result.count)
     }
     
     public static func tan<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
-        fatalError("\(#function) is not implemented for type \(self)")
+        N.tan(values: values.immutable, result: result.pointer, count: result.count)
     }
     
     public static func sinh<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {

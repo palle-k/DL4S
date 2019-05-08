@@ -123,6 +123,69 @@ private struct SqrtContext<Element: NumericType, Device: DeviceType>: UnaryTenso
     }
 }
 
+private struct SinContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let sourceGradient = source.shapedGradient, let vectorGradient = vector.shapedGradient else {
+            return
+        }
+        let tmp = Device.Memory.allocateBuffer(withShape: source.shape, type: Element.self)
+        defer {
+            Device.Memory.free(tmp)
+        }
+        Device.Engine.cos(values: source.shapedValues, result: tmp)
+        Device.Engine.vMA(lhs: vectorGradient.values, rhs: tmp.values, add: sourceGradient.values, result: sourceGradient.values, count: source.count)
+    }
+    
+    var symbol: String {
+        return "sin"
+    }
+}
+
+private struct CosContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let sourceGradient = source.shapedGradient, let vectorGradient = vector.shapedGradient else {
+            return
+        }
+        let tmp = Device.Memory.allocateBuffer(withShape: source.shape, type: Element.self)
+        defer {
+            Device.Memory.free(tmp)
+        }
+        Device.Engine.sin(values: source.shapedValues, result: tmp)
+        Device.Engine.vNeg(val: tmp.values, result: tmp.values, count: source.count)
+        Device.Engine.vMA(lhs: vectorGradient.values, rhs: tmp.values, add: sourceGradient.values, result: sourceGradient.values, count: source.count)
+    }
+    
+    var symbol: String {
+        return "cos"
+    }
+}
+
+private struct TanContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let sourceGradient = source.shapedGradient, let vectorGradient = vector.shapedGradient else {
+            return
+        }
+        let tmp = Device.Memory.allocateBuffer(withShape: source.shape, type: Element.self)
+        defer {
+            Device.Memory.free(tmp)
+        }
+        Device.Engine.cos(values: source.shapedValues, result: tmp)
+        Device.Engine.vSquare(values: tmp.values, result: tmp.values, count: tmp.count)
+        Device.Engine.svDiv(lhs: 1, rhs: tmp.values, result: tmp.values, count: tmp.count)
+        Device.Engine.vMA(lhs: vectorGradient.values, rhs: tmp.values, add: sourceGradient.values, result: sourceGradient.values, count: source.count)
+    }
+    
+    var symbol: String {
+        return "tan"
+    }
+}
+
 
 
 public func exp<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -164,6 +227,36 @@ public func sqrt<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<E
 
 public func log<Element, Device>(_ vector: Tensor<Element, Device>, base: Tensor<Element, Device>) -> Tensor<Element, Device> {
     return log(vector) / log(base)
+}
+
+public func sin<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: vector.shape,
+        parent: nil,
+        context: vector.requiresGradient ? SinContext(source: vector).asAny() : nil
+    )
+    Device.Engine.sin(values: vector.shapedValues, result: result.shapedValues)
+    return result
+}
+
+public func cos<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: vector.shape,
+        parent: nil,
+        context: vector.requiresGradient ? CosContext(source: vector).asAny() : nil
+    )
+    Device.Engine.cos(values: vector.shapedValues, result: result.shapedValues)
+    return result
+}
+
+public func tan<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: vector.shape,
+        parent: nil,
+        context: vector.requiresGradient ? TanContext(source: vector).asAny() : nil
+    )
+    Device.Engine.tan(values: vector.shapedValues, result: result.shapedValues)
+    return result
 }
 
 public func tanh<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -218,6 +311,18 @@ public extension Tensor {
     
     func log(base: Tensor<Element, Device>) -> Tensor<Element, Device> {
         return DL4S.log(self, base: base)
+    }
+    
+    func sin() -> Tensor<Element, Device> {
+        return DL4S.sin(self)
+    }
+    
+    func cos() -> Tensor<Element, Device> {
+        return DL4S.cos(self)
+    }
+    
+    func tan() -> Tensor<Element, Device> {
+        return DL4S.tan(self)
     }
     
     func tanh() -> Tensor<Element, Device> {

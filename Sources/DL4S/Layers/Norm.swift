@@ -31,6 +31,7 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
     public typealias Input = Element
     
     public var isTrainable: Bool = true
+    public var isTraining: Bool = true
     
     public var parameters: [Tensor<Element, Device>] {
         return [shift, scale]
@@ -44,7 +45,7 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
     
     public var momentum: Element
     
-    public init(inputSize: [Int], momentum: Element = 0.1) {
+    public init(inputSize: [Int], momentum: Element = 0.9) {
         shift = Tensor(repeating: 0, shape: inputSize, requiresGradient: true)
         scale = Tensor(repeating: 1, shape: inputSize, requiresGradient: true)
         
@@ -61,12 +62,60 @@ public class BatchNorm<Element: NumericType, Device: DeviceType>: Layer, Codable
         precondition(inputs.count == 1)
         let x = inputs[0]
         
-//        if self.trainable {
-//            runningMean = Tensor(momentum) * runningMean + Tensor(1 - momentum) * mean(x, axis: 0).detached()
-//            runningVar = Tensor(momentum) * runningVar + Tensor(1 - momentum) * variance(x, axis: 0).detached()
-//        }
+        if self.isTraining {
+            let mean = x.mean(axes: 0)
+            let variance = x.variance(axes: 0)
+            
+            runningMean = Tensor(momentum) * runningMean + Tensor(1 - momentum) * mean.detached()
+            runningVar = Tensor(momentum) * runningVar + Tensor(1 - momentum) * variance.detached()
+            
+            let normalized = (x - mean) / (sqrt(variance) + 1e-5)
+            return normalized * scale + shift
+        } else {
+            let normalized = (x - runningMean) / (sqrt(runningVar) + 1e-5)
+            return normalized * scale + shift
+        }
+    }
+}
+
+
+public class LayerNorm<Element: NumericType, Device: DeviceType>: Layer, Codable {
+    public typealias Input = Element
+    
+    public var isTrainable: Bool = true
+    
+    let shift: Tensor<Element, Device>
+    let scale: Tensor<Element, Device>
+    
+    public var parameters: [Tensor<Element, Device>] {
+        return [shift, scale]
+    }
+    
+    public init(inputSize: [Int]) {
+        shift = Tensor(repeating: 0, shape: inputSize, requiresGradient: true)
+        scale = Tensor(repeating: 1, shape: inputSize, requiresGradient: true)
         
-        let normalized = (x - mean(x, axes: [0])) / (sqrt(variance(x, axes: [0])) + 1e-5)
-        return normalized * scale + shift
+        shift.tag = "shift"
+        scale.tag = "scale"
+    }
+    
+    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+        precondition(inputs.count == 1)
+        let x = inputs[0]
+        
+        let axes = Array(1 ..< x.dim)
+        
+        // reshaping mean & variance so that both are broadcasted over batch dimension
+        
+        let mean = x
+            .mean(axes: axes)
+            .view(as: [x.shape[0]] + Array(repeating: 1, count: axes.count))
+        
+        let variance = x
+            .variance(axes: axes)
+            .view(as: mean.shape)
+        
+        let normalized = (x - mean) / (sqrt(variance) + 1e-5)
+        return normalized // * scale + shift
     }
 }
