@@ -54,6 +54,8 @@ Then add `DL4S` as a dependency to your target:
 <summary>
 <h3>Layers</h3>
 </summary>
+<p>
+
 - [x] Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
@@ -72,18 +74,24 @@ Then add `DL4S` as a dependency to your target:
 - [x] Lambda 
 - [x] Sequential
 - [x] Dropout
+
+</p>
 </details>
 
 <details>
 <summary>
 <h3>Optimizers</h3>
 </summary>
+<p>
+
 - [x] SGD
 - [x] Momentum
 - [x] Adam
 - [x] AdaGrad
 - [x] AdaDelta
 - [x] RMSProp
+
+</p>
 </details>
 
 <details>
@@ -94,12 +102,16 @@ Then add `DL4S` as a dependency to your target:
 - [x] Categorical Cross-Entropy
 - [x] MSE
 - [x] L1 & L2 regularization
+
+</p>
 </details>
 
 <details>
 <summary>
 <h3>Tensor Operations</h3>
 </summary>
+<p>
+
 - [x] broadcast-add
 - [x] broadcast-sub
 - [x] broadcast-mul 
@@ -132,25 +144,35 @@ Then add `DL4S` as a dependency to your target:
 - [x] im2col
 - [x] col2im
 - [x] stack / concat
+
+</p>
 </details>
 
 <details>
 <summary>
 <h3>Engines</h3>
 </summary>
+<p>
+
 - [x] CPU (Accelerate framework)
 - [ ] GPU (Metal)
+
+</p>
 </details>
 
 <details>
 <summary>
 <h3>Architectures</h3>
 </summary>
+<p>
+
 Default implementations are provided for the following architectures:
 
 - [x] ResNet (currently only ResNet-18)
 - [x] VGG
 - [x] AlexNet
+
+</p>
 </details>
 
 
