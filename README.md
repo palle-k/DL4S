@@ -52,7 +52,7 @@ Then add `DL4S` as a dependency to your target:
 
 <details>
 <summary>
-<h3>Layers</h3>
+Layers
 </summary>
 <p>
 
@@ -80,7 +80,7 @@ Then add `DL4S` as a dependency to your target:
 
 <details>
 <summary>
-<h3>Optimizers</h3>
+Optimizers
 </summary>
 <p>
 
@@ -96,8 +96,10 @@ Then add `DL4S` as a dependency to your target:
 
 <details>
 <summary>
-<h3>Losses</h3>
+Losses
 </summary>
+<p>
+
 - [x] Binary Cross-Entropy
 - [x] Categorical Cross-Entropy
 - [x] MSE
@@ -108,7 +110,7 @@ Then add `DL4S` as a dependency to your target:
 
 <details>
 <summary>
-<h3>Tensor Operations</h3>
+Tensor Operations
 </summary>
 <p>
 
@@ -150,7 +152,7 @@ Then add `DL4S` as a dependency to your target:
 
 <details>
 <summary>
-<h3>Engines</h3>
+Engines
 </summary>
 <p>
 
@@ -162,7 +164,7 @@ Then add `DL4S` as a dependency to your target:
 
 <details>
 <summary>
-<h3>Architectures</h3>
+Architectures
 </summary>
 <p>
 
