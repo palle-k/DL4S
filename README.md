@@ -121,6 +121,7 @@ Tensor Operations
 - [x] matmul
 - [x] neg
 - [x] exp
+- [x] pow
 - [x] log
 - [x] sqrt
 - [x] sin

@@ -187,7 +187,6 @@ private struct TanContext<Element: NumericType, Device: DeviceType>: UnaryTensor
 }
 
 
-
 public func exp<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let result = Tensor<Element, Device>(
         shape: vector.shape,
@@ -228,6 +227,12 @@ public func sqrt<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<E
 public func log<Element, Device>(_ vector: Tensor<Element, Device>, base: Tensor<Element, Device>) -> Tensor<Element, Device> {
     return log(vector) / log(base)
 }
+
+
+public func pow<Element, Device>(base: Tensor<Element, Device>, exponent: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    return exp(exponent * log(base))
+}
+
 
 public func sin<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let result = Tensor<Element, Device>(
@@ -299,6 +304,18 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
 public extension Tensor {
     func exp() -> Tensor<Element, Device> {
         return DL4S.exp(self)
+    }
+    
+    func exp(withBase base: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.pow(base: base, exponent: self)
+    }
+    
+    func pow(withExponent exponent: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.pow(base: self, exponent: exponent)
+    }
+    
+    static func pow(base: Tensor<Element, Device>, exponent: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.pow(base: base, exponent: exponent)
     }
     
     func log() -> Tensor<Element, Device> {
