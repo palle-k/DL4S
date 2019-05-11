@@ -39,14 +39,12 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
 }
 
 public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let expectedView = expected.view(as: -1)
-    let actualView = actual.view(as: expectedView.shape[0], -1)
+    precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
     
     var result = Tensor<Element, Device>(0)
     
-    for i in 0 ..< expectedView.shape[0] {
-        // expected is not included in compute graph
-        result = result - log(actualView[i, Int(expectedView[i].item)])
+    for index in iterate(expected.shape) {
+        result -= log(actual[index + [Int(expected[index].item)]])
     }
     
     return result / Tensor<Element, Device>(Element(expected.count))

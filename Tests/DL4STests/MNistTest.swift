@@ -108,7 +108,7 @@ class MNistTest: XCTestCase {
         )
         
         let epochs = 2_000
-        let batchSize = 512
+        let batchSize = 128
         
         //              1k iterations @ bs 512    |  100 iterations @ bs 512  |  20 iterations @ bs 512   |  5 iterations @ bs 512
         // no norm:     98.28% acc, loss: 0.0141  |  95.06% acc, loss: 0.156  |  89.67% acc, loss: 0.487  |  76.11% acc, loss: 1.293
