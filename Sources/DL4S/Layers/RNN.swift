@@ -113,8 +113,8 @@ public extension RNN {
         }
     }
     
-    func step(x: [Tensor<Element, Device>], state: State) -> State {
-        return step(preparedInputs: prepare(input: x[0]), state: state)
+    func step(x: Tensor<Element, Device>, state: State) -> State {
+        return step(preparedInputs: prepare(input: x), state: state)
     }
 }
 
