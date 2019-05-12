@@ -114,7 +114,7 @@ public extension RNN {
     }
     
     func step(x: Tensor<Element, Device>, state: State) -> State {
-        return step(preparedInputs: prepare(input: x), state: state)
+        return step(preparedInputs: prepare(input: x.unsqueeze(at: 0)).map {$0.squeeze(at: 0)}, state: state)
     }
 }
 
