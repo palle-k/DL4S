@@ -26,7 +26,7 @@
 import Foundation
 
 
-public class MaxPool2D<Element: NumericType, Device: DeviceType>: Layer {
+public class MaxPool2D<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public let stride: Int
     public let padding: Int
     public let windowSize: Int
@@ -56,7 +56,7 @@ public class MaxPool2D<Element: NumericType, Device: DeviceType>: Layer {
 }
 
 
-public class AvgPool2D<Element: NumericType, Device: DeviceType>: Layer {
+public class AvgPool2D<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public let stride: Int
     public let padding: Int
     public let windowSize: Int
@@ -86,7 +86,7 @@ public class AvgPool2D<Element: NumericType, Device: DeviceType>: Layer {
 }
 
 
-public class AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Layer {
+public class AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public let targetSize: Int
     
     public var isTrainable: Bool {
@@ -114,7 +114,7 @@ public class AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Layer 
     }
 }
 
-public class AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: Layer {
+public class AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public let targetSize: Int
     
     public var isTrainable: Bool {

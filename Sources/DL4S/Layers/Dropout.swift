@@ -27,7 +27,7 @@ import Foundation
 
 
 /// Sets some forwarded values to zero with a given probability during forward operations.
-public class Dropout<Element: NumericType, Device: DeviceType>: Layer {
+public class Dropout<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public typealias Input = Element
     
     public var isTrainable: Bool {

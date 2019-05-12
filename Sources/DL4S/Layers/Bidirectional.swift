@@ -32,7 +32,7 @@ public typealias BidirectionalRNN<RNNLayer: RNN> = Bidirectional<RNNLayer>
 /// 
 /// Combines two RNNs, one for forward, one for backwards into a single RNN
 /// and fuses the resulting states together.
-public class Bidirectional<RNNLayer: RNN>: Layer {
+public final class Bidirectional<RNNLayer: RNN>: Layer {
     public let forwardLayer: RNNLayer
     public let backwardLayer: RNNLayer
     
@@ -83,3 +83,5 @@ public class Bidirectional<RNNLayer: RNN>: Layer {
         }
     }
 }
+
+extension Bidirectional: Codable where RNNLayer: Codable {}

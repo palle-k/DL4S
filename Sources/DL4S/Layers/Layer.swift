@@ -279,7 +279,7 @@ public class Lambda<Element: NumericType, Input: NumericType, Device: DeviceType
 }
 
 
-public class Debug<Element: NumericType, Device: DeviceType>: Layer {
+public class Debug<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public var parameters: [Tensor<Element, Device>] {
         return []
     }

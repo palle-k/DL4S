@@ -26,7 +26,7 @@
 import Foundation
 
 
-public class Conv2D<Element: RandomizableType, Device: DeviceType>: Layer {
+public class Conv2D<Element: RandomizableType, Device: DeviceType>: Layer, Codable {
     public var isTrainable: Bool = true
     
     public let filters: Tensor<Element, Device>

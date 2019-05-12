@@ -25,7 +25,7 @@
 
 import Foundation
 
-public class BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN {
+public class BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     public typealias State = Tensor<Element, Device>
     public typealias Input = Element
     public typealias Element = Element

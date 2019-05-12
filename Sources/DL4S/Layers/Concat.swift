@@ -45,6 +45,6 @@ public class Concat<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public init() {}
     
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        return stack(inputs.map {$0.T}).T
+        return stack(inputs, axis: 1)
     }
 }
