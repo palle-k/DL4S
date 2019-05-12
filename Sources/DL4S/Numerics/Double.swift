@@ -27,7 +27,22 @@ import Foundation
 import Accelerate
 
 
+let DefaultNumberFormatter: NumberFormatter = {
+    let f = NumberFormatter()
+    f.allowsFloats = true
+    f.minimumIntegerDigits = 1
+    f.minimumFractionDigits = 1
+    f.maximumFractionDigits = 3
+    
+    return f
+}()
+
+
 extension Double: NumericType {
+    public func format(maxDecimals: Int) -> String {
+        return String(format: "%.\(maxDecimals)f", self)
+    }
+    
     public func toUInt8() -> UInt8 {
         return UInt8(self)
     }
@@ -278,7 +293,7 @@ extension Double: NumericType {
     }
     
     public static func arange(start: Double, end: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
-        vDSP_vrampD([start], [end], result.pointer(capacity: count), 1, UInt(count))
+        vDSP_vrampD([start], [end / Double(count)], result.pointer(capacity: count), 1, UInt(count))
     }
     
     public static func max(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
@@ -296,6 +311,18 @@ extension Double: NumericType {
         let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
         
         vDSP_mmovD(srcPtr, dstPtr, UInt(submatrixWidth), UInt(submatrixHeight), UInt(width), UInt(submatrixWidth))
+    }
+    
+    public static func sin(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vvsin(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func cos(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vvcos(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func tan(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vvtan(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
     }
 }
 

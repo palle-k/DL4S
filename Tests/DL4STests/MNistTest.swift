@@ -90,25 +90,37 @@ class MNistTest: XCTestCase {
     func testMNist() {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
+        let bn1 = BatchNorm<Float, CPU>(inputSize: [500])
+        let bn2 = BatchNorm<Float, CPU>(inputSize: [300])
+        
         let model = Sequential<Float, CPU>(
             Flatten().asAny(),
             Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
+            // bn1.asAny(),
+            // LayerNorm(inputSize: [500]).asAny(),
             Relu().asAny(),
             Dense(inputFeatures: 500, outputFeatures: 300).asAny(),
+            // bn2.asAny(),
+            // LayerNorm(inputSize: [500]).asAny(),
             Relu().asAny(),
             Dense(inputFeatures: 300, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )
         
-        let epochs = 1_000
+        let epochs = 2_000
         let batchSize = 128
         
-        // let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+        //              1k iterations @ bs 512    |  100 iterations @ bs 512  |  20 iterations @ bs 512   |  5 iterations @ bs 512
+        // no norm:     98.28% acc, loss: 0.0141  |  95.06% acc, loss: 0.156  |  89.67% acc, loss: 0.487  |  76.11% acc, loss: 1.293
+        // batch norm:  98.06% acc, loss: 0.0084  |  96.39% acc, loss: 0.121  |  91.79% acc, loss: 0.291  |  74.70% acc, loss: 0.824
+        // layer norm:  98.12% acc, loss: 0.0083  |  95.90% acc, loss: 0.142  |  90.58% acc, loss: 0.385  |  79.88% acc, loss: 0.987
+        
+        let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.0005)
         // let optimizer = Adagrad(parameters: model.trainableParameters, learningRate: 0.001)
         // let optimizer = GradientDescent(parameters: model.trainableParameters, learningRate: 0.001)
         // let optimizer = Momentum(parameters: model.trainableParameters, learningRate: 0.001)
         // let optimizer = RMSProp(parameters: model.trainableParameters, learningRate: 0.001, gamma: 0.9)
-        let optimizer = Adadelta(parameters: model.trainableParameters, learningRate: 0.001, gamma: 0.9, epsilon: 1e-8)
+        // let optimizer = Adadelta(parameters: model.trainableParameters, learningRate: 0.001, gamma: 0.9, epsilon: 1e-8)
         
         for epoch in 1 ... epochs {
             optimizer.zeroGradient()
@@ -128,18 +140,21 @@ class MNistTest: XCTestCase {
             }
         }
         
+        bn1.isTraining = false
+        bn2.isTraining = false
+        
         var correctCount = 0
         
         for i in 0 ..< ds_val.0.shape[0] {
             let x = ds_val.0[i].unsqueeze(at: 0)
             let pred = argmax(model(x).squeeze())
             let actual = Int(ds_val.1[i].item)
-            
+
             if pred == actual {
                 correctCount += 1
             }
         }
-        
+                
         let accuracy = Float(correctCount) / Float(ds_val.0.shape[0])
         
         print("Accuracy: \(accuracy)")
@@ -150,21 +165,40 @@ class MNistTest: XCTestCase {
     func testMNistConvnet() {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
+        /*
+         With Layer Norm:
+         [10/10000] loss: 1.8275247
+         [100/10000] loss: 0.30241546
+         
+         [10/10000] loss: 1.9961276
+         [100/10000] loss: 0.35611022
+         
+         Without:
+         [10/10000] loss: 2.0360816
+         [100/10000] loss: 0.3532066
+         
+         [10/10000] loss: 2.1360865
+         [100/10000] loss: 0.37744054
+        */
+        
         let model = Sequential<Float, CPU>(
             Conv2D(inputChannels: 1, outputChannels: 6, kernelSize: 5, padding: 0).asAny(), // 4x24x24
+            LayerNorm(inputSize: [4, 24, 24]).asAny(),
             Relu().asAny(),
             MaxPool2D(windowSize: 2, stride: 2).asAny(), // 4x12x12
             Conv2D(inputChannels: 6, outputChannels: 16, kernelSize: 5, padding: 0).asAny(), // 16x8x8
+            LayerNorm(inputSize: [16, 8, 8]).asAny(),
             Relu().asAny(),
             MaxPool2D(windowSize: 2, stride: 2).asAny(), // 16x4x4
             Flatten().asAny(), // 256
             Dense(inputFeatures: 256, outputFeatures: 120).asAny(),
+            LayerNorm(inputSize: [120]).asAny(),
             Relu().asAny(),
             Dense(inputFeatures: 120, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )
         
-        let epochs = 5_000
+        let epochs = 10_000
         let batchSize = 128
         
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
@@ -259,15 +293,15 @@ class MNistTest: XCTestCase {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
         let model = Sequential<Float, CPU>(
-            GRU(inputSize: 28, hiddenSize: 256).asAny(),
+            GRU(inputSize: 28, hiddenSize: 128).asAny(),
             //LSTM(inputSize: 28, hiddenSize: 128).asAny(),
             //BasicRNN(inputSize: 28, hiddenSize: 128).asAny(),
-            Dense(inputFeatures: 256, outputFeatures: 10).asAny(),
+            Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )
         
         let epochs = 10_000
-        let batchSize = 256
+        let batchSize = 128
         
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
         
@@ -330,7 +364,7 @@ class MNistTest: XCTestCase {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
         let model = Sequential<Float, CPU>(
-            BidirectionalRNN(forwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .forward), backwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .backward)).asAny(),
+            Bidirectional(forwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .forward), backwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .backward)).asAny(),
             Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )

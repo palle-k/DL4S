@@ -50,11 +50,17 @@ Then add `DL4S` as a dependency to your target:
 
 ## Features
 
-### Layers
+<details>
+<summary>
+Layers
+</summary>
+<p>
+
 - [x] Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
+- [x] Vanilla RNN
 - [x] Bidirectional RNNs
 - [x] Max Pooling
 - [x] Average Pooling
@@ -63,12 +69,21 @@ Then add `DL4S` as a dependency to your target:
 - [x] Sigmoid
 - [x] Softmax
 - [x] Embedding
-- [x] Batchnorm
+- [x] Batch Norm
+- [x] Layer Norm
 - [x] Lambda 
 - [x] Sequential
 - [x] Dropout
 
-### Optimizers
+</p>
+</details>
+
+<details>
+<summary>
+Optimizers
+</summary>
+<p>
+
 - [x] SGD
 - [x] Momentum
 - [x] Adam
@@ -76,44 +91,92 @@ Then add `DL4S` as a dependency to your target:
 - [x] AdaDelta
 - [x] RMSProp
 
-### Losses
+</p>
+</details>
+
+<details>
+<summary>
+Losses
+</summary>
+<p>
+
 - [x] Binary Cross-Entropy
 - [x] Categorical Cross-Entropy
 - [x] MSE
 - [x] L1 & L2 regularization
 
-### Tensor Operations
-- [x] add
-- [x] sub
-- [x] mul 
-- [x] div
+</p>
+</details>
+
+<details>
+<summary>
+Tensor Operations
+</summary>
+<p>
+
+- [x] broadcast-add
+- [x] broadcast-sub
+- [x] broadcast-mul 
+- [x] broadcast-div
+- [x] matmul
 - [x] neg
 - [x] exp
+- [x] pow
 - [x] log
 - [x] sqrt
-- [x] subscript
-- [x] subscript range
-- [x] transpose
-- [x] axis permute
+- [x] sin
+- [x] cos
+- [x] tan
+- [x] tanh
+- [x] l1 norm
+- [x] l2 norm
 - [x] sum
 - [x] max
+- [x] relu
+- [x] leaky relu
 - [x] reduce sum
 - [x] reduce max
 - [x] conv2d
 - [x] max pool
 - [x] avg pool
+- [x] subscript
+- [x] subscript range
+- [x] transpose
+- [x] axis permute
+- [x] reverse
+- [x] im2col
+- [x] col2im
+- [x] stack / concat
 
+</p>
+</details>
 
-### Engines
+<details>
+<summary>
+Engines
+</summary>
+<p>
+
 - [x] CPU (Accelerate framework)
 - [ ] GPU (Metal)
 
-### Architectures
+</p>
+</details>
+
+<details>
+<summary>
+Architectures
+</summary>
+<p>
+
 Default implementations are provided for the following architectures:
 
 - [x] ResNet (currently only ResNet-18)
 - [x] VGG
 - [x] AlexNet
+
+</p>
+</details>
 
 
 ## Examples

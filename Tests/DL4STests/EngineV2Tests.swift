@@ -107,7 +107,7 @@ class EngineV2Tests: XCTestCase {
         print(result)
     }
     
-    func testOps() {
+    func testReduceOps() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2,3,4], shape: 4, 1, requiresGradient: true)
         
@@ -125,6 +125,15 @@ class EngineV2Tests: XCTestCase {
         let qt1 = a / b.T
         let qt2 = b.T / a
         
+        let bf = b.squeeze()
+        
+        let sf = a + bf
+        let df1 = a - bf
+        let df2 = bf - a
+        let pf = a * bf
+        let qf1 = a / bf
+        let qf2 = bf / a
+        
         XCTAssertEqual(s.shape, [4, 4])
         XCTAssertEqual(d1.shape, [4, 4])
         XCTAssertEqual(d2.shape, [4, 4])
@@ -139,7 +148,14 @@ class EngineV2Tests: XCTestCase {
         XCTAssertEqual(qt1.shape, [4, 4])
         XCTAssertEqual(qt2.shape, [4, 4])
         
-        for x in [s, d1, d2, p, q1, q2, st, dt1, dt2, pt, qt1, qt2] {
+        XCTAssertEqual(sf.shape, [4, 4])
+        XCTAssertEqual(df1.shape, [4, 4])
+        XCTAssertEqual(df2.shape, [4, 4])
+        XCTAssertEqual(pf.shape, [4, 4])
+        XCTAssertEqual(qf1.shape, [4, 4])
+        XCTAssertEqual(qf2.shape, [4, 4])
+        
+        for x in [s, d1, d2, p, q1, q2, st, dt1, dt2, pt, qt1, qt2, sf, df1, df2, pf, qf1, qf2] {
             a.zeroGradient()
             b.zeroGradient()
             

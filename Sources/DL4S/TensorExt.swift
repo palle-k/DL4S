@@ -186,11 +186,11 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
             return "[\(d)]"
         } else if let count = self.shape.first {
             let d = (0 ..< count)
-                .map {"\(self[$0].item)"}
+                .map {self[$0].item.format(maxDecimals: 3)}
                 .joined(separator: ", ")
             return "[\(d)]"
         } else {
-            return "\(item)"
+            return "\(item.format(maxDecimals: 3))"
         }
     }
     
@@ -206,11 +206,11 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
             return "[\(d)]"
         } else if let count = self.shape.first {
             let d = (0 ..< count)
-                .map {"\(self[$0].gradientItem!)"}
+                .map {self[$0].gradientItem!.format(maxDecimals: 3)}
                 .joined(separator: ", ")
             return "[\(d)]"
         } else {
-            return "\(gradientItem!)"
+            return "\(gradientItem!.format(maxDecimals: 3))"
         }
     }
     

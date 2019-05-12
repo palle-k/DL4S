@@ -134,17 +134,11 @@ public class ResNet<Element: RandomizableType, Device: DeviceType>: Layer {
         var x = inputs[0]
         
         x = start(x)
-        print(x.shape)
         x = l1(x)
-        print(x.shape)
         x = l2(x)
-        print(x.shape)
         x = l3(x)
-        print(x.shape)
         x = l4(x)
-        print(x.shape)
         x = end(x)
-        print(x.shape)
         
         return x
     }

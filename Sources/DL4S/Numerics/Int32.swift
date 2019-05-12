@@ -28,6 +28,10 @@ import Accelerate
 
 
 extension Int32: NumericType {
+    public func format(maxDecimals: Int) -> String {
+        return "\(self)"
+    }
+    
     public var isFinite: Bool {
         return true
     }
@@ -338,7 +342,7 @@ extension Int32: NumericType {
     public static func arange(start: Int32, end: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let ptr = result.pointer(capacity: count)
         for i in 0 ..< Int32(count) {
-            ptr[Int(i)] = (end - start) * Int32(count) / i
+            ptr[Int(i)] = start + (end - start) * Int32(count) / i
         }
     }
     
@@ -376,5 +380,17 @@ extension Int32: NumericType {
                     count: submatrixWidth
                 )
         }
+    }
+    
+    public static func sin(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        fatalError("\(#function) is unavailable for type \(type(of: self))")
+    }
+    
+    public static func cos(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        fatalError("\(#function) is unavailable for type \(type(of: self))")
+    }
+    
+    public static func tan(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        fatalError("\(#function) is unavailable for type \(type(of: self))")
     }
 }

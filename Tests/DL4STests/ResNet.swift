@@ -36,15 +36,25 @@ class ResNetTests: XCTestCase {
         let optim = Adam(parameters: resnet.trainableParameters, learningRate: 0.001)
         optim.zeroGradient()
         
-        let t = Tensor<Float, CPU>(repeating: 0, shape: 4, 3, 32, 32)
+        let t = Tensor<Float, CPU>(repeating: 0, shape: 64, 3, 32, 32)
         t.tag = "input"
         Random.fill(t, a: 0, b: 1)
         
-        let result = resnet(t)
-        let expected = Tensor<Int32, CPU>([23, 15, 10, 6])
+        let expected = Tensor<Int32, CPU>((0 ..< 64).map {_ in Int32.random(in: 0 ..< 32)})
         
-        let loss = categoricalCrossEntropy(expected: expected, actual: result)
-        loss.backwards()
-        optim.step()
+        let epochs = 100
+        
+        for i in 1 ... epochs {
+            optim.zeroGradient()
+            
+            let result = resnet(t)
+            
+            let loss = categoricalCrossEntropy(expected: expected, actual: result)
+            loss.backwards()
+            optim.step()
+            
+            print("[\(i)/\(epochs)]: \(loss)")
+        }
+        
     }
 }
