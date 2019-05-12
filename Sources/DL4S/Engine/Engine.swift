@@ -53,6 +53,8 @@ public protocol MemoryOperatorsType {
     static func set<Element>(slice: [Int?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
     static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
     
+    static func setPointee<Element>(of buffer: Buffer<Element, Device>, to newValue: Element)
+    
     static func advance<Element>(buffer: Buffer<Element, Device>, by advancement: Int) -> Buffer<Element, Device>
 }
 
@@ -98,13 +100,8 @@ public protocol EngineType {
     static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N
     static func copysign<N: NumericType>(values: Buffer<N, Device>, signs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N)
-    static func conv2d<N: NumericType>(input: Buffer<N, Device>, filter: Buffer<N, Device>, result: Buffer<N, Device>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
     static func permuteAxes<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], destination: Buffer<N, Device>)
     static func permuteAxesAdd<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], add: Buffer<N, Device>, destination: Buffer<N, Device>)
-    
-    static func maxPool2d<N>(input: Buffer<N, Device>, result: Buffer<N, Device>, resultContext: Buffer<Int32, Device>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType
-    static func maxPool2DRevAdd<N>(pooled: Buffer<N, Device>, poolCtx: Buffer<Int32, Device>, add: Buffer<Int32, Device>, target: Buffer<Int32, Device>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int))
-    
 }
 
 

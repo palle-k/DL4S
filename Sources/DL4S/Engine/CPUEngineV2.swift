@@ -249,7 +249,7 @@ extension CPUEngine: EngineTypeV2 {
     
     @inline(__always)
     @_specialize(where N == Float)
-    private static func reduceMultiAxis<N>(
+    private static func reduceMultiAxis<N: ZeroableType>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
         axes: [Int],
@@ -301,7 +301,7 @@ extension CPUEngine: EngineTypeV2 {
                 srcOffset += srcStridesDstIdx[i] * idx[i]
             }
             
-            var reduced: N = 0
+            var reduced: N = .zero
             
             for srcReduceIndex in srcReduceIndices {
                 srcAddOffset = 0
@@ -325,7 +325,7 @@ extension CPUEngine: EngineTypeV2 {
     
     @inline(__always)
     @_specialize(where N == Float)
-    private static func reducePrefix<N>(
+    private static func reducePrefix<N: NumericType>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
         reduceColumns: (UnsafeBufferPointer<N>, UnsafeBufferPointer<N>, UnsafeMutableBufferPointer<N>, Int) -> ()
@@ -436,7 +436,7 @@ extension CPUEngine: EngineTypeV2 {
     
     @inline(__always)
     @_specialize(where N == Float, Context == Int32)
-    private static func reducePrefixWithContext<N, Context>(
+    private static func reducePrefixWithContext<N: NumericType, Context: NumericType>(
         values: ShapedBuffer<N, CPU>,
         result: ShapedBuffer<N, CPU>,
         context: ShapedBuffer<Context, CPU>,
@@ -460,21 +460,20 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func matMul<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func matMul<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.matMul(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, lhsRows: lhs.shape[0], lhsCols: lhs.shape[1], rhsCols: rhs.shape[1])
     }
     
     @_specialize(where N == Float)
-    public static func matMulAdd<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func matMulAdd<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         matMul(lhs: lhs, rhs: rhs, result: result)
         broadcastAdd(lhs: result, rhs: add, result: result)
     }
     
     @_specialize(where N == Float)
-    public static func broadcastAdd<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func broadcastAdd<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         broadcast(
-            lhs:
-            lhs,
+            lhs: lhs,
             rhs: rhs,
             result: result,
             operator: N.vAdd,
@@ -484,7 +483,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func broadcastSub<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func broadcastSub<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         broadcast(
             lhs: lhs,
             rhs: rhs,
@@ -499,7 +498,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func broadcastMul<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func broadcastMul<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         broadcast(
             lhs: lhs,
             rhs: rhs,
@@ -511,7 +510,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func broadcastDiv<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func broadcastDiv<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         broadcast(
             lhs: lhs,
             rhs: rhs,
@@ -523,7 +522,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func reduceSum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
+    public static func reduceSum<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
         // Choose the operation that performs better
         if axis == 0 && result.shape.reduce(1, *) > 1 {
             reducePrefix(values: values, result: result, reduceColumns: N.vAdd)
@@ -538,7 +537,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func reduceMax<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axis: Int) where N : NumericType {
+    public static func reduceMax<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axis: Int) {
         if let context = context {
             reduceWithContext(
                 values: values,
@@ -564,7 +563,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func reduceMin<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axis: Int) where N : NumericType {
+    public static func reduceMin<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axis: Int) {
         if let context = context {
             reduceWithContext(
                 values: values,
@@ -590,14 +589,14 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func reduceMean<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
+    public static func reduceMean<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
         reduceSum(values: values, result: result, axis: axis)
         let axisCount = values.shape[axis]
         N.vsMul(lhs: result.immutable, rhs: 1 / N(axisCount), result: result.pointer, count: result.count)
     }
     
     @_specialize(where N == Float)
-    public static func reduceSum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) where N : NumericType {
+    public static func reduceSum<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) {
         if axes.elementsEqual(0 ..< axes.count) && result.shape.reduce(1, *) > 1 {
             reducePrefix(
                 values: values,
@@ -616,14 +615,14 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func reduceMean<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) where N : NumericType {
+    public static func reduceMean<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) {
         reduceSum(values: values, result: result, axes: axes)
         let axisCount = axes.map {values.shape[$0]}.reduce(1, *)
         N.vsMul(lhs: result.immutable, rhs: 1 / N(axisCount), result: result.pointer, count: result.count)
     }
     
     @_specialize(where N == Float)
-    public static func reduceMax<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) where N : NumericType {
+    public static func reduceMax<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) {
         if let context = context {
             reduceMultiAxisWithContext(
                 values: values,
@@ -643,7 +642,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func reduceMin<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) where N : NumericType {
+    public static func reduceMin<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, axes: [Int]) {
         if let context = context {
             reduceMultiAxisWithContext(
                 values: values,
@@ -662,7 +661,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func expandContext<N>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
+    public static func expandContext<N>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
         let srcStrides = CPUMemoryOperators.strides(from: reduced.shape)
         var dstStrides = CPUMemoryOperators.strides(from: result.shape)
         let axisStride = dstStrides.remove(at: axis)
@@ -689,18 +688,18 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func sum<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func sum<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         result.values.pointee = N.sum(val: values.immutable, count: values.count)
     }
     
     @_specialize(where N == Float)
-    public static func mean<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func mean<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         result.values.pointee = N.sum(val: values.immutable, count: values.count) / N(values.count)
     }
     
     @discardableResult
     @_specialize(where N == Float)
-    public static func max<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) -> Int where N : NumericType {
+    public static func max<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) -> Int {
         let (arg, max) = N.argmax(values: values.immutable, count: values.count)
         result.values.pointee = max
         return arg
@@ -708,33 +707,33 @@ extension CPUEngine: EngineTypeV2 {
     
     @discardableResult
     @_specialize(where N == Float)
-    public static func min<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) -> Int where N : NumericType {
+    public static func min<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) -> Int {
         let (arg, min) = N.argmin(values: values.immutable, count: values.count)
         result.values.pointee = min
         return arg
     }
     
-    public static func exp<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func exp<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.exp(val: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func log<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func log<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.log(val: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func sqrt<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func sqrt<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.sqrt(val: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func square<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func square<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.vSquare(values: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func relu<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func relu<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.relu(val: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func heaviside<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func heaviside<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         let srcPtr = values.pointer.pointer(capacity: result.count)
         let dstPtr = result.pointer.pointer(capacity: result.count)
         
@@ -743,31 +742,31 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func sin<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func sin<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.sin(values: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func cos<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func cos<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.cos(values: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func tan<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func tan<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.tan(values: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func sinh<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func sinh<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func cosh<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func cosh<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func tanh<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func tanh<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.tanh(val: values.immutable, result: result.pointer, count: result.count)
     }
     
-    public static func permuteAxes<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) where N : NumericType {
+    public static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) {
         let dim = values.dim
         
         if dim == 2 && arangement == [1, 0] {
@@ -803,7 +802,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func permuteAxesAdd<N>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) where N : NumericType {
+    public static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) {
         let sourceMem = values.immutable
         let addMem = add.immutable
         let dstMem = result.pointer
@@ -831,11 +830,11 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func arange<N: NumericType>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, CPU>) {
         N.arange(start: lowerBound, end: upperBound, result: result.pointer, count: result.count)
     }
     
-    public static func subscriptRead<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) where N : NumericType {
+    public static func subscriptRead<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) {
         let (buffer, isCopy, bufferShape) = CPU.Memory.get(slice: index, of: values.values, with: values.shape)
         
         result.pointer.assign(from: buffer.immutable, count: bufferShape.reduce(1, *))
@@ -845,19 +844,19 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func subscriptWrite<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) where N : NumericType {
+    public static func subscriptWrite<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func subscriptReadAdd<N>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) where N : NumericType {
+    public static func subscriptReadAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func subscriptWriteAdd<N>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) where N : NumericType {
+    public static func subscriptWriteAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [Int?]) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func stack<N>(buffers: [ShapedBuffer<N, CPU>], result: ShapedBuffer<N, CPU>, axis: Int) where N : NumericType {
+    public static func stack<N>(buffers: [ShapedBuffer<N, CPU>], result: ShapedBuffer<N, CPU>, axis: Int) {
         var offset = 0
         
         let dstPtr = result.pointer.pointer(capacity: buffers.map {$0.count}.reduce(0, +))
@@ -887,7 +886,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func unstackAdd<N>(stacked: ShapedBuffer<N, CPU>, add: [ShapedBuffer<N, CPU>], result: [ShapedBuffer<N, CPU>], axis: Int) {
+    public static func unstackAdd<N: NumericType>(stacked: ShapedBuffer<N, CPU>, add: [ShapedBuffer<N, CPU>], result: [ShapedBuffer<N, CPU>], axis: Int) {
         var offset = 0
         
         let srcPtr = stacked.immutable
@@ -918,7 +917,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func reverse<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func reverse<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         precondition(values.shape == result.shape)
         
         let stride = CPU.Memory.strides(from: values.shape)[0]
@@ -934,7 +933,7 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func reverseAdd<N>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+    public static func reverseAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         precondition(values.shape == result.shape && values.shape == add.shape)
         
         let stride = CPU.Memory.strides(from: values.shape)[0]
@@ -956,7 +955,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func img2col<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
+    public static func img2col<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(values.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
         
         let batchSize = values.shape[0]
@@ -1028,7 +1027,7 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func col2img<N>(matrix: ShapedBuffer<N, CPU>, image: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
+    public static func col2img<N: NumericType>(matrix: ShapedBuffer<N, CPU>, image: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(image.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
         
         let batchSize = image.shape[0]
@@ -1058,7 +1057,8 @@ extension CPUEngine: EngineTypeV2 {
         // let patchesPerFeatureMap = patchesPerKernel * kernelCount
         
         // Zero fill image
-        N.fill(value: 0, result: image.pointer, count: image.count)
+        //N.fill(value: 0, result: image.pointer, count: image.count)
+        image.pointer.assign(repeating: 0)
         
         var rowBuffer = [Int](repeating: 0, count: rows)
         var colBuffer = [Int](repeating: 0, count: rows)
@@ -1097,56 +1097,27 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    
-    public static func conv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, padding: Int, stride: Int) where N : NumericType  {
-        let tmp = CPU.Memory.allocateBuffer(
-            withShape: [
-                filters.shape[1] * filters.shape[2] * filters.shape[3],
-                result.count / filters.shape[0]
-            ],
-            type: N.self
-        )
-        let tmpResult = CPU.Memory.allocateBuffer(
-            withShape: [filters.shape[0], result.count / filters.shape[0]],
-            type: N.self
-        )
-        defer {
-            CPU.Memory.free(tmp)
-            CPU.Memory.free(tmpResult)
-        }
-        
-        img2col(values: values, result: tmp, kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
-        matMul(
-            lhs: filters.reshaped(to: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]]),
-            rhs: tmp,
-            result: tmpResult
-        )
-        // result layout: [num-filters, num-patches]
-        // target: [batch-size, num-filters, height, width]
-        permuteAxes(values: tmpResult.reshaped(to: [result.shape[1], result.shape[0], result.shape[2], result.shape[3]]), result: result, arangement: [1, 0, 2, 3])
-    }
-    
-    public static func revConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func revConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func kernelGradConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func kernelGradConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func maxPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func maxPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func avgPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func avgPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func revMaxPool2D<N>(values: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func revMaxPool2D<N>(values: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
     
-    public static func revAvgPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) where N : NumericType {
+    public static func revAvgPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
         fatalError("\(#function) is not implemented for type \(self)")
     }
 }

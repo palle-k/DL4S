@@ -156,7 +156,7 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     
     
     public func output(for state: (h: Tensor<Element, Device>, c: Tensor<Element, Device>)) -> Tensor<Element, Device> {
-        return stack(state.c.unsqueeze(at: 0), state.h.unsqueeze(at: 0), axis: 0) // [2, batchSize, hiddenSize]
+        return stack(state.c.unsqueeze(at: 1), state.h.unsqueeze(at: 1), axis: 1) // [batchSize, 2, hiddenSize]
     }
     
     
