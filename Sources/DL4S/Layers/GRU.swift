@@ -112,19 +112,21 @@ public class GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     }
     
     
-    public func step(x: Tensor<Element, Device>, state: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        let x_t = x
-        let h_p = state.view(as: x.shape[0], hiddenSize)
+    public func step(preparedInputs: [Tensor<Element, Device>], state: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        let x_z = preparedInputs[0]
+        let x_r = preparedInputs[1]
+        let x_h = preparedInputs[2]
         
-        let z_t = sigmoid(mmul(x_t, W_z) + mmul(h_p, U_z) + b_z)
-        let r_t = sigmoid(mmul(x_t, W_r) + mmul(h_p, U_r) + b_r)
+        let h_p = state.view(as: x_z.shape[0], hiddenSize)
+        
+        let z_t = sigmoid(x_z + mmul(h_p, U_z))
+        let r_t = sigmoid(x_r + mmul(h_p, U_r))
         
         let h_t_partial_1 = (1 - z_t) * h_p
-        let h_t_partial_2 = tanh(mmul(x_t, W_h) + mmul(r_t * h_p, U_h) + b_h)
+        let h_t_partial_2 = tanh(x_h + mmul(r_t * h_p, U_h))
         
         let h_t = h_t_partial_1 + z_t * h_t_partial_2
         
-        //hiddenStates.append(h_t.unsqueeze(at: 0))
         return h_t
     }
     
@@ -141,6 +143,18 @@ public class GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
         } else {
             return inputs[1]
         }
+    }
+    
+    
+    public func prepare(input: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
+        let seqlen = input.shape[0]
+        let batchSize = input.shape[1]
+        
+        return [
+            input.view(as: seqlen * batchSize, inputSize).mmul(W_z).view(as: seqlen, batchSize, hiddenSize) + b_z,
+            input.view(as: seqlen * batchSize, inputSize).mmul(W_r).view(as: seqlen, batchSize, hiddenSize) + b_r,
+            input.view(as: seqlen * batchSize, inputSize).mmul(W_h).view(as: seqlen, batchSize, hiddenSize) + b_h
+        ]
     }
     
     

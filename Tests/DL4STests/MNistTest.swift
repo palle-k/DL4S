@@ -165,15 +165,34 @@ class MNistTest: XCTestCase {
     func testMNistConvnet() {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
+        /*
+         With Layer Norm:
+         [10/10000] loss: 1.8275247
+         [100/10000] loss: 0.30241546
+         
+         [10/10000] loss: 1.9961276
+         [100/10000] loss: 0.35611022
+         
+         Without:
+         [10/10000] loss: 2.0360816
+         [100/10000] loss: 0.3532066
+         
+         [10/10000] loss: 2.1360865
+         [100/10000] loss: 0.37744054
+        */
+        
         let model = Sequential<Float, CPU>(
             Conv2D(inputChannels: 1, outputChannels: 6, kernelSize: 5, padding: 0).asAny(), // 4x24x24
+            LayerNorm(inputSize: [4, 24, 24]).asAny(),
             Relu().asAny(),
             MaxPool2D(windowSize: 2, stride: 2).asAny(), // 4x12x12
             Conv2D(inputChannels: 6, outputChannels: 16, kernelSize: 5, padding: 0).asAny(), // 16x8x8
+            LayerNorm(inputSize: [16, 8, 8]).asAny(),
             Relu().asAny(),
             MaxPool2D(windowSize: 2, stride: 2).asAny(), // 16x4x4
             Flatten().asAny(), // 256
             Dense(inputFeatures: 256, outputFeatures: 120).asAny(),
+            LayerNorm(inputSize: [120]).asAny(),
             Relu().asAny(),
             Dense(inputFeatures: 120, outputFeatures: 10).asAny(),
             Softmax().asAny()
@@ -345,7 +364,7 @@ class MNistTest: XCTestCase {
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
         let model = Sequential<Float, CPU>(
-            BidirectionalRNN(forwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .forward), backwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .backward)).asAny(),
+            Bidirectional(forwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .forward), backwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .backward)).asAny(),
             Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
             Softmax().asAny()
         )

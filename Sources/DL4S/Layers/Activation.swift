@@ -151,10 +151,7 @@ public class Softmax<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         precondition(inputs.count == 1)
         // TODO: Normalize inputs to make exp more stable
-        let norm = inputs[0] - max(inputs[0]).detached()
-        let e = exp(norm)
-        let s = sum(e, axes: [1])
-        return (e.T / s).T
+        return inputs[0].softmax()
     }
 }
 

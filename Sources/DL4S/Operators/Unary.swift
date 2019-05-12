@@ -299,7 +299,13 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
     return relu(vector) - Tensor(leakage) * relu(-vector)
 }
 
-
+public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
+    // Subtracting max(tensor) does not alter softmax result but makes it more numerically stable.
+    let norm = tensor - max(tensor.detached())
+    let e = exp(norm)
+    let s = sum(e, axes: [axis]).unsqueeze(at: axis)
+    return e / s
+}
 
 public extension Tensor {
     func exp() -> Tensor<Element, Device> {
@@ -356,5 +362,9 @@ public extension Tensor {
     
     func leakyRelu(_ leak: Element) -> Tensor<Element, Device> {
         return DL4S.leakyRelu(self, leakage: leak)
+    }
+    
+    func softmax(axis: Int = 1) -> Tensor<Element, Device> {
+        return DL4S.softmax(self, axis: axis)
     }
 }

@@ -1,5 +1,5 @@
 //
-//  BidirectionalRNN.swift
+//  Bidirectional.swift
 //  DL4S
 //
 //  Created by Palle Klewitz on 27.04.19.
@@ -25,13 +25,20 @@
 
 import Foundation
 
+@available(*, renamed: "Bidirectional")
+public typealias BidirectionalRNN<RNNLayer: RNN> = Bidirectional<RNNLayer>
+
 /// Bidirectional RNN implementation
 /// 
 /// Combines two RNNs, one for forward, one for backwards into a single RNN
 /// and fuses the resulting states together.
-public class BidirectionalRNN<Element: RandomizableType, Device, RNNLayer: RNN>: Layer where RNNLayer.Input == Element, RNNLayer.Element == Element, RNNLayer.Device == Device {
+public class Bidirectional<RNNLayer: RNN>: Layer {
     public let forwardLayer: RNNLayer
     public let backwardLayer: RNNLayer
+    
+    public typealias Element = RNNLayer.Element
+    public typealias Input = RNNLayer.Input
+    public typealias Device = RNNLayer.Device
     
     public var isTrainable: Bool {
         get {
@@ -59,7 +66,7 @@ public class BidirectionalRNN<Element: RandomizableType, Device, RNNLayer: RNN>:
         self.backwardLayer = backwardLayer
     }
     
-    public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
+    public func forward(_ inputs: [Tensor<Input, Device>]) -> Tensor<Element, Device> {
         let x = inputs[0]
         
         let forwardResult = forwardLayer.forward(x)

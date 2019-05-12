@@ -39,25 +39,26 @@ public protocol RNN: Layer {
     var direction: RNNDirection { get }
     
     func createInitialState(fromLayerInputs inputs: [Tensor<Element, Device>]) -> State
-    func step(x: Tensor<Element, Device>, state: State) -> State
+    func step(preparedInputs: [Tensor<Element, Device>], state: State) -> State
     func output(for state: State) -> Tensor<Element, Device>
+    func prepare(input: Tensor<Element, Device>) -> [Tensor<Element, Device>]
 }
 
 
 public extension RNN {
     func process(_ inputs: [Tensor<Element, Device>]) -> ([Tensor<Element, Device>], State) {
         precondition([1, 3].contains(inputs.count))
-        let x = inputs[0]
-        let seqlen = x.shape[0]
+        let x = prepare(input: inputs[0])
+        let seqlen = inputs[0].shape[0]
         
         var state = createInitialState(fromLayerInputs: inputs)
         
         var outputSequence: [Tensor<Element, Device>] = []
         
         for i in 0 ..< seqlen {
-            let x_t = x[direction == .forward ? i : (seqlen - i - 1)]
+            let x_t = x.map {$0[direction == .forward ? i : (seqlen - i - 1)]}
             
-            state = step(x: x_t, state: state)
+            state = step(preparedInputs: x_t, state: state)
             
             outputSequence.append(output(for: state).unsqueeze(at: 0))
         }
@@ -68,6 +69,14 @@ public extension RNN {
         
         return (outputSequence, state)
     }
+    
+    func prepare(input: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
+        return [input]
+    }
+    
+//    func process(_ inputs: PackedSequence<Element, Device>) -> PackedSequence<Element, Device> {
+//        fatalError()
+//    }
     
     
     /// Forwards the given input sequence through the LSTM.
@@ -103,7 +112,9 @@ public extension RNN {
             return output(for: state)
         }
     }
+    
+    func step(x: [Tensor<Element, Device>], state: State) -> State {
+        return step(preparedInputs: prepare(input: x[0]), state: state)
+    }
 }
-
-
 

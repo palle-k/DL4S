@@ -65,6 +65,7 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     /// Indicates whether the LSTM should return its full state sequence or only the last hidden state
     public let shouldReturnFullSequence: Bool
     
+    
     public var parameters: [Tensor<Element, Device>] {
         return [
             W_i, U_i, b_i,
@@ -130,26 +131,45 @@ public class LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     }
     
     
-    public func step(x: Tensor<Element, Device>, state: (h: Tensor<Element, Device>, c: Tensor<Element, Device>)) -> (h: Tensor<Element, Device>, c: Tensor<Element, Device>) {
-        let x_t = x
+    public func step(preparedInputs: [Tensor<Element, Device>], state: (h: Tensor<Element, Device>, c: Tensor<Element, Device>)) -> (h: Tensor<Element, Device>, c: Tensor<Element, Device>) {
+        //let x_t = x[0]
+        let x_f = preparedInputs[0]
+        let x_i = preparedInputs[1]
+        let x_o = preparedInputs[2]
+        let x_c = preparedInputs[3]
+        
         let h_p = state.h
         let c_p = state.c
         
         // TODO: Unify W_* matrics, U_* matrices and b_* vectors, perform just two matrix multiplications and one addition, then select slices
-        let f_t = sigmoid(mmul(x_t, W_f) + mmul(h_p, U_f) + b_f)
-        let i_t = sigmoid(mmul(x_t, W_i) + mmul(h_p, U_i) + b_i)
-        let o_t = sigmoid(mmul(x_t, W_o) + mmul(h_p, U_o) + b_o)
+        let f_t = sigmoid(x_f + mmul(h_p, U_f))
+        let i_t = sigmoid(x_i + mmul(h_p, U_i))
+        let o_t = sigmoid(x_o + mmul(h_p, U_o))
         
         let c_t_partial_1 = f_t * c_p + i_t
-        let c_t_partial_2 = tanh(mmul(x_t, W_c) + mmul(h_p, U_c) + b_c)
+        let c_t_partial_2 = tanh(x_c + mmul(h_p, U_c))
         let c_t = c_t_partial_1 * c_t_partial_2
         let h_t = o_t * tanh(c_t)
         
         return (h_t, c_t)
     }
     
+    
     public func output(for state: (h: Tensor<Element, Device>, c: Tensor<Element, Device>)) -> Tensor<Element, Device> {
-        return state.h
+        return stack(state.c.unsqueeze(at: 0), state.h.unsqueeze(at: 0), axis: 0) // [2, batchSize, hiddenSize]
+    }
+    
+    
+    public func prepare(input: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
+        let seqlen = input.shape[0]
+        let batchSize = input.shape[1]
+        
+        return [
+            mmul(input.view(as: seqlen * batchSize, inputSize), W_f).view(as: seqlen, batchSize, hiddenSize) + b_f,
+            mmul(input.view(as: seqlen * batchSize, inputSize), W_i).view(as: seqlen, batchSize, hiddenSize) + b_i,
+            mmul(input.view(as: seqlen * batchSize, inputSize), W_o).view(as: seqlen, batchSize, hiddenSize) + b_o,
+            mmul(input.view(as: seqlen * batchSize, inputSize), W_c).view(as: seqlen, batchSize, hiddenSize) + b_c
+        ]
     }
     
     
