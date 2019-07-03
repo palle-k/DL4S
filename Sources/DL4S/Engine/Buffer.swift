@@ -26,7 +26,7 @@
 import Foundation
 
 
-public struct Buffer<Element: NumericType, Device: DeviceType>: Hashable {
+public struct Buffer<Element, Device: DeviceType>: Hashable {
     let memory: Device.Memory.RawBuffer
     
     var count: Int {
@@ -39,7 +39,7 @@ public struct Buffer<Element: NumericType, Device: DeviceType>: Hashable {
         }
         
         nonmutating set (newValue) {
-            Device.Engine.fill(value: newValue, result: self, count: 1)
+            Device.Memory.setPointee(of: self, to: newValue)
         }
     }
     
@@ -80,7 +80,7 @@ extension Buffer: CustomLeafReflectable {
     }
 }
 
-public struct ShapedBuffer<Element: NumericType, Device: DeviceType>: Hashable {
+public struct ShapedBuffer<Element, Device: DeviceType>: Hashable {
     var shape: [Int]
     var values: Buffer<Element, Device>
     
@@ -116,7 +116,7 @@ extension Buffer: CustomStringConvertible {
 
 extension ShapedBuffer: CustomStringConvertible {
     public var description: String {
-        return "ShapedBuffer(\(generateDescription()))"
+        return generateDescription()
     }
     
     func generateDescription() -> String {

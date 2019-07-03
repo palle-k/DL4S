@@ -27,21 +27,25 @@ import Foundation
 
 
 public class PackedSequence<Element: NumericType, Device: DeviceType> {
-    let tensor: Tensor<Element, Device>
-    let lengths: [Int]
-    let offsets: [Int]
+    public let storage: Tensor<Element, Device>
+    public let lengths: [Int]
+    public let offsets: [Int]
     
     public var tensors: [Tensor<Element, Device>] {
         return zip(offsets, lengths).map { offset, length in
-            tensor[offset ..< (offset + length)]
+            storage[offset ..< (offset + length)]
         }
+    }
+    
+    public var batchSize: Int {
+        return lengths.count
     }
     
     public init(from tensor: Tensor<Element, Device>, withLengths lengths: [Int]) {
         precondition(tensor.dim >= 1, "Tensor must be at least 1-dimensional")
         precondition(lengths.reduce(0, +) == tensor.shape[0], "Length of packed sequences must sum up to tensor shape[0]")
         
-        self.tensor = tensor
+        self.storage = tensor
         self.lengths = lengths
         self.offsets = lengths
             .reduce(into: [0], {$0.append($0.last! + $1)})
@@ -49,7 +53,7 @@ public class PackedSequence<Element: NumericType, Device: DeviceType> {
     }
     
     public init(of tensors: [Tensor<Element, Device>]) {
-        self.tensor = stack(tensors)
+        self.storage = stack(tensors)
         self.lengths = tensors.map {$0.shape[0]}
         self.offsets = lengths
             .reduce(into: [0], {$0.append($0.last! + $1)})
@@ -62,7 +66,14 @@ public class PackedSequence<Element: NumericType, Device: DeviceType> {
             .map {$0.0}
         
         return stack(availableTensorOffsets.map { offset in
-            self.tensor[offset + index].unsqueeze(at: 0)
+            self.storage[offset + index].unsqueeze(at: 0)
         })
+    }
+    
+    public func availableSequences(at index: Int) -> [Int] {
+        return lengths
+            .enumerated()
+            .filter {$1 > index}
+            .map {$0.offset}
     }
 }

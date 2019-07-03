@@ -75,7 +75,32 @@ public extension RNN {
     }
     
 //    func process(_ inputs: PackedSequence<Element, Device>) -> PackedSequence<Element, Device> {
-//        fatalError()
+//        guard let maxLength = inputs.lengths.max() else {
+//            // As inputs is empty at this point, it can be returned as the result instead of allocating a new empty packed sequence.
+//            return inputs
+//        }
+//        let x = self.prepare(input: inputs.storage).map {
+//            PackedSequence(from: $0, withLengths: inputs.lengths)
+//        }
+//        let batchSizePlaceholder = Tensor<Element, Device>(repeating: 0, shape: 0, inputs.batchSize)
+//        var state = createInitialState(fromLayerInputs: [batchSizePlaceholder])
+//        
+//        var outputSequence: [Tensor<Element, Device>] = []
+//        
+//        for i in 0 ..< maxLength {
+//            let x_t = x.map {$0[direction == .forward ? i : (maxLength - i - 1)]}
+//            
+//            
+//            
+//            state = step(preparedInputs: x_t, state: state)
+//            outputSequence.append(output(for: state))
+//        }
+//        
+//        if direction == .backward {
+//            outputSequence.reverse()
+//        }
+//        
+//        fatalError("TODO")
 //    }
     
     

@@ -26,7 +26,11 @@
 import Foundation
 import Accelerate
 
-public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral, Codable, Comparable {
+public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
+    static var zero: Self { get }
+}
+
+public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable {
     func format(maxDecimals: Int) -> String
     
     init(_ floatValue: Double)

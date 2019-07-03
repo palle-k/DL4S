@@ -44,7 +44,7 @@ public struct VRAMAllocator: MemoryOperatorsType {
     public typealias RawBuffer = VRAMBuffer
     public typealias Device = GPU
     
-    public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> Buffer<Element, GPU> where Element : NumericType {
+    public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> Buffer<Element, GPU> {
         let stride = MemoryLayout<Element>.stride
         guard let buffer = Device.device.makeBuffer(length: stride * capacity, options: .storageModePrivate) else {
             fatalError("Could not allocate memory")
@@ -53,58 +53,62 @@ public struct VRAMAllocator: MemoryOperatorsType {
         return Buffer<Element, GPU>(memory: VRAMBuffer(buffer: buffer, offset: 0))
     }
     
-    public static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, GPU> where Element : NumericType {
+    public static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, GPU> {
         let count = shape.reduce(1, *)
         return ShapedBuffer(values: allocateBuffer(withCapacity: count, type: Element.self), shape: shape)
     }
     
-    public static func free<Element>(_ buffer: Buffer<Element, GPU>) where Element : NumericType {
+    public static func free<Element>(_ buffer: Buffer<Element, GPU>) {
         // Noop, MTLBuffer is reference counted
     }
     
-    public static func free<Element>(_ buffer: ShapedBuffer<Element, GPU>) where Element : NumericType {
+    public static func free<Element>(_ buffer: ShapedBuffer<Element, GPU>) {
         // Noop, MTLBuffer is reference counted
     }
     
     
-    public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, GPU>, count: Int) where Element : NumericType {
+    public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, GPU>, count: Int) {
         // TODO
         fatalError("TODO")
     }
     
-    public static func assign<Element>(from source: Buffer<Element, GPU>, to destination: Buffer<Element, GPU>, count: Int) where Element : NumericType {
+    public static func assign<Element>(from source: Buffer<Element, GPU>, to destination: Buffer<Element, GPU>, count: Int) {
         fatalError("TODO")
     }
     
-    public static func assign<Element>(from source: Buffer<Element, GPU>, to destination: UnsafeMutableBufferPointer<Element>, count: Int) where Element : NumericType {
+    public static func assign<Element>(from source: Buffer<Element, GPU>, to destination: UnsafeMutableBufferPointer<Element>, count: Int) {
         fatalError("TODO")
     }
     
-    public static func getValue<Element>(from source: Buffer<Element, GPU>) -> Element where Element : NumericType {
+    public static func getValue<Element>(from source: Buffer<Element, GPU>) -> Element {
         fatalError("TODO")
     }
     
-    public static func getSize<Element>(of buffer: Buffer<Element, GPU>) -> Int where Element : NumericType {
+    public static func getSize<Element>(of buffer: Buffer<Element, GPU>) -> Int {
         fatalError("TODO")
     }
     
-    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> (Buffer<Element, GPU>, Bool, [Int]) where Element : NumericType {
+    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> (Buffer<Element, GPU>, Bool, [Int]) {
         fatalError("TODO")
     }
     
-    public static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> (Buffer<Element, GPU>, Bool, [Int]) where Element : NumericType {
+    public static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> (Buffer<Element, GPU>, Bool, [Int]) {
         fatalError("TODO")
     }
     
-    public static func set<Element>(slice: [Int?], of buffer: Buffer<Element, GPU>, with dstShape: [Int], from source: Buffer<Element, GPU>, with sourceShape: [Int]) where Element : NumericType {
+    public static func set<Element>(slice: [Int?], of buffer: Buffer<Element, GPU>, with dstShape: [Int], from source: Buffer<Element, GPU>, with sourceShape: [Int]) {
         fatalError("TODO")
     }
     
-    public static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, GPU>, with dstShape: [Int], from source: Buffer<Element, GPU>, with sourceShape: [Int]) where Element : NumericType {
+    public static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, GPU>, with dstShape: [Int], from source: Buffer<Element, GPU>, with sourceShape: [Int]) {
         fatalError("TODO")
     }
     
-    public static func advance<Element>(buffer: Buffer<Element, GPU>, by advancement: Int) -> Buffer<Element, GPU> where Element : NumericType {
+    public static func advance<Element>(buffer: Buffer<Element, GPU>, by advancement: Int) -> Buffer<Element, GPU> {
+        fatalError("TODO")
+    }
+    
+    public static func setPointee<Element>(of buffer: Buffer<Element, GPU>, to newValue: Element) {
         fatalError("TODO")
     }
 }
@@ -112,7 +116,7 @@ public struct VRAMAllocator: MemoryOperatorsType {
 public struct GPUEngine: EngineType {
     public typealias Device = GPU
     
-    public static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int) {
+    public static func fill<N>(value: N, result: Buffer<N, Device>, count: Int) {
         fatalError("\(#function) not available for GPU")
     }
     
@@ -314,7 +318,7 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func expandContext<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+    public static func expandContext<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) {
         fatalError("\(#function) not available for GPU")
     }
     
@@ -346,7 +350,7 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func permuteAxes<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, arangement: [Int]) where N : NumericType {
+    public static func permuteAxes<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, arangement: [Int]) where N: NumericType {
         fatalError("\(#function) not available for GPU")
     }
     
@@ -354,11 +358,11 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func subscriptRead<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
+    public static func subscriptRead<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func subscriptWrite<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
+    public static func subscriptWrite<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) {
         fatalError("\(#function) not available for GPU")
     }
     
@@ -370,7 +374,7 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func reverse<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+    public static func reverse<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) {
         fatalError("\(#function) not available for GPU")
     }
     
@@ -378,7 +382,7 @@ extension GPUEngine: EngineTypeV2 {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func stack<N>(buffers: [ShapedBuffer<N, GPU>], result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+    public static func stack<N>(buffers: [ShapedBuffer<N, GPU>], result: ShapedBuffer<N, GPU>, axis: Int) {
         fatalError("\(#function) not available for GPU")
     }
     
