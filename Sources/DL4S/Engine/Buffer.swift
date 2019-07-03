@@ -116,7 +116,7 @@ extension Buffer: CustomStringConvertible {
 
 extension ShapedBuffer: CustomStringConvertible {
     public var description: String {
-        return "ShapedBuffer(\(generateDescription()))"
+        return generateDescription()
     }
     
     func generateDescription() -> String {

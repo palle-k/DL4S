@@ -64,13 +64,13 @@ public enum Random {
     
     public static func fillNormal<Element: RandomizableType, Device>(_ vector: Tensor<Element, Device>, mean: Element = 0, stdev: Element = 1) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
-        for i in stride(from: 0, to: vector.count, by: 2) {
+        for i in stride(from: 0, to: vector.count - 1, by: 2) {
             let (a, b) = randNormal(stdev: stdev, mean: mean)
             buffer[i] = a
             buffer[i+1] = b
         }
         
-        if vector.count % 2 == 1 {
+        if vector.count % 2 == 0 {
             let (a, _) = randNormal(stdev: stdev, mean: mean)
             buffer[vector.count-1] = a
         }

@@ -47,8 +47,8 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
     public init(inputFeatures: Int, outputSize: Int) {
         self.inputFeatures = inputFeatures
         self.outputSize = outputSize
-        self.embeddingMatrix = Tensor<Element, Device>(repeating: 0, shape: [inputFeatures, outputSize])
-        
+        self.embeddingMatrix = Tensor<Element, Device>(repeating: 0, shape: [inputFeatures, outputSize], requiresGradient: true)
+        self.embeddingMatrix.tag = "W"
         Random.fillNormal(embeddingMatrix, mean: 0, stdev: (2 / Element(outputSize)).sqrt())
     }
     
@@ -128,6 +128,7 @@ public class Embedding<Element: RandomizableType, Device: DeviceType>: Layer, Co
             }
         )
         self.embeddingMatrix.requiresGradient = true
+        self.embeddingMatrix.tag = "W"
         self.inputFeatures = words.count
         self.outputSize = shape
     }

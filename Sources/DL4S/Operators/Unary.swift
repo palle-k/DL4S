@@ -301,7 +301,13 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
 
 public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
     // Subtracting max(tensor) does not alter softmax result but makes it more numerically stable.
-    let norm = tensor - max(tensor.detached())
+    let d = tensor.detached()
+    
+    #if DEBUG
+    d.tag = "softmax-numeric-stabilizer"
+    #endif
+    
+    let norm = tensor - max(d)
     let e = exp(norm)
     let s = sum(e, axes: [axis]).unsqueeze(at: axis)
     return e / s
