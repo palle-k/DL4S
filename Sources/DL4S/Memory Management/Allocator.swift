@@ -131,13 +131,11 @@ enum CPUAllocator {
         rawBuffer.deallocate()
         usedCache -= capacity
         
-        return;
-        
-        if usedCache >= maxCache {
-            rawBuffer.deallocate()
-            usedCache -= capacity
-        } else {
-            freeBuffers[capacity, default: []].append(rawBuffer)
-        }
+//        if usedCache >= maxCache {
+//            rawBuffer.deallocate()
+//            usedCache -= capacity
+//        } else {
+//            freeBuffers[capacity, default: []].append(rawBuffer)
+//        }
     }
 }

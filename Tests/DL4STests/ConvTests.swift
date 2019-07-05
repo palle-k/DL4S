@@ -3,10 +3,28 @@
 //  DL4STests
 //
 //  Created by Palle Klewitz on 13.03.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import XCTest
-import DL4S
+@testable import DL4S
 import AppKit
 
 extension NSImage {
@@ -22,28 +40,56 @@ extension NSImage {
 }
 
 class ConvTests: XCTestCase {
-    func testConv() {
+    func testIm2col() {
+        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let c = `repeat`(a, count: 4)
+        let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
+        
+        print(d)
+        
+        let result = Tensor<Float, CPU>(repeating: 0, shape: 9, 64)
+        CPU.Engine.img2col(values: d.shapedValues, result: result.shapedValues, kernelWidth: 3, kernelHeight: 3, padding: 1, stride: 1)
+        print(result.permuted(to: 1, 0))
+    }
+    
+    func testConv1() {
+        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let c = `repeat`(a, count: 4)
+        let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
         let filters = Tensor<Float, CPU>([
+            [
+                [[1]]
+            ],
+            [
+                [[-1]]
+            ]
+        ])
+        
+        print(conv2d(images: d, filters: filters))
+    }
+    
+    func testConv() {
+        let filters = Tensor<Float, CPU>([
+            [
+                [[1, 2, 1],
+                 [2, 4, 2],
+                 [1, 2, 1]]
+            ],
             [
                 [[-1, 0, 1],
                 [-2, 0, 2],
                 [-1, 0, 1]]
-            ],
-            [
-                [[-1, -2, -1],
-                [0, 0, 0],
-                [1, 2, 1]]
             ]
-        ]) / 8
+        ]) / Tensor<Float, CPU>([16, 4]).view(as: -1, 1, 1, 1)
         
         print(filters.shape)
         
-        let ((images, _), _) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let ((images, _), _) = MNistTest.images(from: "/Users/Palle/Downloads/", maxCount: 32)
         
-        let batch = Random.minibatch(from: images, count: 16).unsqueeze(at: 1) // add depth dimension
+        let batch = Random.minibatch(from: images, count: 64).unsqueeze(at: 1) // add depth dimension
         
-        let filtered = conv2d(input: batch, kernel: filters)
+        let filtered = conv2d(images: batch, filters: filters)
         
         for i in 0 ..< batch.shape[0] {
             let src = batch[i]
@@ -53,9 +99,8 @@ class ConvTests: XCTestCase {
             try? srcImg?.save(to: "/Users/Palle/Desktop/conv/src_\(i).png")
             
             for j in 0 ..< dst.shape[0] {
-                let dstImg = NSImage(dst[i].unsqueeze(at: 0))
+                let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueeze(at: 0))
                 try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j).png")
-                
             }
         }
     }

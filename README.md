@@ -1,9 +1,12 @@
 # DL4S
 
-This package contains an implementation of reverse mode automatic differentiation, 
-vectorized implementations of common matrix and vector operators and high level neural network operations.
+[![CocoaPods](https://img.shields.io/cocoapods/v/DL4S.svg)](https://cocoapods.org/pods/DL4S)
+![CocoaPods](https://img.shields.io/cocoapods/p/DL4S.svg)
+[![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
 
-This project is a work in progress. While all the shown examples work, there are important things missing, such as GPU acceleration and convolution operators.
+This framework contains an implementation of reverse mode automatic differentiation,
+vectorized implementations of common matrix and vector operators and high level neural network operations,
+such as convolution, recurrent units, and more.
 
 ## Overview
 1. [Installation](#installation)
@@ -13,13 +16,26 @@ This project is a work in progress. While all the shown examples work, there are
     3. [Losses](#losses)
     4. [Tensor Operations](#tensor-operations)
     5. [Engines](#engines)
+    6. [Architectures](#architectures)
 3. [Examples](#examples)
-    1. [Feed Forward Network](#feed-forward-networks)
+    1. [Convolutional Networks](#convolutional-networks)
     2. [Recurrent Network (LSTM)](#recurrent-networks)
     3. [Generative Adversarial Network](#generative-adversarial-networks)
 
 
 ## Installation
+
+### CocoaPods
+
+```ruby
+target 'Your-App-Name' do
+    use_frameworks!
+    pod 'DL4S', '~> 0.1.0'
+end
+```
+
+
+### Swift Package Manager
 Add the dependency to your `Package.swift` file:
 
 ```swift
@@ -34,61 +50,133 @@ Then add `DL4S` as a dependency to your target:
 
 ## Features
 
-### Layers
+<details>
+<summary>
+Layers
+</summary>
+<p>
+
+- [x] Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
+- [x] Vanilla RNN
+- [x] Bidirectional RNNs
+- [x] Max Pooling
+- [x] Average Pooling
 - [x] Relu
 - [x] Tanh
 - [x] Sigmoid
 - [x] Softmax
 - [x] Embedding
-- [x] Batchnorm
+- [x] Batch Norm
+- [x] Layer Norm
 - [x] Lambda 
 - [x] Sequential
 - [x] Dropout
-- [ ] Convolution
-- [ ] Pooling
 
-### Optimizers
+</p>
+</details>
+
+<details>
+<summary>
+Optimizers
+</summary>
+<p>
+
 - [x] SGD
 - [x] Momentum
 - [x] Adam
-- [ ] AdaGrad
-- [ ] AdaDelta
-- [ ] RMSProp
+- [x] AdaGrad
+- [x] AdaDelta
+- [x] RMSProp
 
-### Losses
+</p>
+</details>
+
+<details>
+<summary>
+Losses
+</summary>
+<p>
+
 - [x] Binary Cross-Entropy
 - [x] Categorical Cross-Entropy
 - [x] MSE
 - [x] L1 & L2 regularization
 
-### Tensor Operations
-- [x] add
-- [x] sub
-- [x] mul 
-- [x] div
+</p>
+</details>
+
+<details>
+<summary>
+Tensor Operations
+</summary>
+<p>
+
+- [x] broadcast-add
+- [x] broadcast-sub
+- [x] broadcast-mul 
+- [x] broadcast-div
+- [x] matmul
 - [x] neg
 - [x] exp
+- [x] pow
 - [x] log
 - [x] sqrt
+- [x] sin
+- [x] cos
+- [x] tan
+- [x] tanh
+- [x] l1 norm
+- [x] l2 norm
+- [x] sum
+- [x] max
+- [x] relu
+- [x] leaky relu
+- [x] reduce sum
+- [x] reduce max
+- [x] conv2d
+- [x] max pool
+- [x] avg pool
 - [x] subscript
 - [x] subscript range
 - [x] transpose
 - [x] axis permute
-- [x] sum
-- [x] max
-- [x] reduce sum
-- [ ] reduce max
-- [ ] conv2d
-- [ ] max pool
-- [ ] avg pool
+- [x] reverse
+- [x] im2col
+- [x] col2im
+- [x] stack / concat
 
+</p>
+</details>
 
-### Engines
+<details>
+<summary>
+Engines
+</summary>
+<p>
+
 - [x] CPU (Accelerate framework)
 - [ ] GPU (Metal)
+
+</p>
+</details>
+
+<details>
+<summary>
+Architectures
+</summary>
+<p>
+
+Default implementations are provided for the following architectures:
+
+- [x] ResNet (currently only ResNet-18)
+- [x] VGG
+- [x] AlexNet
+
+</p>
+</details>
 
 
 ## Examples
@@ -114,18 +202,23 @@ print(a.gradientDescription!)
 */
 ```
 
-### Feed Forward Networks
+### Convolutional Networks
 
 Example for MNIST classification
 
 ```swift
+// Input must be 1x28x28
 let model = Sequential<Float, CPU>(
-    Flatten().asAny() // Flatten batchSize x 28 x 28 image to batchSize x 784 vector
-    Dense(inputFeatures: 784, outputFeatures: 500).asAny(),
+    Conv2D(inputChannels: 1, outputChannels: 6, kernelSize: 5, padding: 0).asAny(), // 4x24x24
     Relu().asAny(),
-    Dense(inputFeatures: 500, outputFeatures: 300).asAny(),
+    MaxPool2D(windowSize: 2, stride: 2).asAny(), // 4x12x12
+    Conv2D(inputChannels: 6, outputChannels: 16, kernelSize: 5, padding: 0).asAny(), // 16x8x8
     Relu().asAny(),
-    Dense(inputFeatures: 300, outputFeatures: 10).asAny(),
+    MaxPool2D(windowSize: 2, stride: 2).asAny(), // 16x4x4
+    Flatten().asAny(), // 256
+    Dense(inputFeatures: 256, outputFeatures: 120).asAny(),
+    Relu().asAny(),
+    Dense(inputFeatures: 120, outputFeatures: 10).asAny(),
     Softmax().asAny()
 )
 

@@ -26,7 +26,7 @@
 import Foundation
 
 
-public struct Buffer<Element: NumericType, Device: DeviceType>: Hashable {
+public struct Buffer<Element, Device: DeviceType>: Hashable {
     let memory: Device.Memory.RawBuffer
     
     var count: Int {
@@ -39,7 +39,7 @@ public struct Buffer<Element: NumericType, Device: DeviceType>: Hashable {
         }
         
         nonmutating set (newValue) {
-            Device.Engine.fill(value: newValue, result: self, count: 1)
+            Device.Memory.setPointee(of: self, to: newValue)
         }
     }
     
@@ -57,6 +57,17 @@ public struct Buffer<Element: NumericType, Device: DeviceType>: Hashable {
     }
 }
 
+extension Buffer {
+    var array: [Element] {
+        let b = UnsafeMutableBufferPointer<Element>.allocate(capacity: self.count)
+        defer {
+            b.deallocate()
+        }
+        Device.Memory.assign(from: self, to: b, count: self.count)
+        return Array(b)
+    }
+}
+
 extension Buffer: CustomLeafReflectable {
     public var customMirror: Mirror {
         let b = UnsafeMutableBufferPointer<Element>.allocate(capacity: self.count)
@@ -66,5 +77,65 @@ extension Buffer: CustomLeafReflectable {
         Device.Memory.assign(from: self, to: b, count: self.count)
         let a = Array(b)
         return Mirror(self, unlabeledChildren: a, displayStyle: .collection)
+    }
+}
+
+public struct ShapedBuffer<Element, Device: DeviceType>: Hashable {
+    var shape: [Int]
+    var values: Buffer<Element, Device>
+    
+    var dim: Int {
+        return shape.count
+    }
+    
+    var count: Int {
+        return values.count
+    }
+    
+    init(values: Buffer<Element, Device>, shape: [Int]) {
+        self.shape = shape
+        self.values = values
+    }
+    
+    func reshaped(to shape: [Int]) -> ShapedBuffer<Element, Device> {
+        precondition(shape.reduce(1, *) == self.shape.reduce(1, *))
+        
+        return ShapedBuffer(values: values, shape: shape)
+    }
+}
+
+extension Buffer: CustomStringConvertible {
+    public var description: String {
+        return "Buffer(\(generateDescription()))"
+    }
+    
+    func generateDescription() -> String {
+        return "[\(array.map {"\($0)"}.joined(separator: ", "))]"
+    }
+}
+
+extension ShapedBuffer: CustomStringConvertible {
+    public var description: String {
+        return generateDescription()
+    }
+    
+    func generateDescription() -> String {
+        if dim == 0 {
+            return "\(values.pointee)"
+        } else if dim == 1 {
+            let dim = self.shape[0]
+            return "[\((0 ..< dim).map {"\(values[$0])"}.joined(separator: ", "))]"
+        } else {
+            let firstDim = shape.first!
+            let restDim = Array(shape.dropFirst())
+            
+            let stride = restDim.reduce(1, *)
+            
+            let slices = (0 ..< firstDim).map {
+                ShapedBuffer(values: values.advanced(by: stride * $0), shape: restDim).generateDescription()
+            }
+            
+            return "[\(slices.joined(separator: "\n").replacingOccurrences(of: "\n", with: "\n "))]"
+        }
     }
 }

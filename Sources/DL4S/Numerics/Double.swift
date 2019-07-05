@@ -27,9 +27,40 @@ import Foundation
 import Accelerate
 
 
+let DefaultNumberFormatter: NumberFormatter = {
+    let f = NumberFormatter()
+    f.allowsFloats = true
+    f.minimumIntegerDigits = 1
+    f.minimumFractionDigits = 1
+    f.maximumFractionDigits = 3
+    
+    return f
+}()
+
+
 extension Double: NumericType {
+    public func format(maxDecimals: Int) -> String {
+        return String(format: "%.\(maxDecimals)f", self)
+    }
+    
     public func toUInt8() -> UInt8 {
         return UInt8(self)
+    }
+    
+    public func toInt() -> Int {
+        return Int(self)
+    }
+    
+    public var floatValue: Float {
+        return Float(self)
+    }
+    
+    public var doubleValue: Double {
+        return self
+    }
+    
+    public var intValue: Int32 {
+        return Int32(self)
     }
     
     public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, stride: Int, count: Int) {
@@ -122,6 +153,12 @@ extension Double: NumericType {
         return result
     }
     
+    public static func sum(val: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> Double {
+        var result: Double = 0
+        vDSP_sveD(val.pointer(capacity: count), stride, &result, UInt(count))
+        return result
+    }
+    
     public static func copysign(values: UnsafeBufferPointer<Double>, signs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         vvcopysign(result.pointer(capacity: count), values.pointer(capacity: count), signs.pointer(capacity: count), [Int32(count)])
     }
@@ -149,17 +186,17 @@ extension Double: NumericType {
             CblasRowMajor,
             transposeFirst ? CblasTrans : CblasNoTrans,
             transposeSecond ? CblasTrans : CblasNoTrans,
-            Int32(lhsShape.0), // rows in lhs
-            Int32(rhsShape.1), // columns in rhs
-            Int32(lhsShape.1), // columns in lhs and result
-            1, // Scale for product of lhs and rhs
+            Int32(resultShape.0),
+            Int32(resultShape.1),
+            Int32(transposeFirst ? lhsShape.0 : lhsShape.1),
+            1.0,
             lhs.pointer(capacity: lhsShape.0 * lhsShape.1),
-            Int32(lhsShape.0), // Size of first dimension of lhs
+            Int32(lhsShape.1),
             rhs.pointer(capacity: rhsShape.0 * rhsShape.1),
-            Int32(rhsShape.0), // Size of first dimension of rhs
-            1, // Scale for addition of result
+            Int32(rhsShape.1),
+            1.0,
             result.pointer(capacity: resultShape.0 * resultShape.1),
-            Int32(resultShape.0) // Size of first dimension of result
+            Int32(resultShape.1)
         )
     }
     
@@ -222,6 +259,70 @@ extension Double: NumericType {
                 vDSP_imgfirD(inputPlane.pointer(capacity: planeElementCount), UInt(height), UInt(width), kernel.pointer(capacity: kernelElementCount), outputPlane.pointer(capacity: planeElementCount), UInt(kernelHeight), UInt(kernelWidth))
             }
         }
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Double>, count: Int) -> (Int, Double) {
+        var minI: UInt = 0
+        var minV: Double = 0
+        
+        vDSP_minviD(values.pointer(capacity: count), 1, &minV, &minI, UInt(count))
+        
+        return (Int(minI), minV)
+    }
+    
+    public static func argmax(values: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> (Int, Double) {
+        var maxI: UInt = 0
+        var maxV: Double = 0
+        
+        vDSP_maxviD(values.pointer(capacity: count), stride, &maxV, &maxI, UInt(count))
+        
+        return (Int(maxI) / stride, maxV)
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> (Int, Double) {
+        var maxI: UInt = 0
+        var maxV: Double = 0
+        
+        vDSP_minviD(values.pointer(capacity: count), stride, &maxV, &maxI, UInt(count))
+        
+        return (Int(maxI) / stride, maxV)
+    }
+    
+    public static func copy(values: UnsafeBufferPointer<Double>, srcStride: Int, result: UnsafeMutableBufferPointer<Double>, dstStride: Int, count: Int) {
+        cblas_dcopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
+    }
+    
+    public static func arange(start: Double, end: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vDSP_vrampD([start], [end / Double(count)], result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func max(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vDSP_vmaxD(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func min(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vDSP_vminD(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func submatrix(from values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int) {
+        let srcPtr = values.pointer(capacity: width * height)
+            .advanced(by: width * submatrixRow + submatrixColumn)
+        
+        let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
+        
+        vDSP_mmovD(srcPtr, dstPtr, UInt(submatrixWidth), UInt(submatrixHeight), UInt(width), UInt(submatrixWidth))
+    }
+    
+    public static func sin(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vvsin(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func cos(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vvcos(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func tan(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        vvtan(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
     }
 }
 

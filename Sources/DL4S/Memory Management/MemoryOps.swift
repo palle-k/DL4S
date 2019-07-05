@@ -26,21 +26,21 @@
 import Foundation
 
 
-func recursiveRead<Element>(
+func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
-    srcIndex: [Int?],
-    srcStrides: [Int],
-    srcShape: [Int]
-) {
-    guard
-        let sIdx = srcIndex.first,
-        let sStride = srcStrides.first,
-        let sDim = srcShape.first
-    else {
+    srcIndex: C1,
+    srcStrides: C2,
+    srcShape: C2
+) where C1.Element == Int?, C2.Element == Int, C1.Index == Int, C2.Index == Int {
+    guard !srcIndex.isEmpty else {
         destination.pointee = source.pointee
         return
     }
+    
+    let sIdx = srcIndex[srcIndex.startIndex]
+    let sStride = srcStrides[srcStrides.startIndex]
+    let sDim = srcShape[srcShape.startIndex]
     
     if let sIdx = sIdx {
         let offset = sIdx * sStride
@@ -50,9 +50,9 @@ func recursiveRead<Element>(
         recursiveRead(
             source: srcStart,
             destination: destination,
-            srcIndex: Array(srcIndex.dropFirst()),
-            srcStrides: Array(srcStrides.dropFirst()),
-            srcShape: Array(srcShape.dropFirst())
+            srcIndex: srcIndex.dropFirst(),
+            srcStrides: srcStrides.dropFirst(),
+            srcShape: srcShape.dropFirst()
         )
     } else if srcIndex.allSatisfy({$0 == nil}) {
         let count = sDim * sStride
@@ -73,29 +73,75 @@ func recursiveRead<Element>(
             recursiveRead(
                 source: srcStart,
                 destination: dstStart,
-                srcIndex: Array(srcIndex.dropFirst()),
-                srcStrides: Array(srcStrides.dropFirst()),
-                srcShape: Array(srcShape.dropFirst())
+                srcIndex: srcIndex.dropFirst(),
+                srcStrides: srcStrides.dropFirst(),
+                srcShape: srcShape.dropFirst()
             )
         }
     }
 }
 
-func recursiveRead<Element>(
+@_specialize(where Element == Float)
+@_specialize(where Element == Int32)
+@_specialize(where Element == Double)
+@inline(__always)
+func iterativeRead<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
-    srcIndex: [Range<Int>?],
+    srcIndex: [Int?],
     srcStrides: [Int],
     srcShape: [Int]
 ) {
-    guard
-        let sIdx = srcIndex.first,
-        let sStride = srcStrides.first,
-        let sDim = srcShape.first
-    else {
+    let srcIndex = srcIndex.dropLast(while: {$0 == nil})
+    
+    if srcIndex.count == 0 {
+        let count = srcShape[0] * srcStrides[0]
+        destination.assign(from: source, count: count)
+        return
+    }
+    
+    let copyCount = srcStrides[srcIndex.count - 1]
+    
+    let iterShape = zip(srcIndex, srcShape).map { idx, dim in
+        idx == nil ? dim : 1
+    }
+    
+//    for (i, index) in iterate(iterShape).enumerated() {
+//        let index = zip(srcIndex, index).map {$0 ?? $1}
+//        let baseIndex = zip(index, srcStrides).map(*).reduce(0, +)
+//        let dstIndex = i * copyCount
+//        destination.advanced(by: dstIndex)
+//            .assign(from: source.advanced(by: baseIndex), count: copyCount)
+//    }
+    let indices = iterate(iterShape)
+    
+    for i in 0 ..< indices.count {
+        let index = indices[i]
+        var baseIndex = 0
+        let dstIndex = i * copyCount
+        for j in 0 ..< index.count {
+            baseIndex += (srcIndex[j] ?? index[j]) * srcStrides[j]
+        }
+        destination
+            .advanced(by: dstIndex)
+            .assign(from: source.advanced(by: baseIndex), count: copyCount)
+    }
+}
+
+func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
+    source: UnsafeBufferPointer<Element>,
+    destination: UnsafeMutableBufferPointer<Element>,
+    srcIndex: C1,
+    srcStrides: C2,
+    srcShape: C2
+) where C1.Element == Range<Int>?, C2.Element == Int, C1.Index == Int, C2.Index == Int {
+    guard !srcIndex.isEmpty else {
         destination.pointee = source.pointee
         return
     }
+    let sIdx = srcIndex[srcIndex.startIndex]
+    let sStride = srcStrides[srcStrides.startIndex]
+    let sDim = srcShape[srcShape.startIndex]
     
     if let sIdx = sIdx {
         if srcIndex.dropFirst().allSatisfy({$0 == nil}) {
@@ -117,9 +163,9 @@ func recursiveRead<Element>(
                 recursiveRead(
                     source: source.advanced(by: offset),
                     destination: destination.advanced(by: dstOffset),
-                    srcIndex: Array(srcIndex.dropFirst()),
-                    srcStrides: Array(srcStrides.dropFirst()),
-                    srcShape: Array(srcShape.dropFirst())
+                    srcIndex: srcIndex.dropFirst(),
+                    srcStrides: srcStrides.dropFirst(),
+                    srcShape: srcShape.dropFirst()
                 )
             }
         }
@@ -142,21 +188,21 @@ func recursiveRead<Element>(
             recursiveRead(
                 source: srcStart,
                 destination: dstStart,
-                srcIndex: Array(srcIndex.dropFirst()),
-                srcStrides: Array(srcStrides.dropFirst()),
-                srcShape: Array(srcShape.dropFirst())
+                srcIndex: srcIndex.dropFirst(),
+                srcStrides: srcStrides.dropFirst(),
+                srcShape: srcShape.dropFirst()
             )
         }
     }
 }
 
-func recursiveWrite<Element>(
+func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
-    dstIndex: [Int?],
-    dstStrides: [Int],
-    dstShape: [Int]
-) {
+    dstIndex: C1,
+    dstStrides: C2,
+    dstShape: C2
+) where C1.Element == Int?, C2.Element == Int {
     guard
         let dIdx = dstIndex.first,
         let dStride = dstStrides.first,
@@ -173,9 +219,9 @@ func recursiveWrite<Element>(
         recursiveWrite(
             source: source,
             destination: dstStart,
-            dstIndex: Array(dstIndex.dropFirst()),
-            dstStrides: Array(dstStrides.dropFirst()),
-            dstShape: Array(dstShape.dropFirst())
+            dstIndex: dstIndex.dropFirst(),
+            dstStrides: dstStrides.dropFirst(),
+            dstShape: dstShape.dropFirst()
         )
     } else if dstIndex.allSatisfy({$0 == nil}) {
         let count = dDim * dStride
@@ -196,21 +242,52 @@ func recursiveWrite<Element>(
             recursiveWrite(
                 source: srcStart,
                 destination: dstStart,
-                dstIndex: Array(dstIndex.dropFirst()),
-                dstStrides: Array(dstStrides.dropFirst()),
-                dstShape: Array(dstShape.dropFirst())
+                dstIndex: dstIndex.dropFirst(),
+                dstStrides: dstStrides.dropFirst(),
+                dstShape: dstShape.dropFirst()
             )
         }
     }
 }
 
-func recursiveWrite<Element>(
+func iterativeWrite<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
-    dstIndex: [Range<Int>?],
+    dstIndex: [Int?],
     dstStrides: [Int],
     dstShape: [Int]
-) {
+    ) {
+    // print("Using iterativeWrite")
+    let dstIndex = dstIndex.reversed().drop(while: {$0 == nil}).reversed()
+    
+    if dstIndex.count == 0 {
+        let count = dstShape[0] * dstStrides[0]
+        destination.assign(from: source, count: count)
+        return
+    }
+    
+    let copyCount = dstStrides[dstIndex.count - 1]
+    
+    let iterShape = zip(dstIndex, dstShape).map { idx, dim in
+        idx == nil ? dim : 1
+    }
+    
+    for (i, index) in iterate(iterShape).enumerated() {
+        let index = zip(dstIndex, index).map {$0 ?? $1}
+        let baseIndex = zip(index, dstStrides).map(*).reduce(0, +)
+        let srcIndex = i * copyCount
+        destination.advanced(by: baseIndex)
+            .assign(from: source.advanced(by: srcIndex), count: copyCount)
+    }
+}
+
+func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
+    source: UnsafeBufferPointer<Element>,
+    destination: UnsafeMutableBufferPointer<Element>,
+    dstIndex: C1,
+    dstStrides: C2,
+    dstShape: C2
+) where C1.Element == Range<Int>?, C2.Element == Int {
     guard
         let dIdx = dstIndex.first,
         let dStride = dstStrides.first,
@@ -242,9 +319,9 @@ func recursiveWrite<Element>(
                 recursiveWrite(
                     source: srcStart,
                     destination: dstStart,
-                    dstIndex: Array(dstIndex.dropFirst()),
-                    dstStrides: Array(dstStrides.dropFirst()),
-                    dstShape: Array(dstShape.dropFirst())
+                    dstIndex: dstIndex.dropFirst(),
+                    dstStrides: dstStrides.dropFirst(),
+                    dstShape: dstShape.dropFirst()
                 )
             }
         }
@@ -267,15 +344,16 @@ func recursiveWrite<Element>(
             recursiveWrite(
                 source: srcStart,
                 destination: dstStart,
-                dstIndex: Array(dstIndex.dropFirst()),
-                dstStrides: Array(dstStrides.dropFirst()),
-                dstShape: Array(dstShape.dropFirst())
+                dstIndex: dstIndex.dropFirst(),
+                dstStrides: dstStrides.dropFirst(),
+                dstShape: dstShape.dropFirst()
             )
         }
     }
 }
 
 enum MemoryOps {
+    @inline(__always)
     static func strides(from shape: [Int]) -> [Int] {
         let dim = shape.count
         
@@ -371,7 +449,7 @@ enum MemoryOps {
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
         
         let dstStrides = MemoryOps.strides(from: dstShape)
-        recursiveWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
+        iterativeWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
     
     static func set<Element>(slice: [Range<Int>?], of buffer: UnsafeMutableBufferPointer<Element>, with dstShape: [Int], from source: UnsafeBufferPointer<Element>, with sourceShape: [Int]) {

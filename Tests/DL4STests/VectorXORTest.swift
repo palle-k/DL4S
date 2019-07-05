@@ -33,6 +33,7 @@ class VectorXORTest: XCTestCase {
             Dense(inputFeatures: 2, outputFeatures: 6).asAny(),
             Sigmoid().asAny(),
             Dense(inputFeatures: 6, outputFeatures: 1).asAny(),
+            // Logging().asAny(),
             Sigmoid().asAny()
         )
         
@@ -45,26 +46,22 @@ class VectorXORTest: XCTestCase {
         
         let expectedOutputs = Tensor<Float, CPU>([0, 1, 1, 0])
         
-        let optimizer = MomentumOptimizer(parameters: net.trainableParameters, learningRate: 0.05)
+        let optimizer = Momentum(parameters: net.trainableParameters, learningRate: 0.05)
         // let optimizer = Adam(parameters: net.parameters, learningRate: 0.05)
         
         let epochs = 1000
         
         for epoch in 1 ... epochs {
+            optimizer.zeroGradient()
             let predictions = net.forward(inputs)
-            
-            //print(predictions)
-            
             let loss = binaryCrossEntropy(expected: expectedOutputs, actual: predictions)
             
-            loss.zeroGradient()
             loss.backwards()
-            
             optimizer.step()
             
             let lossValue = loss.item
             
-            if epoch % 10 == 0 {
+            if epoch % 100 == 0 {
                 print("[\(epoch)/\(epochs)] loss: \(lossValue / 4)")
             }
         }

@@ -28,6 +28,7 @@ import Foundation
 
 
 /// Protocol for an arbitrary neural network layer
+@dynamicCallable
 public protocol Layer {
     /// Type of elements of input tensor
     associatedtype Input: NumericType
@@ -85,12 +86,14 @@ public extension Layer {
     /// - Parameter url: Location to store the parameters at
     /// - Throws: An error if the parameters could not be encoded (EncodingError) or if the data could not be written to the given URL.
     func saveWeights(to url: URL) throws {
-        let params = self.parameters
-        let encoder = JSONEncoder()
-        let encoded = try encoder.encode(params)
-        try encoded.write(to: url, options: .atomic)
+        try autoreleasepool {
+            let params = self.parameters
+            let encoder = JSONEncoder()
+            encoder.dataEncodingStrategy = .base64
+            let encoded = try encoder.encode(params)
+            try encoded.write(to: url, options: .atomic)
+        }
     }
-    
     
     /// Loads all parameters of the layer from a JSON file at the provided URL
     ///
@@ -98,9 +101,13 @@ public extension Layer {
     /// - Throws: An error if the parametes could not be decoded (Decodingerror) or if no data could be read from the given URL.
     func loadWeights(from url: URL) throws {
         let params = self.parameters
-        let decoder = JSONDecoder()
-        let encoded = try Data(contentsOf: url)
-        let decodedParams = try decoder.decode([Tensor<Element, Device>].self, from: encoded)
+        
+        let decodedParams = try autoreleasepool { () -> [Tensor<Element, Device>] in
+            let decoder = JSONDecoder()
+            decoder.dataDecodingStrategy = .base64
+            let encoded = try Data(contentsOf: url)
+            return try decoder.decode([Tensor<Element, Device>].self, from: encoded)
+        }
         
         for (dst, src) in zip(params, decodedParams) {
             Device.Memory.assign(from: src.values, to: dst.values, count: dst.count)
@@ -109,6 +116,10 @@ public extension Layer {
                 Device.Memory.assign(from: srcGrad, to: dstGrad, count: dst.count)
             }
         }
+    }
+    
+    func dynamicallyCall(withArguments args: [Tensor<Input, Device>]) -> Tensor<Element, Device> {
+        return forward(args)
     }
 }
 
@@ -161,7 +172,7 @@ public class Sequential<Element: NumericType, Device: DeviceType>: Layer {
     
     
     /// Layers that are combined by the sequential layer
-    public let layers: [AnyLayer<Element, Element, Device>]
+    public var layers: [AnyLayer<Element, Element, Device>]
     
     public var isTrainable: Bool {
         get {
@@ -193,6 +204,10 @@ public class Sequential<Element: NumericType, Device: DeviceType>: Layer {
     
     public func forward(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         return layers.reduce(inputs) {[$1.forward($0)]}[0]
+    }
+    
+    public func append<L: Layer>(_ layer: L) where L.Input == Element, L.Device == Device, L.Element == Element {
+        self.layers.append(layer.asAny())
     }
 }
 
@@ -264,7 +279,7 @@ public class Lambda<Element: NumericType, Input: NumericType, Device: DeviceType
 }
 
 
-public class Debug<Element: NumericType, Device: DeviceType>: Layer {
+public class Debug<Element: NumericType, Device: DeviceType>: Layer, Codable {
     public var parameters: [Tensor<Element, Device>] {
         return []
     }

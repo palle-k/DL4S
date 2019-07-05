@@ -28,6 +28,10 @@ import Accelerate
 
 
 extension Int32: NumericType {
+    public func format(maxDecimals: Int) -> String {
+        return "\(self)"
+    }
+    
     public var isFinite: Bool {
         return true
     }
@@ -38,6 +42,22 @@ extension Int32: NumericType {
     
     public func toUInt8() -> UInt8 {
         return UInt8(self)
+    }
+    
+    public func toInt() -> Int {
+        return Int(self)
+    }
+    
+    public var floatValue: Float {
+        return Float(self)
+    }
+    
+    public var doubleValue: Double {
+        return Double(self)
+    }
+    
+    public var intValue: Int32 {
+        return self
     }
     
     public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, stride: Int, count: Int) {
@@ -164,6 +184,14 @@ extension Int32: NumericType {
         return result
     }
     
+    public static func sum(val: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> Int32 {
+        var result: Int32 = 0
+        for i in 0 ..< count {
+            result += val[i * stride]
+        }
+        return result
+    }
+    
     public static func copysign(values: UnsafeBufferPointer<Int32>, signs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         for i in 0 ..< count {
             if signs[i] < 0 {
@@ -251,7 +279,118 @@ extension Int32: NumericType {
         return (maxI, maxV)
     }
     
+    public static func argmax(values: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> (Int, Int32) {
+        precondition(count > 0)
+        var maxI = 0
+        var maxV = values[0]
+        
+        for i in 0 ..< count {
+            let v = values[i * stride]
+            if maxV < v {
+                maxI = i
+                maxV = v
+            }
+        }
+        
+        return (maxI, maxV)
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> (Int, Int32) {
+        precondition(count > 0)
+        var minI = 0
+        var minV = values[0]
+        
+        for i in 0 ..< count {
+            let v = values[i * stride]
+            if minV > v {
+                minI = i
+                minV = v
+            }
+        }
+        
+        return (minI, minV)
+    }
+    
     public static func conv2d(input: UnsafeBufferPointer<Int32>, filter: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) {
         fatalError("Conv2D is not available for data type Int32")
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Int32>, count: Int) -> (Int, Int32) {
+        precondition(count > 0)
+        var minI = 0
+        var minV = values[0]
+        
+        for i in 0 ..< count {
+            if minV > values[i] {
+                minI = i
+                minV = values[i]
+            }
+        }
+        
+        return (minI, minV)
+    }
+    
+    public static func copy(values: UnsafeBufferPointer<Int32>, srcStride: Int, result: UnsafeMutableBufferPointer<Int32>, dstStride: Int, count: Int) {
+        let srcPtr = values.pointer(capacity: srcStride * count)
+        let dstPtr = result.pointer(capacity: dstStride * count)
+        
+        for i in 0 ..< count {
+            dstPtr[i * dstStride] = srcPtr[i * srcStride]
+        }
+    }
+    
+    public static func arange(start: Int32, end: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        let ptr = result.pointer(capacity: count)
+        for i in 0 ..< Int32(count) {
+            ptr[Int(i)] = start + (end - start) * Int32(count) / i
+        }
+    }
+    
+    public static func max(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        let lhsPtr = lhs.pointer(capacity: count)
+        let rhsPtr = rhs.pointer(capacity: count)
+        let resPtr = result.pointer(capacity: count)
+        
+        for i in 0 ..< count {
+            resPtr[i] = Swift.max(lhsPtr[i], rhsPtr[i])
+        }
+    }
+    
+    public static func min(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        let lhsPtr = lhs.pointer(capacity: count)
+        let rhsPtr = rhs.pointer(capacity: count)
+        let resPtr = result.pointer(capacity: count)
+        
+        for i in 0 ..< count {
+            resPtr[i] = Swift.min(lhsPtr[i], rhsPtr[i])
+        }
+    }
+    
+    public static func submatrix(from values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int) {
+        let srcPtr = values.pointer(capacity: width * height)
+        let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
+        
+        for row in 0 ..< submatrixHeight {
+            let srcOffset = (row + submatrixRow) * width + submatrixColumn
+            let dstOffset = row * submatrixWidth
+            
+            dstPtr.advanced(by: dstOffset)
+                .assign(
+                    from: srcPtr.advanced(by: srcOffset),
+                    count: submatrixWidth
+                )
+        }
+    }
+    
+    public static func sin(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        fatalError("\(#function) is unavailable for type \(type(of: self))")
+    }
+    
+    public static func cos(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        fatalError("\(#function) is unavailable for type \(type(of: self))")
+    }
+    
+    public static func tan(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        fatalError("\(#function) is unavailable for type \(type(of: self))")
     }
 }

@@ -35,7 +35,7 @@ fileprivate struct PermutationOperation<Element: NumericType, Device: DeviceType
     var axisArangement: [Int]
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        guard let srcGrad = source.gradient, let dstGrad = vector.gradient else {
+        guard let srcGrad = source.shapedGradient, let dstGrad = vector.shapedGradient else {
             return
         }
         
@@ -45,7 +45,8 @@ fileprivate struct PermutationOperation<Element: NumericType, Device: DeviceType
             invArangement[i] = j
         }
         
-        Device.Engine.permuteAxesAdd(input: dstGrad, arangement: invArangement, shape: vector.shape, add: srcGrad, destination: srcGrad)
+        //Device.Engine.permuteAxesAdd(input: dstGrad, arangement: invArangement, shape: vector.shape, add: srcGrad, destination: srcGrad)
+        Device.Engine.permuteAxesAdd(values: dstGrad, add: srcGrad, result: srcGrad, arangement: invArangement)
     }
 }
 
@@ -67,7 +68,8 @@ public extension Tensor {
             context: requiresGradient ? PermutationOperation(source: self, axisArangement: axisArangement).asAny() : nil
         )
         
-        Device.Engine.permuteAxes(input: self.values, arangement: axisArangement, shape: self.shape, destination: result.values)
+        //Device.Engine.permuteAxes(input: self.values, arangement: axisArangement, shape: self.shape, destination: result.values)
+        Device.Engine.permuteAxes(values: self.shapedValues, result: result.shapedValues, arangement: axisArangement)
         
         return result
     }

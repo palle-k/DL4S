@@ -25,55 +25,6 @@
 
 import Foundation
 
-fileprivate struct ReshapeOperation<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
-    var source: Tensor<Element, Device>
-    
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        guard let sourceGradient = source.gradient, let vectorGradient = vector.gradient else {
-            return
-        }
-        if !Tensor.sameIdentity(source, vector) {
-            Device.Engine.vAdd(lhs: vectorGradient, rhs: sourceGradient, result: sourceGradient, count: source.count)
-        }
-    }
-    
-    var symbol: String {
-        return "reshape"
-    }
-}
-
-public extension Tensor {
-    func view(as shape: Int...) -> Tensor<Element, Device> {
-        return view(as: shape)
-    }
-    
-    func view(as shape: [Int]) -> Tensor<Element, Device> {
-        precondition(shape.count(where: {$0 == -1}) <= 1, "The size of at most one dimension can be unknown (-1).")
-        precondition(shape.allSatisfy {$0 >= -1}, "All dimensions must be greater than or equal to -1.")
-        precondition(shape.contains(-1) || shape.reduce(1, *) == self.count, "Number of elements in result must be equal to number of elements in source")
-        
-        var shape = shape
-        if let idx = shape.firstIndex(of: -1) {
-            let remaining = count / shape.lazy.filter {$0 >= 0}.reduce(1, *)
-            shape[idx] = remaining
-        }
-        
-        return Tensor(
-            values: values,
-            gradient: gradient,
-            shape: shape,
-            parent: self,
-            context: requiresGradient ? ReshapeOperation(source: self).asAny() : nil
-        )
-    }
-    
-    func viewAsScalar() -> Tensor<Element, Device> {
-        precondition(count == 1, "Only vectors with exactly one element can be viewed as a scalar.")
-        
-        return Tensor(values: values, gradient: gradient, shape: [], parent: self, context: ReshapeOperation(source: self).asAny())
-    }
-}
-
 fileprivate struct ReplaceOperation<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
     var source: Tensor<Element, Device>
     let location: [Int?]
@@ -251,6 +202,15 @@ public extension Tensor {
 public extension Tensor {
     func squeeze() -> Tensor<Element, Device> {
         return self.view(as: shape.filter {$0 != 1})
+    }
+    
+    func squeeze(at axis: Int) -> Tensor<Element, Device> {
+        guard shape[axis] == 1 else {
+            return self
+        }
+        var newShape = shape
+        newShape.remove(at: axis)
+        return self.view(as: newShape)
     }
     
     func unsqueeze(at index: Int) -> Tensor<Element, Device> {

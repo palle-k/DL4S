@@ -26,12 +26,22 @@
 import Foundation
 import Accelerate
 
-public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral, Codable, Comparable {
+public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
+    static var zero: Self { get }
+}
+
+public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable {
+    func format(maxDecimals: Int) -> String
+    
     init(_ floatValue: Double)
     init(_ integerValue: Int32)
     
     static var zero: Self { get }
     static var one: Self { get }
+    
+    var floatValue: Float { get }
+    var doubleValue: Double { get }
+    var intValue: Int32 { get }
     
     static prefix func - (value: Self) -> Self
     static func + (lhs: Self, rhs: Self) -> Self
@@ -60,6 +70,7 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     init(_ uint8: UInt8)
     
     func toUInt8() -> UInt8
+    func toInt() -> Int
     
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
@@ -95,16 +106,85 @@ public protocol NumericType: Hashable, ExpressibleByFloatLiteral, ExpressibleByI
     static func sqrt(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func sum(val: UnsafeBufferPointer<Self>, count: Int) -> Self
+    static func sum(val: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> Self
     
     static func copysign(values: UnsafeBufferPointer<Self>, signs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func argmax(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
+    static func argmin(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
+    
+    static func argmax(values: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> (Int, Self)
+    static func argmin(values: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> (Int, Self)
+    
+    static func max(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func min(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func conv2d(input: UnsafeBufferPointer<Self>, filter: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
+    
+    static func copy(values: UnsafeBufferPointer<Self>, srcStride: Int, result: UnsafeMutableBufferPointer<Self>, dstStride: Int, count: Int)
+    static func arange(start: Self, end: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    
+    static func submatrix(from values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int)
+    
+    static func sin(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func cos(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func tan(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
 }
 
-extension UInt8 {
+public extension UInt8 {
     init<Element: NumericType>(_ element: Element) {
         self = element.toUInt8()
+    }
+}
+
+public extension Int32 {
+    init<Element: NumericType>(element: Element) {
+        self = element.intValue
+    }
+}
+
+public extension Float {
+    init<Element: NumericType>(element: Element) {
+        self = element.floatValue
+    }
+}
+
+public extension Double {
+    init<Element: NumericType>(element: Element) {
+        self = element.doubleValue
+    }
+}
+
+public extension NumericType {
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func += (lhs: inout Self, rhs: Self) {
+        lhs = lhs + rhs
+    }
+    
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func -= (lhs: inout Self, rhs: Self) {
+        lhs = lhs - rhs
+    }
+    
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func *= (lhs: inout Self, rhs: Self) {
+        lhs = lhs * rhs
+    }
+    
+    @inline(__always)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    @_specialize(where Self == Int32)
+    static func /= (lhs: inout Self, rhs: Self) {
+        lhs = lhs / rhs
     }
 }

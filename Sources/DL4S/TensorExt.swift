@@ -24,13 +24,13 @@
 //  SOFTWARE.
 
 import Foundation
-import AppKit
+
+#if canImport(CoreGraphics)
+import CoreGraphics
 
 public extension Tensor {
-    convenience init?(_ image: NSImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return nil
-        }
+    convenience init?(_ image: CGImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
+        let cgImage = image
         
         let byteCount = cgImage.height * cgImage.bytesPerRow
         let data = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: 16)
@@ -75,8 +75,10 @@ public extension Tensor {
     }
 }
 
-public extension NSImage {
-    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+public extension Tensor {
+    func cgImage(normalizeFrom tensorRange: ClosedRange<Element> = 0 ... 1) -> CGImage? {
+        let tensor = self
+        
         let pixels = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: tensor.count)
         defer {
             pixels.deallocate()
@@ -123,12 +125,55 @@ public extension NSImage {
             ) else {
                 return nil
         }
-        guard let cgImage = ctx.makeImage() else {
+        return ctx.makeImage()
+    }
+}
+#endif
+
+#if os(macOS)
+import AppKit
+
+public extension Tensor {
+    convenience init?(_ image: NSImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return nil
+        }
+        
+        self.init(cgImage, normalizeTo: range)
+    }
+}
+
+public extension NSImage {
+    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil
         }
         self.init(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
 }
+#endif
+
+#if os(iOS) || os(tvOS) || os(watchOS)
+import UIKit
+
+public extension Tensor {
+    convenience init?(_ image: UIImage, normalizeTo range: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = image.cgImage else {
+            return nil
+        }
+        self.init(cgImage, normalizeTo: range)
+    }
+}
+
+public extension UIImage {
+    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+        guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
+            return nil
+        }
+        self.init(cgImage: cgImage)
+    }
+}
+#endif
 
 extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     private func generateDescription() -> String {
@@ -141,11 +186,11 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
             return "[\(d)]"
         } else if let count = self.shape.first {
             let d = (0 ..< count)
-                .map {"\(self[$0].item)"}
+                .map {self[$0].item.format(maxDecimals: 3)}
                 .joined(separator: ", ")
             return "[\(d)]"
         } else {
-            return "\(item)"
+            return "\(item.format(maxDecimals: 3))"
         }
     }
     
@@ -161,11 +206,11 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
             return "[\(d)]"
         } else if let count = self.shape.first {
             let d = (0 ..< count)
-                .map {"\(self[$0].gradientItem!)"}
+                .map {self[$0].gradientItem!.format(maxDecimals: 3)}
                 .joined(separator: ", ")
             return "[\(d)]"
         } else {
-            return "\(gradientItem!)"
+            return "\(gradientItem!.format(maxDecimals: 3))"
         }
     }
     
@@ -274,23 +319,46 @@ public extension Tensor {
 }
 
 extension Tensor {
-    func sorted(sorting: inout [Tensor<Element, Device>], visited: inout Set<Tensor<Element, Device>>) {
-        guard !visited.contains(self), self.requiresGradient else {
-            return
+    @_specialize(where Element == Float, Device == CPU)
+    @inline(__always)
+    static func operationOrder(from initialTensor: Tensor<Element, Device>) -> [Tensor<Element, Device>] {
+        var stack: [(Tensor<Element, Device>, Int)] = []
+        var sorting: [Tensor<Element, Device>] = []
+        var visited: Set<Tensor<Element, Device>> = []
+        
+        stack.append((initialTensor, 0))
+        
+        while let (current, idx) = stack.last {
+            if visited.contains(current) || !current.requiresGradient {
+                stack.removeLast()
+                continue
+            }
+            
+            if let context = current.context, context.sourceTensors.indices ~= idx {
+                stack.removeLast()
+                stack.append((current, idx + 1))
+                stack.append((context.sourceTensors[idx], 0))
+            } else {
+                visited.insert(current)
+                sorting.append(current)
+                stack.removeLast()
+            }
         }
         
-        for source in context?.sourceTensors ?? [] {
-            source.sorted(sorting: &sorting, visited: &visited)
+        return sorting
+    }
+    
+    public func detachAll() {
+        let sorted = Tensor.operationOrder(from: self)
+        for tensor in sorted {
+            tensor.context = nil
         }
-        
-        visited.insert(self)
-        sorting.append(self)
     }
 }
 
 public extension Tensor where Element == Int32 {
-    func toOneHot(dim: Int) -> Tensor<Float, Device> {
-        let result = Tensor<Float, Device>(repeating: 0, shape: self.shape + [dim])
+    func toOneHot<Target>(dim: Int) -> Tensor<Target, Device> {
+        let result = Tensor<Target, Device>(repeating: 0, shape: self.shape + [dim])
         
         for idx in iterate(self.shape) {
             let target = Int(self[idx].item)
@@ -312,5 +380,48 @@ public extension Tensor {
         }
         
         return result
+    }
+}
+
+extension Tensor {
+    var shapedValues: ShapedBuffer<Element, Device> {
+        return ShapedBuffer(values: self.values, shape: self.shape)
+    }
+    
+    var shapedGradient: ShapedBuffer<Element, Device>? {
+        if let gradient = self.gradient {
+            return ShapedBuffer(values: gradient, shape: self.shape)
+        } else {
+            return nil
+        }
+    }
+}
+
+public extension Tensor {
+    func copied<Destination>(to device: Destination.Type) -> Tensor<Element, Destination> {
+        return Tensor<Element, Destination>(self)
+    }
+}
+
+public extension Tensor {
+    var flattenedArray: [Element] {
+        let ramBuffer = CPU.Memory.allocateBuffer(withCapacity: self.count, type: Element.self)
+        defer {
+            CPU.Memory.free(ramBuffer)
+        }
+        Device.Memory.assign(from: self.values, to: ramBuffer.pointer, count: self.count)
+        return Array(ramBuffer.immutable)
+    }
+    
+    var flattenedGradientArray: [Element]? {
+        guard let gradient = self.gradient else {
+            return nil
+        }
+        let ramBuffer = CPU.Memory.allocateBuffer(withCapacity: self.count, type: Element.self)
+        defer {
+            CPU.Memory.free(ramBuffer)
+        }
+        Device.Memory.assign(from: gradient, to: ramBuffer.pointer, count: self.count)
+        return Array(ramBuffer.immutable)
     }
 }

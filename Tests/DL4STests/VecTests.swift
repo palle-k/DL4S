@@ -433,6 +433,9 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a * b) * 2
+        
+        print(a * b)
+        
         result.backwards()
         
         print(a.gradientDescription!)
@@ -527,7 +530,7 @@ class VecTests: XCTestCase {
     func testAxisSum() {
         let a = Tensor<Float, CPU>([[1,2,3],[4,5,6]])
         
-        let result = sum(a, axis: 0)
+        let result = sum(a, axes: [0])
         print(result)
     }
     
@@ -535,5 +538,11 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
         
         print(a[nil, -3])
+    }
+    
+    func testPadding() {
+        let a = Tensor<Float, CPU>(repeating: 1, shape: 1, 28, 28)
+        let padded = a.padded([0, 2, 2])
+        print(padded)
     }
 }

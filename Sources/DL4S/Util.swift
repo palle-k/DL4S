@@ -32,27 +32,51 @@ extension Sequence {
     }
 }
 
-func iterate(_ shape: [Int]) -> AnySequence<[Int]> {
-    func increment<S: RandomAccessCollection>(_ list: S, shape: S) -> ([Int], Bool) where S.Element == Int {
-        guard let first = list.first, let firstDim = shape.first else {
-            return ([], true)
+func shapeForBroadcastedOperands(_ lhs: [Int], _ rhs: [Int]) -> [Int] {
+    let dim = Swift.max(lhs.count, rhs.count)
+    let pLhs = Array(repeating: 1, count: dim - lhs.count) + lhs
+    let pRhs = Array(repeating: 1, count: dim - rhs.count) + rhs
+    return zip(pLhs, pRhs).map(Swift.max)
+}
+
+@inline(__always)
+func iterate(_ shape: [Int]) -> [[Int]] {
+    var result: [[Int]] = []
+    
+    let count = shape.reduce(1, *)
+    result.reserveCapacity(count)
+    
+    let strides = MemoryOps.strides(from: shape)
+    
+    
+    for i in 0 ..< count {
+        var next: [Int] = Array(repeating: 0, count: shape.count)
+        for axis in 0 ..< shape.count {
+            next[axis] = (i / strides[axis]) % shape[axis]
         }
-        let (rest, overflows) = increment(list.dropFirst(), shape: shape.dropFirst())
-        if overflows {
-            if first + 1 >= firstDim {
-                return ([0] + rest, true)
-            } else {
-                return ([first + 1] + rest, false)
-            }
-        } else {
-            return ([first] + rest, false)
+        
+        result.append(next)
+    }
+    
+    return result
+}
+
+@inline(__always)
+func flatIterate(_ shape: [Int]) -> [Int] {
+    let count = shape.reduce(1, *)
+    let dim = shape.count
+    
+    let strides = MemoryOps.strides(from: shape)
+    var result = [Int](repeating: 0, count: count * dim)
+    
+    for i in 0 ..< count {
+        let b = i * dim
+        for axis in 0 ..< dim {
+            result[b + axis] = (i / strides[axis]) % shape[axis]
         }
     }
     
-    return AnySequence(sequence(first: Array(repeating: 0, count: shape.count)) { state -> [Int]? in
-        let (incremented, overflows) = increment(state, shape: shape)
-        return overflows ? nil : incremented
-    })
+    return result
 }
 
 prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parameters) -> Bool {
@@ -68,8 +92,6 @@ extension Slice: Equatable where Element: Hashable {
 }
 
 extension Slice: Hashable where Element: Hashable {
-    
-    
     public func hash(into hasher: inout Hasher) {
         for element in self {
             hasher.combine(element)
@@ -269,5 +291,126 @@ public struct Progress<Element>: Sequence {
             unit: unit
         )
         return AnyIterator(progressIterator)
+    }
+}
+
+extension Collection {
+    // @_specialize(where Self == Array<Int>)
+    public func dropLast(`while` predicate: (Element) throws -> Bool) rethrows -> SubSequence {
+        var index = self.index(self.endIndex, offsetBy: -1)
+        
+        while index > self.startIndex {
+            if try predicate(self[index]) {
+                index = self.index(index, offsetBy: -1)
+            } else {
+                return self[...index]
+            }
+        }
+        
+        return self[..<index]
+    }
+    
+    // @_specialize(where Self == Array<Int>)
+    public func suffix(`while` predicate: (Element) throws -> Bool) rethrows -> SubSequence {
+        var index = self.endIndex
+        
+        while index > self.startIndex {
+            let nextIndex = self.index(index, offsetBy: -1)
+            if try predicate(self[nextIndex]) {
+                index = nextIndex
+            } else {
+                return self[index...]
+            }
+        }
+        
+        return self[...]
+    }
+}
+
+extension Sequence {
+    @inline(__always)
+    public func suffix(`while` predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
+        return try Array(self).suffix(while: predicate)
+    }
+    
+    @inline(__always)
+    public func dropLast(`while` predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
+        return try Array(self).dropLast(while: predicate)
+    }
+}
+
+
+public enum ConvUtil {
+    public static func outputShape(for inputShape: [Int], kernelCount: Int, kernelWidth: Int, kernelHeight: Int, stride: Int, padding: Int) -> [Int] {
+        return [
+            kernelCount,
+            (inputShape[1] + 2 * padding - kernelHeight) / stride + 1,
+            (inputShape[2] + 2 * padding - kernelWidth) / stride + 1
+        ]
+    }
+}
+
+public extension Tensor {
+    func batches(sized batchSize: Int) -> AnySequence<Tensor<Element, Device>> {
+        precondition(batchSize >= 1, "Batch size must be at least 1.")
+        precondition(dim >= 1, "Tensor must be at least 1-dimensional.")
+        
+        let seq = stride(from: 0, to: shape[0], by: batchSize).lazy.map { offset in
+            self[(offset ..< (offset + batchSize)).clamped(to: 0 ..< self.shape[0])]
+        }
+        
+        return AnySequence(seq)
+    }
+}
+
+
+struct File: Sequence {
+    struct LineIterator: IteratorProtocol {
+        private var buffer: Data?
+        private let handle: FileHandle?
+        private var isCompleted = false
+        
+        init(handle: FileHandle?) {
+            self.handle = handle
+            self.buffer = nil
+        }
+        
+        mutating func next() -> String? {
+            return autoreleasepool { () -> String? in
+                guard let handle = self.handle, !isCompleted else {
+                    return nil
+                }
+                
+                let chunkSize = 4096
+                
+                if let buffer = self.buffer, let index = buffer.firstIndex(of: Character("\n").asciiValue!) {
+                    let line = String(data: buffer.prefix(upTo: index), encoding: .utf8)
+                    self.buffer = Data(buffer.dropFirst(index + 1)) // creating a copy resets the indexing, otherwise index points to the wrong position
+                    return line
+                } else {
+                    let nextChunk = handle.readData(ofLength: chunkSize)
+                    
+                    let buffer = (self.buffer ?? Data()) + nextChunk
+                    self.buffer = buffer
+                    
+                    if nextChunk.count == 0 {
+                        isCompleted = true
+                        return String(data: buffer, encoding: .utf8)
+                    }
+                    
+                    return self.next()
+                }
+            }
+        }
+    }
+    
+    let url: URL
+    
+    init(url: URL) {
+        self.url = url
+    }
+    
+    __consuming func makeIterator() -> LineIterator {
+        return LineIterator(handle: try? FileHandle(forReadingFrom: self.url))
     }
 }

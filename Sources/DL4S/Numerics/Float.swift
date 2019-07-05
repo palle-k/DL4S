@@ -28,8 +28,28 @@ import Accelerate
 
 
 extension Float: NumericType {
+    public func format(maxDecimals: Int) -> String {
+        return String(format: "%.\(maxDecimals)f", self)
+    }
+    
     public func toUInt8() -> UInt8 {
-        return UInt8(max(min(self, 255), 0))
+        return UInt8(Swift.max(Swift.min(self, 255), 0))
+    }
+    
+    public func toInt() -> Int {
+        return Int(self)
+    }
+    
+    public var floatValue: Float {
+        return self
+    }
+    
+    public var doubleValue: Double {
+        return Double(self)
+    }
+    
+    public var intValue: Int32 {
+        return Int32(self)
     }
     
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {
@@ -122,6 +142,12 @@ extension Float: NumericType {
         return result
     }
     
+    public static func sum(val: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> Float {
+        var result: Float = 0
+        vDSP_sve(val.pointer(capacity: count), stride, &result, UInt(count))
+        return result
+    }
+    
     public static func copysign(values: UnsafeBufferPointer<Float>, signs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         vvcopysignf(result.pointer(capacity: count), values.pointer(capacity: count), signs.pointer(capacity: count), [Int32(count)])
     }
@@ -144,22 +170,22 @@ extension Float: NumericType {
         precondition((transposeFirst ? lhsShape.1 : lhsShape.0) == resultShape.0)
         precondition((transposeSecond ? rhsShape.0 : rhsShape.1) == resultShape.1)
         precondition((transposeFirst ? lhsShape.0 : lhsShape.1) == (transposeSecond ? rhsShape.1 : rhsShape.0))
-        
+ 
         cblas_sgemm(
             CblasRowMajor,
             transposeFirst ? CblasTrans : CblasNoTrans,
             transposeSecond ? CblasTrans : CblasNoTrans,
-            Int32(lhsShape.0), // rows in op(lhs)
-            Int32(rhsShape.1), // columns in op(rhs)
-            Int32(lhsShape.1), // columns in op(lhs) and op(rhs)
-            1, // Scale for product of lhs and rhs
+            Int32(resultShape.0),
+            Int32(resultShape.1),
+            Int32(transposeFirst ? lhsShape.0 : lhsShape.1),
+            1.0,
             lhs.pointer(capacity: lhsShape.0 * lhsShape.1),
-            Int32(lhsShape.0), // Size of first dimension of lhs
+            Int32(lhsShape.1),
             rhs.pointer(capacity: rhsShape.0 * rhsShape.1),
-            Int32(rhsShape.0), // Size of first dimension of rhs
-            1, // Scale for addition of result
+            Int32(rhsShape.1),
+            1.0,
             result.pointer(capacity: resultShape.0 * resultShape.1),
-            Int32(resultShape.0) // Size of first dimension of result
+            Int32(resultShape.1)
         )
     }
     
@@ -222,5 +248,78 @@ extension Float: NumericType {
                 vDSP_imgfir(inputPlane.pointer(capacity: planeElementCount), UInt(height), UInt(width), kernel.pointer(capacity: kernelElementCount), outputPlane.pointer(capacity: planeElementCount), UInt(kernelHeight), UInt(kernelWidth))
             }
         }
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Float>, count: Int) -> (Int, Float) {
+        var minI: UInt = 0
+        var minV: Float = 0
+        
+        vDSP_minvi(values.pointer(capacity: count), 1, &minV, &minI, UInt(count))
+        
+        return (Int(minI), minV)
+    }
+    
+    public static func argmax(values: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> (Int, Float) {
+        var minI: UInt = 0
+        var minV: Float = 0
+        
+        vDSP_maxvi(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
+        
+        return (Int(minI) / stride, minV)
+    }
+    
+    public static func argmin(values: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> (Int, Float) {
+        var minI: UInt = 0
+        var minV: Float = 0
+        
+        vDSP_minvi(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
+        
+        return (Int(minI) / stride, minV)
+    }
+    
+    public static func heaviside(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        let srcPtr = values.pointer(capacity: count)
+        let dstPtr = result.pointer(capacity: count)
+        
+        for i in 0 ..< count {
+            dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
+        }
+    }
+    
+    public static func copy(values: UnsafeBufferPointer<Float>, srcStride: Int, result: UnsafeMutableBufferPointer<Float>, dstStride: Int, count: Int) {
+        cblas_scopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
+    }
+    
+    public static func arange(start: Float, end: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vDSP_vramp([start], [end / Float(count)], result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func max(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vDSP_vmax(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func min(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vDSP_vmin(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+    }
+    
+    public static func submatrix(from values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int) {
+        let srcPtr = values.pointer(capacity: width * height)
+            .advanced(by: width * submatrixRow + submatrixColumn)
+        
+        let dstPtr = result.pointer(capacity: submatrixWidth * submatrixHeight)
+        
+        vDSP_mmov(srcPtr, dstPtr, UInt(submatrixWidth), UInt(submatrixHeight), UInt(width), UInt(submatrixWidth))
+    }
+    
+    public static func sin(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vvsinf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func cos(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vvcosf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func tan(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
+        vvtanf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
     }
 }

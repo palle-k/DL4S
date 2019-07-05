@@ -123,6 +123,69 @@ private struct SqrtContext<Element: NumericType, Device: DeviceType>: UnaryTenso
     }
 }
 
+private struct SinContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let sourceGradient = source.shapedGradient, let vectorGradient = vector.shapedGradient else {
+            return
+        }
+        let tmp = Device.Memory.allocateBuffer(withShape: source.shape, type: Element.self)
+        defer {
+            Device.Memory.free(tmp)
+        }
+        Device.Engine.cos(values: source.shapedValues, result: tmp)
+        Device.Engine.vMA(lhs: vectorGradient.values, rhs: tmp.values, add: sourceGradient.values, result: sourceGradient.values, count: source.count)
+    }
+    
+    var symbol: String {
+        return "sin"
+    }
+}
+
+private struct CosContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let sourceGradient = source.shapedGradient, let vectorGradient = vector.shapedGradient else {
+            return
+        }
+        let tmp = Device.Memory.allocateBuffer(withShape: source.shape, type: Element.self)
+        defer {
+            Device.Memory.free(tmp)
+        }
+        Device.Engine.sin(values: source.shapedValues, result: tmp)
+        Device.Engine.vNeg(val: tmp.values, result: tmp.values, count: source.count)
+        Device.Engine.vMA(lhs: vectorGradient.values, rhs: tmp.values, add: sourceGradient.values, result: sourceGradient.values, count: source.count)
+    }
+    
+    var symbol: String {
+        return "cos"
+    }
+}
+
+private struct TanContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
+    var source: Tensor<Element, Device>
+    
+    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
+        guard let sourceGradient = source.shapedGradient, let vectorGradient = vector.shapedGradient else {
+            return
+        }
+        let tmp = Device.Memory.allocateBuffer(withShape: source.shape, type: Element.self)
+        defer {
+            Device.Memory.free(tmp)
+        }
+        Device.Engine.cos(values: source.shapedValues, result: tmp)
+        Device.Engine.vSquare(values: tmp.values, result: tmp.values, count: tmp.count)
+        Device.Engine.svDiv(lhs: 1, rhs: tmp.values, result: tmp.values, count: tmp.count)
+        Device.Engine.vMA(lhs: vectorGradient.values, rhs: tmp.values, add: sourceGradient.values, result: sourceGradient.values, count: source.count)
+    }
+    
+    var symbol: String {
+        return "tan"
+    }
+}
+
 
 public func exp<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let result = Tensor<Element, Device>(
@@ -165,6 +228,42 @@ public func log<Element, Device>(_ vector: Tensor<Element, Device>, base: Tensor
     return log(vector) / log(base)
 }
 
+
+public func pow<Element, Device>(base: Tensor<Element, Device>, exponent: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    return exp(exponent * log(base))
+}
+
+
+public func sin<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: vector.shape,
+        parent: nil,
+        context: vector.requiresGradient ? SinContext(source: vector).asAny() : nil
+    )
+    Device.Engine.sin(values: vector.shapedValues, result: result.shapedValues)
+    return result
+}
+
+public func cos<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: vector.shape,
+        parent: nil,
+        context: vector.requiresGradient ? CosContext(source: vector).asAny() : nil
+    )
+    Device.Engine.cos(values: vector.shapedValues, result: result.shapedValues)
+    return result
+}
+
+public func tan<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: vector.shape,
+        parent: nil,
+        context: vector.requiresGradient ? TanContext(source: vector).asAny() : nil
+    )
+    Device.Engine.tan(values: vector.shapedValues, result: result.shapedValues)
+    return result
+}
+
 public func tanh<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let result = Tensor<Element, Device>(
         shape: vector.shape,
@@ -178,7 +277,9 @@ public func tanh<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<E
 }
 
 public func sigmoid<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    return 1 / (1 + exp(-vector))
+    // return 1 / (1 + exp(-vector))
+    // Using tanh for improved numeric stability
+    return 0.5 * tanh(vector * 0.5) + 0.5
 }
 
 public func relu<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -198,110 +299,78 @@ public func leakyRelu<Element, Device>(_ vector: Tensor<Element, Device>, leakag
     return relu(vector) - Tensor(leakage) * relu(-vector)
 }
 
-
-public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let e = expected.view(as: -1)
-    let a = actual.view(as: -1)
+public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
+    // Subtracting max(tensor) does not alter softmax result but makes it more numerically stable.
+    let d = tensor.detached()
     
-    let p1 = e * log(a)
-    let p2 = (1 - e) * log(1 - a)
-    return mean(-(p1 + p2))
+    #if DEBUG
+    d.tag = "softmax-numeric-stabilizer"
+    #endif
+    
+    let norm = tensor - max(d)
+    let e = exp(norm)
+    let s = sum(e, axes: [axis]).unsqueeze(at: axis)
+    return e / s
 }
 
-public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let expectedView = expected.view(as: -1)
-    let actualView = actual.view(as: expectedView.shape[0], -1)
-    
-    var result = Tensor<Element, Device>(0)
-    
-    for i in 0 ..< expectedView.shape[0] {
-        // expected is not included in compute graph
-        result = result - log(actualView[i, Int(expectedView[i].item)])
+public extension Tensor {
+    func exp() -> Tensor<Element, Device> {
+        return DL4S.exp(self)
     }
     
-    return result / Tensor<Element, Device>(Element(expected.count))
-}
-
-public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let diff = expected - actual
-    let s = sum(diff * diff)
-    return s  / Tensor(Element(expected.dim > 1 ? expected.shape[0] : 1))
-}
-
-public func mean<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? = nil) -> Tensor<Element, Device> {
-    let s = sum(vector, axis: axis)
-    return s / Tensor(Element(axis.map {vector.shape[$0]} ?? vector.count))
-}
-
-public func variance<Element, Device>(_ vector: Tensor<Element, Device>, axis: Int? = nil) -> Tensor<Element, Device> {
-    let m = mean(vector, axis: axis)
-    return mean(vector * vector, axis: axis) - m * m
-}
-
-public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
-    return mean(vector * vector) * Tensor(loss)
-}
-
-public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
-    // abs(x) = sqrt(x * x)
-    return mean(sqrt(vector * vector)) * Tensor(loss)
-}
-
-
-private struct SoftmaxContext<Element: NumericType, Device: DeviceType>: UnaryTensorOperation {
-    var source: Tensor<Element, Device>
-    
-    func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        guard let sourceGradient = source.gradient, let vectorGradient = vector.gradient else {
-            return
-        }
-        precondition(vector.dim == 2)
-        
-        let diag = Tensor<Element, Device>.diagonal(size: vector.shape[1], value: 1)
-        let stride = vector.strides[0]
-        let temp = Device.Memory.allocateBuffer(withCapacity: stride, type: Element.self)
-        
-        for i in 0 ..< vector.shape[0] {
-            let filled = diag * vector[i]
-            let outer = mmul(vector.view(as: -1, 1), vector.view(as: 1, -1))
-            let jac = filled - outer
-            
-            Device.Engine.matMul(
-                lhs: vectorGradient.advanced(by: i * stride),
-                rhs: jac.values,
-                result: temp,
-                lhsRows: 1,
-                lhsCols: jac.shape[0],
-                rhsCols: jac.shape[1]
-            )
-            
-            Device.Engine.vAdd(lhs: sourceGradient.advanced(by: stride * i), rhs: temp, result: sourceGradient.advanced(by: stride * i), count: stride)
-        }
-        
-        Device.Memory.free(temp)
+    func exp(withBase base: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.pow(base: base, exponent: self)
     }
     
-    var symbol: String {
-        return "softmax"
-    }
-}
-
-public func softmax<Element, Device>(_ vector: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    let result = Tensor<Element, Device>(
-        shape: vector.shape,
-        parent: nil,
-        context: vector.requiresGradient ? SoftmaxContext(source: vector).asAny() : nil
-    )
-    
-    let (_, max) = Device.Engine.argmax(values: vector.values, count: result.count)
-    Device.Engine.vsAdd(lhs: vector.values, rhs: -max, result: result.values, count: result.count)
-    Device.Engine.exp(val: result.values, result: result.values, count: result.count)
-    
-    let stride = vector.strides[0]
-    for i in 0 ..< vector.shape[0] {
-        let sum = Device.Engine.sum(val: result.values.advanced(by: stride * i), count: stride)
-        Device.Engine.vsMul(lhs: result.values.advanced(by: stride * i), rhs: 1 / sum, result: result.values.advanced(by: stride * i), count: stride)
+    func pow(withExponent exponent: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.pow(base: self, exponent: exponent)
     }
     
-    return result
+    static func pow(base: Tensor<Element, Device>, exponent: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.pow(base: base, exponent: exponent)
+    }
+    
+    func log() -> Tensor<Element, Device> {
+        return DL4S.log(self)
+    }
+    
+    func sqrt() -> Tensor<Element, Device> {
+        return DL4S.sqrt(self)
+    }
+    
+    func log(base: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        return DL4S.log(self, base: base)
+    }
+    
+    func sin() -> Tensor<Element, Device> {
+        return DL4S.sin(self)
+    }
+    
+    func cos() -> Tensor<Element, Device> {
+        return DL4S.cos(self)
+    }
+    
+    func tan() -> Tensor<Element, Device> {
+        return DL4S.tan(self)
+    }
+    
+    func tanh() -> Tensor<Element, Device> {
+        return DL4S.tanh(self)
+    }
+    
+    func sigmoid() -> Tensor<Element, Device> {
+        return DL4S.sigmoid(self)
+    }
+    
+    func relu() -> Tensor<Element, Device> {
+        return DL4S.relu(self)
+    }
+    
+    func leakyRelu(_ leak: Element) -> Tensor<Element, Device> {
+        return DL4S.leakyRelu(self, leakage: leak)
+    }
+    
+    func softmax(axis: Int = 1) -> Tensor<Element, Device> {
+        return DL4S.softmax(self, axis: axis)
+    }
 }

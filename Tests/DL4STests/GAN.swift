@@ -3,7 +3,7 @@
 //  DL4STests
 //
 //  Created by Palle Klewitz on 07.03.19.
-////  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@ class GANTests: XCTestCase {
         print("Loading images...")
         let ((images, labels_cat), _) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
-        let labels = labels_cat.toOneHot(dim: 10)
+        let labels = labels_cat.toOneHot(dim: 10) as Tensor<Float, CPU>
         
         print("Creating networks...")
         
@@ -45,12 +45,12 @@ class GANTests: XCTestCase {
         let generator = Sequential<Float, CPU>(
             Concat().asAny(),
             Dense(inputFeatures: latentSize + 10, outputFeatures: 200).asAny(),
-            BatchNorm(inputSize: 200).asAny(),
-            Tanh().asAny(),
+            BatchNorm(inputSize: [200]).asAny(),
+            LeakyRelu(0.2).asAny(),
             d1.asAny(),
             Dense(inputFeatures: 200, outputFeatures: 800).asAny(),
-            BatchNorm(inputSize: 800).asAny(),
-            Tanh().asAny(),
+            BatchNorm(inputSize: [800]).asAny(),
+            LeakyRelu(0.2).asAny(),
             d2.asAny(),
             Dense(inputFeatures: 800, outputFeatures: 28 * 28).asAny(),
             Sigmoid().asAny()//,
@@ -63,14 +63,14 @@ class GANTests: XCTestCase {
         let discriminator = Sequential<Float, CPU>(
             Concat().asAny(),
             Dense(inputFeatures: 28 * 28 + 10, outputFeatures: 400).asAny(),
-            BatchNorm(inputSize: 400).asAny(),
-            Tanh().asAny(),
+            // BatchNorm(inputSize: 400).asAny(),
+            Relu().asAny(),
             Dense(inputFeatures: 400, outputFeatures: 100).asAny(),
-            BatchNorm(inputSize: 100).asAny(),
-            Tanh().asAny(),
+            // BatchNorm(inputSize: 100).asAny(),
+            Relu().asAny(),
             Dense(inputFeatures: 100, outputFeatures: 1).asAny(),
-            Sigmoid().asAny(),
-            Debug().asAny()
+            Sigmoid().asAny()
+            // Debug().asAny()
         )
         
         let optimGen = Adam(parameters: generator.trainableParameters, learningRate: 0.0003)
@@ -98,7 +98,7 @@ class GANTests: XCTestCase {
 
             let realResult = discriminator.forward(toFlatVector.forward(real), realLabels)
             
-            let gl = genLabels.toOneHot(dim: 10)
+            let gl = genLabels.toOneHot(dim: 10) as Tensor<Float, CPU>
             let fakeGenerated = generator.forward(genInputs, gl)
             let fakeResult = discriminator.forward(fakeGenerated, gl)
 
@@ -116,7 +116,7 @@ class GANTests: XCTestCase {
                 Random.fill(genLabels, a: 0, b: 9)
 
                 //let genResult = network.forward(genInputs, genLabels.toOneHot(dim: 10))
-                let gl = genLabels.toOneHot(dim: 10)
+                let gl = genLabels.toOneHot(dim: 10) as Tensor<Float, CPU>
                 let generated = generator.forward(genInputs, gl)
                 let genResult = discriminator.forward(generated, gl)
                 
