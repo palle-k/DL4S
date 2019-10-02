@@ -27,6 +27,8 @@ import XCTest
 @testable import DL4S
 
 class MNistTest: XCTestCase {
+    typealias Device = GPU
+    
     static func readSamples(from bytes: [UInt8], labels: [UInt8], count: Int) -> (Tensor<Float, CPU>, Tensor<Int32, CPU>) {
         let imageOffset = 16
         let labelOffset = 8
@@ -50,8 +52,8 @@ class MNistTest: XCTestCase {
             let label = Int(labels[labelOffset + i])
             
             //let sampleMatrix = Matrix3(values: pixelData, width: imageWidth, height: imageHeight, depth: 1)
-            //let sampleMatrix = Tensor<Float, CPU>(pixelData, shape: imageHeight, imageWidth)
-            //let expectedValue = Tensor<Int32, CPU>(Int32(label))
+            //let sampleMatrix = Tensor<Float, Device>(pixelData, shape: imageHeight, imageWidth)
+            //let expectedValue = Tensor<Int32, Device>(Int32(label))
             
             var e = [Float](repeating: 0, count: 10)
             e[label] = Float(1)
@@ -64,13 +66,18 @@ class MNistTest: XCTestCase {
     }
     
     static func images(from path: String, maxCount: Int? = nil) -> ((Tensor<Float, CPU>, Tensor<Int32, CPU>), (Tensor<Float, CPU>, Tensor<Int32, CPU>)) {
-        guard
-            let trainingData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte")),
-            let trainingLabelData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte")),
-            let testingData = try? Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte")),
-            let testingLabelData = try? Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
-        else {
-            fatalError("Data not found")
+        let trainingData: Data
+        let trainingLabelData: Data
+        let testingData: Data
+        let testingLabelData: Data
+        
+        do {
+            trainingData = try Data(contentsOf: URL(fileURLWithPath: path + "train-images-idx3-ubyte"))
+            trainingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "train-labels-idx1-ubyte"))
+            testingData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-images-idx3-ubyte"))
+            testingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels-idx1-ubyte"))
+        } catch let error {
+            fatalError("Data not found \(error)")
         }
         
         let trainingBytes = Array<UInt8>(trainingData)
@@ -88,12 +95,15 @@ class MNistTest: XCTestCase {
     }
     
     func testMNist() {
-        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let (ds_train, ds_val) = { () -> ((Tensor<Float, Device>, Tensor<Int32, Device>), (Tensor<Float, Device>, Tensor<Int32, Device>)) in
+            let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Developer/DL4S/")
+            return ((ds_train.0.copied(to: Device.self), ds_train.1.copied(to: Device.self)), (ds_val.0.copied(to: Device.self), ds_val.1.copied(to: Device.self)))
+        }()
         
-        let bn1 = BatchNorm<Float, CPU>(inputSize: [500])
-        let bn2 = BatchNorm<Float, CPU>(inputSize: [300])
+        let bn1 = BatchNorm<Float, Device>(inputSize: [500])
+        let bn2 = BatchNorm<Float, Device>(inputSize: [300])
         
-        let model = Sequential<Float, CPU>(
+        let model = Sequential<Float, Device>(
             Flatten().asAny(),
             Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
             // bn1.asAny(),
@@ -163,7 +173,9 @@ class MNistTest: XCTestCase {
     }
     
     func testMNistConvnet() {
-        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        typealias Device = CPU
+        
+        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Developer/DL4S/")
         
         /*
          With Layer Norm:
@@ -238,10 +250,12 @@ class MNistTest: XCTestCase {
         
         print("Accuracy: \(accuracy)")
         
-        // try! model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_lenet.json"))
+        try! model.saveWeights(to: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_lenet.json"))
     }
     
     func testMNistResnet() {
+        typealias Device = CPU
+        
         var (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         ds_train.0 = pad(ds_train.0, padding: [0, 2, 2])
         ds_val.0 = pad(ds_val.0, padding: [0, 2, 2])
@@ -249,7 +263,7 @@ class MNistTest: XCTestCase {
         let epochs = 500
         let batchSize = 32
         
-        let model = ResNet<Float, CPU>(inputShape: [1, 32, 32], classCount: 10)
+        let model = ResNet<Float, Device>(inputShape: [1, 32, 32], classCount: 10)
         let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
         
         for epoch in 1 ... epochs {
@@ -290,9 +304,11 @@ class MNistTest: XCTestCase {
     }
     
     func testMNistLstm() {
+        typealias Device = CPU
+        
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
-        let model = Sequential<Float, CPU>(
+        let model = Sequential<Float, Device>(
             GRU(inputSize: 28, hiddenSize: 128).asAny(),
             //LSTM(inputSize: 28, hiddenSize: 128).asAny(),
             //BasicRNN(inputSize: 28, hiddenSize: 128).asAny(),
@@ -307,7 +323,7 @@ class MNistTest: XCTestCase {
         
         print("Training...")
         
-        let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
+        let queue = Queue<(Tensor<Float, Device>, Tensor<Int32, Device>)>(maxLength: 16)
         let workers = 1
 
         for i in 0 ..< workers {
@@ -361,9 +377,11 @@ class MNistTest: XCTestCase {
     }
     
     func testMNISTBiRNN() {
+        typealias Device = CPU
+        
         let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
         
-        let model = Sequential<Float, CPU>(
+        let model = Sequential<Float, Device>(
             Bidirectional(forwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .forward), backwardLayer: GRU(inputSize: 28, hiddenSize: 64, direction: .backward)).asAny(),
             Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
             Softmax().asAny()
@@ -376,7 +394,7 @@ class MNistTest: XCTestCase {
         
         print("Training...")
         
-        let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
+        let queue = Queue<(Tensor<Float, Device>, Tensor<Int32, Device>)>(maxLength: 16)
         let workers = 1
         
         for i in 0 ..< workers {
@@ -428,7 +446,9 @@ class MNistTest: XCTestCase {
     }
     
     func testGenerative() throws {
-        let model = Sequential<Float, CPU>(
+        typealias Device = CPU
+        
+        let model = Sequential<Float, Device>(
             Flatten().asAny(),
             Dense(inputFeatures: 28 * 28, outputFeatures: 500).asAny(),
             Tanh().asAny(),
@@ -440,8 +460,8 @@ class MNistTest: XCTestCase {
         
         try model.loadWeights(from: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_params.json"))
         
-        let input = Tensor<Float, CPU>(repeating: 0, shape: [1, 28, 28], requiresGradient: true)
-        let expected = Tensor<Int32, CPU>([5])
+        let input = Tensor<Float, Device>(repeating: 0, shape: [1, 28, 28], requiresGradient: true)
+        let expected = Tensor<Int32, Device>([5])
         
         Random.fill(input, a: 0, b: 1)
         
@@ -475,4 +495,80 @@ class MNistTest: XCTestCase {
         }
         try png.write(to: URL(fileURLWithPath: "/Users/Palle/Desktop/input.png"))
     }
+    
+    func testIterativeAdversarial() throws {
+        let model = Sequential<Float, CPU>(
+            Conv2D(inputChannels: 1, outputChannels: 6, kernelSize: 5, padding: 0).asAny(), // 4x24x24
+            LayerNorm(inputSize: [4, 24, 24]).asAny(),
+            Relu().asAny(),
+            MaxPool2D(windowSize: 2, stride: 2).asAny(), // 4x12x12
+            Conv2D(inputChannels: 6, outputChannels: 16, kernelSize: 5, padding: 0).asAny(), // 16x8x8
+            LayerNorm(inputSize: [16, 8, 8]).asAny(),
+            Relu().asAny(),
+            MaxPool2D(windowSize: 2, stride: 2).asAny(), // 16x4x4
+            Flatten().asAny(), // 256
+            Dense(inputFeatures: 256, outputFeatures: 120).asAny(),
+            LayerNorm(inputSize: [120]).asAny(),
+            Relu().asAny(),
+            Dense(inputFeatures: 120, outputFeatures: 10).asAny(),
+            Softmax().asAny()
+        )
+        try model.loadWeights(from: URL(fileURLWithPath: "/Users/Palle/Desktop/mnist_lenet.json"))
+        
+        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Developer/DL4S/")
+        
+        // [1, 28, 28], [1]
+        let (sample, target) = Random.minibatch(from: ds_val.0, labels: ds_val.1, count: 1)
+        
+        save(tensor: sample.permuted(to: 0, 2, 1), to: URL(fileURLWithPath: "/Users/Palle/Desktop/sample_orig.png"))
+        
+        let targetIndex = target.squeeze().item
+        print("Expected index: \(target)")
+        let retargeted = Tensor<Int32, CPU>((target.squeeze().item + 1) % 10).view(as: -1) // batchSize
+        print("Adversarial target: \(retargeted)")
+        
+        let epochs = 3000
+        
+        let x = sample.unsqueeze(at: 1) // [1, 1, 28, 28]
+        let y_adv = retargeted
+        let noise = Tensor<Float, CPU>(repeating: 0, shape: sample.shape)
+        Random.fill(noise, a: -0.001, b: 0.001)
+        noise.requiresGradient = true
+        
+        let optimizer = Adam(parameters: [noise], learningRate: 0.001)
+        
+        for epoch in 0 ..< epochs {
+            optimizer.zeroGradient()
+            let y_act = model(x + noise)
+            
+            let target_loss = categoricalCrossEntropy(expected: y_adv, actual: y_act)
+            let decay_loss = l2loss(noise, loss: 1000)
+            
+            let loss = target_loss + decay_loss
+            loss.backwards()
+            optimizer.step()
+            
+            if epoch.isMultiple(of: 10) {
+                let prediction = argmax(y_act.squeeze())
+                print("[\(epoch)/\(epochs)]: loss: \(loss) | target: \(target_loss) | decay: \(decay_loss) | \(prediction) (\(y_act[0, prediction]) confidence)")
+            }
+        }
+        
+        save(tensor: (sample + noise[0]).permuted(to: 0, 2, 1), to: URL(fileURLWithPath: "/Users/Palle/Desktop/sample_adv.png"))
+    }
+}
+
+func sign<Element, Device>(_ x: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    heaviside(x) * 2 - 1
+}
+
+func save<Element, Device>(tensor: Tensor<Element, Device>, to url: URL) {
+    guard let image = NSImage(tensor), let imgData = image.tiffRepresentation else {
+        return
+    }
+    guard let rep = NSBitmapImageRep.init(data: imgData) else {
+        return
+    }
+    let png = rep.representation(using: .png, properties: [:])
+    try? png?.write(to: url)
 }

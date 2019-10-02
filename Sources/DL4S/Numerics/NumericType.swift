@@ -25,6 +25,7 @@
 
 import Foundation
 import Accelerate
+import MetalPerformanceShaders
 
 public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
     static var zero: Self { get }
@@ -61,6 +62,9 @@ public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable
     
     var isFinite: Bool { get }
     var isNaN: Bool { get }
+    
+    static var gpuTypeIdentifier: String { get }
+    static var mpsDataType: MPSDataType { get }
     
     static func pow(base: Self, exponent: Self) -> Self
     

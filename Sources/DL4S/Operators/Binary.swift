@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 import Foundation
-
+import TensorFlow
 
 
 private struct AdditionOperation<Element: NumericType, Device: DeviceType>: BinaryTensorOperation {
@@ -351,3 +351,8 @@ public extension Tensor {
 public prefix func - <Element, Device>(value: Tensor<Element, Device>) -> Tensor<Element, Device> {
     return 0 - value
 }
+
+//@differentiable(vjp: Swift.print where Element: NumericType)
+//func addTF<Element, Device>(_ lhs: Tensor<Element, Device>, _ rhs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+//    
+//}

@@ -25,6 +25,7 @@
 
 import Foundation
 import Accelerate
+import MetalPerformanceShaders
 
 
 extension Float: NumericType {
@@ -50,6 +51,14 @@ extension Float: NumericType {
     
     public var intValue: Int32 {
         return Int32(self)
+    }
+    
+    public static var gpuTypeIdentifier: String {
+        return "Float32"
+    }
+    
+    public static var mpsDataType: MPSDataType {
+        return MPSDataType.float32
     }
     
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {

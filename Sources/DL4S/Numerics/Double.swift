@@ -25,6 +25,7 @@
 
 import Foundation
 import Accelerate
+import MetalPerformanceShaders
 
 
 let DefaultNumberFormatter: NumberFormatter = {
@@ -323,6 +324,14 @@ extension Double: NumericType {
     
     public static func tan(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         vvtan(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static var gpuTypeIdentifier: String {
+        return "DOUBLE_NOT_SUPPORTED"
+    }
+    
+    public static var mpsDataType: MPSDataType {
+        fatalError("Double not supported on GPU")
     }
 }
 

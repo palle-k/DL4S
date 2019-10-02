@@ -25,6 +25,7 @@
 
 import Foundation
 import Accelerate
+import MetalPerformanceShaders
 
 
 extension Int32: NumericType {
@@ -58,6 +59,14 @@ extension Int32: NumericType {
     
     public var intValue: Int32 {
         return self
+    }
+    
+    public static var gpuTypeIdentifier: String {
+        return "Int32"
+    }
+    
+    public static var mpsDataType: MPSDataType {
+        return MPSDataType.int32
     }
     
     public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, stride: Int, count: Int) {

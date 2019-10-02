@@ -313,6 +313,16 @@ public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: In
     return e / s
 }
 
+public func heaviside<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    let result = Tensor<Element, Device>(
+        shape: tensor.shape,
+        parent: nil,
+        context: nil
+    )
+    Device.Engine.heaviside(values: tensor.shapedValues, result: result.shapedValues)
+    return result
+}
+
 public extension Tensor {
     func exp() -> Tensor<Element, Device> {
         return DL4S.exp(self)
@@ -372,5 +382,9 @@ public extension Tensor {
     
     func softmax(axis: Int = 1) -> Tensor<Element, Device> {
         return DL4S.softmax(self, axis: axis)
+    }
+    
+    func heaviside() -> Tensor<Element, Device> {
+        return DL4S.heaviside(self)
     }
 }
