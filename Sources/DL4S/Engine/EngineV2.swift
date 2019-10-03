@@ -38,6 +38,13 @@ public protocol EngineTypeV2 {
     static func broadcastMul<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     static func broadcastDiv<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
+    static func unbroadcastAdd<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>)
+    static func unbroadcastSub<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>)
+    static func unbroadcastSub<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, rhsGradient: ShapedBuffer<N, Device>)
+    static func unbroadcastMul<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>)
+    static func unbroadcastDiv<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>)
+    static func unbroadcastDiv<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, rhsGradient: ShapedBuffer<N, Device>)
+    
     static func reduceSum<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axis: Int)
     static func reduceMax<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
     static func reduceMin<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
@@ -88,4 +95,156 @@ public protocol EngineTypeV2 {
     
     static func img2col<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
     static func col2img<N: NumericType>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+}
+
+extension EngineTypeV2 {
+    public static func unbroadcastAdd<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>) {
+        if lhs.shape == rhs.shape {
+            // Fast path
+            Device.Engine.broadcastAdd(lhs: resultGradient, rhs: lhsGradient, result: lhsGradient)
+            return
+        }
+        
+        let tmp = Device.Memory.allocateBuffer(withShape: lhs.shape, type: N.self)
+        defer {
+            Device.Memory.free(tmp)
+        }
+        
+        let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
+        let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
+            .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+        
+        var tmpReducedShape = lhsPadded
+        
+        for a in lhsReducedAxes.reversed() {
+            tmpReducedShape.remove(at: a)
+        }
+        
+        Device.Engine.reduceSum(values: resultGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
+        Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
+    }
+    
+    public static func unbroadcastSub<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>) {
+        if lhs.shape == rhs.shape {
+            Device.Engine.broadcastAdd(lhs: resultGradient, rhs: lhsGradient, result: lhsGradient)
+        } else {
+            let tmp = Device.Memory.allocateBuffer(withShape: lhs.shape, type: N.self)
+            defer {
+                Device.Memory.free(tmp)
+            }
+            
+            let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
+            let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
+                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+            
+            var tmpReducedShape = lhsPadded
+            
+            for a in lhsReducedAxes.reversed() {
+                tmpReducedShape.remove(at: a)
+            }
+            
+            Device.Engine.reduceSum(values: resultGradient, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
+            Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient, result: lhsGradient)
+        }
+    }
+    
+    public static func unbroadcastSub<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, rhsGradient: ShapedBuffer<N, Device>) {
+        if lhs.shape == rhs.shape {
+            Device.Engine.broadcastSub(lhs: rhsGradient, rhs: resultGradient, result: rhsGradient)
+        } else {
+            let tmp = Device.Memory.allocateBuffer(withShape: rhs.shape, type: N.self)
+            defer {
+                Device.Memory.free(tmp)
+            }
+            
+            let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
+            let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
+                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+            
+            var tmpReducedShape = rhsPadded
+            
+            for a in rhsReducedAxes.reversed() {
+                tmpReducedShape.remove(at: a)
+            }
+            
+            Device.Engine.reduceSum(values: resultGradient, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
+            Device.Engine.broadcastSub(lhs: rhsGradient, rhs: tmp, result: rhsGradient)
+        }
+    }
+    
+    public static func unbroadcastMul<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>) {
+        if lhs.shape == rhs.shape {
+            Device.Engine.vMA(lhs: rhs.values, rhs: resultGradient.values, add: lhsGradient.values, result: lhsGradient.values, count: lhsGradient.count)
+        } else {
+            let tmp1 = Device.Memory.allocateBuffer(withShape: lhs.shape, type: N.self)
+            let tmp2 = Device.Memory.allocateBuffer(withShape: resultGradient.shape, type: N.self)
+            defer {
+                Device.Memory.free(tmp1)
+                Device.Memory.free(tmp2)
+            }
+            
+            let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
+            let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
+                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+            
+            var tmp1reducedShape = lhsPadded
+            
+            for a in lhsReducedAxes.reversed() {
+                tmp1reducedShape.remove(at: a)
+            }
+            
+            Device.Engine.broadcastMul(lhs: rhs, rhs: resultGradient, result: tmp2)
+            Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: lhsReducedAxes)
+            Device.Engine.broadcastAdd(lhs: tmp1, rhs: lhsGradient, result: lhsGradient)
+        }
+    }
+    
+    public static func unbroadcastDiv<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, lhsGradient: ShapedBuffer<N, Device>) {
+        let tmp1 = Device.Memory.allocateBuffer(withShape: lhs.shape, type: N.self)
+        let tmp2 = Device.Memory.allocateBuffer(withShape: resultGradient.shape, type: N.self)
+        defer {
+            Device.Memory.free(tmp1)
+            Device.Memory.free(tmp2)
+        }
+        
+        let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
+        let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
+            .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+        
+        var tmp1reducedShape = lhsPadded
+        
+        for a in lhsReducedAxes.reversed() {
+            tmp1reducedShape.remove(at: a)
+        }
+        
+        Device.Engine.broadcastDiv(lhs: resultGradient, rhs: rhs, result: tmp2)
+        Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: lhsReducedAxes)
+        Device.Engine.broadcastAdd(lhs: tmp1, rhs: lhsGradient, result: lhsGradient)
+    }
+    
+    public static func unbroadcastDiv<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, resultGradient: ShapedBuffer<N, Device>, rhsGradient: ShapedBuffer<N, Device>) {
+        let tmp1 = Device.Memory.allocateBuffer(withShape: rhs.shape, type: N.self)
+        let tmp2 = Device.Memory.allocateBuffer(withShape: resultGradient.shape, type: N.self)
+        defer {
+            Device.Memory.free(tmp1)
+            Device.Memory.free(tmp2)
+        }
+        
+        let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
+        let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
+            .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+        
+        var tmp1reducedShape = rhsPadded
+        
+        for a in rhsReducedAxes.reversed() {
+            tmp1reducedShape.remove(at: a)
+        }
+        
+        Device.Engine.broadcastMul(lhs: resultGradient, rhs: lhs, result: tmp2)
+        Device.Engine.broadcastDiv(lhs: tmp2, rhs: rhs, result: tmp2)
+        Device.Engine.broadcastDiv(lhs: tmp2, rhs: rhs, result: tmp2)
+        Device.Engine.reduceSum(values: tmp2, result: tmp1.reshaped(to: tmp1reducedShape), axes: rhsReducedAxes)
+        Device.Engine.broadcastSub(lhs: rhsGradient, rhs: tmp1, result: rhsGradient)
+    }
+    
 }

@@ -1008,20 +1008,22 @@ extension CPUEngine: EngineTypeV2 {
             
             let featureMap = srcPtr.advanced(by: featureMapStride * featureMapIdx)
             
+            let currDstPtr = dstPtr.advanced(by: c)
+            
             // Using a while-loop gives a ~5% performance gain
-            var r = 0
+            var r: UInt32 = 0
             while r < rows {
-                let row = baseSrcRow + rowBuffer[r]
-                let col = baseSrcCol + colBuffer[r]
+                let row = baseSrcRow &+ rowBuffer[Int(r)]
+                let col = baseSrcCol &+ colBuffer[Int(r)]
                 
-                if row < 0 || row >= height || col < 0 || col >= width {
-                    dstPtr[rColsBuffer[r] + c] = 0
-                } else {
+                if row >= 0 && row < height && col >= 0 && col < width {
                     // TODO: Try advancing featureMap by baseSrcCol + baseSrcRow * verticalStride in advance
                     // TODO: Also try advancing dstPtr by c in advance
-                    dstPtr[rColsBuffer[r] + c] = featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col]
+                    currDstPtr[rColsBuffer[Int(r)]] = featureMap[chanDepthStrideBuffer[Int(r)] &+ row &* verticalStride &+ col]
+                } else {
+                    currDstPtr[rColsBuffer[Int(r)]] = 0
                 }
-                r += 1
+                r &+= 1
             }
         }
     }

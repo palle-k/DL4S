@@ -26,10 +26,6 @@
 import XCTest
 @testable import DL4S
 
-
-
-
-
 class ResNetTests: XCTestCase {
     func testResNet() {
         let resnet = ResNet<Float, CPU>(inputShape: [3, 32, 32], classCount: 32)
@@ -40,21 +36,26 @@ class ResNetTests: XCTestCase {
         t.tag = "input"
         Random.fill(t, a: 0, b: 1)
         
-        let expected = Tensor<Int32, CPU>((0 ..< 64).map {_ in Int32.random(in: 0 ..< 32)})
+//        let expected = Tensor<Int32, CPU>((0 ..< 64).map {_ in Int32.random(in: 0 ..< 32)})
         
-        let epochs = 100
+//        let epochs = 100
         
-        for i in 1 ... epochs {
-            optim.zeroGradient()
-            
-            let result = resnet(t)
-            
-            let loss = categoricalCrossEntropy(expected: expected, actual: result)
-            loss.backwards()
-            optim.step()
-            
-            print("[\(i)/\(epochs)]: \(loss)")
+//        for i in 1 ... epochs {
+//            optim.zeroGradient()
+//
+//            let result = resnet(t)
+//
+//            let loss = categoricalCrossEntropy(expected: expected, actual: result)
+//            loss.backwards()
+//            optim.step()
+//
+//            print("[\(i)/\(epochs)]: \(loss)")
+//        }
+//
+        measure {
+            for _ in 0 ..< 5 {
+                _ = resnet(t)
+            }
         }
-        
     }
 }
