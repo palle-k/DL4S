@@ -26,7 +26,7 @@ public extension XLayer {
     }
 }
 
-public struct XDense<Element: RandomizableType, Device: DeviceType>: XLayer {
+public struct XDense<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
     public static var parameters: [WritableKeyPath<XDense<Element, Device>, XTensor<Element, Device>>] {[
         \.weights,
         \.bias
@@ -59,7 +59,7 @@ public struct XDense<Element: RandomizableType, Device: DeviceType>: XLayer {
     }
 }
 
-public struct XTanh<Element: NumericType, Device: DeviceType>: XLayer {
+public struct XTanh<Element: NumericType, Device: DeviceType>: XLayer, Codable {
     public static var parameters: [WritableKeyPath<XTanh<Element, Device>, XTensor<Element, Device>>] {[]}
     public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
     
@@ -70,7 +70,7 @@ public struct XTanh<Element: NumericType, Device: DeviceType>: XLayer {
     }
 }
 
-public struct XSigmoid<Element: NumericType, Device: DeviceType>: XLayer {
+public struct XSigmoid<Element: NumericType, Device: DeviceType>: XLayer, Codable {
     public static var parameters: [WritableKeyPath<XSigmoid<Element, Device>, XTensor<Element, Device>>] {[]}
     public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
     
@@ -110,6 +110,8 @@ public struct XUnion<First: XLayer, Second: XLayer>: XLayer where First.Outputs 
         return second.callAsFunction(first.callAsFunction(inputs))
     }
 }
+
+extension XUnion: Codable where First: Codable, Second: Codable {}
 
 @_functionBuilder
 public struct LayerBuilder {

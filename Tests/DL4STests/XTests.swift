@@ -108,29 +108,29 @@ class XTests: XCTestCase {
             XDense<Float, CPU>(inputSize: 6, outputSize: 1)
             XSigmoid<Float, CPU>()
         }
-        var optim = XMomentum(model: net, learningRate: 0.05)
+        var optim = XAdam(model: net, learningRate: 0.05)
         
         for epoch in 1 ... 10000 {
             let pred = optim.model(xor_src)
             let loss = binaryCrossEntropy(expected: xor_dst, actual: pred)
-            let grads = loss.gradients(of: optim.model.parameters, retainBackwardsGraph: true)
+            let grads = loss.gradients(of: optim.model.parameters, retainBackwardsGraph: false)
             
-            var gradPenalty: XTensor<Float, CPU> = 0
-
-            for g in grads {
-                let gSq = g * g
-                let penalty = (-gSq).reduceMean()
-                gradPenalty += penalty
-            }
+//            var gradPenalty: XTensor<Float, CPU> = 0
+//
+//            for g in grads {
+//                let gSq = g * g
+//                let penalty = (-gSq).reduceMean()
+//                gradPenalty += penalty
+//            }
+//
+//            let penaltyLoss = 3 * gradPenalty
+//            let penaltyGrads = penaltyLoss.gradients(of: optim.model.parameters)
+//
+//            let fullGrads = zip(grads, penaltyGrads).map(+)
+            optim.update(along: grads)
             
-            let penaltyLoss = 3 * gradPenalty
-            let penaltyGrads = penaltyLoss.gradients(of: optim.model.parameters)
-            
-            let fullGrads = zip(grads, penaltyGrads).map(+)
-            optim.update(along: fullGrads)
-            
-            if epoch.isMultiple(of: 100) {
-                print("[\(epoch)/\(10000)] loss: \(loss), penalty: \(penaltyLoss)")
+            if epoch.isMultiple(of: 1000) {
+                print("[\(epoch)/\(10000)] loss: \(loss.item)")
             }
         }
     }
