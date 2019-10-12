@@ -8,14 +8,15 @@
 import Foundation
 
 struct XTensorContext<Element: NumericType, Device: DeviceType> {
+    var tag: String?
     var sources: [XTensor<Element, Device>]
-    var backpropagate: (XTensor<Element, Device>) -> [XTensor<Element, Device>]
+    var backpropagate: [(XTensor<Element, Device>) -> XTensor<Element, Device>]
 }
 
-fileprivate class XTensorHandle<Element, Device: DeviceType> {
-    var values: ShapedBuffer<Element, Device>
+class XTensorHandle<Element, Device: DeviceType> {
+    var values: Buffer<Element, Device>
     
-    init(values: ShapedBuffer<Element, Device>) {
+    init(values: Buffer<Element, Device>) {
         self.values = values
     }
     
@@ -25,15 +26,23 @@ fileprivate class XTensorHandle<Element, Device: DeviceType> {
 }
 
 public struct XTensor<Element: NumericType, Device: DeviceType> {
-    fileprivate var handle: XTensorHandle<Element, Device>
-    
-    var values: ShapedBuffer<Element, Device> {
-        handle.values
-    }
+    var handle: XTensorHandle<Element, Device>
     var context: XTensorContext<Element, Device>? = nil
     
-    public var shape: [Int] {
-        values.shape
+    /// Identifies the tensor during backpropagation.
+    ///
+    /// The id will vary across different runs and different tensors with the same values.
+    let backpropID: UInt64 = UInt64.random(in: 0 ... UInt64.max)
+    
+    public let shape: [Int]
+    public var requiresGradient: Bool
+    
+    #if DEBUG
+    public var tag: String? = nil
+    #endif
+    
+    var values: ShapedBuffer<Element, Device> {
+        ShapedBuffer(values: handle.values, shape: shape)
     }
     
     public var count: Int {
@@ -41,97 +50,55 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
     }
     
     public var dim: Int {
-        values.dim
+        shape.count
     }
     
-    let backpropID: UInt64 = UInt64.random(in: 0 ... UInt64.max)
-    
-    public init(repeating value: Element, shape: Int...) {
-        self.init(repeating: value, shape: shape)
+    public init(repeating value: Element, shape: Int..., requiresGradient: Bool = false) {
+        self.init(repeating: value, shape: shape, requiresGradient: requiresGradient)
     }
     
-    public init(repeating value: Element, shape: [Int]) {
+    public init(repeating value: Element, shape: [Int], requiresGradient: Bool = false) {
         let values = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.fill(value: value, result: values.values, count: values.count)
-        handle = XTensorHandle(values: values)
+        handle = XTensorHandle(values: values.values)
+        self.requiresGradient = requiresGradient
+        self.shape = shape
     }
     
-    public init(_ v: [Element]) {
+    public init(_ v: [Element], requiresGradient: Bool = false) {
         let values = Device.Memory.allocateBuffer(withShape: [v.count], type: Element.self)
         v.withUnsafeBufferPointer { ptr in
             Device.Memory.assign(from: ptr, to: values.values, count: v.count)
         }
-        handle = XTensorHandle(values: values)
+        handle = XTensorHandle(values: values.values)
+        self.requiresGradient = requiresGradient
+        self.shape = [v.count]
     }
     
-    init(owning values: ShapedBuffer<Element, Device>, context: XTensorContext<Element, Device>) {
-        handle = XTensorHandle(values: values)
+    public init(_ v: [Element], shape: [Int], requiresGradient: Bool = false) {
+        precondition(v.count == shape.reduce(1, *), "Number of elements must match number of elements specified by shape")
+        
+        let values = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
+        v.withUnsafeBufferPointer { ptr in
+            Device.Memory.assign(from: ptr, to: values.values, count: v.count)
+        }
+        handle = XTensorHandle(values: values.values)
+        self.requiresGradient = requiresGradient
+        self.shape = shape
+    }
+    
+    init(using values: ShapedBuffer<Element, Device>, context: XTensorContext<Element, Device>?) {
+        handle = XTensorHandle(values: values.values)
         self.context = context
+        self.requiresGradient = context != nil
+        self.shape = values.shape
     }
     
-    public static func + (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
-        let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
-        let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        
-        Device.Engine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: resultValues)
-        
-        let resultContext = XTensorContext<Element, Device>(
-            sources: [lhs, rhs],
-            backpropagate: { vectorGradient in
-                
-                let lhsGradient = { () -> XTensor<Element, Device> in
-                    let lhsGradient = XTensor<Element, Device>(repeating: 0, shape: lhs.shape)
-                    
-                    let tmp = Device.Memory.allocateBuffer(withShape: lhs.shape, type: Element.self)
-                    defer {
-                        Device.Memory.free(tmp)
-                    }
-                    
-                    let lhsPadded = Array(repeating: 1, count: vectorGradient.dim - lhs.dim) + lhs.shape
-                    let lhsReducedAxes = zip(lhsPadded, vectorGradient.shape).enumerated()
-                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                    
-                    var tmpReducedShape = lhsPadded
-                    
-                    for a in lhsReducedAxes.reversed() {
-                        tmpReducedShape.remove(at: a)
-                    }
-                    
-                    Device.Engine.reduceSum(values: vectorGradient.values, result: tmp.reshaped(to: tmpReducedShape), axes: lhsReducedAxes)
-                    Device.Engine.broadcastAdd(lhs: tmp, rhs: lhsGradient.values, result: lhsGradient.values)
-                    
-                    return lhsGradient
-                }()
-                
-                let rhsGradient = { () -> XTensor<Element, Device> in
-                    let rhsGradient = XTensor<Element, Device>(repeating: 0, shape: lhs.shape)
-                
-                    let tmp = Device.Memory.allocateBuffer(withShape: rhs.shape, type: Element.self)
-                    defer {
-                        Device.Memory.free(tmp)
-                    }
-                    
-                    let rhsPadded = Array(repeating: 1, count: vectorGradient.dim - rhs.dim) + rhs.shape
-                    let rhsReducedAxes = zip(rhsPadded, vectorGradient.shape).enumerated()
-                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                    
-                    var tmpReducedShape = rhsPadded
-                    
-                    for a in rhsReducedAxes.reversed() {
-                        tmpReducedShape.remove(at: a)
-                    }
-                    
-                    Device.Engine.reduceSum(values: vectorGradient.values, result: tmp.reshaped(to: tmpReducedShape), axes: rhsReducedAxes)
-                    Device.Engine.broadcastAdd(lhs: tmp, rhs: rhsGradient.values, result: rhsGradient.values)
-                    
-                    return rhsGradient
-                }()
-                
-                return [lhsGradient, rhsGradient]
-            }
-        )
-        
-        return XTensor(owning: resultValues, context: resultContext)
+    init(handle: XTensorHandle<Element, Device>, shape: [Int], context: XTensorContext<Element, Device>?) {
+        self.handle = handle
+        self.context = context
+        self.requiresGradient = context != nil
+        self.shape = shape
     }
     
     @_specialize(where Element == Float, Device == CPU)
@@ -163,7 +130,12 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
         return sorting
     }
     
-    func backpropagate(for tensors: [XTensor<Element, Device>]) -> [XTensor<Element, Device>] {
+    
+    /// Performs backpropagation and returns the gradients for the given tensors
+    /// - Parameters:
+    ///   - tensors: Tensors to differentiate for
+    ///   - retainGraph: Whether to store the graph for the backwards pass. If enabled, higher order gradients can be computed.
+    public func gradients(of tensors: [XTensor<Element, Device>], retainBackwardsGraph retainGraph: Bool = false) -> [XTensor<Element, Device>] {
         let result = self
         let operationOrder = XTensor.operationOrder(from: result)
         
@@ -178,8 +150,26 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
             guard let ctx = tensor.context else {
                 continue
             }
-            let sourceGrads = ctx.backpropagate(grad)
-            grads.merge(zip(ctx.sources, sourceGrads).map {($0.backpropID, $1)}, uniquingKeysWith: +)
+            for (src, fn) in zip(ctx.sources, ctx.backpropagate) {
+                guard src.requiresGradient else {
+                    continue
+                }
+                
+                let srcGrad: XTensor<Element, Device>
+                if retainGraph {
+                    srcGrad = fn(grad)
+                } else {
+                    srcGrad = fn(grad).detached()
+                }
+                
+                assert(srcGrad.shape == src.shape)
+                
+                if let existingGrad = grads[src.backpropID] {
+                    grads[src.backpropID] = existingGrad + srcGrad
+                } else {
+                    grads[src.backpropID] = srcGrad
+                }
+            }
         }
         
         let targetGrads = tensors.map {
@@ -188,10 +178,24 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
         
         return targetGrads
     }
-}
-
-extension XTensor: CustomStringConvertible {
-    public var description: String {
-        values.description
+    
+    mutating func ensureOwnership() {
+        if isKnownUniquelyReferenced(&handle) {
+            return
+        }
+        
+        let replacementHandle = XTensorHandle(values:
+            Device.Memory.allocateBuffer(withShape: shape, type: Element.self).values
+        )
+        Device.Memory.assign(from: handle.values, to: replacementHandle.values, count: count)
+        self.handle = replacementHandle
+    }
+    
+    public mutating func discardContext() {
+        self.context = nil
+    }
+    
+    public func detached() -> XTensor<Element, Device> {
+        XTensor(handle: handle, shape: shape, context: nil)
     }
 }

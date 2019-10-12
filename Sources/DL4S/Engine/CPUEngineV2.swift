@@ -460,14 +460,19 @@ extension CPUEngine: EngineTypeV2 {
     }
     
     @_specialize(where N == Float)
-    public static func matMul<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
-        N.matMul(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, lhsRows: lhs.shape[0], lhsCols: lhs.shape[1], rhsCols: rhs.shape[1])
-    }
-    
-    @_specialize(where N == Float)
-    public static func matMulAdd<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
-        matMul(lhs: lhs, rhs: rhs, result: result)
-        broadcastAdd(lhs: result, rhs: add, result: result)
+    public static func gemm<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
+        N.gemm(
+            lhs: lhs.values.memory.bindMemory(to: N.self).immutable,
+            rhs: rhs.values.memory.bindMemory(to: N.self).immutable,
+            result: result.values.memory.bindMemory(to: N.self),
+            lhsShape: (lhs.shape[0], lhs.shape[1]),
+            rhsShape: (rhs.shape[0], rhs.shape[1]),
+            resultShape: (result.shape[0], result.shape[1]),
+            alpha: alpha,
+            beta: beta,
+            transposeFirst: transposeFirst,
+            transposeSecond: transposeSecond
+        )
     }
     
     @_specialize(where N == Float)

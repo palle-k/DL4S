@@ -276,18 +276,6 @@ public struct CPUEngine: EngineType {
         N.vSquare(values: values.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
     }
     
-    public static func matMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsRows: Int, lhsCols: Int, rhsCols: Int) {
-        N.matMul(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), lhsRows: lhsRows, lhsCols: lhsCols, rhsCols: rhsCols)
-    }
-    
-    public static func matMulAddInPlace<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool, transposeSecond: Bool) {
-        N.matMulAddInPlace(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), lhsShape: lhsShape, rhsShape: rhsShape, resultShape: resultShape, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
-    }
-    
-    public static func dot<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, count: Int) -> N {
-        return N.dot(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, count: count)
-    }
-    
     public static func vMulSA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: N, result: Buffer<N, Device>, count: Int) {
         N.vMulSA(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, add: add, result: result.memory.bindMemory(to: N.self), count: count)
     }

@@ -210,8 +210,10 @@ public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloa
         self.parent = parent
         self.context = context
         
-        Device.Engine.fill(value: 0, result: self.gradient!, count: count)
         self.requiresGradient = context?.sourceTensors.contains(where: {$0.requiresGradient}) ?? false
+        if let gradient = self.gradient {
+            Device.Engine.fill(value: 0, result: gradient, count: count)
+        }
     }
     
     public init(_ value: Element, requiresGradient: Bool = false) {

@@ -228,6 +228,10 @@ extension Int32: NumericType {
         fatalError("Matrix multiplication not defined for Int32")
     }
     
+    public static func gemm(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), alpha: Int32, beta: Int32, transposeFirst: Bool, transposeSecond: Bool) {
+        fatalError("Matrix multiplication not defined for Int32")
+    }
+    
     public func sqrt() -> Int32 {
         return Int32(Foundation.sqrt(Float(self)))
     }

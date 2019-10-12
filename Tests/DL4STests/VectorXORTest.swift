@@ -49,7 +49,7 @@ class VectorXORTest: XCTestCase {
         let optimizer = Momentum(parameters: net.trainableParameters, learningRate: 0.05)
         // let optimizer = Adam(parameters: net.parameters, learningRate: 0.05)
         
-        let epochs = 1000
+        let epochs = 10000
         
         for epoch in 1 ... epochs {
             optimizer.zeroGradient()
@@ -61,7 +61,7 @@ class VectorXORTest: XCTestCase {
             
             let lossValue = loss.item
             
-            if epoch % 100 == 0 {
+            if epoch % 1000 == 0 {
                 print("[\(epoch)/\(epochs)] loss: \(lossValue / 4)")
             }
         }

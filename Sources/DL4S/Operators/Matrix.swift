@@ -31,30 +31,28 @@ private struct MatmulOperation<Element: NumericType, Device: DeviceType>: Binary
     var rhs: Tensor<Element, Device>
     
     func fillSourceGradients(fromResultGradients vector: Tensor<Element, Device>) {
-        guard let vectorGradient = vector.gradient else {
+        guard let vectorGradient = vector.shapedGradient else {
             return
         }
         
-        if let lhsGradient = lhs.gradient {
-            Device.Engine.matMulAddInPlace(
+        if let lhsGradient = lhs.shapedGradient {
+            Device.Engine.gemm(
                 lhs: vectorGradient,
-                rhs: rhs.values,
+                rhs: rhs.shapedValues,
                 result: lhsGradient,
-                lhsShape: (vector.shape[0], vector.shape[1]),
-                rhsShape: (rhs.shape[0], rhs.shape[1]),
-                resultShape: (lhs.shape[0], lhs.shape[1]),
+                alpha: 1,
+                beta: 1,
                 transposeFirst: false,
                 transposeSecond: true
             )
         }
-        if let rhsGradient = rhs.gradient {
-            Device.Engine.matMulAddInPlace(
-                lhs: lhs.values,
+        if let rhsGradient = rhs.shapedGradient {
+            Device.Engine.gemm(
+                lhs: lhs.shapedValues,
                 rhs: vectorGradient,
                 result: rhsGradient,
-                lhsShape: (lhs.shape[0], lhs.shape[1]),
-                rhsShape: (vector.shape[0], vector.shape[1]),
-                resultShape: (rhs.shape[0], rhs.shape[1]),
+                alpha: 1,
+                beta: 1,
                 transposeFirst: true,
                 transposeSecond: false
             )
@@ -107,7 +105,7 @@ public func mmul<Element: NumericType, Device: DeviceType>(_ lhs: Tensor<Element
         context: lhs.requiresGradient || rhs.requiresGradient ? MatmulOperation(lhs: lhsView, rhs: rhsView).asAny() : nil
     )
     
-    Device.Engine.matMul(lhs: lhsView.values, rhs: rhsView.values, result: result.values, lhsRows: lhsView.shape[0], lhsCols: lhsView.shape[1], rhsCols: rhsView.shape[1])
+    Device.Engine.gemm(lhs: lhsView.shapedValues, rhs: rhsView.shapedValues, result: result.shapedValues, alpha: 1, beta: 0, transposeFirst: false, transposeSecond: false)
     
     return result.view(as: resultViewShape)
 }

@@ -91,9 +91,16 @@ public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable
     
     static func vSquare(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     
+    @available(*, deprecated, message: "Use gemm")
     static func matMul(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsRows: Int, lhsCols: Int, rhsCols: Int)
+    
+    @available(*, deprecated, message: "Use gemm")
     static func matMulAddInPlace(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool, transposeSecond: Bool)
+    
+    @available(*, deprecated, message: "Use gemm")
     static func dot(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, count: Int) -> Self
+    
+    static func gemm(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), alpha: Self, beta: Self, transposeFirst: Bool, transposeSecond: Bool)
     
     static func vMulSA(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, add: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func vsMulVAdd(lhs: UnsafeBufferPointer<Self>, rhs: Self, add: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)

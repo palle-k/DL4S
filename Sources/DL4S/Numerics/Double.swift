@@ -178,6 +178,10 @@ extension Double: NumericType {
     }
     
     public static func matMulAddInPlace(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool = false, transposeSecond: Bool = false) {
+        gemm(lhs: lhs, rhs: rhs, result: result, lhsShape: lhsShape, rhsShape: rhsShape, resultShape: resultShape, alpha: 1, beta: 1, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
+    }
+    
+    public static func gemm(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), alpha: Self, beta: Self, transposeFirst: Bool, transposeSecond: Bool) {
         precondition((transposeFirst ? lhsShape.1 : lhsShape.0) == resultShape.0)
         precondition((transposeSecond ? rhsShape.0 : rhsShape.1) == resultShape.1)
         precondition((transposeFirst ? lhsShape.0 : lhsShape.1) == (transposeSecond ? rhsShape.1 : rhsShape.0))
@@ -189,12 +193,12 @@ extension Double: NumericType {
             Int32(resultShape.0),
             Int32(resultShape.1),
             Int32(transposeFirst ? lhsShape.0 : lhsShape.1),
-            1.0,
+            alpha,
             lhs.pointer(capacity: lhsShape.0 * lhsShape.1),
             Int32(lhsShape.1),
             rhs.pointer(capacity: rhsShape.0 * rhsShape.1),
             Int32(rhsShape.1),
-            1.0,
+            beta,
             result.pointer(capacity: resultShape.0 * resultShape.1),
             Int32(resultShape.1)
         )
