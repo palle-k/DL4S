@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 03.10.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 
@@ -36,7 +54,7 @@ public extension XTensor {
                             broadcastShape[a] = 1
                         }
                         
-                        return XTensor(repeating: 0, shape: self.shape) + resultGradient
+                        return XTensor(repeating: 0, shape: self.shape) + resultGradient.view(as: broadcastShape)
                     }]
                 )
             )
@@ -56,6 +74,43 @@ public extension XTensor {
     func reduceMean() -> XTensor<Element, Device> {
         reduceMean(along: Array(0 ..< dim))
     }
+    
+    func variance(along axes: [Int]) -> XTensor<Element, Device> {
+        let m = self.reduceMean(along: axes)
+        return (self * self).reduceMean(along: axes) - m * m
+    }
+    
+    func variance() -> XTensor<Element, Device> {
+        variance(along: Array(0 ..< dim))
+    }
+    
+    func argmax() -> Int {
+        Device.Engine.argmax(values: values.values, count: count).0
+    }
+}
+
+public func sum<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    tensor.reduceSum()
+}
+
+public func sum<Element, Device>(_ tensor: XTensor<Element, Device>, axes: [Int]) -> XTensor<Element, Device> {
+    tensor.reduceSum(along: axes)
+}
+
+public func mean<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    tensor.reduceMean()
+}
+
+public func mean<Element, Device>(_ tensor: XTensor<Element, Device>, axes: [Int]) -> XTensor<Element, Device> {
+    tensor.reduceMean(along: axes)
+}
+
+public func variance<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    tensor.variance()
+}
+
+public func variance<Element, Device>(_ tensor: XTensor<Element, Device>, axes: [Int]) -> XTensor<Element, Device> {
+    tensor.variance(along: axes)
 }
 
 //MARK: Min/Max

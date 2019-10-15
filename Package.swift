@@ -1,4 +1,4 @@
-// swift-tools-version:5.0
+// swift-tools-version:5.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,9 +6,9 @@ import PackageDescription
 let package = Package(
     name: "DL4S",
     platforms: [
-        .macOS(.v10_12),
-        .iOS(.v11),
-        .tvOS(.v11)
+        .macOS(.v10_15),
+        .iOS(.v13),
+        .tvOS(.v13)
     ],
     products: [
         // Products define the executables and libraries produced by a package, and make them visible to other packages.

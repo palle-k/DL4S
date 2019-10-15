@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 03.10.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 
@@ -11,17 +29,30 @@ struct XTensorContext<Element: NumericType, Device: DeviceType> {
     var tag: String?
     var sources: [XTensor<Element, Device>]
     var backpropagate: [(XTensor<Element, Device>) -> XTensor<Element, Device>]
+    #if DEBUG
+    var operationStack = OperationGroup.operationStack
+    #endif
+    
+    init(tag: String?, sources: [XTensor<Element, Device>], backpropagate: [(XTensor<Element, Device>) -> XTensor<Element, Device>]) {
+        self.tag = tag
+        self.sources = sources
+        self.backpropagate = backpropagate
+    }
 }
 
 class XTensorHandle<Element, Device: DeviceType> {
     var values: Buffer<Element, Device>
+    var parent: XTensorHandle<Element, Device>?
     
-    init(values: Buffer<Element, Device>) {
+    init(values: Buffer<Element, Device>, parent: XTensorHandle<Element, Device>? = nil) {
         self.values = values
+        self.parent = parent
     }
     
     deinit {
-        Device.Memory.free(self.values)
+        if parent == nil {
+            Device.Memory.free(self.values)
+        }
     }
 }
 
@@ -136,6 +167,8 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
     ///   - tensors: Tensors to differentiate for
     ///   - retainGraph: Whether to store the graph for the backwards pass. If enabled, higher order gradients can be computed.
     public func gradients(of tensors: [XTensor<Element, Device>], retainBackwardsGraph retainGraph: Bool = false) -> [XTensor<Element, Device>] {
+        OperationGroup.push("Backpropagate")
+        
         let result = self
         let operationOrder = XTensor.operationOrder(from: result)
         
@@ -175,6 +208,10 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
         let targetGrads = tensors.map {
             grads[$0.backpropID] ?? XTensor(repeating: 0, shape: $0.shape)
         }
+        
+        OperationGroup.pop()
+        
+        grads.removeAll(keepingCapacity: false)
         
         return targetGrads
     }

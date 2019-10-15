@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 03.10.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 
@@ -16,20 +34,22 @@ extension XTensor {
         
         if lhs.requiresGradient || rhs.requiresGradient {
             func grad(a: XTensor<Element, Device>, b: XTensor<Element, Device>, grad: XTensor<Element, Device>) -> XTensor<Element, Device> {
-                let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
-                let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                
-                var tmpReducedShape = aPadded
-                
-                for a in aReducedAxes.reversed() {
-                    tmpReducedShape.remove(at: a)
+                OperationGroup.capture(named: "BroadcastAddGrad") {
+                    let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
+                    let aReducedAxes = zip(aPadded, grad.shape).enumerated()
+                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                    
+                    var tmpReducedShape = aPadded
+                    
+                    for a in aReducedAxes.reversed() {
+                        tmpReducedShape.remove(at: a)
+                    }
+                    
+                    let reduced = grad
+                        .reduceSum(along: aReducedAxes)
+                        .view(as: a.shape)
+                    return reduced
                 }
-                
-                let reduced = grad
-                    .reduceSum(along: aReducedAxes)
-                    .view(as: a.shape)
-                return reduced
             }
             
             let resultContext = XTensorContext<Element, Device>(
@@ -58,17 +78,19 @@ extension XTensor {
         
         if lhs.requiresGradient || rhs.requiresGradient {
             func grad(a: XTensor<Element, Device>, b: XTensor<Element, Device>, grad: XTensor<Element, Device>) -> XTensor<Element, Device> {
-                let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
-                let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                    .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                
-                var tmp1reducedShape = aPadded
-                
-                for a in aReducedAxes.reversed() {
-                    tmp1reducedShape.remove(at: a)
+                OperationGroup.capture(named: "BroadcastMultiplyGrad") {
+                    let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
+                    let aReducedAxes = zip(aPadded, grad.shape).enumerated()
+                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                    
+                    var tmp1reducedShape = aPadded
+                    
+                    for a in aReducedAxes.reversed() {
+                        tmp1reducedShape.remove(at: a)
+                    }
+                    
+                    return (b * grad).reduceSum(along: aReducedAxes).view(as: a.shape)
                 }
-                
-                return (b * grad).reduceSum(along: aReducedAxes).view(as: a.shape)
             }
             
             let resultContext = XTensorContext<Element, Device>(
@@ -100,29 +122,33 @@ extension XTensor {
                 sources: [lhs, rhs],
                 backpropagate: [
                     { resultGradient in
-                        let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
-                        let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                            .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                        
-                        var tmpReducedShape = lhsPadded
-                        
-                        for a in lhsReducedAxes.reversed() {
-                            tmpReducedShape.remove(at: a)
+                        OperationGroup.capture(named: "BroadcastSubtractGradLhs") {
+                            let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
+                            let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
+                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                            
+                            var tmpReducedShape = lhsPadded
+                            
+                            for a in lhsReducedAxes.reversed() {
+                                tmpReducedShape.remove(at: a)
+                            }
+                            
+                            return resultGradient.reduceSum(along: lhsReducedAxes).view(as: tmpReducedShape)
                         }
-                        
-                        return resultGradient.reduceSum(along: lhsReducedAxes).view(as: tmpReducedShape)
                     }, { resultGradient in
-                        let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
-                        let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                            .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                        
-                        var tmpReducedShape = rhsPadded
-                        
-                        for a in rhsReducedAxes.reversed() {
-                            tmpReducedShape.remove(at: a)
+                        OperationGroup.capture(named: "BroadcastSubtractGradRhs") {
+                            let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
+                            let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
+                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                            
+                            var tmpReducedShape = rhsPadded
+                            
+                            for a in rhsReducedAxes.reversed() {
+                                tmpReducedShape.remove(at: a)
+                            }
+                            
+                            return 0 - resultGradient.reduceSum(along: rhsReducedAxes).view(as: tmpReducedShape)
                         }
-                        
-                        return 0 - resultGradient.reduceSum(along: rhsReducedAxes).view(as: tmpReducedShape)
                     }
                 ]
             )
@@ -144,32 +170,36 @@ extension XTensor {
                 sources: [lhs, rhs],
                 backpropagate: [
                     { resultGradient -> XTensor<Element, Device> in
-                        let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
-                        let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                            .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                        
-                        var tmp1reducedShape = lhsPadded
-                        
-                        for a in lhsReducedAxes.reversed() {
-                            tmp1reducedShape.remove(at: a)
+                        OperationGroup.capture(named: "BroadcastDivideLhs") {
+                            let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
+                            let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
+                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                            
+                            var tmp1reducedShape = lhsPadded
+                            
+                            for a in lhsReducedAxes.reversed() {
+                                tmp1reducedShape.remove(at: a)
+                            }
+                            
+                            let d = resultGradient / rhs
+                            return d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
                         }
-                        
-                        let d = resultGradient / rhs
-                        return d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
                     }, { resultGradient -> XTensor<Element, Device> in
-                        let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
-                        let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                            .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                        
-                        var tmp1reducedShape = rhsPadded
-                        
-                        for a in rhsReducedAxes.reversed() {
-                            tmp1reducedShape.remove(at: a)
+                        OperationGroup.capture(named: "BroadcastDivideRhs") {
+                            let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
+                            let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
+                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                            
+                            var tmp1reducedShape = rhsPadded
+                            
+                            for a in rhsReducedAxes.reversed() {
+                                tmp1reducedShape.remove(at: a)
+                            }
+                            
+                            let m = resultGradient * lhs
+                            let d = m / (rhs * rhs)
+                            return -d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
                         }
-                        
-                        let m = resultGradient * lhs
-                        let d = m / (rhs * rhs)
-                        return -d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
                     }
                 ]
             )

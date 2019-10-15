@@ -31,7 +31,7 @@ extension UnsafeMutableRawBufferPointer: Hashable {
     }
     
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(bytes: UnsafeRawBufferPointer(self))
+        hasher.combine(String(describing: self.baseAddress!))
     }
 }
 

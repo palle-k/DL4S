@@ -42,6 +42,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         }
     }
     private static var allocations: [UnsafeMutableRawBufferPointer: [String]] = [:]
+    private static let sema = DispatchSemaphore(value: 1)
     
     @inline(__always)
     static func strides(from shape: [Int]) -> [Int] {
@@ -75,16 +76,20 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: stride * capacity, alignment: alignment)
         
         if traceAllocations {
+            sema.wait()
             let trace = Thread.callStackSymbols
             allocations[buffer] = trace
+            sema.signal()
             
             DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(5)) {
+                sema.wait()
                 if let trace = allocations[buffer] {
                     print("[ALLOC TRACE]: buffer of size \(capacity) not freed after 3 seconds.")
                     print("[ALLOC TRACE] [begin callstack]")
                     print(trace.joined(separator: "\n"))
                     print("[ALLOC TRACE] [end callstack]")
                 }
+                sema.signal()
             }
         }
         
@@ -97,11 +102,12 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     }
     
     public static func free<Element>(_ buffer: Buffer<Element, CPU>) {
-        buffer.memory.deallocate()
-        
         if traceAllocations {
+            sema.wait()
             allocations.removeValue(forKey: buffer.memory)
+            sema.signal()
         }
+        buffer.memory.deallocate()
     }
     
     public static func free<Element>(_ buffer: ShapedBuffer<Element, CPU>) {
