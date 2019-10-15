@@ -3,7 +3,25 @@
 //  DL4STests
 //
 //  Created by Palle Klewitz on 03.10.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import XCTest
 @testable import DL4S
@@ -115,23 +133,22 @@ class XTests: XCTestCase {
             let loss = binaryCrossEntropy(expected: xor_dst, actual: pred)
             let grads = loss.gradients(of: optim.model.parameters, retainBackwardsGraph: false)
             
-//            var gradPenalty: XTensor<Float, CPU> = 0
-//
-//            for g in grads {
-//                let gSq = g * g
-//                let penalty = (-gSq).reduceMean()
-//                gradPenalty += penalty
-//            }
-//
-//            let penaltyLoss = 3 * gradPenalty
-//            let penaltyGrads = penaltyLoss.gradients(of: optim.model.parameters)
-//
-//            let fullGrads = zip(grads, penaltyGrads).map(+)
             optim.update(along: grads)
             
             if epoch.isMultiple(of: 1000) {
                 print("[\(epoch)/\(10000)] loss: \(loss.item)")
             }
         }
+    }
+    
+    func testLeak() {
+        let model = XSigmoid<Float, CPU>()
+        
+        for _ in 0 ..< 10 {
+            let a = XTensor<Float, CPU>(repeating: 0, shape: [10, 10], requiresGradient: true)
+            let result = model(a)
+            print(result.graph())
+        }
+        print("Done")
     }
 }
