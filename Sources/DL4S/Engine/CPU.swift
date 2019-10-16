@@ -24,7 +24,9 @@
 //  SOFTWARE.
 
 import Foundation
+#if canImport(Accelerate)
 import Accelerate
+#endif
 
 
 public struct CPU: DeviceType {

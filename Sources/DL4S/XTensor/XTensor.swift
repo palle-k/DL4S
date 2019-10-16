@@ -209,10 +209,15 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
             grads[$0.backpropID] ?? XTensor(repeating: 0, shape: $0.shape)
         }
         
+        #if DEBUG
+        if tensors.contains(where: {
+            !grads.keys.contains($0.backpropID)
+        }) {
+            print("[WARNING]: No gradient given for tensor.")
+        }
+        #endif
+        
         OperationGroup.pop()
-        
-        grads.removeAll(keepingCapacity: false)
-        
         return targetGrads
     }
     

@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 15.10.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 import XCTest
@@ -54,9 +72,6 @@ class WGANGPTests: XCTestCase {
         
         print("Training...")
         
-        let genInputsT = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 50)
-        Random.fill(genInputsT, a: 0, b: 1)
-        let genInputs = XTensor(genInputsT)
         
         for epoch in 1 ... epochs {
             var lastCriticDiscriminationLoss: XTensor<Float, CPU> = 0
@@ -97,6 +112,10 @@ class WGANGPTests: XCTestCase {
                 lastCriticDiscriminationLoss = criticDiscriminationLoss.detached()
                 lastGradientPenaltyLoss = gradientPenaltyLoss.detached()
             }
+
+            let genInputsT = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 50)
+            Random.fill(genInputsT, a: 0, b: 1)
+            let genInputs = XTensor(genInputsT)
             
             let fakeGenerated = optimGen.model(genInputs)
             let fakeDiscriminated = optimCrit.model(fakeGenerated)
@@ -106,8 +125,28 @@ class WGANGPTests: XCTestCase {
 
             optimGen.update(along: generatorGradients)
 
-            if epoch % 10 == 0 {
+            if epoch.isMultiple(of: 100) {
                 print(" [\(epoch)/\(epochs)] loss c: \(lastCriticDiscriminationLoss), gp: \(lastGradientPenaltyLoss), g: \(generatorLoss)")
+            }
+            
+            if epoch.isMultiple(of: 1000) {
+                let genInputsT = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 50)
+                Random.fill(genInputsT, a: 0, b: 1)
+                let genInputs = XTensor(genInputsT)
+                
+                let fakeGenerated = optimGen.model(genInputs).view(as: [-1, 28, 28])
+                
+                for i in 0 ..< 32 {
+                    let slice = fakeGenerated[i].permuted(to: [1, 0]).unsqueezed(at: 0)
+                    guard let image = NSImage(slice), let imgData = image.tiffRepresentation else {
+                        continue
+                    }
+                    guard let rep = NSBitmapImageRep(data: imgData) else {
+                        continue
+                    }
+                    let png = rep.representation(using: .png, properties: [:])
+                    try? png?.write(to: URL(fileURLWithPath: "/Users/Palle/Desktop/wgan_gp/gen_\(epoch)_\(i).png"))
+                }
             }
         }
         

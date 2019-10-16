@@ -922,6 +922,36 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
+    public static func unstack<N>(stacked: ShapedBuffer<N, CPU>, result: [ShapedBuffer<N, CPU>], axis: Int) where N : NumericType {
+        var offset = 0
+        
+        let srcPtr = stacked.immutable
+        let srcStrides = CPU.Memory.strides(from: stacked.shape)
+        
+        for buffer in result {
+            let src = srcPtr.advanced(by: offset)
+            let dstStrides = CPU.Memory.strides(from: buffer.shape)
+            let copyCount = buffer.shape[axis] * dstStrides[axis]
+            
+            let iterShape = Array(buffer.shape.prefix(upTo: axis))
+            let dst = buffer.pointer
+
+            for idx in iterate(iterShape) {
+                var srcIdx = 0
+                var dstIdx = 0
+                
+                for i in 0 ..< idx.count {
+                    srcIdx += srcStrides[i] * idx[i]
+                    dstIdx += dstStrides[i] * idx[i]
+                }
+                
+                dst.assign(from: src.advanced(by: srcIdx), count: copyCount)
+            }
+            
+            offset += copyCount
+        }
+    }
+    
     public static func reverse<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         precondition(values.shape == result.shape)
         

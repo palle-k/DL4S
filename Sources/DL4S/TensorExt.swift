@@ -46,8 +46,8 @@ public extension Tensor {
             bytesPerRow: cgImage.bytesPerRow,
             space: cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: cgImage.bitmapInfo.rawValue
-            ) else {
-                return nil
+        ) else {
+            return nil
         }
         
         ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))

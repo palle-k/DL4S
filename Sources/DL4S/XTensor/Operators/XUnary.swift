@@ -157,7 +157,7 @@ public extension XTensor {
     func softmax(axis: Int = 1) -> XTensor<Element, Device> {
         let normalizer = detached().reduceMax(along: [axis]).unsqueezed(at: axis)
         let exponentiated = (self - normalizer).exp()
-        return exponentiated / reduceSum(along: [axis]).unsqueezed(at: axis)
+        return exponentiated / exponentiated.reduceSum(along: [axis]).unsqueezed(at: axis)
     }
     
     func sine() -> XTensor<Element, Device> {
