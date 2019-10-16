@@ -145,9 +145,15 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         if nonNilIndices.count == slice.count {
             // Simple offset into storage
             let offset = zip(nonNilIndices, strides).map(*).reduce(0, +)
-            let advanced = buffer.memory.bindMemory(to: Element.self).advanced(by: offset)
+            let resultShape = Array(shape.dropFirst(nonNilIndices.count))
+            
+            let bound = buffer.memory
+                .bindMemory(to: Element.self)
+            let advanced = UnsafeMutableBufferPointer(
+                rebasing: bound.advanced(by: offset).prefix(resultShape.reduce(1, *))
+            )
             let advancedRaw = UnsafeMutableRawBufferPointer(advanced)
-            return (Buffer<Element, CPU>(memory: advancedRaw), false, Array(shape.dropFirst(nonNilIndices.count)))
+            return (Buffer<Element, CPU>(memory: advancedRaw), false, resultShape)
         } else {
             let padded = slice + [Int?](repeating: nil, count: shape.count - slice.count)
             

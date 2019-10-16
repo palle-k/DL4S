@@ -30,8 +30,8 @@ import XCTest
 
 class WGANGPTests: XCTestCase {
     func testWGANGP() {
-        var generator = XUnion {
-            XDense<Float, CPU>(inputSize: 50, outputSize: 200)
+        var generator = XSequential {
+            XDense<Float, CPU>(inputSize: 50 + 10, outputSize: 200)
             XBatchNorm<Float, CPU>(inputSize: [200])
             XLeakyRelu<Float, CPU>(leakage: 0.2)
             
@@ -44,8 +44,8 @@ class WGANGPTests: XCTestCase {
         }
         generator.tag = "Generator"
         
-        var critic = XUnion {
-            XDense<Float, CPU>(inputSize: 28 * 28, outputSize: 400)
+        var critic = XSequential {
+            XDense<Float, CPU>(inputSize: 28 * 28 + 10, outputSize: 400)
             XRelu<Float, CPU>()
             
             XDense<Float, CPU>(inputSize: 400, outputSize: 100)
@@ -56,9 +56,11 @@ class WGANGPTests: XCTestCase {
         critic.tag = "Discriminator"
         
         print("Loading images...")
-        let ((images, labels_cat), _) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let ((imagesT, labels_catT), _) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let labels_cat = XTensor(labels_catT)
         
-        let labels = labels_cat.toOneHot(dim: 10) as Tensor<Float, CPU>
+        let images = XTensor(imagesT).view(as: [-1, 28 * 28])
+        let labels = labels_cat.oneHotEncoded(dim: 10, type: Float.self)
         
         print("Creating networks...")
         
@@ -72,33 +74,35 @@ class WGANGPTests: XCTestCase {
         
         print("Training...")
         
-        
         for epoch in 1 ... epochs {
             var lastCriticDiscriminationLoss: XTensor<Float, CPU> = 0
             var lastGradientPenaltyLoss: XTensor<Float, CPU> = 0
             
             for _ in 0 ..< n_critic {
-                let (realT, _) = Random.minibatch(from: images, labels: labels, count: batchSize)
-                let real = XTensor(realT.view(as: [batchSize, 28 * 28]))
-
-                let genInputsT = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 50)
-                Random.fill(genInputsT, a: 0, b: 1)
-                let genInputs = XTensor(genInputsT)
+                let (real, realLabels) = Random.minibatch(from: images, labels: labels, count: batchSize)
+                
+                let genNoiseInput = XTensor<Float, CPU>(uniformlyDistributedWithShape: [batchSize, 50], min: 0, max: 1)
+                let genLabelInput = XTensor<Int32, CPU>(uniformlyDistributedWithShape: [batchSize], min: 0, max: 9)
+                    .oneHotEncoded(dim: 10, type: Float.self)
+                
+                let genInputs = XTensor(stacking: [genNoiseInput, genLabelInput], along: 1)
                 
                 let fakeGenerated = optimGen.model(genInputs)
                 
                 let eps = XTensor<Float, CPU>(Float.random(in: 0 ... 1))
                 let mixed = real * eps + fakeGenerated * (1 - eps)
                 
-                let fakeDiscriminated = optimCrit.model(mixed)
-                let realDiscriminated = optimCrit.model(real)
+                let genFakeInput = XTensor(stacking: [mixed, genLabelInput], along: 1)
+                
+                let fakeDiscriminated = optimCrit.model(genFakeInput)
+                let realDiscriminated = optimCrit.model(XTensor(stacking: [real, realLabels], along: 1))
                 
                 let criticDiscriminationLoss = OperationGroup.capture(named: "CriticDiscriminationLoss") {
                     fakeDiscriminated.reduceMean() - realDiscriminated.reduceMean()
                 }
                 
                 let gradientPenaltyLoss = OperationGroup.capture(named: "GradientPenaltyLoss") { () -> XTensor<Float, CPU> in
-                    let fakeGeneratedGrad = fakeDiscriminated.gradients(of: [mixed], retainBackwardsGraph: true)[0]
+                    let fakeGeneratedGrad = fakeDiscriminated.gradients(of: [genFakeInput], retainBackwardsGraph: true)[0]
                     let partialPenaltyTerm = (fakeGeneratedGrad * fakeGeneratedGrad).reduceSum(along: [1]).sqrt() - 1
                     let gradientPenaltyLoss = lambda * (partialPenaltyTerm * partialPenaltyTerm).reduceMean()
                     return gradientPenaltyLoss
@@ -113,12 +117,14 @@ class WGANGPTests: XCTestCase {
                 lastGradientPenaltyLoss = gradientPenaltyLoss.detached()
             }
 
-            let genInputsT = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 50)
-            Random.fill(genInputsT, a: 0, b: 1)
-            let genInputs = XTensor(genInputsT)
+            let genNoiseInput = XTensor<Float, CPU>(uniformlyDistributedWithShape: [batchSize, 50], min: 0, max: 1)
+            let genLabelInput = XTensor<Int32, CPU>(uniformlyDistributedWithShape: [batchSize], min: 0, max: 9)
+                .oneHotEncoded(dim: 10, type: Float.self)
+            
+            let genInputs = XTensor(stacking: [genNoiseInput, genLabelInput], along: 1)
             
             let fakeGenerated = optimGen.model(genInputs)
-            let fakeDiscriminated = optimCrit.model(fakeGenerated)
+            let fakeDiscriminated = optimCrit.model(XTensor(stacking: [fakeGenerated, genLabelInput], along: 1))
             let generatorLoss = -fakeDiscriminated.reduceMean()
             
             let generatorGradients = generatorLoss.gradients(of: optimGen.model.parameters)
@@ -130,9 +136,11 @@ class WGANGPTests: XCTestCase {
             }
             
             if epoch.isMultiple(of: 1000) {
-                let genInputsT = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 50)
-                Random.fill(genInputsT, a: 0, b: 1)
-                let genInputs = XTensor(genInputsT)
+                let genNoiseInput = XTensor<Float, CPU>(uniformlyDistributedWithShape: [batchSize, 50], min: 0, max: 1)
+                let genLabelInput = XTensor<Int32, CPU>(uniformlyDistributedWithShape: [batchSize], min: 0, max: 9)
+                    .oneHotEncoded(dim: 10, type: Float.self)
+                
+                let genInputs = XTensor(stacking: [genNoiseInput, genLabelInput], along: 1)
                 
                 let fakeGenerated = optimGen.model(genInputs).view(as: [-1, 28, 28])
                 
@@ -149,6 +157,5 @@ class WGANGPTests: XCTestCase {
                 }
             }
         }
-        
     }
 }

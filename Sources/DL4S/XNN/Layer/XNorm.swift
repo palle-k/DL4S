@@ -67,3 +67,54 @@ public struct XBatchNorm<Element: RandomizableType, Device: DeviceType>: XLayer,
         }
     }
 }
+
+
+public struct XLayerNorm<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
+    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
+        \.shift,
+        \.scale
+    ]}
+    public var parameters: [XTensor<Element, Device>] {
+        get {[shift, scale]}
+        set {
+            shift = newValue[0]
+            scale = newValue[1]
+        }
+    }
+    
+    public var isTraining = true
+    
+    public var shift: XTensor<Element, Device>
+    public var scale: XTensor<Element, Device>
+    
+    public var momentum: Element
+    
+    public init(inputSize: [Int], momentum: Element = 0.9) {
+        shift = XTensor(repeating: 0, shape: inputSize, requiresGradient: true)
+        scale = XTensor(repeating: 1, shape: inputSize, requiresGradient: true)
+        
+        self.momentum = momentum
+        
+        #if DEBUG
+        shift.tag = "shift"
+        scale.tag = "scale"
+        #endif
+    }
+    
+    public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+        OperationGroup.capture(named: "LayerNorm") {
+            let x = inputs
+            let axes = Array(1 ..< x.dim)
+            let mean = x
+                .reduceMean(along: axes)
+                .view(as: [x.shape[0]] + Array(repeating: 1, count: axes.count))
+            
+            let variance = x
+                .variance(along: axes)
+                .view(as: mean.shape)
+            
+            let normalized = (x - mean) / (sqrt(variance) + 1e-5)
+            return normalized * scale + shift
+        }
+    }
+}

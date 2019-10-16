@@ -144,6 +144,10 @@ public extension XTensor {
         }
     }
     
+    func reduceMax() -> XTensor<Element, Device> {
+        reduceMax(along: Array(0 ..< dim))
+    }
+    
     private func scatter(context: XTensor<Int32, Device>, axes: [Int], shape: [Int]) -> XTensor<Element, Device> {
         precondition(axes.count == 1, "Scatter is only available along a single axis.")
         let axis = axes.first!

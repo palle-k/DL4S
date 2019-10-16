@@ -395,7 +395,8 @@ enum MemoryOps {
         if nonNilIndices.count == slice.count {
             // Simple offset into storage
             let offset = zip(nonNilIndices, strides).map(*).reduce(0, +)
-            return (buffer.advanced(by: offset), false, Array(shape.dropFirst(nonNilIndices.count)))
+            let resultShape = Array(shape.dropFirst(nonNilIndices.count))
+            return (UnsafeMutableBufferPointer(rebasing: buffer.advanced(by: offset).prefix(resultShape.reduce(1, *))), false, resultShape)
         } else {
             let padded = slice + [Int?](repeating: nil, count: shape.count - slice.count)
             

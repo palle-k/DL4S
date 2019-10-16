@@ -38,21 +38,27 @@ public extension XTensor {
         }
         Device.Engine.unstack(stacked: self.values, result: sourceBuffers, axis: axis)
         
-        return sourceBuffers.map { buffer in
+        return sourceBuffers.enumerated().map { (i, buffer) in
             XTensor(
                 using: buffer,
                 context: self.requiresGradient ? XTensorContext(
                     tag: "Unstack",
                     sources: [self],
                     backpropagate: [{ resultGradient -> XTensor<Element, Device> in
-                        fatalError("Backpropagation is not supported for unstacking.")
+                        let sourceOffsets = sourceLengths.reduce(into: [0], {$0.append($0.last! + $1)})
+                        let idx = Array(repeating: nil, count: axis) +
+                            [sourceOffsets[i] ..< sourceOffsets[i] + sourceLengths[i]]
+                        
+                        var target = XTensor<Element, Device>(repeating: 0, shape: self.shape)
+                        target[idx] = resultGradient
+                        return target
                     }]
                 ) : nil
             )
         }
     }
     
-    init(stacking tensors: [Self], along axis: Int) {
+    init(stacking tensors: [Self], along axis: Int = 0) {
         precondition(0 ..< tensors[0].dim ~= axis, "Dimensionality of tensors must be in dimensionality range of source tensors")
         
         precondition(tensors.allSatisfy {
@@ -73,23 +79,19 @@ public extension XTensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.stack(buffers: tensors.map {$0.values}, result: resultBuffer, axis: axis)
         
-        var resultCache: [XTensor<Element, Device>]? = nil
-        
         self.init(
             using: resultBuffer,
             context: requiresGradient ? XTensorContext(
                 tag: "Stack",
                 sources: tensors,
                 backpropagate: tensors.indices.map { i in { resultGradient in
-                    if let cache = resultCache {
-                        return cache[i]
-                    } else {
-                        let cache = resultGradient.unstacked(along: axis, withSourceLengths: resultStackDimSize)
-                        resultCache = cache
-                        return cache[i]
-                    }
+                    resultGradient.unstacked(along: axis, withSourceLengths: resultStackDimSize)[i]
                 }}
             ) : nil
         )
     }
+}
+
+public func stack<Element, Device>(_ tensors: [XTensor<Element, Device>], along axis: Int = 0) -> XTensor<Element, Device> {
+    XTensor(stacking: tensors, along: axis)
 }

@@ -25,8 +25,8 @@
 
 import Foundation
 
-extension XTensor {
-    public static func + (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+public extension XTensor {
+    static func + (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
@@ -70,7 +70,7 @@ extension XTensor {
         }
     }
     
-    public static func * (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static func * (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
@@ -111,7 +111,7 @@ extension XTensor {
         }
     }
     
-    public static func - (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static func - (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.broadcastSub(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
@@ -159,7 +159,7 @@ extension XTensor {
         }
     }
     
-    public static func / (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static func / (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.broadcastDiv(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
@@ -210,11 +210,11 @@ extension XTensor {
         }
     }
     
-    public static prefix func - (value: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static prefix func - (value: XTensor<Element, Device>) -> XTensor<Element, Device> {
         return 0 - value
     }
     
-    public static func += (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func += (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag
@@ -226,7 +226,7 @@ extension XTensor {
         assert(originalShape == lhs.shape, "In-place addition has modified shape.")
     }
     
-    public static func -= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func -= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag
@@ -238,7 +238,7 @@ extension XTensor {
         assert(originalShape == lhs.shape, "In-place subtraction has modified shape.")
     }
     
-    public static func *= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func *= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag
@@ -250,7 +250,7 @@ extension XTensor {
         assert(originalShape == lhs.shape, "In-place multiplication has modified shape.")
     }
     
-    public static func /= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func /= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag
@@ -260,5 +260,9 @@ extension XTensor {
         lhs.tag = tag
         #endif
         assert(originalShape == lhs.shape, "In-place division has modified shape.")
+    }
+    
+    func raised(toPowerOf power: Self) -> Self {
+        (self.log() * power).exp()
     }
 }

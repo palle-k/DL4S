@@ -207,8 +207,20 @@ public func sqrt<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor
     tensor.sqrt()
 }
 
+public func tanh<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    tensor.tanh()
+}
+
 public func sigmoid<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
     tensor.sigmoid()
+}
+
+public func sin<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    tensor.sine()
+}
+
+public func cos<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    tensor.cosine()
 }
 
 public func relu<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {

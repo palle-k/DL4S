@@ -120,7 +120,7 @@ class XTests: XCTestCase {
         xor_dst.tag = "xor_dst"
         #endif
         
-        let net = XUnion {
+        let net = XSequential {
             XDense<Float, CPU>(inputSize: 2, outputSize: 6)
             XTanh<Float, CPU>()
             XDense<Float, CPU>(inputSize: 6, outputSize: 1)

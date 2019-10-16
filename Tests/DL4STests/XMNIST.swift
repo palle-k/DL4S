@@ -51,7 +51,7 @@ struct SecondOrderOptimizer<Model: XLayer> {
 class XMNIST: XCTestCase {
 
     func testExample() {
-        var model = XUnion {
+        var model = XSequential {
             XDense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
             XRelu<Float, CPU>()
             XDense<Float, CPU>(inputSize: 500, outputSize: 200)

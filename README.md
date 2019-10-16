@@ -4,7 +4,7 @@
 ![CocoaPods](https://img.shields.io/cocoapods/p/DL4S.svg)
 [![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
 
-This framework contains an implementation of reverse mode automatic differentiation,
+This framework provides reverse mode automatic differentiation,
 vectorized implementations of common matrix and vector operators and high level neural network operations,
 such as convolution, recurrent units, and more.
 
@@ -184,21 +184,21 @@ Default implementations are provided for the following architectures:
 ### Arithmetic & Differentiation
 
 ```swift
-let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-let prod = mmul(a.T, a)
-let s = sum(prod)
+let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+let prod = a.transposed().matMul(a)
+let s = prod.reduceSum()
 let l = log(s)
 print(l) // 5.1873856
 
 
 // Backpropagate
-l.backwards()
+let dl_da = l.gradients(of: [a])[0]
 
-print(a.gradientDescription!)
+print(dl_da)
 /*
-[[0.03351955, 0.03351955],
- [0.07821229, 0.07821229],
- [0.12290502, 0.12290502]]
+[[0.034, 0.034]
+ [0.078, 0.078]
+ [0.123, 0.123]]
 */
 ```
 

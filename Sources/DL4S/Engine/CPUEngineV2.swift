@@ -945,7 +945,7 @@ extension CPUEngine: EngineTypeV2 {
                     dstIdx += dstStrides[i] * idx[i]
                 }
                 
-                dst.assign(from: src.advanced(by: srcIdx), count: copyCount)
+                dst.advanced(by: dstIdx).assign(from: src.advanced(by: srcIdx), count: copyCount)
             }
             
             offset += copyCount
