@@ -36,6 +36,11 @@ public struct XSGD<Layer: XLayer>: XOptimizer {
     public private(set) var model: Layer
     public var learningRate: XTensor<Layer.Parameter, Layer.Device>
     
+    public init(model: Layer, learningRate: XTensor<Layer.Parameter, Layer.Device>) {
+        self.model = model
+        self.learningRate = learningRate
+    }
+    
     public mutating func update(along gradients: [XTensor<Layer.Parameter, Layer.Device>]) {
         for (keyPath, grad) in zip(Layer.parameters, gradients) {
             model[keyPath: keyPath] -= learningRate * grad
