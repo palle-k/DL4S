@@ -61,3 +61,5 @@ public struct Bidirectional<RNNLayer: RNN>: LayerType {
         }
     }
 }
+
+extension Bidirectional: Codable where RNNLayer: Codable {}
