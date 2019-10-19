@@ -181,6 +181,11 @@ Default implementations are provided for the following architectures:
 
 ## Examples
 
+Some high level examples have been implemented in other repositories:
+
+- [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S): Seq2seq with attention.
+- [Gridworld](https://github.com/palle-k/REINFORCE-DL4S): Reinforcement Learning using the REINFORCE algorithm.
+
 ### Arithmetic & Differentiation
 
 DL4S provides a high-level interface to many vectorized operations on tensors.
@@ -239,156 +244,63 @@ Example for MNIST classification
 
 ```swift
 // Input must be 1x28x28
-let model = Sequential<Float, CPU>(
-    Conv2D(inputChannels: 1, outputChannels: 6, kernelSize: 5, padding: 0).asAny(), // 4x24x24
-    Relu().asAny(),
-    MaxPool2D(windowSize: 2, stride: 2).asAny(), // 4x12x12
-    Conv2D(inputChannels: 6, outputChannels: 16, kernelSize: 5, padding: 0).asAny(), // 16x8x8
-    Relu().asAny(),
-    MaxPool2D(windowSize: 2, stride: 2).asAny(), // 16x4x4
-    Flatten().asAny(), // 256
-    Dense(inputFeatures: 256, outputFeatures: 120).asAny(),
-    Relu().asAny(),
-    Dense(inputFeatures: 120, outputFeatures: 10).asAny(),
-    Softmax().asAny()
-)
+var model = Sequential {
+   Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5))
+   Relu<Float, CPU>()
+   MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
+   
+   Convolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5))
+   Relu<Float, CPU>()
+   MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
+   
+   Flatten<Float, CPU>()
+   
+   Dense<Float, CPU>(inputSize: 256, outputSize: 120)
+   Relu<Float, CPU>()
+   
+   Dense<Float, CPU>(inputSize: 120, outputSize: 10)
+   Softmax<Float, CPU>()
+}
 
-let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
+var optimizer = XAdam(model: model, learningRate: 0.001)
 
 // Single iteration of minibatch gradient descent
-optimizer.zeroGradient()
-
 let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
 let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
 
-let pred = model.forward(batch)
+// use optimizer.model, not model
+let pred = optimizer.model(batch)
 let loss = categoricalCrossEntropy(expected: y_true, actual: pred)
 
-loss.backwards()
-optimizer.step()
+let gradients = loss.gradients(of: optimizer.model.parameters)
+optimizer.update(along: gradients)
 ```
 
 ### Recurrent Networks
 
 Example for MNIST classification
 
-The LSTM scans the image from top to bottom and uses the final hidden state for classification.
+The Gated Reccurent Unit scans the image from top to bottom and uses the final hidden state for classification.
 
 ```swift
-let model = Sequential<Float, CPU>(
-    LSTM(inputSize: 28, hiddenSize: 128).asAny(),
-    Dense(inputFeatures: 128, outputFeatures: 10).asAny(),
-    Softmax().asAny()
-)
+let model = Sequential {
+    GRU<Float, CPU>(inputSize: 28, hiddenSize: 128, direction: .forward)
+    Lambda<GRU<Float, CPU>.Outputs, Tensor<Float, CPU>, Float, CPU> { inputs in
+        inputs.0
+    }
+    Dense<Float, CPU>(inputSize: 128, outputSize: 10)
+    Softmax<Float, CPU>()
+}
 
-let optimizer = Adam(parameters: model.trainableParameters, learningRate: 0.001)
-
-// Single iteration of minibatch gradient descent
-optimizer.zeroGradient()
+var optimizer = Adam(model: model, learningRate: 0.001)
 
 let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
 let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
 
 let x = batch.permuted(to: 1, 0, 2) // Swap first and second axis
-let pred = model.forward(x)
+let pred = optimizer.model(x)
 let loss = categoricalCrossEntropy(expected: y_true, actual: pred)
 
-loss.backwards()
-optimizer.step()
-```
-
-### Generative Adversarial Networks
-
-Example to generate random images similar to those in MNIST
-
-```swift
-let images: Tensor<Float, CPU> = ... // shape [numImages x 28 x 28]
-
-let d1 = Dropout<Float, CPU>(rate: 0.5)
-let d2 = Dropout<Float, CPU>(rate: 0.5)
-
-let generator = Sequential<Float, CPU>(
-    Dense(inputFeatures: 20, outputFeatures: 200).asAny(),
-    Tanh().asAny(),
-    d1.asAny(),
-    Dense(inputFeatures: 200, outputFeatures: 800).asAny(),
-    Tanh().asAny(),
-    d2.asAny(),
-    Dense(inputFeatures: 800, outputFeatures: 28 * 28).asAny(),
-    Sigmoid().asAny(),
-    Reshape(shape: 28, 28).asAny()
-)
-
-let discriminator = Sequential<Float, CPU>(
-    Flatten().asAny(),
-    Dense(inputFeatures: 28 * 28, outputFeatures: 400).asAny(),
-    Tanh().asAny(),
-    Dense(inputFeatures: 400, outputFeatures: 100).asAny(),
-    Tanh().asAny(),
-    Dense(inputFeatures: 100, outputFeatures: 1).asAny(),
-    Sigmoid().asAny()
-)
-
-let network = Sequential(generator.asAny(), discriminator.asAny())
-
-
-let optimGen = Adam(parameters: generator.trainableParameters, learningRate: 0.0003)
-let optimDis = Adam(parameters: discriminator.trainableParameters, learningRate: 0.0003)
-
-let batchSize = 32
-let epochs = 10_000
-let regularization: Float = 0.001
-
-let genInputs = Tensor<Float, CPU>(repeating: 0, shape: batchSize, 20)
-
-for epoch in 1 ... epochs {
-    optimDis.zeroGradient()
-
-    let real = Random.minibatch(from: images, count: batchSize)
-    Random.fillNormal(genInputs)
-
-    let realResult = discriminator.forward(real)
-    let fakeResult = network.forward(genInputs)
-
-    let dRegLoss = optimDis.parameters.map {l2loss($0, loss: regularization)}.reduce(0, +)
-    let discriminatorLoss = -mean(log(realResult)) - mean(log(1 - fakeResult)) + dRegLoss
-
-    discriminatorLoss.backwards()
-    optimDis.step()
-
-    var generatorLoss = Tensor<Float, CPU>(0)
-
-    for _ in 0 ..< 4 {
-        optimGen.zeroGradient()
-        Random.fillNormal(genInputs)
-
-        let genResult = network.forward(genInputs)
-
-        let gRegLoss = optimGen.parameters.map {l2loss($0, loss: regularization)}.reduce(0, +)
-        generatorLoss = -0.5 * mean(log(genResult)) + gRegLoss // heuristic non-saturating loss
-
-        generatorLoss.backwards()
-        optimGen.step()
-    }
-
-    if epoch % 100 == 0 {
-        print(" [\(epoch)/\(epochs)] loss d: \(discriminatorLoss.item), g: \(generatorLoss.item)")
-    }
-}
-
-Random.fillNormal(genInputs)
-let genResult = generator.forward(genInputs)
-
-for i in 0 ..< batchSize {
-    let slice = genResult[i].T.unsqueeze(at: 0)
-    guard let image = NSImage(slice), let imgData = image.tiffRepresentation else {
-        continue
-    }
-    guard let rep = NSBitmapImageRep.init(data: imgData) else {
-        continue
-    }
-    let png = rep.representation(using: .png, properties: [:])
-    try? png?.write(to: URL(fileURLWithPath: "generated_\(i).png"))
-}
-
+let gradients = loss.gradients(of: optimizer.model.parameters)
+optimizer.update(along: gradients)
 ```

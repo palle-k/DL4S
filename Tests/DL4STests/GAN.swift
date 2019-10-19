@@ -31,45 +31,45 @@ import XCTest
 class GANTests: XCTestCase {
     func testGAN() {
         print("Loading images...")
-        let ((images, labels_cat), _) = XMNIST.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
+        let ((images, labels_cat), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
 
         let labels = labels_cat.oneHotEncoded(dim: 10, type: Float.self)
         
         print("Creating networks...")
         let latentSize = 20
         
-        let gen = XSequential {
-            XConcat<Float, CPU>()
+        let gen = Sequential {
+            Concat<Float, CPU>()
             
-            XDense<Float, CPU>(inputSize: latentSize + 10, outputSize: 200)
-            XBatchNorm<Float, CPU>(inputSize: [200])
-            XLeakyRelu<Float, CPU>(leakage: 0.2)
-            XDropout<Float, CPU>(rate: 0.5)
+            Dense<Float, CPU>(inputSize: latentSize + 10, outputSize: 200)
+            BatchNorm<Float, CPU>(inputSize: [200])
+            LeakyRelu<Float, CPU>(leakage: 0.2)
+            Dropout<Float, CPU>(rate: 0.5)
             
-            XDense<Float, CPU>(inputSize: 200, outputSize: 800)
-            XBatchNorm<Float, CPU>(inputSize: [800])
-            XLeakyRelu<Float, CPU>(leakage: 0.2)
-            XDropout<Float, CPU>(rate: 0.5)
+            Dense<Float, CPU>(inputSize: 200, outputSize: 800)
+            BatchNorm<Float, CPU>(inputSize: [800])
+            LeakyRelu<Float, CPU>(leakage: 0.2)
+            Dropout<Float, CPU>(rate: 0.5)
             
-            XDense<Float, CPU>(inputSize: 800, outputSize: 28 * 28)
-            XSigmoid<Float, CPU>()
+            Dense<Float, CPU>(inputSize: 800, outputSize: 28 * 28)
+            Sigmoid<Float, CPU>()
         }
         
-        let disc = XSequential {
-            XConcat<Float, CPU>()
+        let disc = Sequential {
+            Concat<Float, CPU>()
             
-            XDense<Float, CPU>(inputSize: 28 * 28 + 10, outputSize: 400)
-            XRelu<Float, CPU>()
+            Dense<Float, CPU>(inputSize: 28 * 28 + 10, outputSize: 400)
+            Relu<Float, CPU>()
             
-            XDense<Float, CPU>(inputSize: 400, outputSize: 100)
-            XRelu<Float, CPU>()
+            Dense<Float, CPU>(inputSize: 400, outputSize: 100)
+            Relu<Float, CPU>()
             
-            XDense<Float, CPU>(inputSize: 100, outputSize: 1)
-            XSigmoid<Float, CPU>()
+            Dense<Float, CPU>(inputSize: 100, outputSize: 1)
+            Sigmoid<Float, CPU>()
         }
         
-        var optimGen = XAdam(model: gen, learningRate: 0.0003)
-        var optimDis = XAdam(model: disc, learningRate: 0.0003)
+        var optimGen = Adam(model: gen, learningRate: 0.0003)
+        var optimDis = Adam(model: disc, learningRate: 0.0003)
         
         let batchSize = 32
         let epochs = 50_000
@@ -80,8 +80,8 @@ class GANTests: XCTestCase {
         for epoch in 1 ... epochs {
             let (real, realLabels) = Random.minibatch(from: images, labels: labels, count: batchSize)
             
-            let genInputs = XTensor<Float, CPU>(normalDistributedWithShape: batchSize, latentSize)
-            let genLabels = XTensor<Int32, CPU>(uniformlyDistributedWithShape: batchSize, min: 0, max: 9)
+            let genInputs = Tensor<Float, CPU>(normalDistributedWithShape: batchSize, latentSize)
+            let genLabels = Tensor<Int32, CPU>(uniformlyDistributedWithShape: batchSize, min: 0, max: 9)
             
             let realResult = optimDis.model([real.view(as: [batchSize, -1]), realLabels])
             let gl = genLabels.oneHotEncoded(dim: 10, type: Float.self)
@@ -89,24 +89,24 @@ class GANTests: XCTestCase {
             let fakeGenerated = optimGen.model([genInputs, gl])
             let fakeResult = optimDis.model([fakeGenerated, gl])
             
-            let dRegLoss = optimDis.model.parameters.map {($0 * $0).reduceMean() * XTensor(regularization)}.reduce(0, +)
+            let dRegLoss = optimDis.model.parameters.map {($0 * $0).reduceMean() * Tensor(regularization)}.reduce(0, +)
 
             let discriminatorLoss = -mean(log(realResult)) - mean(log(1 - fakeResult)) + dRegLoss
             
             let discriminatorGrads = discriminatorLoss.gradients(of: optimDis.model.parameters)
             optimDis.update(along: discriminatorGrads)
             
-            var generatorLoss = XTensor<Float, CPU>(0)
+            var generatorLoss = Tensor<Float, CPU>(0)
 
             for _ in 0 ..< 4 {
-                let genInputs = XTensor<Float, CPU>(normalDistributedWithShape: batchSize, latentSize)
-                let genLabels = XTensor<Int32, CPU>(uniformlyDistributedWithShape: batchSize, min: 0, max: 9)
+                let genInputs = Tensor<Float, CPU>(normalDistributedWithShape: batchSize, latentSize)
+                let genLabels = Tensor<Int32, CPU>(uniformlyDistributedWithShape: batchSize, min: 0, max: 9)
                 let gl = genLabels.oneHotEncoded(dim: 10, type: Float.self)
                 
                 let generated = optimGen.model([genInputs, gl])
                 let genResult = optimDis.model([generated, gl])
                 
-                let gRegLoss = optimGen.model.parameters.map {($0 * $0).reduceMean() * XTensor(regularization)}.reduce(0, +)
+                let gRegLoss = optimGen.model.parameters.map {($0 * $0).reduceMean() * Tensor(regularization)}.reduce(0, +)
                 generatorLoss = -0.5 * mean(log(genResult)) + gRegLoss // heuristic non-saturating loss
 
                 let generatorGradients = generatorLoss.gradients(of: optimGen.model.parameters)
@@ -118,8 +118,8 @@ class GANTests: XCTestCase {
             }
 
             if epoch % 1000 == 0 {
-                let genInputs = XTensor<Float, CPU>(normalDistributedWithShape: batchSize, latentSize)
-                let genLabels = XTensor<Int32, CPU>(uniformlyDistributedWithShape: batchSize, min: 0, max: 9)
+                let genInputs = Tensor<Float, CPU>(normalDistributedWithShape: batchSize, latentSize)
+                let genLabels = Tensor<Int32, CPU>(uniformlyDistributedWithShape: batchSize, min: 0, max: 9)
                 let gl = genLabels.oneHotEncoded(dim: 10, type: Float.self)
                 
                 let genResult = optimGen.model([genInputs, gl])

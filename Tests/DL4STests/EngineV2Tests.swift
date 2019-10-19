@@ -28,10 +28,10 @@ import XCTest
 
 class EngineV2Tests: XCTestCase {
     func testBroadcast() {
-        let lhs = XTensor<Float, CPU>([[1,2],[3,4],[5,6]])
-        let rhs = XTensor<Float, CPU>([1,2])
+        let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
+        let rhs = Tensor<Float, CPU>([1,2])
         
-        let result = XTensor<Float, CPU>(repeating: 0, shape: 3, 2)
+        let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
         
         CPUEngine.broadcastMul(lhs: rhs.values, rhs: lhs.values, result: result.values)
         
@@ -39,16 +39,16 @@ class EngineV2Tests: XCTestCase {
     }
     
     func testBroadcast2() {
-        let x = XTensor<Float, CPU>([1, 0.5, 0]).view(as: -1, 1)
+        let x = Tensor<Float, CPU>([1, 0.5, 0]).view(as: -1, 1)
         let result = 1 - x
         print(result)
     }
     
     func testBroadcast3() {
-        let lhs = XTensor<Float, CPU>([[1,2],[3,4],[5,6]])
-        let rhs = XTensor<Float, CPU>([1,2,3]).view(as: -1, 1)
+        let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
+        let rhs = Tensor<Float, CPU>([1,2,3]).view(as: -1, 1)
         
-        let result = XTensor<Float, CPU>(repeating: 0, shape: 3, 2)
+        let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
         
         CPUEngine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: result.values)
         
@@ -56,8 +56,8 @@ class EngineV2Tests: XCTestCase {
     }
     
     func testBroadcast4() {
-        let a = XTensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
-        let b = XTensor<Float, CPU>([1,3,3,7])
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        let b = Tensor<Float, CPU>([1,3,3,7])
         
         let result = a.unsqueezed(at: 2) + b.view(as: -1, 1, 1)
         
@@ -65,8 +65,8 @@ class EngineV2Tests: XCTestCase {
     }
     
     func testBroadcast5() {
-        let a = XTensor<Float, CPU>(repeating: 0, shape: 16, 16)
-        let b = XTensor<Float, CPU>(uniformlyDistributedWithShape: 16, 1, min: 0, max: 1)
+        let a = Tensor<Float, CPU>(repeating: 0, shape: 16, 16)
+        let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: 16, 1, min: 0, max: 1)
         
         let result = a + b
         
@@ -74,9 +74,9 @@ class EngineV2Tests: XCTestCase {
     }
     
     func testReduceSum1() {
-        let a = XTensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
-        let result = XTensor<Float, CPU>(repeating: Float(0), shape: 4)
+        let result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
         let r = result.values
         
         CPU.Engine.reduceSum(values: v, result: r, axis: 0)
@@ -85,9 +85,9 @@ class EngineV2Tests: XCTestCase {
     }
     
     func testReduceSum2() {
-        let a = XTensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
-        let result = XTensor<Float, CPU>(repeating: Float(0), shape: 4)
+        let result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
         let r = result.values
         
         CPU.Engine.reduceSum(values: v, result: r, axis: 1)
@@ -96,9 +96,9 @@ class EngineV2Tests: XCTestCase {
     }
     
     func testReduceSum3() {
-        let a = XTensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
-        let result = XTensor<Float, CPU>(repeating: Float(0), shape: [])
+        let result = Tensor<Float, CPU>(repeating: Float(0), shape: [])
         let r = result.values
         
         CPU.Engine.reduceSum(values: v, result: r, axes: [0, 1])
@@ -107,8 +107,8 @@ class EngineV2Tests: XCTestCase {
     }
     
     func testReduceOps() {
-        let a = XTensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2,3,4], shape: 4, 1, requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2,3,4], shape: 4, 1, requiresGradient: true)
         
         let s = a + b
         let d1 = a - b

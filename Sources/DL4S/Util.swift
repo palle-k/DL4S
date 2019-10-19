@@ -350,20 +350,6 @@ public enum ConvUtil {
     }
 }
 
-public extension Tensor {
-    func batches(sized batchSize: Int) -> AnySequence<Tensor<Element, Device>> {
-        precondition(batchSize >= 1, "Batch size must be at least 1.")
-        precondition(dim >= 1, "Tensor must be at least 1-dimensional.")
-        
-        let seq = stride(from: 0, to: shape[0], by: batchSize).lazy.map { offset in
-            self[(offset ..< (offset + batchSize)).clamped(to: 0 ..< self.shape[0])]
-        }
-        
-        return AnySequence(seq)
-    }
-}
-
-
 struct File: Sequence {
     struct LineIterator: IteratorProtocol {
         private var buffer: Data?

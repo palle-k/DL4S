@@ -28,7 +28,7 @@ import XCTest
 
 class VecTests: XCTestCase {
     func testVectorWriteItem() {
-        var vector: XTensor<Float, CPU> = XTensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
+        var vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
         
         vector[0, 0] = 2
         print(vector)
@@ -43,7 +43,7 @@ class VecTests: XCTestCase {
     }
     
     func testVectorWriteItem2() {
-        var vector: XTensor<Float, CPU> = XTensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
+        var vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
         
         vector[2, 1] = 10
         print(vector)
@@ -58,21 +58,21 @@ class VecTests: XCTestCase {
     }
     
     func testVectorReadSlice() {
-        let v: XTensor<Float, CPU> = XTensor([0,1,2,3,4,5], shape:3,2)
+        let v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
         print(v)
         print(v[nil, 0 ..< 2])
         print(v[nil, 0 ..< 1])
     }
     
     func testVectorWrite() {
-        var v: XTensor<Float, CPU> = XTensor([0,1,2,3,4,5], shape:3,2)
+        var v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
         // v[0,0] = 10
         v[2,1] = 20
         print(v)
     }
     
     func testVecOps2() {
-        var input: XTensor<Double, CPU> = 0
+        var input: Tensor<Double, CPU> = 0
         input.requiresGradient = true
         let result = sigmoid(input)
         
@@ -87,15 +87,15 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>([1,2,3])
         let b = Tensor<Float, CPU>([4,5,6])
         
-        let result = mmul(a, b)
+        let result = matMul(a, b)
         
         XCTAssertEqual(result.dim, 0)
         XCTAssertEqual(result.item, 32)
     }
     
     func testMMul2x1() {
-        let a = XTensor<Float, CPU>([1,2,3])
-        let c = XTensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+        let a = Tensor<Float, CPU>([1,2,3])
+        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
         let result = matMul(c, a)
         
@@ -108,8 +108,8 @@ class VecTests: XCTestCase {
     }
     
     func testMMul1x2() {
-        let d = XTensor<Float, CPU>([1,2])
-        let c = XTensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+        let d = Tensor<Float, CPU>([1,2])
+        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
         let result = matMul(d, c)
         print(result)
@@ -122,7 +122,7 @@ class VecTests: XCTestCase {
     }
     
     func testMMul2x2() {
-        let c = XTensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
         let result = matMul(c.T, c)
         print(result)
@@ -139,7 +139,7 @@ class VecTests: XCTestCase {
     }
     
     func testMMul2x2_2() {
-        let c = XTensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
         let result = matMul(c, c.T)
         print(result)
@@ -156,7 +156,7 @@ class VecTests: XCTestCase {
     }
     
     func testLog() {
-        let x = XTensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, min: -5, max: 5)
+        let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, min: -5, max: 5)
         
         let result = log(exp(x))
         
@@ -168,9 +168,9 @@ class VecTests: XCTestCase {
     }
     
     func testGradientAddMul() {
-        let a = XTensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([[4, 5, 6], [7, 8, 9]], requiresGradient: true)
-        let c = XTensor<Float, CPU>([[1, 1, 1], [2, 2, 2]], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([[4, 5, 6], [7, 8, 9]], requiresGradient: true)
+        let c = Tensor<Float, CPU>([[1, 1, 1], [2, 2, 2]], requiresGradient: true)
         
         let result = (a + b) * c
         let grads = result.gradients(of: [a, b, c])
@@ -181,7 +181,7 @@ class VecTests: XCTestCase {
     }
     
     func testGradientExp() {
-        let a = XTensor<Float, CPU>([[1, 2, 3], [0, -1, -2]], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2, 3], [0, -1, -2]], requiresGradient: true)
         
         let result = exp(a) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -202,7 +202,7 @@ class VecTests: XCTestCase {
     }
     
     func testGradientLog() {
-        let a = XTensor<Float, CPU>([[1, 2, 3], [10, 20, 30]], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2, 3], [10, 20, 30]], requiresGradient: true)
         
         let result = log(a) * 4
         let aGrad = result.gradients(of: [a])[0]
@@ -221,8 +221,8 @@ class VecTests: XCTestCase {
     }
     
     func testGradientMatmul() {
-        let a = XTensor<Float, CPU>([1, 2, 3], requiresGradient: true)
-        let c = XTensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
+        let a = Tensor<Float, CPU>([1, 2, 3], requiresGradient: true)
+        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
         
         let result = matMul(c, a) * 2
         print(result)
@@ -233,14 +233,14 @@ class VecTests: XCTestCase {
     }
     
     func testNeg() {
-        let a = XTensor<Float, CPU>([1,2,3,4,5])
+        let a = Tensor<Float, CPU>([1,2,3,4,5])
         
         let result = -a
         print(result)
     }
     
     func testSigmoid() {
-        let a = XTensor<Float, CPU>(normalDistributedWithShape: 10)
+        let a = Tensor<Float, CPU>(normalDistributedWithShape: 10)
         
         let elements = (0 ..< 10).map { (x: Int) in a[x].item}
         
@@ -255,8 +255,8 @@ class VecTests: XCTestCase {
     }
     
     func testAddBackwards() {
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b + c
         let grads = result.gradients(of: [b, c])
@@ -274,8 +274,8 @@ class VecTests: XCTestCase {
     }
     
     func testAddBackwards2() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a + b) * 2
         let grads = result.gradients(of: [a, b])
@@ -298,8 +298,8 @@ class VecTests: XCTestCase {
     }
     
     func testAddBackwards3() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a + b) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -316,8 +316,8 @@ class VecTests: XCTestCase {
     }
     
     func testAddBackwards4() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b + a) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -334,8 +334,8 @@ class VecTests: XCTestCase {
     }
     
     func testSubBackwards() {
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b - c
         let grads = result.gradients(of: [b, c])
@@ -353,8 +353,8 @@ class VecTests: XCTestCase {
     }
     
     func testSubBackwards2() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a - b) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -371,8 +371,8 @@ class VecTests: XCTestCase {
     }
     
     func testSubBackwards3() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b - a) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -389,8 +389,8 @@ class VecTests: XCTestCase {
     }
     
     func testMulBackwards() {
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b * c
         
@@ -409,8 +409,8 @@ class VecTests: XCTestCase {
     }
     
     func testMulBackwards2() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a * b) * 2
         
@@ -430,8 +430,8 @@ class VecTests: XCTestCase {
     }
     
     func testMulBackwards3() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b * a) * 2
         
@@ -449,8 +449,8 @@ class VecTests: XCTestCase {
     }
     
     func testDivBackwards() {
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b / c
         let grads = result.gradients(of: [b, c])
@@ -468,8 +468,8 @@ class VecTests: XCTestCase {
     }
     
     func testDivBackwards2() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a / b) * 2
         
@@ -486,8 +486,8 @@ class VecTests: XCTestCase {
     }
     
     func testDivBackwards3() {
-        let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = XTensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b / a) * 2
         
@@ -503,20 +503,20 @@ class VecTests: XCTestCase {
     }
     
     func testAxisSum() {
-        let a = XTensor<Float, CPU>([[1,2,3],[4,5,6]])
+        let a = Tensor<Float, CPU>([[1,2,3],[4,5,6]])
         
         let result = sum(a, axes: [0])
         print(result)
     }
     
     func testNegativeIndices() {
-        let a = XTensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
         
         print(a[nil, -3])
     }
     
     func testPadding() {
-        let a = XTensor<Float, CPU>(repeating: 1, shape: 1, 28, 28)
+        let a = Tensor<Float, CPU>(repeating: 1, shape: 1, 28, 28)
         let padded = a.padded(padding: [0, 2, 2])
         print(padded)
     }

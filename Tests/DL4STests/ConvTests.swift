@@ -41,23 +41,23 @@ extension NSImage {
 
 class ConvTests: XCTestCase {
     func testIm2col() {
-        let a = XTensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
         let c = a.repeated(4)
-        let d = c * XTensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
+        let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
         print(d)
         
-        let result = XTensor<Float, CPU>(repeating: 0, shape: 9, 64)
+        let result = Tensor<Float, CPU>(repeating: 0, shape: 9, 64)
         CPU.Engine.img2col(values: d.values, result: result.values, kernelWidth: 3, kernelHeight: 3, padding: 1, stride: 1)
         print(result.permuted(to: 1, 0))
     }
     
     func testConv1() {
-        let a = XTensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
         let c = a.repeated(4)
-        let d = c * XTensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
+        let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
-        let filters = XTensor<Float, CPU>([
+        let filters = Tensor<Float, CPU>([
             [
                 [[1]]
             ],
@@ -70,7 +70,7 @@ class ConvTests: XCTestCase {
     }
     
     func testConv() {
-        let filters = XTensor<Float, CPU>([
+        let filters = Tensor<Float, CPU>([
             [
                 [[1, 2, 1],
                  [2, 4, 2],
@@ -81,11 +81,11 @@ class ConvTests: XCTestCase {
                 [-2, 0, 2],
                 [-1, 0, 1]]
             ]
-        ]) / XTensor<Float, CPU>([16, 4]).view(as: -1, 1, 1, 1)
+        ]) / Tensor<Float, CPU>([16, 4]).view(as: -1, 1, 1, 1)
         
         print(filters.shape)
         
-        let ((images, _), _) = XMNIST.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
+        let ((images, _), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
         
         let batch = Random.minibatch(from: images, count: 64)
         

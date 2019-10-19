@@ -28,13 +28,13 @@ import XCTest
 
 class VectorXORTest: XCTestCase {
     func testXNN() {
-        var xor_src = XTensor<Float, CPU>([
+        var xor_src = Tensor<Float, CPU>([
             [0, 0],
             [0, 1],
             [1, 0],
             [1, 1]
         ])
-        var xor_dst = XTensor<Float, CPU>([
+        var xor_dst = Tensor<Float, CPU>([
             [0],
             [1],
             [1],
@@ -46,13 +46,13 @@ class VectorXORTest: XCTestCase {
         xor_dst.tag = "xor_dst"
         #endif
         
-        let net = XSequential {
-            XDense<Float, CPU>(inputSize: 2, outputSize: 6)
-            XTanh<Float, CPU>()
-            XDense<Float, CPU>(inputSize: 6, outputSize: 1)
-            XSigmoid<Float, CPU>()
+        let net = Sequential {
+            Dense<Float, CPU>(inputSize: 2, outputSize: 6)
+            Tanh<Float, CPU>()
+            Dense<Float, CPU>(inputSize: 6, outputSize: 1)
+            Sigmoid<Float, CPU>()
         }
-        var optim = XAdam(model: net, learningRate: 0.05)
+        var optim = Adam(model: net, learningRate: 0.05)
         
         for epoch in 1 ... 100 {
             let pred = optim.model(xor_src)

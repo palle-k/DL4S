@@ -1,8 +1,8 @@
 //
-//  PerformanceTests.swift
-//  DL4STests
+//  Dense.swift
+//  DL4S
 //
-//  Created by Palle Klewitz on 10.04.19.
+//  Created by Palle Klewitz on 16.10.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,24 +23,36 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
-@testable import DL4S
+import Foundation
 
-class PerformanceTests: XCTestCase {
-    func testHeaviside() {
-        let src = Tensor<Float, CPU>(uniformlyDistributedWithShape: 32, 200, min: -10, max: -10)
-        let dst = Tensor<Float, CPU>(repeating: 0, shape: 32, 200)
-        
-        let srcPtr = src.values.immutable
-        let dstPtr = dst.values.pointer
-        
-        self.measure {
-            for _ in 0 ..< 100000 {
-                Float.heaviside(values: srcPtr, result: dstPtr, count: 32 * 200)
-            }
+public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+        \.weights,
+        \.bias
+    ]}
+    
+    public var weights: Tensor<Element, Device>
+    public var bias: Tensor<Element, Device>
+    
+    public var parameters: [Tensor<Element, Device>] {
+        get {
+            [weights, bias]
         }
-        
-        print(sum(src) + sum(dst)) // retain src and dst
     }
     
+    public init(inputSize: Int, outputSize: Int) {
+        weights = Tensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true)
+        bias = Tensor(repeating: 0, shape: [outputSize], requiresGradient: true)
+        
+        #if DEBUG
+        weights.tag = "W"
+        bias.tag = "b"
+        #endif
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        OperationGroup.capture(named: "Dense") {
+            inputs.matrixMultiplied(with: weights) + bias
+        }
+    }
 }

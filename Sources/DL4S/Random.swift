@@ -53,31 +53,6 @@ func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
 }
 
 public enum Random {
-    public static func fill<Element: RandomizableType, Device>(_ vector: Tensor<Element, Device>, a: Element, b: Element) {
-        let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
-        for i in 0 ..< vector.count {
-            buffer[i] = Element.random(in: a ... b)
-        }
-        Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
-        buffer.deallocate()
-    }
-    
-    public static func fillNormal<Element: RandomizableType, Device>(_ vector: Tensor<Element, Device>, mean: Element = 0, stdev: Element = 1) {
-        let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
-        for i in stride(from: 0, to: vector.count - 1, by: 2) {
-            let (a, b) = randNormal(stdev: stdev, mean: mean)
-            buffer[i] = a
-            buffer[i+1] = b
-        }
-        
-        if vector.count % 2 == 0 {
-            let (a, _) = randNormal(stdev: stdev, mean: mean)
-            buffer[vector.count-1] = a
-        }
-        Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
-        buffer.deallocate()
-    }
-    
     public static func fill<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in 0 ..< vector.count {
@@ -108,19 +83,7 @@ public enum Random {
         
         let sampleShape = [1] + Array(dataset.shape.dropFirst())
         
-        return stack(
-            (0 ..< count)
-                .map {_ in Int.random(in: 0 ..< n)}
-                .map {dataset[$0].view(as: sampleShape)}
-        )
-    }
-    
-    public static func minibatch<Element: NumericType, Device: DeviceType>(from dataset: XTensor<Element, Device>, count: Int) -> XTensor<Element, Device> {
-        let n = dataset.shape[0]
-        
-        let sampleShape = [1] + Array(dataset.shape.dropFirst())
-        
-        return XTensor(
+        return Tensor(
             stacking: (0 ..< count)
                 .map {_ in Int.random(in: 0 ..< n)}
                 .map {dataset[$0].view(as: sampleShape)},
@@ -131,40 +94,12 @@ public enum Random {
     public static func minibatch<E1: NumericType, E2: NumericType, D1: DeviceType, D2: DeviceType>(from dataset: Tensor<E1, D1>, labels: Tensor<E2, D2>, count: Int) -> (Tensor<E1, D1>, Tensor<E2, D2>) {
         let n = dataset.shape[0]
         
-        // let sampleShape = [1] + Array(dataset.shape.dropFirst())
-        // let labelShape = [1] + Array(labels.shape.dropFirst())
-        
         let indices = (0 ..< count).map {_ in Int.random(in: 0 ..< n)}
         
-        let randomSamples = stack(indices.map {dataset[$0].unsqueeze(at: 0)})
-        let randomLabels = stack(indices.map {labels[$0].unsqueeze(at: 0)})
+        let randomSamples = Tensor(stacking: indices.map {dataset[$0].unsqueezed(at: 0)}, along: 0)
+        let randomLabels = Tensor(stacking: indices.map {labels[$0].unsqueezed(at: 0)}, along: 0)
         
         return (randomSamples, randomLabels)
-    }
-    
-    public static func minibatch<E1: NumericType, E2: NumericType, D1: DeviceType, D2: DeviceType>(from dataset: XTensor<E1, D1>, labels: XTensor<E2, D2>, count: Int) -> (XTensor<E1, D1>, XTensor<E2, D2>) {
-        let n = dataset.shape[0]
-        
-        let indices = (0 ..< count).map {_ in Int.random(in: 0 ..< n)}
-        
-        let randomSamples = XTensor(stacking: indices.map {dataset[$0].unsqueezed(at: 0)}, along: 0)
-        let randomLabels = XTensor(stacking: indices.map {labels[$0].unsqueezed(at: 0)}, along: 0)
-        
-        return (randomSamples, randomLabels)
-    }
-    
-    // TODO: Make this an in-place operation
-    public static func bernoulli<Element, Device>(p: Float, shape: [Int]) -> Tensor<Element, Device> {
-        let count = shape.reduce(1, *)
-        let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
-        for i in 0 ..< count {
-            buffer[i] = Float.random(in: 0 ... 1) <= p ? 1 : 0
-        }
-        
-        let result = Tensor<Element, Device>(repeating: 0, shape: shape)
-        Device.Memory.assign(from: buffer.immutable, to: result.values, count: count)
-        buffer.deallocate()
-        return result
     }
     
     public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
