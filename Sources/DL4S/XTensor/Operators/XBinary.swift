@@ -133,8 +133,8 @@ public extension XTensor {
             let resultContext = XTensorContext(
                 tag: "-",
                 sources: [lhs, rhs],
-                backpropagate: [
-                    { resultGradient in
+                backpropagateAccumulate: [
+                    { resultGradient, acc in
                         OperationGroup.capture(named: "∇₁-") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
@@ -146,9 +146,14 @@ public extension XTensor {
                                 tmpReducedShape.remove(at: a)
                             }
                             
-                            return resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            if let acc = acc {
+                                return acc + resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            } else {
+                                return resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            }
+                            
                         }
-                    }, { resultGradient in
+                    }, { resultGradient, acc in
                         OperationGroup.capture(named: "∇₂-") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
@@ -160,7 +165,11 @@ public extension XTensor {
                                 tmpReducedShape.remove(at: a)
                             }
                             
-                            return 0 - resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            if let acc = acc {
+                                return acc - resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            } else {
+                                return -resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            }
                         }
                     }
                 ]
@@ -186,8 +195,8 @@ public extension XTensor {
             let context = XTensorContext(
                 tag: "÷",
                 sources: [lhs, rhs],
-                backpropagate: [
-                    { resultGradient -> Self in
+                backpropagateAccumulate: [
+                    { resultGradient, acc -> Self in
                         OperationGroup.capture(named: "∇₁÷") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
@@ -200,9 +209,14 @@ public extension XTensor {
                             }
                             
                             let d = resultGradient / rhs
-                            return d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            if let acc = acc {
+                                return acc + d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            } else {
+                                return d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            }
+                            
                         }
-                    }, { resultGradient -> Self in
+                    }, { resultGradient, acc -> Self in
                         OperationGroup.capture(named: "∇₂÷") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
@@ -216,7 +230,11 @@ public extension XTensor {
                             
                             let m = resultGradient * lhs
                             let d = m / (rhs * rhs)
-                            return -d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            if let acc = acc {
+                                return acc - d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            } else {
+                                return -d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            }
                         }
                     }
                 ]

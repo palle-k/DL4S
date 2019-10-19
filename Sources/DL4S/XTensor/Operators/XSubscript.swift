@@ -45,8 +45,8 @@ public extension XTensor {
                 context: requiresGradient ? XTensorContext(
                     tag: "read",
                     sources: [self],
-                    backpropagate: [{ resultGradient in
-                        var result = Self(repeating: 0, shape: self.shape)
+                    backpropagateAccumulate: [{ resultGradient, acc in
+                        var result = (acc ?? Self(repeating: 0, shape: self.shape))
                         result[index] = resultGradient
                         return result
                     }]
@@ -107,8 +107,8 @@ public extension XTensor {
                 context: requiresGradient ? XTensorContext(
                     tag: "SubscriptRangeRead",
                     sources: [self],
-                    backpropagate: [{ resultGradient in
-                        var result = Self(repeating: 0, shape: self.shape)
+                    backpropagateAccumulate: [{ resultGradient, acc in
+                        var result = (acc ?? Self(repeating: 0, shape: self.shape))
                         result[index] = resultGradient
                         return result
                     }]

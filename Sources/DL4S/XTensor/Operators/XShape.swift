@@ -96,20 +96,67 @@ public extension XTensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: dstShape, type: Element.self)
         Device.Engine.permuteAxes(values: self.values, result: resultBuffer, arangement: axisArangement)
         
+        let dim = self.dim
+        
         return XTensor(
             using: resultBuffer,
             context: XTensorContext(
                 tag: "permute\(axisArangement)",
                 sources: [self],
-                backpropagate: [{ resultGradient in
-                    var invArangement = [Int](repeating: 0, count: self.dim)
+                backpropagateAccumulate: [{ resultGradient, acc in
+                    var invArangement = [Int](repeating: 0, count: dim)
                     for (i, j) in axisArangement.enumerated() {
                         invArangement[i] = j
                     }
-                    return resultGradient.permuted(to: invArangement)
+                    if var acc = acc {
+                        acc.addingPermuted(resultGradient, permutation: invArangement)
+                        return acc
+                    } else {
+                        return resultGradient.permuted(to: invArangement)
+                    }
                 }]
             )
         )
+    }
+    
+    mutating func addingPermuted(_ other: Self, permutation: [Int]) {
+        precondition(permutation.count == dim, "Axis arangement must have dimensionality of source tensor")
+        precondition(Set(permutation).count == dim, "Axis arangement must not contain duplicate axes")
+        
+        if self.requiresGradient || other.requiresGradient {
+            let original = self
+            
+            ensureOwnership()
+            Device.Engine.permuteAxesAdd(values: other.values, add: self.values, result: self.values, arangement: permutation)
+            let dim = self.dim
+            self.context = XTensorContext(
+                tag: "permutedAdd",
+                sources: [original, other],
+                backpropagateAccumulate: [
+                    { resultGradient, acc in
+                        if let acc = acc {
+                            return acc + resultGradient
+                        } else {
+                            return resultGradient
+                        }
+                    }, { resultGradient, acc in
+                        var invArangement = [Int](repeating: 0, count: dim)
+                        for (i, j) in permutation.enumerated() {
+                            invArangement[i] = j
+                        }
+                        if var acc = acc {
+                            acc.addingPermuted(resultGradient, permutation: invArangement)
+                            return acc
+                        } else {
+                            return resultGradient.permuted(to: invArangement)
+                        }
+                    }
+                ]
+            )
+        } else {
+            ensureOwnership()
+            Device.Engine.permuteAxesAdd(values: other.values, add: self.values, result: self.values, arangement: permutation)
+        }
     }
     
     func permuted(to axisArangement: Int...) -> Self {

@@ -190,13 +190,13 @@ public extension XTensor {
         Device.Engine.expandContext(reduced: values, context: context.values, result: resultBuffer, axis: axis)
         return XTensor(
             using: resultBuffer,
-            context: XTensorContext(
+            context: requiresGradient ? XTensorContext(
                 tag: "scatter",
                 sources: [self],
-                backpropagate: [{ resultGradient in
+                backpropagate: [{ resultGradient -> Self in
                     fatalError("Backpropagation is not available for Scatter operation.")
                 }]
-            )
+            ) : nil
         )
     }
 }
