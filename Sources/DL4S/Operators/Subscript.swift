@@ -50,9 +50,9 @@ fileprivate struct SelectOperation<Element: NumericType, Device: DeviceType>: Un
         guard let (buffer, isCopy, _) = source.gradient(from: location) else {
             return
         }
-        Device.Engine.vAdd(lhs: buffer, rhs: vectorGradient, result: buffer, count: vector.count)
         
         if isCopy {
+            Device.Engine.vAdd(lhs: buffer, rhs: vectorGradient, result: buffer, count: vector.count)
             source.setGradient(at: location, source: buffer, sourceShape: vector.shape)
         }
     }

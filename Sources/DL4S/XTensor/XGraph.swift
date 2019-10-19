@@ -52,7 +52,7 @@ struct Digraph: Hashable, Codable {
     var edges: Set<Edge> = []
     var subgraphs: [String: Digraph] = [:]
     
-    mutating func addNode(id: String, label: String?, shape: String = "box", attributes: Dictionary<String, String> = [:]) {
+    mutating func addNode(id: String, label: String? = nil, shape: String = "box", attributes: Dictionary<String, String> = [:]) {
         nodes.insert(Node(id: id, label: label, shape: shape, attributes: attributes))
     }
     
@@ -73,52 +73,54 @@ struct Digraph: Hashable, Codable {
 
 extension Digraph.Node {
     var dot: String {
-        var repr = "\(id) ["
+        let repr = "\(id)"
         
+        var attrs = self.attributes
         if let label = self.label {
-            repr += "label=\"\(label.escaped())\" "
+            attrs["label"] = "\"\(label.escaped())\""
         }
-        repr += "shape=\(shape) "
+        attrs["shape"] = shape
         
-        for (key, value) in attributes {
-            repr += "\(key)=\(value) "
-        }
-        
-        repr += "]"
-        return repr
+        let pairs = attrs.map {"\($0.key)=\($0.value)"}
+        return "\(repr) [\(pairs.joined(separator: " "))];"
     }
 }
 
 extension Digraph.Edge {
     var dot: String {
-        var repr = "\(source) -> \(destination) ["
+        let repr = "\(source) -> \(destination)"
         
-        repr += "label=\"\((label ?? "").escaped())\" "
-        
-        for (key, value) in attributes {
-            repr += "\(key)=\(value) "
+        var attrs = self.attributes
+        if let label = self.label {
+            attrs["label"] = "\"\(label.escaped())\""
         }
-        
-        repr += "]"
-        return repr
+        if attrs.isEmpty {
+            return "\(repr);"
+        } else {
+            let pairs = attrs.map {"\($0.key)=\($0.value)"}
+            return "\(repr) [\(pairs.joined(separator: " "))];"
+        }
     }
 }
 
 extension Digraph: CustomStringConvertible {
-    fileprivate func dot(type: String = "digraph") -> String {
+    fileprivate func dot(type: String = "digraph", isRoot: Bool = false) -> String {
         """
         \(type) \(id ?? "") {
-            \(nodes.map {$0.dot}.joined(separator: "\n\t"))
-            \(edges.map {$0.dot}.joined(separator: "\n\t"))
-            \(subgraphs.values.map {$0.dot(type: "subgraph").split(separator: "\n").joined(separator: "\n\t")}.joined(separator: "\n\t"))
-            label="\(name?.escaped() ?? "")";
-            labeljust="l";
+        \(isRoot ? "    graph [fontname=\"helvetica\" fontsize=10 color=\"#B0B0B0\"];\n" : "")\
+        \(isRoot ? "    node [fontname=\"helvetica\" fontsize=10 margin=0.03 width=0.2 height=0 color=\"#A0A0A0\"];\n" : "")\
+        \(isRoot ? "    edge [fontname=\"helvetica\" fontsize=8 arrowsize=0.5 color=\"#A0A0A0\" fontcolor=\"#A0A0A0\"];\n" : "")\
+        \(isRoot ? "    splines=true;\n    ranksep=0.2;\n    nodesep=0.15;\n" : "")\
+        \(nodes.isEmpty ? "" : "    \(nodes.map {$0.dot}.joined(separator: "\n    "))\n")\
+        \(edges.isEmpty ? "" : "    \(edges.map {$0.dot}.joined(separator: "\n    "))\n")\
+        \(subgraphs.isEmpty ? "" : "    \(subgraphs.values.map {$0.dot(type: "subgraph").split(separator: "\n").joined(separator: "\n    ")}.joined(separator: "\n    "))\n")\
+        \(name.map {"    label=\"\($0.escaped())\";\n    labeljust=\"l\";\n"} ?? "")\
         }
         """
     }
     
     var description: String {
-        return dot()
+        return dot(isRoot: true)
     }
 }
 
@@ -160,11 +162,24 @@ public extension XTensor {
         
         var graph = Digraph()
         if let ctx = self.context {
-            graph.addNode(id: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: ctx.tag ?? "op")
+            graph.addNode(id: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: ctx.tag ?? "op", attributes: ["style": "rounded"])
             
             for src in ctx.sources {
                 if let srcCtx = src.context {
+                    #if DEBUG
+                    if srcCtx.operationStack.map({$0.id}) == ctx.operationStack.map({$0.id}) && !ctx.operationStack.isEmpty {
+                        graph.addEdge(
+                            from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))",
+                            to: "\(self.backpropID)\(abs(ctx.tag.hashValue))",
+                            label: "\(src.shape)",
+                            attributes: [:]
+                        )
+                    } else {
+                        graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: "\(src.shape)")
+                    }
+                    #else
                     graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: "\(src.shape)")
+                    #endif
                 } else {
                     graph.addEdge(from: "\(src.backpropID)", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: "\(src.shape)")
                 }
@@ -189,7 +204,7 @@ public extension XTensor {
             }
             #endif
             
-            graph.addNode(id: "\(self.backpropID)", label: label, shape: "circle", attributes: requiresGradient ? ["style": "filled", "fillcolor": "\"#99ccff\""] : [:])
+            graph.addNode(id: "\(self.backpropID)", label: label, shape: "box", attributes: requiresGradient ? ["style": "filled", "fillcolor": "\"#99ccff\""] : [:])
         }
         return graph
     }
@@ -210,7 +225,12 @@ public extension XTensor {
         var ctxGraph = Digraph()
         
         if let last = ctx.operationStack.last {
-            let initial = Digraph(id: "cluster_\(last.id)", name: last.name, nodes: [Digraph.Node(id: opID)])
+            var initial = Digraph(id: "cluster_\(last.id)", name: last.name, nodes: [Digraph.Node(id: opID)])
+            
+            for node in ctx.sources where node.context == nil {
+                initial.addNode(id: "\(node.backpropID)", shape: "circle")
+            }
+            
             let g = ctx.operationStack.dropLast().reversed().reduce(initial) { acc, item in
                 Digraph(id: "cluster_\(item.id)", name: item.name, subgraphs: [acc.id!: acc])
             }

@@ -49,7 +49,7 @@ public extension XTensor {
         return XTensor(
             using: resultBuffer,
             context: requiresGradient ? XTensorContext(
-                tag: "Img2col",
+                tag: "im2col",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient.col2img(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride, resultShape: self.shape)
@@ -72,7 +72,7 @@ public extension XTensor {
         return XTensor(
             using: resultBuffer,
             context: XTensorContext(
-                tag: "Col2img",
+                tag: "col2im",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient.img2col(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
@@ -97,7 +97,7 @@ public extension XTensor {
         let cols = self.img2col(kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
         let conv = filters
             .view(as: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]])
-            .matMul(cols)
+            .matrixMultiplied(with: cols)
             .view(as: [outputShape[1], outputShape[0], outputShape[2], outputShape[3]])
         
         return conv.permuted(to: [1, 0, 2, 3])
@@ -131,20 +131,20 @@ public extension XTensor {
         }
     }
 
-    func averagePooled2d(images: XTensor<Element, Device>, windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> XTensor<Element, Device> {
+    func averagePooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> XTensor<Element, Device> {
         OperationGroup.capture(named: "AveragePool2D") {
             let padding = padding ?? ((windowSize - 1) / 2)
             let stride = stride ?? windowSize
             
             let outputShape = [
-                images.shape[0],
-                images.shape[1],
-                (images.shape[2] + 2 * padding - windowSize) / stride + 1,
-                (images.shape[3] + 2 * padding - windowSize) / stride + 1
+                shape[0],
+                shape[1],
+                (shape[2] + 2 * padding - windowSize) / stride + 1,
+                (shape[3] + 2 * padding - windowSize) / stride + 1
             ]
             
             let cols = self
-                .view(as: [images.shape[0] * images.shape[1], 1, images.shape[2], images.shape[3]])
+                .view(as: [shape[0] * shape[1], 1, shape[2], shape[3]])
                 .img2col(
                     kernelWidth: windowSize,
                     kernelHeight: windowSize,

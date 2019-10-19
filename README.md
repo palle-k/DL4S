@@ -183,14 +183,21 @@ Default implementations are provided for the following architectures:
 
 ### Arithmetic & Differentiation
 
+DL4S provides a high-level interface to many vectorized operations on tensors.
+
 ```swift
 let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
 let prod = a.transposed().matMul(a)
 let s = prod.reduceSum()
 let l = log(s)
 print(l) // 5.1873856
+```
 
+When a tensor is marked to require a gradient, a compute graph will be captured. 
+The graph stores all operations, which use that tensor directly or indirectly as an operand.
 
+It is then possible to backpropagate through that graph using the `gradients(of:)` function:
+```swift
 // Backpropagate
 let dl_da = l.gradients(of: [a])[0]
 
@@ -201,6 +208,30 @@ print(dl_da)
  [0.123, 0.123]]
 */
 ```
+
+#### Second derivatives
+
+The operations used during backpropagation are themselves differentiable. 
+Therefore, second derivatives (diagonal of Hessian) can be computed by computing the gradient of the gradient.
+
+When higher order derivatives are required, the compute graph of the backwards pass has to be explicitly retained.
+Otherwise it will be automatically discarded.
+```swift
+let t = XTensor<Float, CPU>([1,2,3,4], requiresGradient: true)
+
+let result = t * t * t
+print(result) // [1, 8, 27, 64]
+
+let grad = result.gradients(of: [t], retainBackwardsGraph: true)[0]
+print(grad) // [3, 12, 27, 48]
+
+let secondGrad = grad.gradients(of: [t], retainBackwardsGraph: true)[0]
+print(secondGrad) // [6, 12, 18, 24]
+
+let thirdGrad = secondGrad.gradients(of: [t])[0]
+print(thirdGrad) // [6, 6, 6, 6]
+```
+
 
 ### Convolutional Networks
 

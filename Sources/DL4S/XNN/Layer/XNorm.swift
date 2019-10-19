@@ -114,7 +114,7 @@ public struct XLayerNorm<Element: RandomizableType, Device: DeviceType>: XLayer,
                 .view(as: mean.shape)
             
             let normalized = (x - mean) / (sqrt(variance) + 1e-5)
-            return normalized * scale + shift
+            return normalized // * scale + shift
         }
     }
 }

@@ -1,8 +1,8 @@
 //
-//  XDense.swift
+//  XConvolution.swift
 //  DL4S
 //
-//  Created by Palle Klewitz on 16.10.19.
+//  Created by Palle Klewitz on 17.10.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,37 +25,46 @@
 
 import Foundation
 
-public struct XDense<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XDense<Element, Device>, XTensor<Element, Device>>] {[
-        \.weights,
+public struct XConvolution2D<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
+    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
+        \.filters,
         \.bias
     ]}
     
-    public var weights: XTensor<Element, Device>
+    public var filters: XTensor<Element, Device>
     public var bias: XTensor<Element, Device>
+    public let stride: Int
+    public let padding: Int?
     
     public var parameters: [XTensor<Element, Device>] {
         get {
-            [weights, bias]
+            [filters, bias]
         }
         set {
-            (weights, bias) = (newValue[0], newValue[1])
+            (filters, bias) = (newValue[0], newValue[1])
         }
     }
     
-    public init(inputSize: Int, outputSize: Int) {
-        weights = XTensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true)
-        bias = XTensor(repeating: 0, shape: [outputSize], requiresGradient: true)
+    public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = 0, stride: Int = 1) {
+        self.filters = XTensor(
+            normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
+            mean: 0,
+            stdev: (2 / Element(kernelSize.height * kernelSize.width * inputChannels)).sqrt(),
+            requiresGradient: true
+        )
+        self.bias = XTensor(repeating: 0, shape: [outputChannels], requiresGradient: true)
+        self.stride = stride
+        self.padding = padding
         
         #if DEBUG
-        weights.tag = "W"
+        filters.tag = "W"
         bias.tag = "b"
         #endif
     }
     
     public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
-        OperationGroup.capture(named: "Dense") {
-            inputs.matrixMultiplied(with: weights) + bias
+        OperationGroup.capture(named: "Conv2D") {
+            inputs.convolved2d(filters: filters, padding: padding, stride: stride)
         }
     }
 }

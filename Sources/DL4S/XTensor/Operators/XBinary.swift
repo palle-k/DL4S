@@ -30,11 +30,15 @@ public extension XTensor {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
-        Device.Engine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: resultValues)
+        if lhs.shape == rhs.shape {
+            Device.Engine.vAdd(lhs: lhs.values.values, rhs: rhs.values.values, result: resultValues.values, count: lhs.count)
+        } else {
+            Device.Engine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: resultValues)
+        }
         
         if lhs.requiresGradient || rhs.requiresGradient {
             func grad(a: XTensor<Element, Device>, b: XTensor<Element, Device>, grad: XTensor<Element, Device>) -> XTensor<Element, Device> {
-                OperationGroup.capture(named: "BroadcastAddGrad") {
+                OperationGroup.capture(named: "∇+") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
                         .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
@@ -53,7 +57,7 @@ public extension XTensor {
             }
             
             let resultContext = XTensorContext<Element, Device>(
-                tag: "BroadcastAdd",
+                tag: "+",
                 sources: [lhs, rhs],
                 backpropagate: [
                     { vectorGradient in
@@ -74,11 +78,15 @@ public extension XTensor {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
-        Device.Engine.broadcastMul(lhs: lhs.values, rhs: rhs.values, result: resultValues)
+        if lhs.shape == rhs.shape {
+            Device.Engine.vMul(lhs: lhs.values.values, rhs: rhs.values.values, result: resultValues.values, count: lhs.count)
+        } else {
+            Device.Engine.broadcastMul(lhs: lhs.values, rhs: rhs.values, result: resultValues)
+        }
         
         if lhs.requiresGradient || rhs.requiresGradient {
             func grad(a: XTensor<Element, Device>, b: XTensor<Element, Device>, grad: XTensor<Element, Device>) -> XTensor<Element, Device> {
-                OperationGroup.capture(named: "BroadcastMultiplyGrad") {
+                OperationGroup.capture(named: "∇⊙") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
                         .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
@@ -94,7 +102,7 @@ public extension XTensor {
             }
             
             let resultContext = XTensorContext<Element, Device>(
-                tag: "BroadcastMultiply",
+                tag: "⊙",
                 sources: [lhs, rhs],
                 backpropagate: [
                     { vectorGradient in
@@ -114,15 +122,20 @@ public extension XTensor {
     static func - (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        Device.Engine.broadcastSub(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
+        
+        if lhs.shape == rhs.shape {
+            Device.Engine.vSub(lhs: lhs.values.values, rhs: rhs.values.values, result: resultBuffer.values, count: lhs.count)
+        } else {
+            Device.Engine.broadcastSub(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
+        }
         
         if lhs.requiresGradient || rhs.requiresGradient {
             let resultContext = XTensorContext(
-                tag: "BroadcastSubtract",
+                tag: "-",
                 sources: [lhs, rhs],
                 backpropagate: [
                     { resultGradient in
-                        OperationGroup.capture(named: "BroadcastSubtractGradLhs") {
+                        OperationGroup.capture(named: "∇₁-") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
                                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
@@ -133,10 +146,10 @@ public extension XTensor {
                                 tmpReducedShape.remove(at: a)
                             }
                             
-                            return resultGradient.reduceSum(along: lhsReducedAxes).view(as: tmpReducedShape)
+                            return resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
                         }
                     }, { resultGradient in
-                        OperationGroup.capture(named: "BroadcastSubtractGradRhs") {
+                        OperationGroup.capture(named: "∇₂-") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
                                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
@@ -147,7 +160,7 @@ public extension XTensor {
                                 tmpReducedShape.remove(at: a)
                             }
                             
-                            return 0 - resultGradient.reduceSum(along: rhsReducedAxes).view(as: tmpReducedShape)
+                            return 0 - resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
                         }
                     }
                 ]
@@ -162,15 +175,20 @@ public extension XTensor {
     static func / (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        Device.Engine.broadcastDiv(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
+        
+        if lhs.shape == rhs.shape {
+            Device.Engine.vDiv(lhs: lhs.values.values, rhs: rhs.values.values, result: resultBuffer.values, count: lhs.count)
+        } else {
+            Device.Engine.broadcastDiv(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
+        }
         
         if lhs.requiresGradient || rhs.requiresGradient {
             let context = XTensorContext(
-                tag: "BroadcastDivide",
+                tag: "÷",
                 sources: [lhs, rhs],
                 backpropagate: [
                     { resultGradient -> XTensor<Element, Device> in
-                        OperationGroup.capture(named: "BroadcastDivideLhs") {
+                        OperationGroup.capture(named: "∇₁÷") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
                                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
@@ -185,7 +203,7 @@ public extension XTensor {
                             return d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
                         }
                     }, { resultGradient -> XTensor<Element, Device> in
-                        OperationGroup.capture(named: "BroadcastDivideRhs") {
+                        OperationGroup.capture(named: "∇₂÷") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
                                 .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
@@ -211,7 +229,19 @@ public extension XTensor {
     }
     
     static prefix func - (value: XTensor<Element, Device>) -> XTensor<Element, Device> {
-        return 0 - value
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: value.shape, type: Element.self)
+        Device.Engine.vNeg(val: value.values.values, result: resultBuffer.values, count: value.count)
+        
+        return XTensor(
+            using: resultBuffer,
+            context: XTensorContext(
+                tag: "neg",
+                sources: [value],
+                backpropagate: [{ resultGradient in
+                    -resultGradient
+                }]
+            )
+        )
     }
     
     static func += (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {

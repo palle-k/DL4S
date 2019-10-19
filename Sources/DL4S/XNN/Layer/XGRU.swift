@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 17.10.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 
@@ -47,9 +65,9 @@ public struct XGRU<Element: RandomizableType, Device: DeviceType>: XRNN, Codable
         Wz = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
         Wr = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
         Wh = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Uz = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Ur = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uh = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Uz = XTensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Ur = XTensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Uh = XTensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
         bz = XTensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         br = XTensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         bh = XTensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
@@ -84,9 +102,9 @@ public struct XGRU<Element: RandomizableType, Device: DeviceType>: XRNN, Codable
             let postMulView = [seqlen, batchSize, hiddenSize]
             
             return (
-                inputs.view(as: preMulView).matMul(Wz).view(as: postMulView) + bz,
-                inputs.view(as: preMulView).matMul(Wr).view(as: postMulView) + br,
-                inputs.view(as: preMulView).matMul(Wh).view(as: postMulView) + bh
+                inputs.view(as: preMulView).matrixMultiplied(with: Wz).view(as: postMulView) + bz,
+                inputs.view(as: preMulView).matrixMultiplied(with: Wr).view(as: postMulView) + br,
+                inputs.view(as: preMulView).matrixMultiplied(with: Wh).view(as: postMulView) + bh
             )
         }
     }

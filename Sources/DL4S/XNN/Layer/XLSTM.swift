@@ -3,7 +3,25 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 17.10.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import Foundation
 
@@ -53,10 +71,10 @@ public struct XLSTM<Element: RandomizableType, Device: DeviceType>: XRNN, Codabl
         Wo = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
         Wf = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
         Wc = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Ui = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uo = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uf = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uc = XTensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Ui = XTensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Uo = XTensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Uf = XTensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Uc = XTensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
         bi = XTensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         bo = XTensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         bf = XTensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
@@ -95,10 +113,10 @@ public struct XLSTM<Element: RandomizableType, Device: DeviceType>: XRNN, Codabl
             let postMulView = [seqlen, batchSize, hiddenSize]
             
             return (
-                inputs.view(as: preMulView).matMul(Wi).view(as: postMulView) + bi,
-                inputs.view(as: preMulView).matMul(Wo).view(as: postMulView) + bo,
-                inputs.view(as: preMulView).matMul(Wf).view(as: postMulView) + bf,
-                inputs.view(as: preMulView).matMul(Wc).view(as: postMulView) + bc
+                inputs.view(as: preMulView).matrixMultiplied(with: Wi).view(as: postMulView) + bi,
+                inputs.view(as: preMulView).matrixMultiplied(with: Wo).view(as: postMulView) + bo,
+                inputs.view(as: preMulView).matrixMultiplied(with: Wf).view(as: postMulView) + bf,
+                inputs.view(as: preMulView).matrixMultiplied(with: Wc).view(as: postMulView) + bc
             )
         }
     }

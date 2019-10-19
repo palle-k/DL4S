@@ -45,7 +45,7 @@ public extension XTensor {
             return XTensor(
                 using: resultBuffer,
                 context: XTensorContext(
-                    tag: "ReduceSum(\(axes))",
+                    tag: "sum\(axes)",
                     sources: [self],
                     backpropagate: [{ resultGradient in
                         var broadcastShape = self.shape
@@ -124,13 +124,18 @@ public extension XTensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         if requiresGradient {
             let contextBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
-            Device.Engine.reduceMax(values: values, result: resultBuffer, context: contextBuffer, axes: axes)
+            if let axis = axes.first, axes.count == 1 {
+                Device.Engine.reduceMax(values: values, result: resultBuffer, context: contextBuffer, axis: axis)
+            } else {
+                Device.Engine.reduceMax(values: values, result: resultBuffer, context: contextBuffer, axes: axes)
+            }
+            
             let context = XTensor<Int32, Device>(using: contextBuffer, context: nil)
             
             return XTensor(
                 using: resultBuffer,
                 context: XTensorContext(
-                    tag: "ReduceMax(\(axes))",
+                    tag: "max\(axes)",
                     sources: [self],
                     backpropagate: [{ resultGradient in
                         resultGradient.scatter(context: context, axes: axes, shape: self.shape)
@@ -157,7 +162,7 @@ public extension XTensor {
         return XTensor(
             using: resultBuffer,
             context: XTensorContext(
-                tag: "Scatter",
+                tag: "scatter",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     fatalError("Backpropagation is not available for Scatter operation.")

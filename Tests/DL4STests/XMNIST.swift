@@ -26,73 +26,202 @@
 import XCTest
 @testable import DL4S
 
-struct SecondOrderOptimizer<Model: XLayer> {
-    var model: Model
-    private var keyPaths = Model.parameters
-    
-    init(model: Model) {
-        self.model = model
-    }
-    
-    mutating func update(along gradients: [XTensor<Model.Parameter, Model.Device>], secondOrder: [XTensor<Model.Parameter, Model.Device>]) {
-        for i in keyPaths.indices {
-            let path = keyPaths[i]
-            let grad = gradients[i].detached()
-            let hessDiag = secondOrder[i].detached()
-            //let hessMag = sqrt(hessDiag * hessDiag)
-            let update = hessDiag
-            
-            self.model[keyPath: path] -= update * grad
-            self.model[keyPath: path].discardContext()
-        }
-    }
-}
-
 class XMNIST: XCTestCase {
-
-    func testExample() {
+    static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (XTensor<Element, Device>, XTensor<Int32, Device>), test: (XTensor<Element, Device>, XTensor<Int32, Device>)) {
+        let trainingData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
+        let trainingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
+        let testingData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
+        let testingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
+        
+        let trainImages = XTensor<Element, Device>(trainingData.dropFirst(16).prefix(28 * 28 * 60_000).map(Element.init)) / 256
+        let testImages = XTensor<Element, Device>(testingData.dropFirst(16).prefix(28 * 28 * 10_000).map(Element.init)) / 256
+        
+        let trainLabels = XTensor<Int32, Device>(trainingLabelData.dropFirst(8).prefix(60_000).map(Int32.init))
+        let testLabels = XTensor<Int32, Device>(testingLabelData.dropFirst(8).prefix(10_000).map(Int32.init))
+        
+        return (
+            train: (trainImages.view(as: [-1, 1, 28, 28]), trainLabels),
+            test: (testImages.view(as: [-1, 1, 28, 28]), testLabels)
+        )
+    }
+    
+    func testConvNet() {
         var model = XSequential {
-            XDense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            XConvolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5))
+            XLayerNorm<Float, CPU>(inputSize: [4, 24, 24])
             XRelu<Float, CPU>()
-            XDense<Float, CPU>(inputSize: 500, outputSize: 200)
+            XMaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
+            XConvolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5))
+            XLayerNorm<Float, CPU>(inputSize: [16, 8, 8])
             XRelu<Float, CPU>()
-            XDense<Float, CPU>(inputSize: 200, outputSize: 50)
+            XMaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
+            XFlatten<Float, CPU>()
+            XDense<Float, CPU>(inputSize: 256, outputSize: 120)
+            XLayerNorm<Float, CPU>(inputSize: [120])
             XRelu<Float, CPU>()
-            XDense<Float, CPU>(inputSize: 50, outputSize: 10)
+            XDense<Float, CPU>(inputSize: 120, outputSize: 10)
             XSoftmax<Float, CPU>()
         }
+        
         model.tag = "Classifier"
         var optimizer = XAdam(model: model, learningRate: 0.001)
         
-        let ((images, labels), _) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let ((images, labels), (imagesVal, labelsVal)) = XMNIST.loadMNIST(from: "/Users/Palle/Downloads/", type: Float.self, device: CPU.self)
         
         let epochs = 10_000
-        let batchSize = 64
-        let lambda: XTensor<Float, CPU> = 1
+        let batchSize = 128
         
         for epoch in 1 ... epochs {
-            let (realT, labelT) = Random.minibatch(from: images, labels: labels, count: batchSize)
-            var input = XTensor(realT.view(as: [batchSize, 28 * 28]))
-            input.requiresGradient = true
-            let expected = XTensor(labelT)
-            
-            let predicted = optimizer.model(input)
-            
-            let targetLoss = categoricalCrossEntropy(expected: expected, actual: predicted)
-            
-            let inputGradient = targetLoss.gradients(of: [input], retainBackwardsGraph: true)[0]
+            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
 
-            let partialPenaltyTerm = (inputGradient * inputGradient).reduceSum(along: [1])
-            let gradientPenaltyLoss = lambda * partialPenaltyTerm.reduceMean()
+            let predicted = optimizer.model(input)
+            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
             
-            let loss = targetLoss + gradientPenaltyLoss
             let gradients = loss.gradients(of: optimizer.model.parameters)
             
             optimizer.update(along: gradients)
             
-            if epoch.isMultiple(of: 100) {
-                print("[\(epoch)/\(epochs)] loss: \(targetLoss), gp: \(gradientPenaltyLoss * 100) / 100")
+            if epoch.isMultiple(of: 10) {
+                print("[\(epoch)/\(epochs)] loss: \(loss)")
             }
         }
+        
+        var correctCount = 0
+        
+        for i in 0 ..< imagesVal.shape[0] {
+            let x = imagesVal[i].view(as: [1, 1, 28, 28])
+            let pred = optimizer.model(x).squeezed().argmax()
+            let actual = Int(labelsVal[i].item)
+            
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
+        
+        print("accuracy: \(accuracy * 100)%")
+    }
+    
+    func testFCN() {
+        var model = XSequential {
+            XDense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            XRelu<Float, CPU>()
+            
+            XDense<Float, CPU>(inputSize: 500, outputSize: 300)
+            XRelu<Float, CPU>()
+
+            XDense<Float, CPU>(inputSize: 300, outputSize: 10)
+            XSoftmax<Float, CPU>()
+        }
+        
+        model.tag = "Classifier"
+        var optimizer = XAdam(model: model, learningRate: 0.001)
+        
+        let ((images, labels), (imagesVal, labelsVal)) = XMNIST.loadMNIST(from: "/Users/Palle/Downloads/", type: Float.self, device: CPU.self)
+        
+        let epochs = 10_000
+        let batchSize = 128
+        
+        for epoch in 1 ... epochs {
+            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
+            
+            let predicted = optimizer.model(input.view(as: [batchSize, 28 * 28]))
+            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
+            
+            let gradients = loss.gradients(of: optimizer.model.parameters)
+            optimizer.update(along: gradients)
+            
+            if epoch.isMultiple(of: 100) {
+                print("[\(epoch)/\(epochs)] loss: \(loss)")
+            }
+        }
+        
+        var correctCount = 0
+        
+        for i in 0 ..< imagesVal.shape[0] {
+            let x = imagesVal[i].view(as: [1, 28 * 28])
+            let y = optimizer.model(x).squeezed()
+            let pred = y.argmax()
+            
+            let actual = Int(labelsVal[i].item)
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
+        
+        print("accuracy: \(accuracy * 100)%")
+    }
+    
+    func testGRU() {
+        let ((images, labels), (imagesVal, labelsVal)) = XMNIST.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
+        
+        var model = XSequential {
+            XGRU<Float, CPU>(inputSize: 28, hiddenSize: 128, direction: .forward)
+            XLambda<XGRU<Float, CPU>.Outputs, XTensor<Float, CPU>, Float, CPU> { inputs in
+                inputs.0
+            }
+            XDense<Float, CPU>(inputSize: 128, outputSize: 10)
+            XSoftmax<Float, CPU>()
+        }
+        model.tag = "Classifier"
+        
+        let epochs = 10_000
+        let batchSize = 128
+        
+        var optimizer = XAdam(model: model, learningRate: 0.001)
+        
+        let queue = Queue<(XTensor<Float, CPU>, XTensor<Int32, CPU>)>(maxLength: 16)
+        let workers = 1
+
+        for i in 0 ..< workers {
+            DispatchQueue.global().async {
+                print("starting worker \(i)")
+                while !queue.isStopped {
+                    let (batch, expected) = Random.minibatch(from: images, labels: labels, count: batchSize)
+                    let x = batch.view(as: [-1, 28, 28]).permuted(to: [1, 0, 2])
+                    queue.enqueue((x, expected))
+                }
+                print("stopping worker \(i)")
+            }
+        }
+        
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        
+        for epoch in 1 ... epochs {
+            let (input, target) = queue.dequeue()!
+            
+            let predicted = optimizer.model(input)
+            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
+            
+            let gradients = loss.gradients(of: optimizer.model.parameters)
+            optimizer.update(along: gradients)
+            
+            bar.next(userInfo: loss.item)
+        }
+        
+        bar.complete()
+        queue.stop()
+        
+        var correctCount = 0
+        
+        for i in 0 ..< imagesVal.shape[0] {
+            let x = imagesVal[i]
+                .view(as: [-1, 28, 28])
+                .permuted(to: [1, 0, 2])
+            let y = optimizer.model(x).squeezed()
+            let pred = y.argmax()
+            
+            let actual = Int(labelsVal[i].item)
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
+        
+        print("accuracy: \(accuracy * 100)%")
     }
 }

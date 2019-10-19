@@ -80,7 +80,7 @@ class XTests: XCTestCase {
         rhs.tag = "rhs"
         #endif
         
-        var result = lhs.matMul(rhs)
+        var result = lhs.matrixMultiplied(with: rhs)
         #if DEBUG
         result.tag = "result"
         #endif
@@ -141,14 +141,36 @@ class XTests: XCTestCase {
         }
     }
     
-    func testLeak() {
-        let model = XSigmoid<Float, CPU>()
+    func testXRNN() {
+        let model = XLSTM<Float, CPU>(inputSize: 32, hiddenSize: 32)
+        var input = XTensor<Float, CPU>(uniformlyDistributedWithShape: [1, 4, 32], requiresGradient: true)
+        input.requiresGradient = true
+        #if DEBUG
+        input.tag = "input"
+        #endif
         
-        for _ in 0 ..< 10 {
-            let a = XTensor<Float, CPU>(repeating: 0, shape: [10, 10], requiresGradient: true)
-            let result = model(a)
-            print(result.graph())
-        }
-        print("Done")
+        let result = model(input).0.hiddenState
+        let inputGrad = result.gradients(of: [input], retainBackwardsGraph: true)[0]
+        
+        print(inputGrad.graph())
+    }
+    
+    func testGrads() {
+        // let a = XTensor<Float, CPU>([[0.001, 0.01, 0.1, 1.0, 10.0, 100.0]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([[0.001, 0.01, 0.1, 1.0, 10.0, 100.0]], requiresGradient: true)
+        
+        // let ra = a[0, 2]
+        let rb = b[0, 2]
+        
+        print(rb)
+        
+        // let ga = ra.gradients(of: [a])[0]
+        rb.backwards()
+        
+        // print(ga)
+        print(b.gradientDescription!)
+        
+        // print(ra.graph())
+        print(rb.graph)
     }
 }

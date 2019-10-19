@@ -27,7 +27,7 @@ import Foundation
 
 
 public extension XTensor {
-    func matMul(_ other: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    func matrixMultiplied(with other: XTensor<Element, Device>) -> XTensor<Element, Device> {
         let lhs = self
         let rhs = other
         
@@ -62,6 +62,67 @@ public extension XTensor {
         return lhsView._matMul(rhsView).view(as: resultViewShape)
     }
     
+    func broadcastMatrixMultiplied(with other: XTensor<Element, Device>, transposeSelf: Bool = false, transposeOther: Bool = false) -> XTensor<Element, Device> {
+        precondition(self.dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
+        precondition(self.shape.suffix(2)[transposeSelf ? 0 : 1] == other.shape.suffix(2)[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
+        
+        let lhs: Self
+        let rhs: Self
+        
+        if self.dim > other.dim {
+            lhs = self
+            rhs = other.view(as: Array(repeating: 1, count: self.dim - other.dim) + other.shape)
+        } else if self.dim < other.dim {
+            lhs = self.view(as: Array(repeating: 1, count: other.dim - self.dim) + self.shape)
+            rhs = other
+        } else {
+            lhs = self
+            rhs = other
+        }
+        
+        let broadcastResultShape = shapeForBroadcastedOperands(lhs.shape.dropLast(2), rhs.shape.dropLast(2))
+        let matMulResultShape = [lhs.shape.suffix(2)[transposeSelf ? 1 : 0], rhs.shape.suffix(2)[transposeOther ? 0 : 1]]
+        
+        let resultBuffer = Device.Memory.allocateBuffer(
+            withShape: broadcastResultShape + matMulResultShape,
+            type: Element.self
+        )
+        Device.Engine.broadcastGemm(
+            lhs: lhs.values,
+            rhs: rhs.values,
+            result: resultBuffer,
+            alpha: 1,
+            beta: 0,
+            transposeFirst: transposeSelf,
+            transposeSecond: transposeOther
+        )
+        
+        return XTensor(
+            using: resultBuffer,
+            context: (lhs.requiresGradient || rhs.requiresGradient) ? XTensorContext(
+                tag: "bmmul",
+                sources: [lhs, rhs],
+                backpropagate: [
+                    { (resultGradient: XTensor<Element, Device>) in
+                        let res = resultGradient.broadcastMatrixMultiplied(with: other, transposeSelf: false, transposeOther: !transposeOther)
+                        if transposeSelf {
+                            return res.permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
+                        } else {
+                            return res
+                        }
+                    }, { resultGradient in
+                        let res = self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
+                        if transposeOther {
+                            return res.permuted(to: Array(0 ..< (rhs.dim - 2)) + [rhs.dim - 1, rhs.dim - 2])
+                        } else {
+                            return res
+                        }
+                    }
+                ]
+            ) : nil
+        )
+    }
+    
     private func _matMul(_ other: XTensor<Element, Device>, transposeSelf: Bool = false, transposeOther: Bool = false) -> XTensor<Element, Device> {
         precondition(self.dim == 2)
         precondition(other.dim == 2)
@@ -83,7 +144,7 @@ public extension XTensor {
         return XTensor(
             using: resultBuffer,
             context: (self.requiresGradient || other.requiresGradient) ? XTensorContext(
-                tag: "MatrixMultiply(\(transposeSelf ? "T" : "_"), \(transposeOther ? "T" : "_"))",
+                tag: "mmul",
                 sources: [self, other],
                 backpropagate: [
                     { resultGradient in
@@ -108,5 +169,5 @@ public extension XTensor {
 }
 
 public func matMul<Element, Device>(_ lhs: XTensor<Element, Device>, _ rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
-    lhs.matMul(rhs)
+    lhs.matrixMultiplied(with: rhs)
 }

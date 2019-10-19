@@ -46,10 +46,10 @@ public protocol Optimizer {
 }
 
 // Using a default implementation crashes the compiler.
-// public extension Optimizer {
-//     func zeroGradient() {
-//         for param in parameters {
-//             param.zeroGradient()
-//         }
-//     }
-// }
+public extension Optimizer {
+    func zeroGradient() {
+        for param in parameters {
+            param.zeroGradient()
+        }
+    }
+}

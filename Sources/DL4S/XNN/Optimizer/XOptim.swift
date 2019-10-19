@@ -1,8 +1,8 @@
 //
-//  XDense.swift
+//  XOptim.swift
 //  DL4S
 //
-//  Created by Palle Klewitz on 16.10.19.
+//  Created by Palle Klewitz on 12.10.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,37 +25,9 @@
 
 import Foundation
 
-public struct XDense<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XDense<Element, Device>, XTensor<Element, Device>>] {[
-        \.weights,
-        \.bias
-    ]}
+public protocol XOptimizer {
+    associatedtype Layer: XLayer
     
-    public var weights: XTensor<Element, Device>
-    public var bias: XTensor<Element, Device>
-    
-    public var parameters: [XTensor<Element, Device>] {
-        get {
-            [weights, bias]
-        }
-        set {
-            (weights, bias) = (newValue[0], newValue[1])
-        }
-    }
-    
-    public init(inputSize: Int, outputSize: Int) {
-        weights = XTensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true)
-        bias = XTensor(repeating: 0, shape: [outputSize], requiresGradient: true)
-        
-        #if DEBUG
-        weights.tag = "W"
-        bias.tag = "b"
-        #endif
-    }
-    
-    public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
-        OperationGroup.capture(named: "Dense") {
-            inputs.matrixMultiplied(with: weights) + bias
-        }
-    }
+    var model: Layer { get }
+    mutating func update(along gradients: [XTensor<Layer.Parameter, Layer.Device>])
 }

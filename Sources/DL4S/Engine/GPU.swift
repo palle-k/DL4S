@@ -172,6 +172,10 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func dot<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, count: Int) -> N {
         fatalError("\(#function) not available for GPU")
     }

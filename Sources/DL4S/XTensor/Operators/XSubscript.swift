@@ -43,7 +43,7 @@ public extension XTensor {
                 handle: handle,
                 shape: shape,
                 context: requiresGradient ? XTensorContext(
-                    tag: "SubscriptRead",
+                    tag: "read",
                     sources: [self],
                     backpropagate: [{ resultGradient in
                         var result = XTensor<Element, Device>(repeating: 0, shape: self.shape)
@@ -75,7 +75,7 @@ public extension XTensor {
             if slice.requiresGradient {
                 self.requiresGradient = true
                 self.context = XTensorContext(
-                    tag: "SubscriptWrite",
+                    tag: "write",
                     sources: [slice],
                     backpropagate: [{ resultGradient in
                         resultGradient[index]

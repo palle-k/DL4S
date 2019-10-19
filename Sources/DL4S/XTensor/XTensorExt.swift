@@ -125,7 +125,7 @@ public extension XTensor where Element: RandomizableType {
         precondition(shape.count == 2, "Shape must be 2-dimensional")
         
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fillNormal(self.values, mean: 0, stdev: 2 / Element(shape[0]).sqrt())
+        Random.fillNormal(self.values, mean: 0, stdev: (2 / Element(shape[0])).sqrt())
     }
     
     init(normalDistributedWithShape shape: [Int], mean: Element = 1, stdev: Element = 1, requiresGradient: Bool = false) {
@@ -136,6 +136,13 @@ public extension XTensor where Element: RandomizableType {
     init(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
         Random.fill(self.values, a: min, b: max)
+    }
+}
+
+public extension XTensor {
+    init(bernoulliDistributedWithShape shape: [Int], probability: Float, requiresGradient: Bool = false) {
+        self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
+        Random.bernoulli(values, p: probability)
     }
 }
 

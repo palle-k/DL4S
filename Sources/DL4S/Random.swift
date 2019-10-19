@@ -167,4 +167,15 @@ public enum Random {
         return result
     }
     
+    public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
+        let count = values.shape.reduce(1, *)
+        let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
+        for i in 0 ..< count {
+            buffer[i] = Float.random(in: 0 ... 1) <= p ? 1 : 0
+        }
+        
+        Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)
+        buffer.deallocate()
+    }
+    
 }

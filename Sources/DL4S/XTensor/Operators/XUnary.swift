@@ -35,7 +35,7 @@ public extension XTensor {
         if requiresGradient {
             let resultCopy = result
             result.context = XTensorContext(
-                tag: "Exponentiate",
+                tag: "exp",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient * resultCopy
@@ -54,7 +54,7 @@ public extension XTensor {
         
         if requiresGradient {
             result.context = XTensorContext(
-                tag: "Logarithm",
+                tag: "log",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient / self
@@ -73,7 +73,7 @@ public extension XTensor {
         if requiresGradient {
             let resultCopy = result
             result.context = XTensorContext(
-                tag: "Tanh",
+                tag: "tanh",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     (1 - resultCopy * resultCopy) * resultGradient
@@ -92,7 +92,7 @@ public extension XTensor {
         if requiresGradient {
             let resultCopy = result
             result.context = XTensorContext(
-                tag: "SquareRoot",
+                tag: "sqrt",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     0.5 / resultCopy * resultGradient
@@ -112,7 +112,7 @@ public extension XTensor {
         
         if requiresGradient {
             result.context = XTensorContext(
-                tag: "Heaviside",
+                tag: "heaviside",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     XTensor(repeating: 0, shape: resultGradient.shape)
@@ -132,7 +132,7 @@ public extension XTensor {
         
         if requiresGradient {
             result.context = XTensorContext(
-                tag: "RectifiedLinear",
+                tag: "relu",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     OperationGroup.capture(named: "RectifiedLinearGrad") {
@@ -166,7 +166,7 @@ public extension XTensor {
         var result = XTensor(using: resultBuffer, context: nil)
         if requiresGradient {
             result.context = XTensorContext(
-                tag: "Sine",
+                tag: "sin",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     self.cosine() * resultGradient
@@ -183,7 +183,7 @@ public extension XTensor {
         var result = XTensor(using: resultBuffer, context: nil)
         if requiresGradient {
             result.context = XTensorContext(
-                tag: "Cosine",
+                tag: "cos",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     -self.sine() * resultGradient

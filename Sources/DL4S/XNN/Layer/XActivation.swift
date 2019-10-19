@@ -88,3 +88,19 @@ public struct XSoftmax<Element: NumericType, Device: DeviceType>: XLayer, Codabl
         }
     }
 }
+
+
+public struct XLambda<Inputs, Outputs, Element: NumericType, Device: DeviceType>: XLayer {
+    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    
+    public var transform: (Inputs) -> Outputs
+    
+    public init(_ transform: @escaping (Inputs) -> Outputs) {
+        self.transform = transform
+    }
+    
+    public func callAsFunction(_ inputs: Inputs) -> Outputs {
+        transform(inputs)
+    }
+}

@@ -42,7 +42,7 @@ public extension XTensor {
             XTensor(
                 using: buffer,
                 context: self.requiresGradient ? XTensorContext(
-                    tag: "Unstack",
+                    tag: "unstack",
                     sources: [self],
                     backpropagate: [{ resultGradient -> XTensor<Element, Device> in
                         let sourceOffsets = sourceLengths.reduce(into: [0], {$0.append($0.last! + $1)})
@@ -82,7 +82,7 @@ public extension XTensor {
         self.init(
             using: resultBuffer,
             context: requiresGradient ? XTensorContext(
-                tag: "Stack",
+                tag: "stack",
                 sources: tensors,
                 backpropagate: tensors.indices.map { i in { resultGradient in
                     resultGradient.unstacked(along: axis, withSourceLengths: resultStackDimSize)[i]

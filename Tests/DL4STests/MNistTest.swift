@@ -64,14 +64,10 @@ class MNistTest: XCTestCase {
     }
     
     static func images(from path: String, maxCount: Int? = nil) -> ((Tensor<Float, CPU>, Tensor<Int32, CPU>), (Tensor<Float, CPU>, Tensor<Int32, CPU>)) {
-        guard
-            let trainingData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte")),
-            let trainingLabelData = try? Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte")),
-            let testingData = try? Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte")),
-            let testingLabelData = try? Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
-        else {
-            fatalError("Data not found")
-        }
+        let trainingData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
+        let trainingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
+        let testingData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
+        let testingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
         
         let trainingBytes = Array<UInt8>(trainingData)
         let trainingLabels = Array<UInt8>(trainingLabelData)
@@ -88,7 +84,7 @@ class MNistTest: XCTestCase {
     }
     
     func testMNist() {
-        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Developer/DL4S/")
         
         let bn1 = BatchNorm<Float, CPU>(inputSize: [500])
         let bn2 = BatchNorm<Float, CPU>(inputSize: [300])
@@ -163,7 +159,7 @@ class MNistTest: XCTestCase {
     }
     
     func testMNistConvnet() {
-        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Developer/DL4S/")
         
         /*
          With Layer Norm:
@@ -290,7 +286,7 @@ class MNistTest: XCTestCase {
     }
     
     func testMNistLstm() {
-        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Downloads/")
+        let (ds_train, ds_val) = MNistTest.images(from: "/Users/Palle/Developer/DL4S/")
         
         let model = Sequential<Float, CPU>(
             GRU(inputSize: 28, hiddenSize: 128).asAny(),

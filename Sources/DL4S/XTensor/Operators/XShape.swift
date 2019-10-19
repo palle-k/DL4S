@@ -38,11 +38,15 @@ public extension XTensor {
             shape[idx] = count / used
         }
         
+        if shape == self.shape {
+            return self
+        }
+        
         return XTensor(
             handle: self.handle,
             shape: shape,
             context: requiresGradient ? XTensorContext(
-                tag: "Reshape(\(shape))",
+                tag: "view\(shape)",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient.view(as: self.shape)
@@ -91,7 +95,7 @@ public extension XTensor {
         return XTensor(
             using: resultBuffer,
             context: XTensorContext(
-                tag: "Permute(\(axisArangement))",
+                tag: "permute\(axisArangement)",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     var invArangement = [Int](repeating: 0, count: self.dim)
@@ -106,5 +110,9 @@ public extension XTensor {
     
     func transposed() -> XTensor<Element, Device> {
         permuted(to: [1, 0])
+    }
+    
+    var T: XTensor<Element, Device> {
+        transposed()
     }
 }
