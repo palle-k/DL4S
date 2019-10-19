@@ -305,7 +305,6 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
             dstStart.assign(from: source, count: count)
         } else {
             let srcShape = zip(dstIndex, dstStrides)
-                .filter {$0.0 == nil}
                 .map {$1}
             let srcStrides = MemoryOps.strides(from: srcShape)
             let sStride = srcStrides[0]

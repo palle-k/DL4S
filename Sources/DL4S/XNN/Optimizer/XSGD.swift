@@ -26,16 +26,20 @@
 import Foundation
 
 public struct XSGD<Layer: XLayer>: XOptimizer {
-    public private(set) var model: Layer
-    public var learningRate: XTensor<Layer.Parameter, Layer.Device>
+    public typealias ParamTensor = XTensor<Layer.Parameter, Layer.Device>
     
-    public init(model: Layer, learningRate: XTensor<Layer.Parameter, Layer.Device>) {
+    public private(set) var model: Layer
+    public var learningRate: ParamTensor
+    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    
+    public init(model: Layer, learningRate: ParamTensor) {
         self.model = model
         self.learningRate = learningRate
+        self.paths = model.parameterPaths
     }
     
-    public mutating func update(along gradients: [XTensor<Layer.Parameter, Layer.Device>]) {
-        for (keyPath, grad) in zip(Layer.parameters, gradients) {
+    public mutating func update(along gradients: [ParamTensor]) {
+        for (keyPath, grad) in zip(paths, gradients) {
             model[keyPath: keyPath] -= learningRate * grad
             model[keyPath: keyPath].discardContext()
         }
@@ -60,7 +64,7 @@ public struct XMomentum<Layer: XLayer>: XOptimizer {
         self.velocities = model.parameters.map {
             XTensor(repeating: 0, shape: $0.shape)
         }
-        self.paths = Layer.parameters
+        self.paths = model.parameterPaths
     }
     
     public mutating func update(along gradients: [ParamTensor]) {
@@ -73,7 +77,28 @@ public struct XMomentum<Layer: XLayer>: XOptimizer {
     }
 }
 
-extension XSGD: Codable where Layer: Codable {}
+extension XSGD: Codable where Layer: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        model = try container.decode(Layer.self, forKey: .model)
+        learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
+        
+        paths = model.parameterPaths
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(model, forKey: .model)
+        try container.encode(learningRate, forKey: .learningRate)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case model
+        case learningRate
+    }
+}
 
 extension XMomentum: Codable where Layer: Codable {
     public init(from decoder: Decoder) throws {
@@ -84,7 +109,7 @@ extension XMomentum: Codable where Layer: Codable {
         learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
         velocities = try container.decode([ParamTensor].self, forKey: .velocities)
         
-        paths = Layer.parameters
+        paths = model.parameterPaths
     }
     
     public func encode(to encoder: Encoder) throws {

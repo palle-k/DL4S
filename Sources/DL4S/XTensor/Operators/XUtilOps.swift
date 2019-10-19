@@ -45,31 +45,31 @@ public extension XTensor {
         self.init(using: buffer, context: nil)
     }
     
-    func repeated(_ times: Int) -> XTensor<Element, Device> {
+    func repeated(_ times: Int) -> Self {
         return XTensor(stacking: Array(repeating: self, count: count))
     }
 
-    func padded(with value: Element = 0, padding: [(Int, Int)]) -> XTensor<Element, Device> {
+    func padded(with value: Element = 0, padding: [(Int, Int)]) -> Self {
         precondition(padding.count == dim)
         
-        var result = XTensor<Element, Device>(repeating: value, shape: zip(shape, padding).map {$0 + $1.0 + $1.1})
+        var result = Self(repeating: value, shape: zip(shape, padding).map {$0 + $1.0 + $1.1})
         let index = zip(shape, padding).map {$1.0 ..< ($0 + $1.0)}
         result[index] = self
         
         return result
     }
 
-    func padded(with value: Element = 0, padding: [Int]) -> XTensor<Element, Device> {
+    func padded(with value: Element = 0, padding: [Int]) -> Self {
         precondition(padding.count == dim)
         
-        var result = XTensor<Element, Device>(repeating: value, shape: zip(shape, padding).map {$0 + $1 * 2})
+        var result = Self(repeating: value, shape: zip(shape, padding).map {$0 + $1 * 2})
         let index = zip(shape, padding).map {$1 ..< ($0 + $1)}
         result[index] = self
         
         return result
     }
     
-    func reversed() -> XTensor<Element, Device> {
+    func reversed() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.reverse(values: values, result: resultBuffer)
         

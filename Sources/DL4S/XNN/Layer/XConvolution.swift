@@ -26,7 +26,7 @@
 import Foundation
 
 public struct XConvolution2D<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
         \.filters,
         \.bias
     ]}
@@ -40,19 +40,16 @@ public struct XConvolution2D<Element: RandomizableType, Device: DeviceType>: XLa
         get {
             [filters, bias]
         }
-        set {
-            (filters, bias) = (newValue[0], newValue[1])
-        }
     }
     
-    public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = 0, stride: Int = 1) {
+    public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = nil, stride: Int = 1) {
         self.filters = XTensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
             mean: 0,
             stdev: (2 / Element(kernelSize.height * kernelSize.width * inputChannels)).sqrt(),
             requiresGradient: true
         )
-        self.bias = XTensor(repeating: 0, shape: [outputChannels], requiresGradient: true)
+        self.bias = XTensor(repeating: 0, shape: [1, outputChannels, 1, 1], requiresGradient: true)
         self.stride = stride
         self.padding = padding
         
@@ -64,7 +61,7 @@ public struct XConvolution2D<Element: RandomizableType, Device: DeviceType>: XLa
     
     public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
         OperationGroup.capture(named: "Conv2D") {
-            inputs.convolved2d(filters: filters, padding: padding, stride: stride)
+            inputs.convolved2d(filters: filters, padding: padding, stride: stride) + bias
         }
     }
 }

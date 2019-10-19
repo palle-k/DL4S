@@ -27,8 +27,8 @@ import Foundation
 
 
 public struct XMaxPool2D<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public let windowSize: Int
     public let stride: Int
@@ -48,8 +48,8 @@ public struct XMaxPool2D<Element: NumericType, Device: DeviceType>: XLayer, Coda
 }
 
 public struct XAvgPool2D<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public let windowSize: Int
     public let stride: Int
@@ -65,5 +65,39 @@ public struct XAvgPool2D<Element: NumericType, Device: DeviceType>: XLayer, Coda
         OperationGroup.capture(named: "AvgPool2D") {
             inputs.averagePooled2d(windowSize: windowSize, padding: padding, stride: stride)
         }
+    }
+}
+
+public struct XAdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: XLayer, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
+    
+    public let targetSize: Int
+    
+    public init(targetSize: Int) {
+        self.targetSize = targetSize
+    }
+    
+    public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+        let height = inputs.shape[2]
+        let windowSize = height / targetSize
+        return inputs.maxPooled2d(windowSize: windowSize, padding: 0, stride: windowSize)
+    }
+}
+
+public struct XAdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: XLayer, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
+    
+    public let targetSize: Int
+    
+    public init(targetSize: Int) {
+        self.targetSize = targetSize
+    }
+    
+    public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+        let height = inputs.shape[2]
+        let windowSize = height / targetSize
+        return inputs.averagePooled2d(windowSize: windowSize, padding: 0, stride: windowSize)
     }
 }

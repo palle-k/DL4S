@@ -29,7 +29,7 @@ public struct XBasicRNN<Element: RandomizableType, Device: DeviceType>: XRNN, Co
     public typealias Inputs = XTensor<Element, Device>
     public typealias Outputs = (XTensor<Element, Device>, () -> XTensor<Element, Device>)
     
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
         \.W, \.U, \.b
     ]}
     
@@ -48,7 +48,6 @@ public struct XBasicRNN<Element: RandomizableType, Device: DeviceType>: XRNN, Co
     
     public var parameters: [XTensor<Element, Device>] {
         get {[W, U, b]}
-        set {(W, U, b) = (newValue[0], newValue[1], newValue[2])}
     }
     
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {

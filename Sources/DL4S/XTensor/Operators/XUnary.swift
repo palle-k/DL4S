@@ -27,7 +27,7 @@ import Foundation
 
 
 public extension XTensor {
-    func exp() -> XTensor<Element, Device> {
+    func exp() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.exp(values: values, result: resultBuffer)
         var result = XTensor(using: resultBuffer, context: nil)
@@ -47,7 +47,7 @@ public extension XTensor {
         return result
     }
     
-    func log() -> XTensor<Element, Device> {
+    func log() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.log(values: values, result: resultBuffer)
         var result = XTensor(using: resultBuffer, context: nil)
@@ -65,7 +65,7 @@ public extension XTensor {
         return result
     }
     
-    func tanh() -> XTensor<Element, Device> {
+    func tanh() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.tanh(values: values, result: resultBuffer)
         var result = XTensor(using: resultBuffer, context: nil)
@@ -84,7 +84,7 @@ public extension XTensor {
         return result
     }
     
-    func sqrt() -> XTensor<Element, Device> {
+    func sqrt() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sqrt(values: values, result: resultBuffer)
         var result = XTensor(using: resultBuffer, context: nil)
@@ -104,7 +104,7 @@ public extension XTensor {
         return result
     }
     
-    func heaviside() -> XTensor<Element, Device> {
+    func heaviside() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.heaviside(values: values, result: resultBuffer)
         
@@ -124,7 +124,7 @@ public extension XTensor {
         return result
     }
     
-    func rectifiedLinear() -> XTensor<Element, Device> {
+    func rectifiedLinear() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.relu(values: values, result: resultBuffer)
         
@@ -146,21 +146,21 @@ public extension XTensor {
         return result
     }
     
-    func leakyRectifiedLinear(leakage: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    func leakyRectifiedLinear(leakage: Self) -> Self {
         rectifiedLinear() - leakage * (-self).rectifiedLinear()
     }
     
-    func sigmoid() -> XTensor<Element, Device> {
+    func sigmoid() -> Self {
         0.5 * (self * 0.5).tanh() + 0.5
     }
     
-    func softmax(axis: Int = 1) -> XTensor<Element, Device> {
+    func softmax(axis: Int = 1) -> Self {
         let normalizer = detached().reduceMax(along: [axis]).unsqueezed(at: axis)
         let exponentiated = (self - normalizer).exp()
         return exponentiated / exponentiated.reduceSum(along: [axis]).unsqueezed(at: axis)
     }
     
-    func sine() -> XTensor<Element, Device> {
+    func sine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sin(values: values, result: resultBuffer)
         var result = XTensor(using: resultBuffer, context: nil)
@@ -177,7 +177,7 @@ public extension XTensor {
         return result
     }
     
-    func cosine() -> XTensor<Element, Device> {
+    func cosine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sin(values: values, result: resultBuffer)
         var result = XTensor(using: resultBuffer, context: nil)

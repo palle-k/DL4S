@@ -1,8 +1,8 @@
 //
-//  XDense.swift
+//  XContext.swift
 //  DL4S
 //
-//  Created by Palle Klewitz on 16.10.19.
+//  Created by Palle Klewitz on 19.10.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,34 +25,29 @@
 
 import Foundation
 
-public struct XDense<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
-        \.weights,
-        \.bias
-    ]}
+struct XTensorContext<Element: NumericType, Device: DeviceType> {
+    var tag: String?
+    var sources: [XTensor<Element, Device>]
+    var backpropagate: [(XTensor<Element, Device>, XTensor<Element, Device>?) -> XTensor<Element, Device>]
+    #if DEBUG
+    var operationStack = OperationGroup.operationStack
+    #endif
     
-    public var weights: XTensor<Element, Device>
-    public var bias: XTensor<Element, Device>
-    
-    public var parameters: [XTensor<Element, Device>] {
-        get {
-            [weights, bias]
-        }
+    init(tag: String?, sources: [XTensor<Element, Device>], backpropagate: [(XTensor<Element, Device>) -> XTensor<Element, Device>]) {
+        self.init(tag: tag, sources: sources, backpropagateAccumulate: backpropagate.map { function in
+            { resultGradient, accumulator in
+                if let acc = accumulator {
+                    return acc + function(resultGradient)
+                } else {
+                    return function(resultGradient)
+                }
+            }
+        })
     }
     
-    public init(inputSize: Int, outputSize: Int) {
-        weights = XTensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true)
-        bias = XTensor(repeating: 0, shape: [outputSize], requiresGradient: true)
-        
-        #if DEBUG
-        weights.tag = "W"
-        bias.tag = "b"
-        #endif
-    }
-    
-    public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
-        OperationGroup.capture(named: "Dense") {
-            inputs.matrixMultiplied(with: weights) + bias
-        }
+    init(tag: String?, sources: [XTensor<Element, Device>], backpropagateAccumulate: [(XTensor<Element, Device>, XTensor<Element, Device>?) -> XTensor<Element, Device>]) {
+        self.tag = tag
+        self.sources = sources
+        self.backpropagate = backpropagateAccumulate
     }
 }

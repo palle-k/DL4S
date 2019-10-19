@@ -27,34 +27,25 @@ import XCTest
 @testable import DL4S
 
 
-
-
-
 class ResNetTests: XCTestCase {
     func testResNet() {
-        let resnet = ResNet<Float, CPU>(inputShape: [3, 32, 32], classCount: 32)
-        let optim = Adam(parameters: resnet.trainableParameters, learningRate: 0.001)
-        optim.zeroGradient()
+        let resnet = ResNet18<Float, CPU>(inputShape: [3, 32, 32], classes: 32)
+        var optim = XAdam(model: resnet, learningRate: 0.001)
         
-        let t = Tensor<Float, CPU>(repeating: 0, shape: 64, 3, 32, 32)
-        t.tag = "input"
-        Random.fill(t, a: 0, b: 1)
-        
-        let expected = Tensor<Int32, CPU>((0 ..< 64).map {_ in Int32.random(in: 0 ..< 32)})
+        let t = XTensor<Float, CPU>(uniformlyDistributedWithShape: 4, 3, 32, 32, min: 0, max: 1)
+
+        let expected = XTensor<Int32, CPU>((0 ..< 4).map {_ in Int32.random(in: 0 ..< 32)})
         
         let epochs = 100
         
         for i in 1 ... epochs {
-            optim.zeroGradient()
-            
             let result = resnet(t)
             
             let loss = categoricalCrossEntropy(expected: expected, actual: result)
-            loss.backwards()
-            optim.step()
+            let grads = loss.gradients(of: optim.model.parameters)
+            optim.update(along: grads)
             
             print("[\(i)/\(epochs)]: \(loss)")
         }
-        
     }
 }

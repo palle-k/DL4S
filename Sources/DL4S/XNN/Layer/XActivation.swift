@@ -26,8 +26,8 @@
 import Foundation
 
 public struct XTanh<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XTanh<Element, Device>, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public init() {}
     
@@ -37,8 +37,8 @@ public struct XTanh<Element: NumericType, Device: DeviceType>: XLayer, Codable {
 }
 
 public struct XSigmoid<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XSigmoid<Element, Device>, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public init() {}
     
@@ -50,8 +50,8 @@ public struct XSigmoid<Element: NumericType, Device: DeviceType>: XLayer, Codabl
 }
 
 public struct XRelu<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XRelu<Element, Device>, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public init() {}
     
@@ -61,8 +61,8 @@ public struct XRelu<Element: NumericType, Device: DeviceType>: XLayer, Codable {
 }
 
 public struct XLeakyRelu<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XLeakyRelu<Element, Device>, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     public var leakage: Element
     
     public init(leakage: Element) {
@@ -77,8 +77,8 @@ public struct XLeakyRelu<Element: NumericType, Device: DeviceType>: XLayer, Coda
 }
 
 public struct XSoftmax<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XSoftmax<Element, Device>, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public init() {}
     
@@ -91,8 +91,8 @@ public struct XSoftmax<Element: NumericType, Device: DeviceType>: XLayer, Codabl
 
 
 public struct XLambda<Inputs, Outputs, Element: NumericType, Device: DeviceType>: XLayer {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public var transform: (Inputs) -> Outputs
     

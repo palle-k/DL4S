@@ -27,7 +27,7 @@ import Foundation
 
 
 public extension XTensor {
-    func matrixMultiplied(with other: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    func matrixMultiplied(with other: Self) -> Self {
         let lhs = self
         let rhs = other
         
@@ -37,8 +37,8 @@ public extension XTensor {
         
         let resultViewShape: [Int]
         
-        let lhsView: XTensor<Element, Device>
-        let rhsView: XTensor<Element, Device>
+        let lhsView: Self
+        let rhsView: Self
         
         switch (lhs.dim, rhs.dim) {
         case (1, 1):
@@ -62,7 +62,7 @@ public extension XTensor {
         return lhsView._matMul(rhsView).view(as: resultViewShape)
     }
     
-    func broadcastMatrixMultiplied(with other: XTensor<Element, Device>, transposeSelf: Bool = false, transposeOther: Bool = false) -> XTensor<Element, Device> {
+    func broadcastMatrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         precondition(self.dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
         precondition(self.shape.suffix(2)[transposeSelf ? 0 : 1] == other.shape.suffix(2)[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
         
@@ -103,7 +103,7 @@ public extension XTensor {
                 tag: "bmmul",
                 sources: [lhs, rhs],
                 backpropagate: [
-                    { (resultGradient: XTensor<Element, Device>) in
+                    { (resultGradient: Self) in
                         let res = resultGradient.broadcastMatrixMultiplied(with: other, transposeSelf: false, transposeOther: !transposeOther)
                         if transposeSelf {
                             return res.permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
@@ -123,7 +123,7 @@ public extension XTensor {
         )
     }
     
-    private func _matMul(_ other: XTensor<Element, Device>, transposeSelf: Bool = false, transposeOther: Bool = false) -> XTensor<Element, Device> {
+    private func _matMul(_ other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         precondition(self.dim == 2)
         precondition(other.dim == 2)
         precondition(self.shape[transposeSelf ? 0 : 1] == other.shape[transposeOther ? 1 : 0])
@@ -146,16 +146,29 @@ public extension XTensor {
             context: (self.requiresGradient || other.requiresGradient) ? XTensorContext(
                 tag: "mmul",
                 sources: [self, other],
-                backpropagate: [
-                    { resultGradient in
-                        let res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
+                backpropagateAccumulate: [
+                    { resultGradient, acc in
+                        let res: Self
+                        if let acc = acc {
+                            res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther)
+                        } else {
+                             res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
+                        }
+                        
                         if transposeSelf {
                             return res.transposed()
                         } else {
                             return res
                         }
-                    }, { resultGradient in
-                        let res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
+                    }, { resultGradient, acc in
+                        let res: Self
+                        
+                        if let acc = acc {
+                            res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false)
+                        } else {
+                            res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
+                        }
+                        
                         if transposeOther {
                             return res.transposed()
                         } else {
@@ -165,6 +178,75 @@ public extension XTensor {
                 ]
             ) : nil
         )
+    }
+    
+    private func _matMulAdd(_ other: Self, add: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
+        precondition(self.dim == 2)
+        precondition(other.dim == 2)
+        precondition(self.shape[transposeSelf ? 0 : 1] == other.shape[transposeOther ? 1 : 0])
+        
+        let resultShape = [self.shape[transposeSelf ? 1 : 0], other.shape[transposeOther ? 0 : 1]]
+        precondition(resultShape == add.shape)
+        
+        var target = add
+        target.ensureOwnership()
+        
+        Device.Engine.gemm(
+            lhs: self.values,
+            rhs: other.values,
+            result: target.values,
+            alpha: 1,
+            beta: 1,
+            transposeFirst: transposeSelf,
+            transposeSecond: transposeOther
+        )
+        
+        if self.requiresGradient || other.requiresGradient || add.requiresGradient {
+            target.requiresGradient = true
+            target.context = XTensorContext(
+                tag: "gemm",
+                sources: [self, other, add],
+                backpropagateAccumulate: [
+                    { resultGradient, sourceGradient in
+                        if let src = sourceGradient {
+                            let res = resultGradient._matMulAdd(other, add: transposeSelf ? src.transposed() : src, transposeSelf: false, transposeOther: !transposeOther)
+                            if transposeSelf {
+                                return res.transposed()
+                            } else {
+                                return res
+                            }
+                        } else {
+                            let res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
+                            if transposeSelf {
+                                return res.transposed()
+                            } else {
+                                return res
+                            }
+                        }
+                    }, { resultGradient, sourceGradient in
+                        if let src = sourceGradient {
+                            let res = self._matMulAdd(resultGradient, add: transposeOther ? src.transposed() : src, transposeSelf: !transposeSelf, transposeOther: false)
+                            if transposeOther {
+                                return res.transposed()
+                            } else {
+                                return res
+                            }
+                        } else {
+                            let res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
+                            if transposeOther {
+                                return res.transposed()
+                            } else {
+                                return res
+                            }
+                        }
+                    }, { resultGradient, sourceGradient in
+                        sourceGradient.map {$0 + resultGradient} ?? resultGradient
+                    }
+                ]
+            )
+        }
+        
+        return target
     }
 }
 

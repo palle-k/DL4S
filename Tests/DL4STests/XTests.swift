@@ -101,46 +101,6 @@ class XTests: XCTestCase {
         print(lhsGradGrads, rhsGradGrads)
     }
     
-    func testXNN() {
-        var xor_src = XTensor<Float, CPU>([
-            [0, 0],
-            [0, 1],
-            [1, 0],
-            [1, 1]
-        ])
-        var xor_dst = XTensor<Float, CPU>([
-            [0],
-            [1],
-            [1],
-            [0]
-        ])
-        
-        #if DEBUG
-        xor_src.tag = "xor_src"
-        xor_dst.tag = "xor_dst"
-        #endif
-        
-        let net = XSequential {
-            XDense<Float, CPU>(inputSize: 2, outputSize: 6)
-            XTanh<Float, CPU>()
-            XDense<Float, CPU>(inputSize: 6, outputSize: 1)
-            XSigmoid<Float, CPU>()
-        }
-        var optim = XAdam(model: net, learningRate: 0.05)
-        
-        for epoch in 1 ... 10000 {
-            let pred = optim.model(xor_src)
-            let loss = binaryCrossEntropy(expected: xor_dst, actual: pred)
-            let grads = loss.gradients(of: optim.model.parameters, retainBackwardsGraph: false)
-            
-            optim.update(along: grads)
-            
-            if epoch.isMultiple(of: 1000) {
-                print("[\(epoch)/\(10000)] loss: \(loss.item)")
-            }
-        }
-    }
-    
     func testXRNN() {
         let model = XLSTM<Float, CPU>(inputSize: 32, hiddenSize: 32)
         var input = XTensor<Float, CPU>(uniformlyDistributedWithShape: [1, 4, 32], requiresGradient: true)

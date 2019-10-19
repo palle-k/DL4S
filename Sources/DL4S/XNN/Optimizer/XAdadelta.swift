@@ -53,7 +53,7 @@ public struct XAdadelta<Layer: XLayer>: XOptimizer {
         self.updateSums = model.parameters.map {
             XTensor(repeating: 0, shape: $0.shape)
         }
-        self.paths = Layer.parameters
+        self.paths = model.parameterPaths
     }
     
     public mutating func reset() {

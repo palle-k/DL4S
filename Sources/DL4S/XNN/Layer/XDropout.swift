@@ -9,18 +9,23 @@ import Foundation
 
 
 public struct XDropout<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public var rate: Float
+    public var isActive: Bool = true
     
     public init(rate: Float) {
         self.rate = rate
     }
     
     public func callAsFunction(_ inputs: XTensor<Element, Device>) -> XTensor<Element, Device> {
-        OperationGroup.capture(named: "Dropout") {
-            inputs * XTensor(bernoulliDistributedWithShape: Array(inputs.shape.dropFirst()), probability: (1 - rate))
+        if isActive {
+            return OperationGroup.capture(named: "Dropout") {
+                inputs * XTensor(bernoulliDistributedWithShape: Array(inputs.shape.dropFirst()), probability: (1 - rate))
+            }
+        } else {
+            return inputs
         }
     }
 }

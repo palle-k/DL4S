@@ -26,16 +26,12 @@
 import Foundation
 
 public struct XBatchNorm<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XBatchNorm<Element, Device>, XTensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
         \.shift,
         \.scale
     ]}
     public var parameters: [XTensor<Element, Device>] {
         get {[shift, scale]}
-        set {
-            shift = newValue[0]
-            scale = newValue[1]
-        }
     }
     
     public var isTraining = true
@@ -70,16 +66,12 @@ public struct XBatchNorm<Element: RandomizableType, Device: DeviceType>: XLayer,
 
 
 public struct XLayerNorm<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
         \.shift,
         \.scale
     ]}
     public var parameters: [XTensor<Element, Device>] {
         get {[shift, scale]}
-        set {
-            shift = newValue[0]
-            scale = newValue[1]
-        }
     }
     
     public var isTraining = true

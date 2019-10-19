@@ -123,9 +123,11 @@ public extension XTensor {
 public extension XTensor where Element: RandomizableType {
     init(xavierNormalWithShape shape: [Int], requiresGradient: Bool = false) {
         precondition(shape.count == 2, "Shape must be 2-dimensional")
-        
-        self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fillNormal(self.values, mean: 0, stdev: (2 / Element(shape[0])).sqrt())
+        self.init(normalDistributedWithShape: shape, mean: 0, stdev: (2 / Element(shape[0])).sqrt(), requiresGradient: requiresGradient)
+    }
+    
+    init(xavierNormalWithShape shape: Int..., requiresGradient: Bool = false) {
+        self.init(xavierNormalWithShape: shape, requiresGradient: requiresGradient)
     }
     
     init(normalDistributedWithShape shape: [Int], mean: Element = 1, stdev: Element = 1, requiresGradient: Bool = false) {
@@ -133,9 +135,17 @@ public extension XTensor where Element: RandomizableType {
         Random.fillNormal(self.values, mean: mean, stdev: stdev)
     }
     
+    init(normalDistributedWithShape shape: Int..., mean: Element = 1, stdev: Element = 1, requiresGradient: Bool = false) {
+        self.init(normalDistributedWithShape: shape, mean: mean, stdev: stdev, requiresGradient: requiresGradient)
+    }
+        
     init(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
         Random.fill(self.values, a: min, b: max)
+    }
+    
+    init(uniformlyDistributedWithShape shape: Int..., min: Element = 0, max: Element = 1, requiresGradient: Bool = false) {
+        self.init(uniformlyDistributedWithShape: shape, min: min, max: max, requiresGradient: requiresGradient)
     }
 }
 
@@ -143,6 +153,10 @@ public extension XTensor {
     init(bernoulliDistributedWithShape shape: [Int], probability: Float, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
         Random.bernoulli(values, p: probability)
+    }
+    
+    init(bernoulliDistributedWithShape shape: Int..., probability: Float, requiresGradient: Bool = false) {
+        self.init(bernoulliDistributedWithShape: shape, probability: probability, requiresGradient: requiresGradient)
     }
 }
 

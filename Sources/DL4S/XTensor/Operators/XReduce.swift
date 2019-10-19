@@ -47,14 +47,14 @@ public extension XTensor {
                 context: XTensorContext(
                     tag: "sum\(axes)",
                     sources: [self],
-                    backpropagate: [{ resultGradient in
+                    backpropagateAccumulate: [{ resultGradient, acc in
                         var broadcastShape = self.shape
                         
                         for a in axes {
                             broadcastShape[a] = 1
                         }
                         
-                        return XTensor(repeating: 0, shape: self.shape) + resultGradient.view(as: broadcastShape)
+                        return (acc ?? XTensor(repeating: 0, shape: self.shape)) + resultGradient.view(as: broadcastShape)
                     }]
                 )
             )
@@ -63,24 +63,37 @@ public extension XTensor {
         }
     }
     
-    func reduceSum() -> XTensor<Element, Device> {
+    @inline(__always)
+    func reduceSum(along axes: Int...) -> Self {
+        reduceSum(along: axes)
+    }
+    
+    func reduceSum() -> Self {
         reduceSum(along: Array(0 ..< dim))
     }
     
-    func reduceMean(along axes: [Int]) -> XTensor<Element, Device> {
+    func reduceMean(along axes: [Int]) -> Self {
         reduceSum(along: axes) / XTensor(integerLiteral: axes.map {shape[$0]}.reduce(1, *))
     }
     
-    func reduceMean() -> XTensor<Element, Device> {
+    func reduceMean(along axes: Int...) -> Self {
+        reduceMean(along: axes)
+    }
+    
+    func reduceMean() -> Self {
         reduceMean(along: Array(0 ..< dim))
     }
     
-    func variance(along axes: [Int]) -> XTensor<Element, Device> {
+    func variance(along axes: [Int]) -> Self {
         let m = self.reduceMean(along: axes)
         return (self * self).reduceMean(along: axes) - m * m
     }
     
-    func variance() -> XTensor<Element, Device> {
+    func variance(along axes: Int...) -> Self {
+        variance(along: axes)
+    }
+    
+    func variance() -> Self {
         variance(along: Array(0 ..< dim))
     }
     
@@ -97,11 +110,19 @@ public func sum<Element, Device>(_ tensor: XTensor<Element, Device>, axes: [Int]
     tensor.reduceSum(along: axes)
 }
 
+public func sum<Element, Device>(_ tensor: XTensor<Element, Device>, axes: Int...) -> XTensor<Element, Device> {
+    tensor.reduceSum(along: axes)
+}
+
 public func mean<Element, Device>(_ tensor: XTensor<Element, Device>) -> XTensor<Element, Device> {
     tensor.reduceMean()
 }
 
 public func mean<Element, Device>(_ tensor: XTensor<Element, Device>, axes: [Int]) -> XTensor<Element, Device> {
+    tensor.reduceMean(along: axes)
+}
+
+public func mean<Element, Device>(_ tensor: XTensor<Element, Device>, axes: Int...) -> XTensor<Element, Device> {
     tensor.reduceMean(along: axes)
 }
 
@@ -113,9 +134,13 @@ public func variance<Element, Device>(_ tensor: XTensor<Element, Device>, axes: 
     tensor.variance(along: axes)
 }
 
+public func variance<Element, Device>(_ tensor: XTensor<Element, Device>, axes: Int...) -> XTensor<Element, Device> {
+    tensor.variance(along: axes)
+}
+
 //MARK: Min/Max
 public extension XTensor {
-    func reduceMax(along axes: [Int]) -> XTensor<Element, Device> {
+    func reduceMax(along axes: [Int]) -> Self {
         var resultShape: [Int] = shape
         for a in axes.reversed() {
             resultShape.remove(at: a)
@@ -149,11 +174,15 @@ public extension XTensor {
         }
     }
     
-    func reduceMax() -> XTensor<Element, Device> {
+    func reduceMax(along axes: Int...) -> Self {
+        reduceMax(along: axes)
+    }
+    
+    func reduceMax() -> Self {
         reduceMax(along: Array(0 ..< dim))
     }
     
-    private func scatter(context: XTensor<Int32, Device>, axes: [Int], shape: [Int]) -> XTensor<Element, Device> {
+    private func scatter(context: XTensor<Int32, Device>, axes: [Int], shape: [Int]) -> Self {
         precondition(axes.count == 1, "Scatter is only available along a single axis.")
         let axis = axes.first!
         

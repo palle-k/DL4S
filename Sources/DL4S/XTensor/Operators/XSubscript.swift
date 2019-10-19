@@ -27,7 +27,7 @@ import Foundation
 
 
 public extension XTensor {
-    subscript(index: [Int?]) -> XTensor<Element, Device> {
+    subscript(index: [Int?]) -> Self {
         get {
             let index = zip(index, shape).map { idx, dim -> Int? in
                 if let idx = idx, idx < 0 {
@@ -46,7 +46,7 @@ public extension XTensor {
                     tag: "read",
                     sources: [self],
                     backpropagate: [{ resultGradient in
-                        var result = XTensor<Element, Device>(repeating: 0, shape: self.shape)
+                        var result = Self(repeating: 0, shape: self.shape)
                         result[index] = resultGradient
                         return result
                     }]
@@ -85,12 +85,12 @@ public extension XTensor {
         }
     }
     
-    subscript(index: Int?...) -> XTensor<Element, Device> {
+    subscript(index: Int?...) -> Self {
         get {self[index]}
         set (slice) {self[index] = slice}
     }
     
-    subscript(index: [Range<Int>?]) -> XTensor<Element, Device> {
+    subscript(index: [Range<Int>?]) -> Self {
         get {
             let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: self.shape)
             
@@ -108,7 +108,7 @@ public extension XTensor {
                     tag: "SubscriptRangeRead",
                     sources: [self],
                     backpropagate: [{ resultGradient in
-                        var result = XTensor<Element, Device>(repeating: 0, shape: self.shape)
+                        var result = Self(repeating: 0, shape: self.shape)
                         result[index] = resultGradient
                         return result
                     }]
@@ -138,7 +138,7 @@ public extension XTensor {
         }
     }
     
-    subscript(index: Range<Int>?...) -> XTensor<Element, Device> {
+    subscript(index: Range<Int>?...) -> Self {
         get {self[index]}
         set (slice) {self[index] = slice}
     }

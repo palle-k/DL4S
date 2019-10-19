@@ -171,17 +171,16 @@ public extension XTensor {
                         graph.addEdge(
                             from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))",
                             to: "\(self.backpropID)\(abs(ctx.tag.hashValue))",
-                            label: "\(src.shape)",
                             attributes: [:]
                         )
                     } else {
-                        graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: "\(src.shape)")
+                        graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))")
                     }
                     #else
-                    graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: "\(src.shape)")
+                    graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))")
                     #endif
                 } else {
-                    graph.addEdge(from: "\(src.backpropID)", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: "\(src.shape)")
+                    graph.addEdge(from: "\(src.backpropID)", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))")
                 }
                 graph.join(with: src.follow(visited: &visited))
             }

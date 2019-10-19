@@ -55,13 +55,17 @@ public extension XTensor {
         )
     }
     
-    func unsqueezed(at axis: Int) -> XTensor<Element, Device> {
+    func view(as shape: Int...) -> Self {
+        view(as: shape)
+    }
+    
+    func unsqueezed(at axis: Int) -> Self {
         var shape = self.shape
         shape.insert(1, at: axis)
         return view(as: shape)
     }
     
-    func squeezed(at axis: Int) -> XTensor<Element, Device> {
+    func squeezed(at axis: Int) -> Self {
         var shape = self.shape
         if shape[axis] == 1 {
             shape.remove(at: axis)
@@ -69,17 +73,17 @@ public extension XTensor {
         return view(as: shape)
     }
     
-    func squeezed() -> XTensor<Element, Device> {
+    func squeezed() -> Self {
         view(as: shape.filter {$0 != 1})
     }
     
-    func flattened() -> XTensor<Element, Device> {
+    func flattened() -> Self {
         view(as: [-1])
     }
 }
 
 public extension XTensor {
-    func permuted(to axisArangement: [Int]) -> XTensor<Element, Device> {
+    func permuted(to axisArangement: [Int]) -> Self {
         precondition(axisArangement.count == dim, "Axis arangement must have dimensionality of source tensor")
         precondition(Set(axisArangement).count == dim, "Axis arangement must not contain duplicate axes")
         
@@ -108,11 +112,15 @@ public extension XTensor {
         )
     }
     
-    func transposed() -> XTensor<Element, Device> {
+    func permuted(to axisArangement: Int...) -> Self {
+        permuted(to: axisArangement)
+    }
+    
+    func transposed() -> Self {
         permuted(to: [1, 0])
     }
     
-    var T: XTensor<Element, Device> {
+    var T: Self {
         transposed()
     }
 }

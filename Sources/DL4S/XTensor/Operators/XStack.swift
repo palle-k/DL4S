@@ -27,7 +27,7 @@ import Foundation
 
 
 public extension XTensor {
-    func unstacked(along axis: Int, withSourceLengths sourceLengths: [Int]) -> [XTensor<Element, Device>] {
+    func unstacked(along axis: Int, withSourceLengths sourceLengths: [Int]) -> [Self] {
         let sourceShapes = sourceLengths.map { length -> [Int] in
             var shape = self.shape
             shape[axis] = length

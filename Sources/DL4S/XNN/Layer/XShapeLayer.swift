@@ -26,8 +26,8 @@
 import Foundation
 
 public struct XReshape<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public var outputShape: [Int]
     
@@ -42,8 +42,8 @@ public struct XReshape<Element: NumericType, Device: DeviceType>: XLayer, Codabl
 }
 
 public struct XFlatten<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public init() {}
     
@@ -54,8 +54,8 @@ public struct XFlatten<Element: NumericType, Device: DeviceType>: XLayer, Codabl
 }
 
 public struct XConcat<Element: NumericType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
-    public var parameters: [XTensor<Element, Device>] { get {[]} set {} }
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[]}
+    public var parameters: [XTensor<Element, Device>] { get {[]} }
     
     public init() {}
     

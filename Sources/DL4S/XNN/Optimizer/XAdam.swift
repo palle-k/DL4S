@@ -61,7 +61,7 @@ public struct XAdam<Layer: XLayer>: XOptimizer {
         self.secondMoments = model.parameters.map {
             XTensor(repeating: 0, shape: $0.shape)
         }
-        self.paths = Layer.parameters
+        self.paths = model.parameterPaths
     }
     
     public mutating func reset() {
@@ -112,7 +112,7 @@ extension XAdam: Codable where Layer: Codable {
         firstMoments = try container.decode([ParamTensor].self, forKey: .firstMoments)
         secondMoments = try container.decode([ParamTensor].self, forKey: .secondMoments)
         
-        paths = Layer.parameters
+        paths = model.parameterPaths
     }
     
     public func encode(to encoder: Encoder) throws {

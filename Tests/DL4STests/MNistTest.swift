@@ -449,7 +449,8 @@ class MNistTest: XCTestCase {
             optimizer.zeroGradient()
             
             let pred = model.forward(input)
-            let loss = categoricalCrossEntropy(expected: expected, actual: pred) + sum((input - 0.5) * (input - 0.5)) * 0.00001
+            let weightPenalty = sum((input - 0.5) * (input - 0.5)) * 0.00001
+            let loss = categoricalCrossEntropy(expected: expected, actual: pred) + weightPenalty
             loss.backwards()
             
             optimizer.step()

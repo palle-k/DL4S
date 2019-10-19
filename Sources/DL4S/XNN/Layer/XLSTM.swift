@@ -31,7 +31,7 @@ public struct XLSTM<Element: RandomizableType, Device: DeviceType>: XRNN, Codabl
     public typealias Outputs = (State, () -> State)
     public typealias State = (hiddenState: XTensor<Element, Device>, cellState: XTensor<Element, Device>)
     
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
         \.Wi, \.Wo, \.Wf, \.Wc,
         \.Ui, \.Uo, \.Uf, \.Uc,
         \.bi, \.bo, \.bf, \.bc
@@ -61,7 +61,6 @@ public struct XLSTM<Element: RandomizableType, Device: DeviceType>: XRNN, Codabl
     
     public var parameters: [XTensor<Element, Device>] {
         get {[Wi, Wo, Wf, Wc, Ui, Uo, Uf, Uc, bi, bo, bf, bc]}
-        set {(Wi, Wo, Wf, Wc, Ui, Uo, Uf, Uc, bi, bo, bf, bc) = (newValue[0], newValue[1], newValue[2], newValue[3], newValue[4], newValue[5], newValue[6], newValue[7], newValue[8], newValue[9], newValue[10], newValue[11])}
     }
     
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {

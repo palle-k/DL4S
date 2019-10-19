@@ -29,7 +29,7 @@ public struct XGRU<Element: RandomizableType, Device: DeviceType>: XRNN, Codable
     public typealias Inputs = XTensor<Element, Device>
     public typealias Outputs = (XTensor<Element, Device>, () -> XTensor<Element, Device>)
     
-    public static var parameters: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
         \.Wz, \.Wr, \.Wh,
         \.Uz, \.Ur, \.Uh,
         \.bz, \.br, \.bh
@@ -56,7 +56,6 @@ public struct XGRU<Element: RandomizableType, Device: DeviceType>: XRNN, Codable
     
     public var parameters: [XTensor<Element, Device>] {
         get {[Wz, Wr, Wh, Uz, Ur, Uh, bz, br, bh]}
-        set {(Wz, Wr, Wh, Uz, Ur, Uh, bz, br, bh) = (newValue[0], newValue[1], newValue[2], newValue[3], newValue[4], newValue[5], newValue[6], newValue[7], newValue[8])}
     }
     
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {

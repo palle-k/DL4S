@@ -25,20 +25,6 @@
 
 import Foundation
 
-struct XTensorContext<Element: NumericType, Device: DeviceType> {
-    var tag: String?
-    var sources: [XTensor<Element, Device>]
-    var backpropagate: [(XTensor<Element, Device>) -> XTensor<Element, Device>]
-    #if DEBUG
-    var operationStack = OperationGroup.operationStack
-    #endif
-    
-    init(tag: String?, sources: [XTensor<Element, Device>], backpropagate: [(XTensor<Element, Device>) -> XTensor<Element, Device>]) {
-        self.tag = tag
-        self.sources = sources
-        self.backpropagate = backpropagate
-    }
-}
 
 class XTensorHandle<Element, Device: DeviceType> {
     var values: Buffer<Element, Device>
@@ -118,6 +104,10 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
         self.shape = shape
     }
     
+    public init(_ v: [Element], shape: Int..., requiresGradient: Bool = false) {
+        self.init(v, shape: shape, requiresGradient: requiresGradient)
+    }
+    
     init(using values: ShapedBuffer<Element, Device>, context: XTensorContext<Element, Device>?) {
         handle = XTensorHandle(values: values.values)
         self.context = context
@@ -134,7 +124,7 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
     
     @_specialize(where Element == Float, Device == CPU)
     @inline(__always)
-    static func operationOrder(from initialTensor: XTensor<Element, Device>) -> [XTensor<Element, Device>] {
+    static func operationOrder(from initialTensor: Self) -> [Self] {
         var stack: [(XTensor<Element, Device>, Int)] = []
         var sorting: [XTensor<Element, Device>] = []
         var visited: Set<UInt64> = []
@@ -166,7 +156,7 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
     /// - Parameters:
     ///   - tensors: Tensors to differentiate for
     ///   - retainGraph: Whether to store the graph for the backwards pass. If enabled, higher order gradients can be computed.
-    public func gradients(of tensors: [XTensor<Element, Device>], retainBackwardsGraph retainGraph: Bool = false) -> [XTensor<Element, Device>] {
+    public func gradients(of tensors: [Self], retainBackwardsGraph retainGraph: Bool = false) -> [Self] {
         OperationGroup.push("Backpropagate")
         
         let result = self
@@ -189,18 +179,17 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
                 }
                 
                 let srcGrad: XTensor<Element, Device>
-                if retainGraph {
-                    srcGrad = fn(grad)
+                if let existingGrad = grads[src.backpropID] {
+                    srcGrad = fn(grad, existingGrad)
                 } else {
-                    srcGrad = fn(grad).detached()
+                    srcGrad = fn(grad, nil)
                 }
-                
                 assert(srcGrad.shape == src.shape)
                 
-                if let existingGrad = grads[src.backpropID] {
-                    grads[src.backpropID] = existingGrad + srcGrad
-                } else {
+                if retainGraph {
                     grads[src.backpropID] = srcGrad
+                } else {
+                    grads[src.backpropID] = srcGrad.detached()
                 }
             }
         }
@@ -209,35 +198,37 @@ public struct XTensor<Element: NumericType, Device: DeviceType> {
             grads[$0.backpropID] ?? XTensor(repeating: 0, shape: $0.shape)
         }
         
-        #if DEBUG
-        if tensors.contains(where: {
-            !grads.keys.contains($0.backpropID)
-        }) {
-            print("[WARNING]: No gradient given for tensor.")
-        }
-        #endif
-        
         OperationGroup.pop()
         return targetGrads
     }
     
     mutating func ensureOwnership() {
-        if isKnownUniquelyReferenced(&handle) {
+        if isKnownUniquelyReferenced(&handle) && handle.parent == nil {
             return
         }
         
+        let original = self
         let replacementHandle = XTensorHandle(values:
             Device.Memory.allocateBuffer(withShape: shape, type: Element.self).values
         )
         Device.Memory.assign(from: handle.values, to: replacementHandle.values, count: count)
-        self.handle = replacementHandle
+        
+        self = XTensor(
+            handle: replacementHandle,
+            shape: shape,
+            context: XTensorContext(
+                tag: "identity",
+                sources: [original],
+                backpropagate: [{$0}]
+            )
+        )
     }
     
     public mutating func discardContext() {
         self.context = nil
     }
     
-    public func detached() -> XTensor<Element, Device> {
+    public func detached() -> Self {
         XTensor(handle: handle, shape: shape, context: nil)
     }
 }

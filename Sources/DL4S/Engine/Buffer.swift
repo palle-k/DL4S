@@ -145,7 +145,7 @@ extension ShapedBuffer: CustomStringConvertible {
                 ShapedBuffer(values: values.advanced(by: stride * $0), shape: restDim).generateDescription()
             }
             
-            return "[\(slices.joined(separator: "\n").replacingOccurrences(of: "\n", with: "\n "))]"
+            return "[\(slices.joined(separator: ",\n").replacingOccurrences(of: "\n", with: "\n "))]"
         }
     }
 }

@@ -28,10 +28,8 @@ import XCTest
 
 class PerformanceTests: XCTestCase {
     func testHeaviside() {
-        let src = Tensor<Float, CPU>(repeating: 0, shape: 32, 200)
-        let dst = Tensor<Float, CPU>(repeating: 0, shape: 32, 200)
-        
-        Random.fill(src, a: -10, b: 10)
+        let src = XTensor<Float, CPU>(uniformlyDistributedWithShape: 32, 200, min: -10, max: -10)
+        let dst = XTensor<Float, CPU>(repeating: 0, shape: 32, 200)
         
         let srcPtr = src.values.immutable
         let dstPtr = dst.values.pointer

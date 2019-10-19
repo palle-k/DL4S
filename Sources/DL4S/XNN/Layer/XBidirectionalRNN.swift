@@ -30,18 +30,18 @@ public struct XBidirectional<RNNLayer: XRNN>: XLayer {
     public typealias Inputs = RNNLayer.Inputs
     public typealias Outputs = (forward: RNNLayer.Outputs, backward: RNNLayer.Outputs)
     
-    public static var parameters: [WritableKeyPath<Self, XTensor<RNNLayer.Parameter, RNNLayer.Device>>] {
-        [\Self.forwardLayer, \Self.backwardLayer].flatMap { basePath in
-            RNNLayer.parameters.map(basePath.appending(path:))
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<RNNLayer.Parameter, RNNLayer.Device>>] {
+        let forwardPaths = forwardLayer.parameterPaths.map {
+            (\Self.forwardLayer).appending(path: $0)
         }
+        let backwardPaths = backwardLayer.parameterPaths.map {
+            (\Self.backwardLayer).appending(path: $0)
+        }
+        return forwardPaths + backwardPaths
     }
     
     public var parameters: [XTensor<RNNLayer.Parameter, RNNLayer.Device>] {
         get {forwardLayer.parameters + backwardLayer.parameters}
-        set {
-            forwardLayer.parameters = Array(newValue[..<(newValue.count / 2)])
-            backwardLayer.parameters = Array(newValue[(newValue.count / 2)...])
-        }
     }
     
     public var forwardLayer: RNNLayer

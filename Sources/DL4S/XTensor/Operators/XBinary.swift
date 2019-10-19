@@ -26,7 +26,7 @@
 import Foundation
 
 public extension XTensor {
-    static func + (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static func + (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
@@ -37,7 +37,7 @@ public extension XTensor {
         }
         
         if lhs.requiresGradient || rhs.requiresGradient {
-            func grad(a: XTensor<Element, Device>, b: XTensor<Element, Device>, grad: XTensor<Element, Device>) -> XTensor<Element, Device> {
+            func grad(a: Self, b: Self, grad: Self) -> Self {
                 OperationGroup.capture(named: "∇+") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
@@ -74,7 +74,7 @@ public extension XTensor {
         }
     }
     
-    static func * (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static func * (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
@@ -85,7 +85,7 @@ public extension XTensor {
         }
         
         if lhs.requiresGradient || rhs.requiresGradient {
-            func grad(a: XTensor<Element, Device>, b: XTensor<Element, Device>, grad: XTensor<Element, Device>) -> XTensor<Element, Device> {
+            func grad(a: Self, b: Self, grad: Self) -> Self {
                 OperationGroup.capture(named: "∇⊙") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
@@ -119,7 +119,7 @@ public extension XTensor {
         }
     }
     
-    static func - (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static func - (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
@@ -172,7 +172,7 @@ public extension XTensor {
         }
     }
     
-    static func / (lhs: XTensor<Element, Device>, rhs: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static func / (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
@@ -187,7 +187,7 @@ public extension XTensor {
                 tag: "÷",
                 sources: [lhs, rhs],
                 backpropagate: [
-                    { resultGradient -> XTensor<Element, Device> in
+                    { resultGradient -> Self in
                         OperationGroup.capture(named: "∇₁÷") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
@@ -202,7 +202,7 @@ public extension XTensor {
                             let d = resultGradient / rhs
                             return d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
                         }
-                    }, { resultGradient -> XTensor<Element, Device> in
+                    }, { resultGradient -> Self in
                         OperationGroup.capture(named: "∇₂÷") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
@@ -228,7 +228,7 @@ public extension XTensor {
         }
     }
     
-    static prefix func - (value: XTensor<Element, Device>) -> XTensor<Element, Device> {
+    static prefix func - (value: Self) -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: value.shape, type: Element.self)
         Device.Engine.vNeg(val: value.values.values, result: resultBuffer.values, count: value.count)
         
@@ -244,7 +244,7 @@ public extension XTensor {
         )
     }
     
-    static func += (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func += (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag
@@ -256,7 +256,7 @@ public extension XTensor {
         assert(originalShape == lhs.shape, "In-place addition has modified shape.")
     }
     
-    static func -= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func -= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag
@@ -268,7 +268,7 @@ public extension XTensor {
         assert(originalShape == lhs.shape, "In-place subtraction has modified shape.")
     }
     
-    static func *= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func *= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag
@@ -280,7 +280,7 @@ public extension XTensor {
         assert(originalShape == lhs.shape, "In-place multiplication has modified shape.")
     }
     
-    static func /= (lhs: inout XTensor<Element, Device>, rhs: XTensor<Element, Device>) {
+    static func /= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
         let tag = lhs.tag

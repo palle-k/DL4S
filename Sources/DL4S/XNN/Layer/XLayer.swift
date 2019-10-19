@@ -32,8 +32,8 @@ public protocol XLayer {
     associatedtype Parameter: NumericType
     associatedtype Device: DeviceType
     
-    static var parameters: [WritableKeyPath<Self, XTensor<Parameter, Device>>] { get }
-    var parameters: [XTensor<Parameter, Device>] { get set }
+    var parameterPaths: [WritableKeyPath<Self, XTensor<Parameter, Device>>] { get }
+    var parameters: [XTensor<Parameter, Device>] { get }
     
     func callAsFunction(_ inputs: Inputs) -> Outputs
 }
@@ -41,5 +41,45 @@ public protocol XLayer {
 public extension XLayer {
     func dynamicallyCall(withArguments arguments: [Inputs]) -> Outputs {
         return callAsFunction(arguments[0])
+    }
+}
+
+public struct XAnyLayer<Inputs, Outputs, Parameter: NumericType, Device: DeviceType>: XLayer {
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Parameter, Device>>] {
+        parameters.indices.map {
+            \Self.parameters[$0]
+        }
+    }
+    
+    public var parameters: [XTensor<Parameter, Device>] {
+        get { getParameters() }
+        set {
+            
+        }
+    }
+    
+    private var getParameters: () -> [XTensor<Parameter, Device>]
+    private var setParameters: ([XTensor<Parameter, Device>]) -> ()
+    private var forward: (Inputs) -> Outputs
+    
+    public init<L: XLayer>(_ wrappedLayer: L) where L.Inputs == Inputs, L.Outputs == Outputs, L.Parameter == Parameter, L.Device == Device {
+        var wrappedLayer = wrappedLayer
+        let paths = wrappedLayer.parameterPaths
+        
+        getParameters = {
+            wrappedLayer.parameters
+        }
+        setParameters = {
+            zip(paths, $0).forEach {
+                wrappedLayer[keyPath: $0] = $1
+            }
+        }
+        forward = {
+            wrappedLayer.callAsFunction($0)
+        }
+    }
+    
+    public func callAsFunction(_ inputs: Inputs) -> Outputs {
+        forward(inputs)
     }
 }

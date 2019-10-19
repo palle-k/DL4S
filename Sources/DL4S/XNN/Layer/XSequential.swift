@@ -35,11 +35,6 @@ public struct XSequential<First: XLayer, Second: XLayer>: XLayer where First.Out
         get {
             first.parameters + second.parameters
         }
-        set {
-            let c = first.parameters.count
-            first.parameters = Array(newValue[..<c])
-            second.parameters = Array(newValue[c...])
-        }
     }
     
     public init(first: First, second: Second) {
@@ -47,9 +42,14 @@ public struct XSequential<First: XLayer, Second: XLayer>: XLayer where First.Out
         self.second = second
     }
     
-    public static var parameters: [WritableKeyPath<XSequential<First, Second>, XTensor<First.Parameter, First.Device>>] {
-        First.parameters.map((\Self.first).appending(path:)) +
-            Second.parameters.map((\Self.second).appending(path:))
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<First.Parameter, First.Device>>] {
+        let firstPaths = first.parameterPaths.map {
+            (\Self.first).appending(path: $0)
+        }
+        let secondPaths = second.parameterPaths.map {
+            (\Self.second).appending(path: $0)
+        }
+        return firstPaths + secondPaths
     }
     
     public func callAsFunction(_ inputs: First.Inputs) -> Second.Outputs {

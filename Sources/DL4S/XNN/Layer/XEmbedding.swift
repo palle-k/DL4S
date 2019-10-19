@@ -27,13 +27,12 @@ import Foundation
 
 /// Transforms discrete values, such as word indices, into a lower dimensional embedding.
 public struct XEmbedding<Element: RandomizableType, Device: DeviceType>: XLayer, Codable {
-    public static var parameters: [WritableKeyPath<XEmbedding<Element, Device>, XTensor<XEmbedding<Element, Device>.Parameter, XEmbedding<Element, Device>.Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, XTensor<Element, Device>>] {[
         \.embeddingMatrix
     ]}
     
     public var parameters: [XTensor<Element, Device>] {
         get {[embeddingMatrix]}
-        set {embeddingMatrix = newValue[0]}
     }
     
     public var embeddingMatrix: XTensor<Element, Device>

@@ -28,11 +28,16 @@ import XCTest
 
 class MemTests: XCTestCase {
     func testSliceRead() {
-        let a: Tensor<Float, CPU> = Tensor((0..<16).map(Float.init), shape: 4, 4)
+        let a: XTensor<Float, CPU> = XTensor((0..<16).map(Float.init), shape: 4, 4)
         
         print(a[0, nil])
         print(a[1, nil])
         print(a[2, nil])
         print(a[3, nil])
+        
+        print(a[nil, 0])
+        print(a[nil, 1])
+        print(a[nil, 2])
+        print(a[nil, 3])
     }
 }
