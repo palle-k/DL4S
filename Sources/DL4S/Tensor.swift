@@ -25,6 +25,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use XTensor instead")
 public class Tensor<Element: NumericType, Device: DeviceType>: ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral, Codable {
     public typealias FloatLiteralType = Double
     public typealias IntegerLiteralType = Int32
