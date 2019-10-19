@@ -41,6 +41,16 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     }
 }
 
+extension Tensor: Equatable where Element: Equatable {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        if lhs.shape != rhs.shape {
+            return false
+        }
+        let d = (lhs - rhs)
+        return (d * d).reduceSum().item == 0
+    }
+}
+
 extension Tensor: ExpressibleByFloatLiteral {
     public init(floatLiteral value: Double) {
         self.init([Element.init(value)], shape: [])
