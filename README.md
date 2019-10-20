@@ -50,7 +50,21 @@ Then add `DL4S` as a dependency to your target:
 
 #### MKL Support
 
-On Linux, DL4S can be accelerated with MKL
+DL4S can be accelerated with Intel's Math Kernel Library ([Installation Instructions](https://software.intel.com/en-us/get-started-with-mkl-for-linux)). 
+On Apple devices, DL4S uses vectorized functions provided by the builtin Accelerate framework by default.
+
+When compiling for Linux, make sure to add include and linker paths:
+
+```bash
+swift build -Xcc -I/opt/intel/mkl/include -Xlinker -L/opt/intel/mkl/lib/intel64
+```
+
+To run, LD_LIBRARY_PATH needs to be set:
+
+```bash
+export LD_LIBRARY_PATH=/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+```
+
 
 ## Features
 
