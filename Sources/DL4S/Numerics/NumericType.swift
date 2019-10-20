@@ -30,7 +30,7 @@ public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
     static var zero: Self { get }
 }
 
-public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable {
+public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable, CPUNumeric {
     func format(maxDecimals: Int) -> String
     
     init(_ floatValue: Double)
@@ -62,8 +62,6 @@ public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable
     var isFinite: Bool { get }
     var isNaN: Bool { get }
     
-    static func pow(base: Self, exponent: Self) -> Self
-    
     init(_ float: Float)
     init(_ int: Int)
     init(_ uint: UInt)
@@ -72,70 +70,6 @@ public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable
     func toUInt8() -> UInt8
     func toInt() -> Int
     
-    static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
-    
-    static func transpose(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, srcRows: Int, srcCols: Int)
-    
-    static func vAdd(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func vsAdd(lhs: UnsafeBufferPointer<Self>, rhs: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func vNeg(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func vSub(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func vMul(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func vMA(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, add: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func vsMul(lhs: UnsafeBufferPointer<Self>, rhs: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func vDiv(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func svDiv(lhs: Self, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func vSquare(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    @available(*, deprecated, message: "Use gemm")
-    static func matMul(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsRows: Int, lhsCols: Int, rhsCols: Int)
-    
-    @available(*, deprecated, message: "Use gemm")
-    static func matMulAddInPlace(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool, transposeSecond: Bool)
-    
-    @available(*, deprecated, message: "Use gemm")
-    static func dot(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, count: Int) -> Self
-    
-    static func gemm(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), alpha: Self, beta: Self, transposeFirst: Bool, transposeSecond: Bool)
-    
-    static func vMulSA(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, add: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func vsMulVAdd(lhs: UnsafeBufferPointer<Self>, rhs: Self, add: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func log(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func exp(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func relu(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func tanh(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func sqrt(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func sum(val: UnsafeBufferPointer<Self>, count: Int) -> Self
-    static func sum(val: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> Self
-    
-    static func copysign(values: UnsafeBufferPointer<Self>, signs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func argmax(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
-    static func argmin(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
-    
-    static func argmax(values: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> (Int, Self)
-    static func argmin(values: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> (Int, Self)
-    
-    static func max(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func min(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func conv2d(input: UnsafeBufferPointer<Self>, filter: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int)
-    
-    static func copy(values: UnsafeBufferPointer<Self>, srcStride: Int, result: UnsafeMutableBufferPointer<Self>, dstStride: Int, count: Int)
-    static func arange(start: Self, end: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    
-    static func submatrix(from values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, width: Int, height: Int, submatrixHeight: Int, submatrixWidth: Int, submatrixRow: Int, submatrixColumn: Int)
-    
-    static func sin(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func cos(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func tan(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
 }
 
 public extension UInt8 {

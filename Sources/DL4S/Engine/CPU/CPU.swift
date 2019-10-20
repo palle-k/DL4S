@@ -234,38 +234,3 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         buffer.pointer.pointee = newValue
     }
 }
-
-public struct CPUEngine: EngineType {
-    public typealias Device = CPU
-    
-    public static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int) {
-        N.fill(value: value, result: result.memory.bindMemory(to: N.self), count: count)
-        // result.pointer.pointer(capacity: count).assign(repeating: value, count: count)
-    }
-    
-    public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        N.vAdd(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
-    }
-    
-    public static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        N.vNeg(val: val.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
-    }
-    
-    public static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        N.vSub(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
-    }
-    
-    public static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        N.vMul(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
-    }
-    
-    public static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        N.vDiv(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
-    }
-    
-    public static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N) {
-        return N.argmax(values: values.memory.bindMemory(to: N.self).immutable, count: count)
-    }
-    
-    
-}

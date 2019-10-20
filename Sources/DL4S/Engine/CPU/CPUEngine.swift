@@ -53,7 +53,38 @@ private enum BroadcastMode: Int {
     case scalarVector
 }
 
-extension CPUEngine {
+
+public struct CPUEngine: EngineType {
+    public typealias Device = CPU
+    
+    public static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int) {
+        N.fill(value: value, result: result.memory.bindMemory(to: N.self), count: count)
+    }
+    
+    public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        N.vAdd(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+    }
+    
+    public static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        N.vNeg(val: val.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+    }
+    
+    public static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        N.vSub(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+    }
+    
+    public static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        N.vMul(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+    }
+    
+    public static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        N.vDiv(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+    }
+    
+    public static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N) {
+        return N.argmax(values: values.memory.bindMemory(to: N.self).immutable, count: count)
+    }
+    
     @inline(__always)
     @_specialize(where N == Float)
     private static func broadcast<N>(
@@ -773,10 +804,6 @@ extension CPUEngine {
     
     public static func sqrt<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         N.sqrt(val: values.immutable, result: result.pointer, count: result.count)
-    }
-    
-    public static func square<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
-        N.vSquare(values: values.immutable, result: result.pointer, count: result.count)
     }
     
     public static func relu<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
