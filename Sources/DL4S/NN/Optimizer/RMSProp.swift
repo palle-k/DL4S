@@ -61,7 +61,8 @@ public struct RMSProp<Layer: LayerType>: Optimizer {
             let path = paths[i]
             let grad = gradients[i].detached()
             
-            gradientSums[i] = gamma * gradientSums[i] + (1 - gamma) * (grad * grad)
+            let addedToGradientSum = (1 - gamma) * (grad * grad)
+            gradientSums[i] = gamma * gradientSums[i] + addedToGradientSum
             
             let a = learningRate / sqrt(gradientSums[i] + epsilon)
             let delta = a * grad

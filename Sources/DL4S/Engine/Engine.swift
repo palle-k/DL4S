@@ -28,7 +28,7 @@ import Foundation
 
 public protocol DeviceType {
     associatedtype Memory: MemoryOperatorsType where Memory.Device == Self
-    associatedtype Engine: EngineType & EngineTypeV2 where Engine.Device == Self
+    associatedtype Engine: EngineType where Engine.Device == Self
 }
 
 
@@ -56,90 +56,4 @@ public protocol MemoryOperatorsType {
     static func setPointee<Element>(of buffer: Buffer<Element, Device>, to newValue: Element)
     
     static func advance<Element>(buffer: Buffer<Element, Device>, by advancement: Int) -> Buffer<Element, Device>
-}
-
-
-public protocol EngineType {
-    associatedtype Device: DeviceType where Device.Engine == Self
-    
-    static func sqrt<N: NumericType>(_ value: N) -> N
-    static func log<N: NumericType>(_ value: N) -> N
-    static func exp<N: NumericType>(_ value: N) -> N
-    static func sin<N: NumericType>(_ value: N) -> N
-    static func cos<N: NumericType>(_ value: N) -> N
-    static func tan<N: NumericType>(_ value: N) -> N
-    static func sinh<N: NumericType>(_ value: N) -> N
-    static func cosh<N: NumericType>(_ value: N) -> N
-    static func tanh<N: NumericType>(_ value: N) -> N
-    static func pow<N: NumericType>(base: N, exponent: N) -> N
-    
-    static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int)
-    static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, stride: Int, count: Int)
-    static func transpose<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, srcRows: Int, srcCols: Int)
-    static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vsAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int)
-    static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vMA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vsMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int)
-    static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func svDiv<N: NumericType>(lhs: N, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vSquare<N: NumericType>(values: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vMulSA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: N, result: Buffer<N, Device>, count: Int)
-    static func vsMulVAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func log<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func exp<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func relu<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func tanh<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func sqrt<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N
-    static func copysign<N: NumericType>(values: Buffer<N, Device>, signs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N)
-    static func permuteAxes<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], destination: Buffer<N, Device>)
-    static func permuteAxesAdd<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], add: Buffer<N, Device>, destination: Buffer<N, Device>)
-}
-
-
-extension EngineType {
-    public static func sqrt<N: NumericType>(_ value: N) -> N {
-        return value.sqrt()
-    }
-    
-    public static func log<N: NumericType>(_ value: N) -> N {
-        return value.log()
-    }
-    
-    public static func exp<N: NumericType>(_ value: N) -> N {
-        return value.exp()
-    }
-    
-    public static func sin<N: NumericType>(_ value: N) -> N {
-        return value.sin()
-    }
-    
-    public static func cos<N: NumericType>(_ value: N) -> N {
-        return value.cos()
-    }
-    
-    public static func tan<N: NumericType>(_ value: N) -> N {
-        return value.tan()
-    }
-    
-    public static func sinh<N: NumericType>(_ value: N) -> N {
-        return value.sinh()
-    }
-    
-    public static func cosh<N: NumericType>(_ value: N) -> N {
-        return value.cosh()
-    }
-    
-    public static func tanh<N: NumericType>(_ value: N) -> N {
-        return value.tanh()
-    }
-    
-    public static func pow<N: NumericType>(base: N, exponent: N) -> N {
-        return N.pow(base: base, exponent: exponent)
-    }
 }

@@ -27,6 +27,16 @@ import Foundation
 
 //MARK: Img2col
 public extension Tensor {
+    
+    /// Performs an img2col transformation, which allows convolutions to be performed by matrix multiplication.
+    ///
+    /// The source tensor is expected to have a shape of [batchSize, channels, height, width]
+    ///
+    /// - Parameters:
+    ///   - kernelWidth: Width of the convolution kernel
+    ///   - kernelHeight: Height of the convolution kernel
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
     func img2col(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) -> Tensor<Element, Device> {
         let resultHeight = (shape[2] + 2 * padding - kernelHeight) / stride + 1
         let resultWidth = (shape[3] + 2 * padding - kernelWidth) / stride + 1
@@ -58,6 +68,13 @@ public extension Tensor {
         )
     }
     
+    /// Performs an inverse of the img2col operation
+    /// - Parameters:
+    ///   - kernelWidth: Width of the convolution kernel
+    ///   - kernelHeight: Height of the convolution kernel
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
+    ///   - resultShape: Shape of the resulting tensor
     func col2img(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int, resultShape: [Int]) -> Tensor<Element, Device> {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.col2img(
@@ -84,6 +101,15 @@ public extension Tensor {
 
 //MARK: Convolution
 public extension Tensor {
+    /// Performs a 2d convolution
+    ///
+    /// the source tensor is expected to have a shape of [batchSize, channels, width, height]
+    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelWidth, kernelHeight]
+    ///
+    /// - Parameters:
+    ///   - filters: Filters to convolve the tensor with
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
     func convolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let padding = padding ?? ((filters.shape[2] - 1) / 2)
         
@@ -106,6 +132,12 @@ public extension Tensor {
 
 //MARK: Pooling
 public extension Tensor {
+    
+    /// Performs max pooling on the tensor. Max pooling selects the maximum value for every given window of a tensor.
+    /// - Parameters:
+    ///   - windowSize: Window size
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
     func maxPooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "MaxPool2D") {
             let padding = padding ?? ((windowSize - 1) / 2)
@@ -131,6 +163,11 @@ public extension Tensor {
         }
     }
 
+    /// Performs average pooling on the tensor. Average pooling computes the average of every given window of a tensor.
+    /// - Parameters:
+    ///   - windowSize: Window size
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
     func averagePooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "AveragePool2D") {
             let padding = padding ?? ((windowSize - 1) / 2)

@@ -26,6 +26,17 @@
 import Foundation
 
 public extension Tensor {
+    
+    /// Element-wise broadcast adds the given tensors
+    ///
+    /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
+    /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
+    /// tensor with the result shape [42, 3, 8].
+    ///
+    /// - Parameters:
+    ///   - lhs: First tensor
+    ///   - rhs: Second tensor
+    /// - Returns: Broadcast added result
     static func + (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -74,6 +85,16 @@ public extension Tensor {
         }
     }
     
+    /// Element-wise broadcast multiplies the given tensors
+    ///
+    /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
+    /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
+    /// tensor with the result shape [42, 3, 8].
+    ///
+    /// - Parameters:
+    ///   - lhs: First tensor
+    ///   - rhs: Second tensor
+    /// - Returns: Broadcast multiplied result
     static func * (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -119,6 +140,16 @@ public extension Tensor {
         }
     }
     
+    /// Element-wise broadcast subtracts the given tensors
+    ///
+    /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
+    /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
+    /// tensor with the result shape [42, 3, 8].
+    ///
+    /// - Parameters:
+    ///   - lhs: First tensor
+    ///   - rhs: Second tensor
+    /// - Returns: Broadcast  difference
     static func - (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -181,6 +212,16 @@ public extension Tensor {
         }
     }
     
+    /// Element-wise broadcast divides the given tensors
+    ///
+    /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
+    /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
+    /// tensor with the result shape [42, 3, 8].
+    ///
+    /// - Parameters:
+    ///   - lhs: First tensor
+    ///   - rhs: Second tensor
+    /// - Returns: Broadcast quotient
     static func / (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -246,6 +287,10 @@ public extension Tensor {
         }
     }
     
+    
+    /// Negates every element of the given tensor
+    /// - Parameter value: Tensor to negate
+    /// - Returns: Negated tensor
     static prefix func - (value: Self) -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: value.shape, type: Element.self)
         Device.Engine.vNeg(val: value.values.values, result: resultBuffer.values, count: value.count)
@@ -262,6 +307,10 @@ public extension Tensor {
         )
     }
     
+    /// In-place broadcast adds the given tensors
+    /// - Parameters:
+    ///   - lhs: Tensor to update
+    ///   - rhs: Tensor to add to lhs
     static func += (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -274,6 +323,10 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place addition has modified shape.")
     }
     
+    /// In-place broadcast subtracts the given tensors
+    /// - Parameters:
+    ///   - lhs: Tensor to update
+    ///   - rhs: Tensor to subtract from lhs
     static func -= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -286,6 +339,10 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place subtraction has modified shape.")
     }
     
+    /// In-place broadcast multiplies the given tensors
+    /// - Parameters:
+    ///   - lhs: Tensor to update
+    ///   - rhs: Tensor to multiply with lhs
     static func *= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -298,6 +355,10 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place multiplication has modified shape.")
     }
     
+    /// In-place broadcast divides the given tensors
+    /// - Parameters:
+    ///   - lhs: Tensor to update
+    ///   - rhs: Tensor to divide lhs with
     static func /= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -310,6 +371,10 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place division has modified shape.")
     }
     
+    /// Broadcast exponentiates the tensor with the given exponent
+    /// - Parameters:
+    ///   - power: Exponent
+    /// - Returns: self broadcast exponentiated by power
     func raised(toPowerOf power: Self) -> Self {
         (self.log() * power).exp()
     }

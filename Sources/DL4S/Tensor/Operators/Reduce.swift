@@ -28,6 +28,8 @@ import Foundation
 
 //MARK: Summation
 public extension Tensor {
+    /// Sums up elements along the given axes
+    /// - Parameter axes: Axes to sum
     func reduceSum(along axes: [Int]) -> Tensor<Element, Device> {
         if axes.isEmpty {
             return self
@@ -63,23 +65,31 @@ public extension Tensor {
         }
     }
     
+    /// Sums up elements along the given axes
+    /// - Parameter axes: Axes to sum
     @inline(__always)
     func reduceSum(along axes: Int...) -> Self {
         reduceSum(along: axes)
     }
     
+    /// Computes the sum of all elements of the tensor
     func reduceSum() -> Self {
         reduceSum(along: Array(0 ..< dim))
     }
     
+    /// Computes the mean of the elements along the given axes
+    /// - Parameter axes: Axes to compute the mean of
     func reduceMean(along axes: [Int]) -> Self {
         reduceSum(along: axes) / Tensor(integerLiteral: axes.map {shape[$0]}.reduce(1, *))
     }
     
+    /// Computes the mean of the elements along the given axes
+    /// - Parameter axes: Axes to compute the mean of
     func reduceMean(along axes: Int...) -> Self {
         reduceMean(along: axes)
     }
     
+    /// Computes the mean of all elements of the tensor
     func reduceMean() -> Self {
         reduceMean(along: Array(0 ..< dim))
     }

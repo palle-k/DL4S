@@ -53,7 +53,7 @@ private enum BroadcastMode: Int {
     case scalarVector
 }
 
-extension CPUEngine: EngineTypeV2 {
+extension CPUEngine {
     @inline(__always)
     @_specialize(where N == Float)
     private static func broadcast<N>(
@@ -1177,27 +1177,4 @@ extension CPUEngine: EngineTypeV2 {
         }
     }
     
-    public static func revConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
-    
-    public static func kernelGradConv2d<N>(values: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int)) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
-    
-    public static func maxPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>?, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
-    
-    public static func avgPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
-    
-    public static func revMaxPool2D<N>(values: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
-    
-    public static func revAvgPool2D<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, strides: (vertical: Int, horizontal: Int), kernelSize: (vertical: Int, horizontal: Int)) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
 }

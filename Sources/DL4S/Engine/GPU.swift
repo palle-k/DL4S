@@ -113,138 +113,6 @@ public struct VRAMAllocator: MemoryOperatorsType {
     }
 }
 
-public struct GPUEngine: EngineType {
-    public typealias Device = GPU
-    
-    public static func fill<N>(value: N, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, stride: Int, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func transpose<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, srcRows: Int, srcCols: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vsAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vMA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vsMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func svDiv<N: NumericType>(lhs: N, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vSquare<N: NumericType>(values: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func gemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func dot<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, count: Int) -> N {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vMulSA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: N, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func vsMulVAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func log<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func exp<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func relu<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func tanh<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func sqrt<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func copysign<N: NumericType>(values: Buffer<N, Device>, signs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N) {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func conv2d<N>(input: Buffer<N, GPU>, filter: Buffer<N, GPU>, result: Buffer<N, GPU>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func permuteAxes<N>(input: Buffer<N, GPU>, arangement: [Int], shape: [Int], destination: Buffer<N, GPU>) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func permuteAxesAdd<N>(input: Buffer<N, GPU>, arangement: [Int], shape: [Int], add: Buffer<N, GPU>, destination: Buffer<N, GPU>) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func maxPool2d<N>(input: Buffer<N, GPU>, result: Buffer<N, GPU>, resultContext: Buffer<Int32, GPU>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func maxPool2DRevAdd<N>(pooled: Buffer<N, GPU>, poolCtx: Buffer<Int32, GPU>, add: Buffer<Int32, GPU>, target: Buffer<Int32, GPU>, inputSize: (batchSize: Int, depth: Int, height: Int, width: Int), kernelSize: (height: Int, width: Int), stride: (vertical: Int, horizontal: Int)) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-}
-
 
 public struct VRAMBuffer: Hashable {
     public static func == (lhs: VRAMBuffer, rhs: VRAMBuffer) -> Bool {
@@ -260,7 +128,50 @@ public struct VRAMBuffer: Hashable {
     var offset: Int
 }
 
-extension GPUEngine: EngineTypeV2 {
+
+public struct GPUEngine: EngineType {
+    public typealias Device = GPU
+    
+    public static func fill<N>(value: N, result: Buffer<N, Device>, count: Int) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func svDiv<N: NumericType>(lhs: N, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func gemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N) {
+        fatalError("\(#function) not available for GPU")
+    }
+
     public static func broadcastAdd<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }

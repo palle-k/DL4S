@@ -81,8 +81,11 @@ public struct Adam<Layer: LayerType>: Optimizer {
             let path = paths[i]
             let grad = gradients[i].detached()
             
-            firstMoments[i] = firstMoments[i] * beta1 + grad * (1 - beta1)
-            secondMoments[i] = secondMoments[i] * beta2 + (grad * grad) * (1 - beta2)
+            let addedToFirstMoment = grad * (1 - beta1)
+            firstMoments[i] = firstMoments[i] * beta1 + addedToFirstMoment
+            
+            let addedToSecondMoment = (grad * grad) * (1 - beta2)
+            secondMoments[i] = secondMoments[i] * beta2 + addedToSecondMoment
             
             let m_car_t = firstMoments[i] / (1 - beta1t)
             let v_car_t = secondMoments[i] / (1 - beta2t)

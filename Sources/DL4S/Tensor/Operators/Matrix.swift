@@ -27,6 +27,9 @@ import Foundation
 
 
 public extension Tensor {
+    
+    /// Computes the matrix-matrix product, the vector-matrix product, the matrix-vector product or the vector-vector product of the tensor with the given other tensor
+    /// - Parameter other: Tensor to multiply with self.
     func matrixMultiplied(with other: Self) -> Self {
         let lhs = self
         let rhs = other
@@ -62,6 +65,15 @@ public extension Tensor {
         return lhsView._matMul(rhsView).view(as: resultViewShape)
     }
     
+    /// Broadcast matrix multiplies self with the given other operand.
+    ///
+    /// Broadcasting is applied along all axes except the last two.
+    /// Operands are expected to have a dimensionality of 2.
+    ///
+    /// - Parameters:
+    ///   - other: Other operand
+    ///   - transposeSelf: Whether to transpose self before multiplication
+    ///   - transposeOther: Whether to transpose the other operand before the multiplication
     func broadcastMatrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         precondition(self.dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
         precondition(self.shape.suffix(2)[transposeSelf ? 0 : 1] == other.shape.suffix(2)[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
@@ -250,6 +262,10 @@ public extension Tensor {
     }
 }
 
+/// Computes the matrix-matrix product, the vector-matrix product, the matrix-vector product or the vector-vector product of the given two tensors
+/// - Parameters:
+///   - lhs: left hand side operand
+///   - rhs: right hand side operand
 public func matMul<Element, Device>(_ lhs: Tensor<Element, Device>, _ rhs: Tensor<Element, Device>) -> Tensor<Element, Device> {
     lhs.matrixMultiplied(with: rhs)
 }

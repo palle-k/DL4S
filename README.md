@@ -4,7 +4,7 @@
 ![CocoaPods](https://img.shields.io/cocoapods/p/DL4S.svg)
 [![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
 
-This framework provides reverse mode automatic differentiation,
+This framework provides reverse mode automatic differentiation (including second, third, etc. derivatives),
 vectorized implementations of common matrix and vector operators and high level neural network operations,
 such as convolution, recurrent units, and more.
 

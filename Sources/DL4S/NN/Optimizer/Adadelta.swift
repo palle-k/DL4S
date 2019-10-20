@@ -71,7 +71,8 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
             let path = paths[i]
             let grad = gradients[i].detached()
             
-            gradientSums[i] = gamma * gradientSums[i] + (1 - gamma) * (grad * grad)
+            let addedToGradSum = (1 - gamma) * (grad * grad)
+            gradientSums[i] = gamma * gradientSums[i] + addedToGradSum
             
             if isInitialized {
                 let a = sqrt(gradientSums[i] + epsilon)
@@ -80,7 +81,8 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
                 let delta = b / a * grad
                 model[keyPath: path] -= delta
                 
-                updateSums[i] = gamma * updateSums[i] + (1 - gamma) * (delta * delta)
+                let addedToUpdateSum = (1 - gamma) * (delta * delta)
+                updateSums[i] = gamma * updateSums[i] + addedToUpdateSum
                 
             } else {
                 let a = learningRate / sqrt(gradientSums[i] + epsilon)
