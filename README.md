@@ -48,6 +48,10 @@ Then add `DL4S` as a dependency to your target:
 .target(name: "MyPackage", dependencies: ["DL4S"])
 ```
 
+#### MKL Support
+
+On Linux, DL4S can be accelerated with MKL
+
 ## Features
 
 <details>
@@ -158,6 +162,7 @@ Engines
 <p>
 
 - [x] CPU (Accelerate framework)
+- [x] CPU (Intel Math Kernel Library)
 - [ ] GPU (Metal)
 
 </p>

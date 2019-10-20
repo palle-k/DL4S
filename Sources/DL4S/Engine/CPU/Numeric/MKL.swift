@@ -1,5 +1,5 @@
 //
-//  Accelerate.swift
+//  MKL.swift
 //  DL4S
 //
 //  Created by Palle Klewitz on 20.10.19.
@@ -23,11 +23,18 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-// Manual implementation of Accelerate in case it is not available (i.e. on Linux)
+// MKL to Accelerate Bridge
+#if !canImport(Accelerate) && canImport(MKL)
+import MKL
+typealias CBLAS_ORDER = CBLAS_LAYOUT
+typealias CBLAS_TRANSPOSE = MKL.CBLAS_TRANSPOSE
 
-import Foundation
+let CblasRowMajor = CBLAS_ORDER(rawValue: 101)
+let CblasColMajor = CBLAS_ORDER(rawValue: 102)
 
-#if !canImport(Accelerate) && !canImport(MKL)
+let CblasNoTrans = CBLAS_TRANSPOSE(rawValue: 111)
+let CblasTrans = CBLAS_TRANSPOSE(rawValue: 112)
+
 
 typealias vDSP_Stride = Int
 typealias vDSP_Length = UInt
@@ -39,9 +46,109 @@ func vDSP_vfill(_ __A: UnsafePointer<Float>, _ __C: UnsafeMutablePointer<Float>,
     }
 }
 
+func __callMkl(
+    lhs: UnsafePointer<Float>,
+    rhs: UnsafePointer<Float>, 
+    result: UnsafeMutablePointer<Float>, 
+    strideLhs: vDSP_Stride,
+    strideRhs: vDSP_Stride, 
+    strideResult: vDSP_Stride, 
+    count: vDSP_Length, 
+    operation: (UnsafePointer<Float>, UnsafePointer<Float>, UnsafeMutablePointer<Float>) -> ()
+) {
+    let lhsInput: UnsafePointer<Float>
+    var lhsPtr: UnsafeMutablePointer<Float>? = nil
+    if strideLhs == 1 {
+        lhsInput = lhs
+    } else {
+        let lhsBuffer = UnsafeMutablePointer<Float>.allocate(capacity: Int(count))
+        lhsPtr = lhsBuffer
+        vsPackI(Int32(count), lhs, Int32(strideLhs), lhsBuffer)
+        lhsInput = UnsafePointer(lhsBuffer)
+    }
+    let rhsInput: UnsafePointer<Float>
+    var rhsPtr: UnsafeMutablePointer<Float>? = nil
+    if strideRhs == 1 {
+        rhsInput = rhs
+    } else {
+        let rhsBuffer = UnsafeMutablePointer<Float>.allocate(capacity: Int(count))
+        rhsPtr = rhsBuffer
+        vsPackI(Int32(count), rhs, Int32(strideRhs), rhsBuffer)
+        rhsInput = UnsafePointer(rhsBuffer)
+    }
+    let resultInput: UnsafeMutablePointer<Float>
+    if strideResult == 1 {
+        resultInput = result
+    } else {
+        resultInput = UnsafeMutablePointer<Float>.allocate(capacity: Int(count))
+    }
+    operation(lhsInput, rhsInput, resultInput)
+    lhsPtr?.deallocate()
+    rhsPtr?.deallocate()
+
+    if strideResult != 1 {
+        vsUnpackI(Int32(count), resultInput, result, Int32(strideResult))
+        resultInput.deallocate()
+    }
+}
+
+func __callMkl(
+    input: UnsafePointer<Float>,
+    result: UnsafeMutablePointer<Float>, 
+    strideInput: vDSP_Stride,
+    strideResult: vDSP_Stride, 
+    count: vDSP_Length, 
+    operation: (UnsafePointer<Float>, UnsafeMutablePointer<Float>) -> ()
+) {
+    let inputVals: UnsafePointer<Float>
+    var inputPtr: UnsafeMutablePointer<Float>? = nil
+    if strideInput == 1 {
+        inputVals = input
+    } else {
+        let inputBuffer = UnsafeMutablePointer<Float>.allocate(capacity: Int(count))
+        inputPtr = inputBuffer
+        vsPackI(Int32(count), input, Int32(strideInput), inputBuffer)
+        inputVals = UnsafePointer(inputBuffer)
+    }
+    let resultInput: UnsafeMutablePointer<Float>
+    if strideResult == 1 {
+        resultInput = result
+    } else {
+        resultInput = UnsafeMutablePointer<Float>.allocate(capacity: Int(count))
+    }
+    operation(inputVals, resultInput)
+    inputPtr?.deallocate()
+
+    if strideResult != 1 {
+        vsUnpackI(Int32(count), resultInput, result, Int32(strideResult))
+        resultInput.deallocate()
+    }
+}
 func vDSP_vsq(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    for i in 0 ..< Int(__N) {
-        __C[i * __IC] = __A[i * __IA]
+    if __IA == 1 && __IC == 1 {
+        vsSqr(Int32(__N), __A, __C)
+    } else if __IA == 1 {
+        let tmp = UnsafeMutablePointer<Float>.allocate(capacity: Int(__N))
+        defer {
+            tmp.deallocate()
+        }
+        vsSqr(Int32(__N), __A, tmp)
+        vsUnpackI(Int32(__N), tmp, __C, Int32(__IC))
+    } else if __IC == 1 {
+        let tmp = UnsafeMutablePointer<Float>.allocate(capacity: Int(__N))
+        defer {
+            tmp.deallocate()
+        }
+        vsPackI(Int32(__N), __A, Int32(__IA), tmp)
+        vsSqr(Int32(__N), tmp, __C)
+    } else {
+        let tmp = UnsafeMutablePointer<Float>.allocate(capacity: Int(__N))
+        defer {
+            tmp.deallocate()
+        }
+        vsPackI(Int32(__N), __A, Int32(__IA), tmp)
+        vsSqr(Int32(__N), tmp, tmp)
+        vsUnpackI(Int32(__N), tmp, __C, Int32(__IC))
     }
 }
 
@@ -70,14 +177,14 @@ func vDSP_svdiv(_ __A: UnsafePointer<Float>, _ __B: UnsafePointer<Float>, _ __IB
 }
 
 func vDSP_vadd(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    for i in 0 ..< Int(__N) {
-        __C[i * __IC] = __A[i * __IA] + __B[i * __IB]
+    __callMkl(lhs: __A, rhs: __B, result: __C, strideLhs: __IA, strideRhs: __IB, strideResult: __IC, count: __N) { lhs, rhs, result in
+        vsAdd(Int32(__N), lhs, rhs, result)
     }
 }
 
 func vDSP_vmul(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    for i in 0 ..< Int(__N) {
-        __C[i * __IC] = __A[i * __IA] * __B[i * __IB]
+    __callMkl(lhs: __A, rhs: __B, result: __C, strideLhs: __IA, strideRhs: __IB, strideResult: __IC, count: __N) { lhs, rhs, result in
+        vsMul(Int32(__N), lhs, rhs, result)
     }
 }
 
@@ -88,8 +195,8 @@ func vDSP_vneg(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMu
 }
 
 func vDSP_vsub(_ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    for i in 0 ..< Int(__N) {
-        __C[i * __IC] = __A[i * __IA] - __B[i * __IB]
+    __callMkl(lhs: __A, rhs: __B, result: __C, strideLhs: __IA, strideRhs: __IB, strideResult: __IC, count: __N) { lhs, rhs, result in
+        vsSub(Int32(__N), lhs, rhs, result)
     }
 }
 
@@ -100,8 +207,8 @@ func vDSP_vma(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePoi
 }
 
 func vDSP_vdiv(_ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    for i in 0 ..< Int(__N) {
-        __C[i * __IC] = __A[i * __IA] / __B[i * __IB]
+    __callMkl(lhs: __A, rhs: __B, result: __C, strideLhs: __IA, strideRhs: __IB, strideResult: __IC, count: __N) { lhs, rhs, result in
+        vsDiv(Int32(__N), lhs, rhs, result)
     }
 }
 
@@ -549,45 +656,31 @@ func vDSP_vrampi(_ __A: UnsafePointer<Int32>, _ __B: UnsafePointer<Int32>, _ __C
 // MARK: veclib Float
 
 func vvtanhf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = tanhf(a[i])
-    }
+    vsTanh(l[0], a, c)
 }
 
 func vvsqrtf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = sqrtf(a[i])
-    }
+    vsSqrt(l[0], a, c)
 }
 
 func vvexpf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = expf(a[i])
-    }
+    vsExp(l[0], a, c)
 }
 
 func vvlogf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = logf(a[i])
-    }
+    vsLn(l[0], a, c)
 }
 
 func vvsinf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = sinf(a[i])
-    }
+    vsSin(l[0], a, c)
 }
 
 func vvcosf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = cosf(a[i])
-    }
+    vsCos(l[0], a, c)
 }
 
 func vvtanf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = tanf(a[i])
-    }
+    vsTan(l[0], a, c)
 }
 
 func vvcopysignf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ s: UnsafePointer<Float>, _ l: UnsafePointer<Int32>) {
@@ -598,45 +691,31 @@ func vvcopysignf(_ c: UnsafeMutablePointer<Float>, _ a: UnsafePointer<Float>, _ 
 
 // MARK: veclib Double
 func vvtanh(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = Glibc.tanh(a[i])
-    }
+    vdTanh(l[0], a, c)
 }
 
 func vvsqrt(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = sqrt(a[i])
-    }
+    vdSqrt(l[0], a, c)
 }
 
 func vvexp(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = Glibc.exp(a[i])
-    }
+    vdExp(l[0], a, c)
 }
 
 func vvlog(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = Glibc.log(a[i])
-    }
+    vdLn(l[0], a, c)
 }
 
 func vvsin(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = Glibc.sin(a[i])
-    }
+    vdSin(l[0], a, c)
 }
 
 func vvcos(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = Glibc.cos(a[i])
-    }
+    vdCos(l[0], a, c)
 }
 
 func vvtan(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
-    for i in 0 ..< Int(l[0]) {
-        c[i] = Glibc.tan(a[i])
-    }
+    vdTan(l[0], a, c)
 }
 
 func vvcopysign(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _ s: UnsafePointer<Double>, _ l: UnsafePointer<Int32>) {
@@ -646,305 +725,3 @@ func vvcopysign(_ c: UnsafeMutablePointer<Double>, _ a: UnsafePointer<Double>, _
 }
 
 #endif
-
-#if !canImport(MKL)
-
-// MARK: cblas
-typealias CBLAS_ORDER = Int8
-let CblasRowMajor: CBLAS_ORDER = 101
-let CblasColMajor: CBLAS_ORDER = 102
-
-typealias CBLAS_TRANSPOSE = Int8
-let CblasNoTrans: CBLAS_TRANSPOSE = 111
-let CblasTrans: CBLAS_TRANSPOSE = 112
-
-
-
-/// General Matrix Multiply
-/// - Parameters:
-///   - __Order: Data ordering
-///   - __TransA: Whether to transpose A
-///   - __TransB: Whether to transpose B
-///   - __M: Number of rows in matrices A and C.
-///   - __N: Number of columns in matrices B and C.
-///   - __K: Number of columns in matrix A; number of rows in matrix B.
-///   - __alpha: Scaling factor for the product of matrices A and B.
-///   - __A: Matrix A.
-///   - __lda: The size of the first dimention of matrix A; if you are passing a matrix A[m][n], the value should be m.
-///   - __B: Matrix B.
-///   - __ldb: The size of the first dimention of matrix B; if you are passing a matrix B[m][n], the value should be m.
-///   - __beta: Scaling factor for matrix C.
-///   - __C: Matrix C.
-///   - __ldc: The size of the first dimention of matrix C; if you are passing a matrix C[m][n], the value should be m.
-func cblas_sgemm(_ __Order: CBLAS_ORDER, _ __TransA: CBLAS_TRANSPOSE, _ __TransB: CBLAS_TRANSPOSE, _ __M: Int32, _ __N: Int32, _ __K: Int32, _ __alpha: Float, _ __A: UnsafePointer<Float>, _ __lda: Int32, _ __B: UnsafePointer<Float>, _ __ldb: Int32, _ __beta: Float, _ __C: UnsafeMutablePointer<Float>, _ __ldc: Int32) {
-    if __Order == CblasColMajor {
-        fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
-    }
-    print("not using MKL")
-    
-    
-    let transA = (__TransA == CblasTrans)
-    let transB = (__TransB == CblasTrans)
-    
-    if __M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1 {
-        return
-    }
-    
-    if __alpha == 0 {
-        if __beta == 0 {
-            for i in 0 ..< Int(__M * __N) {
-                __C[i] = 0
-            }
-        } else {
-            for i in 0 ..< Int(__M * __N) {
-                __C[i] *= __beta
-            }
-        }
-    }
-    
-    if __beta == 0 {
-        for i in 0 ..< Int(__M * __N) {
-            __C[i] = 0
-        }
-    } else {
-        for i in 0 ..< Int(__M * __N) {
-            __C[i] *= __beta
-        }
-    }
-    
-    if transA {
-        if transB {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Float = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[r + l * Int(__M)] * __B[l + c * Int(__K)]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        } else {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Float = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[r + l * Int(__M)] * __B[l * Int(__N) + c]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        }
-    } else {
-        if transB {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Float = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[l + r * Int(__K)] * __B[l + c * Int(__K)]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        } else {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Float = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[l + r * Int(__K)] * __B[l * Int(__N) + c]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        }
-    }
-}
-
-func cblas_dgemm(_ __Order: CBLAS_ORDER, _ __TransA: CBLAS_TRANSPOSE, _ __TransB: CBLAS_TRANSPOSE, _ __M: Int32, _ __N: Int32, _ __K: Int32, _ __alpha: Double, _ __A: UnsafePointer<Double>, _ __lda: Int32, _ __B: UnsafePointer<Double>, _ __ldb: Int32, _ __beta: Double, _ __C: UnsafeMutablePointer<Double>, _ __ldc: Int32) {
-    if __Order == CblasColMajor {
-        fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
-    }
-    
-    let transA = (__TransA == CblasTrans)
-    let transB = (__TransB == CblasTrans)
-    
-    if __M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1 {
-        return
-    }
-    
-    if __alpha == 0 {
-        if __beta == 0 {
-            for i in 0 ..< Int(__M * __N) {
-                __C[i] = 0
-            }
-        } else {
-            for i in 0 ..< Int(__M * __N) {
-                __C[i] *= __beta
-            }
-        }
-    }
-    
-    if __beta == 0 {
-        for i in 0 ..< Int(__M * __N) {
-            __C[i] = 0
-        }
-    } else {
-        for i in 0 ..< Int(__M * __N) {
-            __C[i] *= __beta
-        }
-    }
-    
-    if transA {
-        if transB {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Double = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[r + l * Int(__M)] * __B[l + c * Int(__K)]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        } else {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Double = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[r + l * Int(__M)] * __B[l * Int(__N) + c]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        }
-    } else {
-        if transB {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Double = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[l + r * Int(__K)] * __B[l + c * Int(__K)]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        } else {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Double = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[l + r * Int(__K)] * __B[l * Int(__N) + c]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        }
-    }
-}
-
-
-func cblas_scopy(_ __N: Int32, _ __X: UnsafePointer<Float>!, _ __incX: Int32, _ __Y: UnsafeMutablePointer<Float>!, _ __incY: Int32) {
-    for i in 0 ..< __N {
-        __Y[Int(i * __incY)] = __X[Int(i * __incX)]
-    }
-}
-
-func cblas_dcopy(_ __N: Int32, _ __X: UnsafePointer<Double>!, _ __incX: Int32, _ __Y: UnsafeMutablePointer<Double>!, _ __incY: Int32) {
-    for i in 0 ..< __N {
-        __Y[Int(i * __incY)] = __X[Int(i * __incX)]
-    }
-}
-
-#endif
-
-#if canImport(Accelerate)
-import Accelerate
-#else
-
-#endif
-
-func cblas_igemm(_ __Order: CBLAS_ORDER, _ __TransA: CBLAS_TRANSPOSE, _ __TransB: CBLAS_TRANSPOSE, _ __M: Int32, _ __N: Int32, _ __K: Int32, _ __alpha: Int32, _ __A: UnsafePointer<Int32>, _ __lda: Int32, _ __B: UnsafePointer<Int32>, _ __ldb: Int32, _ __beta: Int32, _ __C: UnsafeMutablePointer<Int32>, _ __ldc: Int32) {
-    if __Order == CblasColMajor {
-        fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
-    }
-    
-    let transA = (__TransA == CblasTrans)
-    let transB = (__TransB == CblasTrans)
-    
-    if __M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1 {
-        return
-    }
-    
-    if __alpha == 0 {
-        if __beta == 0 {
-            for i in 0 ..< Int(__M * __N) {
-                __C[i] = 0
-            }
-        } else {
-            for i in 0 ..< Int(__M * __N) {
-                __C[i] *= __beta
-            }
-        }
-    }
-    
-    if __beta == 0 {
-        for i in 0 ..< Int(__M * __N) {
-            __C[i] = 0
-        }
-    } else {
-        for i in 0 ..< Int(__M * __N) {
-            __C[i] *= __beta
-        }
-    }
-    
-    if transA {
-        if transB {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Int32 = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[r + l * Int(__M)] * __B[l + c * Int(__K)]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        } else {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Int32 = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[r + l * Int(__M)] * __B[l * Int(__N) + c]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        }
-    } else {
-        if transB {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Int32 = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[l + r * Int(__K)] * __B[l + c * Int(__K)]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        } else {
-            for r in 0 ..< Int(__M) {
-                for c in 0 ..< Int(__N) {
-                    var tmp: Int32 = 0
-                    for l in 0 ..< Int(__K) {
-                        tmp += __A[l + r * Int(__K)] * __B[l * Int(__N) + c]
-                    }
-                    __C[r * Int(__N) + c] = __alpha * tmp
-                }
-            }
-        }
-    }
-}
-
-
-func cblas_icopy(_ __N: Int32, _ __X: UnsafePointer<Int32>!, _ __incX: Int32, _ __Y: UnsafeMutablePointer<Int32>!, _ __incY: Int32) {
-    for i in 0 ..< __N {
-        __Y[Int(i * __incY)] = __X[Int(i * __incX)]
-    }
-}

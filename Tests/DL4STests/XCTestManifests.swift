@@ -17,7 +17,7 @@ extension EngineV2Tests {
     //   `swift test --generate-linuxmain`
     // to regenerate.
     static let __allTests__EngineV2Tests = [
-        ("testBroadcast", testBroadcast),
+        ("testBroadcast1", testBroadcast1),
         ("testBroadcast2", testBroadcast2),
         ("testBroadcast3", testBroadcast3),
         ("testBroadcast4", testBroadcast4),

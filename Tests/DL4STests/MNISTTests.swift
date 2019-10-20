@@ -66,7 +66,7 @@ class MNISTTests: XCTestCase {
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/Users/Palle/Downloads/", type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/home/palle/Downloads/MNIST/", type: Float.self, device: CPU.self)
         
         let epochs = 10_000
         let batchSize = 128
@@ -118,7 +118,7 @@ class MNISTTests: XCTestCase {
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/Users/Palle/Downloads/", type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/home/palle/Downloads/MNIST/", type: Float.self, device: CPU.self)
         
         let epochs = 10_000
         let batchSize = 128
@@ -156,7 +156,7 @@ class MNISTTests: XCTestCase {
     }
     
     func testGRU() {
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/home/palle/Downloads/MNIST/", type: Float.self, device: CPU.self)
         
         var model = Sequential {
             GRU<Float, CPU>(inputSize: 28, hiddenSize: 128, direction: .forward)

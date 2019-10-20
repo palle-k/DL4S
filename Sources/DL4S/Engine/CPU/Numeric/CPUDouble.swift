@@ -26,6 +26,8 @@
 import Foundation
 #if canImport(Accelerate)
 import Accelerate
+#elseif canImport(MKL)
+import MKL
 #endif
 
 extension Double: CPUNumeric {

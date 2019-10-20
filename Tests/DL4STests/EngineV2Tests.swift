@@ -27,15 +27,19 @@ import XCTest
 @testable import DL4S
 
 class EngineV2Tests: XCTestCase {
-    func testBroadcast() {
-        let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
-        let rhs = Tensor<Float, CPU>([1,2])
+    func testBroadcast1() {
+        // let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
+        // let rhs = Tensor<Float, CPU>([1,2])
         
-        let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
+        // let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
         
-        CPUEngine.broadcastMul(lhs: rhs.values, rhs: lhs.values, result: result.values)
+        // CPUEngine.broadcastMul(lhs: rhs.values, rhs: lhs.values, result: result.values)
         
-        print(result)
+        // print(result)
+        let lhs = Tensor<Float, CPU>([1,2,3,4])
+        let rhs = Tensor<Float, CPU>([2,4,6,8])
+
+        print(lhs + rhs)
     }
     
     func testBroadcast2() {
