@@ -24,8 +24,6 @@
 //  SOFTWARE.
 
 import Foundation
-import Accelerate
-
 
 let DefaultNumberFormatter: NumberFormatter = {
     let f = NumberFormatter()

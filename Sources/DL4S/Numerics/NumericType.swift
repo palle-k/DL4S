@@ -24,7 +24,6 @@
 //  SOFTWARE.
 
 import Foundation
-import Accelerate
 
 public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
     static var zero: Self { get }
