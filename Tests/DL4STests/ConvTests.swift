@@ -25,6 +25,7 @@
 
 import XCTest
 @testable import DL4S
+#if canImport(AppKit)
 import AppKit
 
 extension NSImage {
@@ -38,6 +39,7 @@ extension NSImage {
         try png.write(to: URL(fileURLWithPath: path))
     }
 }
+#endif
 
 class ConvTests: XCTestCase {
     func testIm2col() {
@@ -91,6 +93,7 @@ class ConvTests: XCTestCase {
         
         let filtered = batch.convolved2d(filters: filters)
         
+        #if canImport(AppKit)
         for i in 0 ..< batch.shape[0] {
             let src = batch[i]
             let dst = filtered[i]
@@ -103,5 +106,6 @@ class ConvTests: XCTestCase {
                 try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j).png")
             }
         }
+        #endif
     }
 }

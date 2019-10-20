@@ -134,6 +134,7 @@ class WGANGPTests: XCTestCase {
                 print(" [\(epoch)/\(epochs)] loss c: \(lastCriticDiscriminationLoss), gp: \(lastGradientPenaltyLoss), g: \(generatorLoss)")
             }
             
+            #if canImport(AppKit)
             if epoch.isMultiple(of: 1000) {
                 let genNoiseInput = Tensor<Float, CPU>(uniformlyDistributedWithShape: [batchSize, 50], min: 0, max: 1)
                 let genLabelInput = Tensor<Int32, CPU>(uniformlyDistributedWithShape: [batchSize], min: 0, max: 9)
@@ -155,6 +156,7 @@ class WGANGPTests: XCTestCase {
                     try? png?.write(to: URL(fileURLWithPath: "/Users/Palle/Desktop/wgan_gp/gen_\(epoch)_\(i).png"))
                 }
             }
+            #endif
         }
     }
 }

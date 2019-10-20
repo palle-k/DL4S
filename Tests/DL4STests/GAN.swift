@@ -117,6 +117,7 @@ class GANTests: XCTestCase {
                 print(" [\(epoch)/\(epochs)] loss d: \(discriminatorLoss.item), g: \(generatorLoss.item)")
             }
 
+            #if canImport(AppKit)
             if epoch % 1000 == 0 {
                 let genInputs = Tensor<Float, CPU>(normalDistributedWithShape: batchSize, latentSize)
                 let genLabels = Tensor<Int32, CPU>(uniformlyDistributedWithShape: batchSize, min: 0, max: 9)
@@ -137,6 +138,7 @@ class GANTests: XCTestCase {
                     try? png?.write(to: URL(fileURLWithPath: "/Users/Palle/Desktop/gan/gen_\(epoch)_\(i).png"))
                 }
             }
+            #endif
         }
         
     }
