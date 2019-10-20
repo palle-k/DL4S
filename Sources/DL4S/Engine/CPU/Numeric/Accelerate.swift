@@ -27,7 +27,7 @@
 
 import Foundation
 
-#if !canImport(Accelerate)
+#if !canImport(Accelerate) || true
 
 typealias vDSP_Stride = Int
 typealias vDSP_Length = UInt
@@ -654,160 +654,98 @@ typealias CBLAS_TRANSPOSE = Int8
 let CblasNoTrans: CBLAS_TRANSPOSE = 111
 let CblasTrans: CBLAS_TRANSPOSE = 112
 
+
+/// General Matrix Multiply
+/// - Parameters:
+///   - __Order: Data ordering
+///   - __TransA: Whether to transpose A
+///   - __TransB: Whether to transpose B
+///   - __M: Number of rows in matrices A and C.
+///   - __N: Number of columns in matrices B and C.
+///   - __K: Number of columns in matrix A; number of rows in matrix B.
+///   - __alpha: Scaling factor for the product of matrices A and B.
+///   - __A: Matrix A.
+///   - __lda: The size of the first dimention of matrix A; if you are passing a matrix A[m][n], the value should be m.
+///   - __B: Matrix B.
+///   - __ldb: The size of the first dimention of matrix B; if you are passing a matrix B[m][n], the value should be m.
+///   - __beta: Scaling factor for matrix C.
+///   - __C: Matrix C.
+///   - __ldc: The size of the first dimention of matrix C; if you are passing a matrix C[m][n], the value should be m.
 func cblas_sgemm(_ __Order: CBLAS_ORDER, _ __TransA: CBLAS_TRANSPOSE, _ __TransB: CBLAS_TRANSPOSE, _ __M: Int32, _ __N: Int32, _ __K: Int32, _ __alpha: Float, _ __A: UnsafePointer<Float>, _ __lda: Int32, _ __B: UnsafePointer<Float>, _ __ldb: Int32, _ __beta: Float, _ __C: UnsafeMutablePointer<Float>, _ __ldc: Int32) {
-    // Adapted from NetLib
-    @inline(__always) func A(_ I: Int32, _ J: Int32) -> Float { __A[Int((I)-1 + ((J)-1) * (__lda))] }
-    @inline(__always) func B(_ I: Int32, _ J: Int32) -> Float { __B[Int((I)-1 + ((J)-1) * (__ldb))] }
-    @inline(__always) func C(_ I: Int32, _ J: Int32) -> Float { __C[Int((I)-1 + ((J)-1) * (__ldc))] }
-    @inline(__always) func C(_ I: Int32, _ J: Int32, _ V: Float) { __C[Int((I)-1 + ((J)-1) * (__ldc))] = V }
+    if __Order == CblasColMajor {
+        fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
+    }
     
-    let nota = __TransA == CblasNoTrans
-    let notb = __TransB == CblasNoTrans
-    let nrowa: Int32
-    let ncola: Int32
-    let nrowb: Int32
+    let transA = (__TransA == CblasTrans)
+    let transB = (__TransB == CblasTrans)
     
-    if nota {
-        nrowa = __M
-        ncola = __K
-    } else {
-        nrowa = __K
-        ncola = __M
-    }
-    if notb {
-        nrowb = __K
-    } else {
-        nrowb = __N
-    }
-
-    /*     Test the input parameters. */
-    var info = 0;
-    if (!nota && __TransA != CblasTrans) {
-        info = 1;
-    } else if (!notb && __TransB != CblasTrans) {
-        info = 2
-    } else if (__M < 0) {
-        info = 3
-    } else if (__N < 0) {
-        info = 4
-    } else if (__K < 0) {
-        info = 5
-    } else if (__lda < max(1, nrowa)) {
-        info = 8
-    } else if (__ldb < max(1, nrowb)) {
-        info = 10
-    } else if (__ldc < max(1, __M)) {
-        info = 13
-    }
-    if (info != 0) {
-        fatalError("cblas_sgemm error: \(info)")
-    }
-
-    /*     Quick return if possible. */
-    if (__M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1) {
+    if __M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1 {
         return
     }
-
-    /*     And if  alpha.eq.zero. */
-
-    if (__alpha == 0) {
-        if (__beta == 0) {
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    C(i,j,0)
-                    /* L10: */
-                }
-                /* L20: */
+    
+    if __alpha == 0 {
+        if __beta == 0 {
+            for i in 0 ..< Int(__M * __N) {
+                __C[i] = 0
             }
         } else {
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    C(i,j,__beta * C(i,j))
-                    /* L30: */
-                }
-                /* L40: */
+            for i in 0 ..< Int(__M * __N) {
+                __C[i] *= __beta
             }
         }
-        return
     }
-
-    /*     Start the operations. */
-
-    if (notb) {
-        if (nota) {
-    /*           Form  C := alpha*A*B + beta*C. */
-            for j in 1 ... __N {
-                if (__beta == 0) {
-                    for i in 1 ... __M {
-                        C(i,j,0)
+    
+    if __beta == 0 {
+        for i in 0 ..< Int(__M * __N) {
+            __C[i] = 0
+        }
+    } else {
+        for i in 0 ..< Int(__M * __N) {
+            __C[i] *= __beta
+        }
+    }
+    
+    if transA {
+        if transB {
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Float = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[r + l * Int(__M)] * __B[l + c * Int(__K)]
                     }
-                } else if (__beta != 1) {
-                    for i in 1 ... __M {
-                        C(i,j,__beta * C(i,j))
-                    }
-                }
-                for l in 1 ... __K {
-                    if (B(l,j) != 0) {
-                        let temp = __alpha * B(l,j);
-                        for i in 1 ... __M {
-                            C(i,j, C(i,j) + temp * A(i,l))
-                        }
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         } else {
-/*           Form  C := alpha*A'*B + beta*C */
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    var temp: Float = 0
-                    for l in 1 ... __K {
-                        temp += A(l,i) * B(l,j)
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Float = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[r + l * Int(__M)] * __B[l * Int(__N) + c]
                     }
-                    if (__beta == 0) {
-                        C(i,j,__alpha * temp)
-                    } else {
-                        C(i,j,__alpha * temp + __beta * C(i,j))
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         }
     } else {
-        if (nota) {
-/*           Form  C := alpha*A*B' + beta*C */
-
-            for j in 1 ... __N {
-                if (__beta == 0) {
-                    for i in 1 ... __M {
-                        C(i,j,0)
+        if transB {
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Float = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[l + r * Int(__K)] * __B[l + c * Int(__K)]
                     }
-                } else if (__beta != 1) {
-                    for i in 1 ... __M {
-                        C(i,j, __beta * C(i,j))
-                    }
-                }
-                for l in 1 ... __K {
-                    if (B(j,l) != 0) {
-                        let temp = __alpha * B(j,l)
-                        for i in 1 ... __M {
-                            C(i,j, C(i,j) + temp * A(i,l))
-                        }
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         } else {
-/*           Form  C := alpha*A'*B' + beta*C */
-
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    var temp: Float = 0
-                    for l in 1 ... __K {
-                        temp += A(l,i) * B(j,l);
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Float = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[l + r * Int(__K)] * __B[l * Int(__N) + c]
                     }
-                    if (__beta == 0) {
-                        C(i,j,__alpha * temp)
-                    } else {
-                        C(i,j, __alpha * temp + __beta * C(i,j))
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         }
@@ -815,159 +753,80 @@ func cblas_sgemm(_ __Order: CBLAS_ORDER, _ __TransA: CBLAS_TRANSPOSE, _ __TransB
 }
 
 func cblas_dgemm(_ __Order: CBLAS_ORDER, _ __TransA: CBLAS_TRANSPOSE, _ __TransB: CBLAS_TRANSPOSE, _ __M: Int32, _ __N: Int32, _ __K: Int32, _ __alpha: Double, _ __A: UnsafePointer<Double>, _ __lda: Int32, _ __B: UnsafePointer<Double>, _ __ldb: Int32, _ __beta: Double, _ __C: UnsafeMutablePointer<Double>, _ __ldc: Int32) {
-    // Adapted from NetLib
-    @inline(__always) func A(_ I: Int32, _ J: Int32) -> Double { __A[Int((I)-1 + ((J)-1) * (__lda))] }
-    @inline(__always) func B(_ I: Int32, _ J: Int32) -> Double { __B[Int((I)-1 + ((J)-1) * (__ldb))] }
-    @inline(__always) func C(_ I: Int32, _ J: Int32) -> Double { __C[Int((I)-1 + ((J)-1) * (__ldc))] }
-    @inline(__always) func C(_ I: Int32, _ J: Int32, _ V: Double) { __C[Int((I)-1 + ((J)-1) * (__ldc))] = V }
+    if __Order == CblasColMajor {
+        fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
+    }
     
-    let nota = __TransA == CblasNoTrans
-    let notb = __TransB == CblasNoTrans
-    let nrowa: Int32
-    let ncola: Int32
-    let nrowb: Int32
+    let transA = (__TransA == CblasTrans)
+    let transB = (__TransB == CblasTrans)
     
-    if nota {
-        nrowa = __M
-        ncola = __K
-    } else {
-        nrowa = __K
-        ncola = __M
-    }
-    if notb {
-        nrowb = __K
-    } else {
-        nrowb = __N
-    }
-
-    /*     Test the input parameters. */
-    var info = 0;
-    if (!nota && __TransA != CblasTrans) {
-        info = 1;
-    } else if (!notb && __TransB != CblasTrans) {
-        info = 2
-    } else if (__M < 0) {
-        info = 3
-    } else if (__N < 0) {
-        info = 4
-    } else if (__K < 0) {
-        info = 5
-    } else if (__lda < max(1, nrowa)) {
-        info = 8
-    } else if (__ldb < max(1, nrowb)) {
-        info = 10
-    } else if (__ldc < max(1, __M)) {
-        info = 13
-    }
-    if (info != 0) {
-        fatalError("cblas_sgemm error: \(info)")
-    }
-
-    /*     Quick return if possible. */
-    if (__M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1) {
+    if __M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1 {
         return
     }
-
-    /*     And if  alpha.eq.zero. */
-
-    if (__alpha == 0) {
-        if (__beta == 0) {
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    C(i,j,0)
-                    /* L10: */
-                }
-                /* L20: */
+    
+    if __alpha == 0 {
+        if __beta == 0 {
+            for i in 0 ..< Int(__M * __N) {
+                __C[i] = 0
             }
         } else {
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    C(i,j,__beta * C(i,j))
-                    /* L30: */
-                }
-                /* L40: */
+            for i in 0 ..< Int(__M * __N) {
+                __C[i] *= __beta
             }
         }
-        return
     }
-
-    /*     Start the operations. */
-
-    if (notb) {
-        if (nota) {
-    /*           Form  C := alpha*A*B + beta*C. */
-            for j in 1 ... __N {
-                if (__beta == 0) {
-                    for i in 1 ... __M {
-                        C(i,j,0)
+    
+    if __beta == 0 {
+        for i in 0 ..< Int(__M * __N) {
+            __C[i] = 0
+        }
+    } else {
+        for i in 0 ..< Int(__M * __N) {
+            __C[i] *= __beta
+        }
+    }
+    
+    if transA {
+        if transB {
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Double = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[r + l * Int(__M)] * __B[l + c * Int(__K)]
                     }
-                } else if (__beta != 1) {
-                    for i in 1 ... __M {
-                        C(i,j,__beta * C(i,j))
-                    }
-                }
-                for l in 1 ... __K {
-                    if (B(l,j) != 0) {
-                        let temp = __alpha * B(l,j);
-                        for i in 1 ... __M {
-                            C(i,j, C(i,j) + temp * A(i,l))
-                        }
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         } else {
-/*           Form  C := alpha*A'*B + beta*C */
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    var temp: Double = 0
-                    for l in 1 ... __K {
-                        temp += A(l,i) * B(l,j)
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Double = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[r + l * Int(__M)] * __B[l * Int(__N) + c]
                     }
-                    if (__beta == 0) {
-                        C(i,j,__alpha * temp)
-                    } else {
-                        C(i,j,__alpha * temp + __beta * C(i,j))
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         }
     } else {
-        if (nota) {
-/*           Form  C := alpha*A*B' + beta*C */
-
-            for j in 1 ... __N {
-                if (__beta == 0) {
-                    for i in 1 ... __M {
-                        C(i,j,0)
+        if transB {
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Double = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[l + r * Int(__K)] * __B[l + c * Int(__K)]
                     }
-                } else if (__beta != 1) {
-                    for i in 1 ... __M {
-                        C(i,j, __beta * C(i,j))
-                    }
-                }
-                for l in 1 ... __K {
-                    if (B(j,l) != 0) {
-                        let temp = __alpha * B(j,l)
-                        for i in 1 ... __M {
-                            C(i,j, C(i,j) + temp * A(i,l))
-                        }
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         } else {
-/*           Form  C := alpha*A'*B' + beta*C */
-
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    var temp: Double = 0
-                    for l in 1 ... __K {
-                        temp += A(l,i) * B(j,l);
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Double = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[l + r * Int(__K)] * __B[l * Int(__N) + c]
                     }
-                    if (__beta == 0) {
-                        C(i,j,__alpha * temp)
-                    } else {
-                        C(i,j, __alpha * temp + __beta * C(i,j))
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         }
@@ -993,159 +852,80 @@ import Accelerate
 #endif
 
 func cblas_igemm(_ __Order: CBLAS_ORDER, _ __TransA: CBLAS_TRANSPOSE, _ __TransB: CBLAS_TRANSPOSE, _ __M: Int32, _ __N: Int32, _ __K: Int32, _ __alpha: Int32, _ __A: UnsafePointer<Int32>, _ __lda: Int32, _ __B: UnsafePointer<Int32>, _ __ldb: Int32, _ __beta: Int32, _ __C: UnsafeMutablePointer<Int32>, _ __ldc: Int32) {
-    // Adapted from NetLib
-    @inline(__always) func A(_ I: Int32, _ J: Int32) -> Int32 { __A[Int((I)-1 + ((J)-1) * (__lda))] }
-    @inline(__always) func B(_ I: Int32, _ J: Int32) -> Int32 { __B[Int((I)-1 + ((J)-1) * (__ldb))] }
-    @inline(__always) func C(_ I: Int32, _ J: Int32) -> Int32 { __C[Int((I)-1 + ((J)-1) * (__ldc))] }
-    @inline(__always) func C(_ I: Int32, _ J: Int32, _ V: Int32) { __C[Int((I)-1 + ((J)-1) * (__ldc))] = V }
+    if __Order == CblasColMajor {
+        fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
+    }
     
-    let nota = __TransA == CblasNoTrans
-    let notb = __TransB == CblasNoTrans
-    let nrowa: Int32
-    let ncola: Int32
-    let nrowb: Int32
+    let transA = (__TransA == CblasTrans)
+    let transB = (__TransB == CblasTrans)
     
-    if nota {
-        nrowa = __M
-        ncola = __K
-    } else {
-        nrowa = __K
-        ncola = __M
-    }
-    if notb {
-        nrowb = __K
-    } else {
-        nrowb = __N
-    }
-
-    /*     Test the input parameters. */
-    var info = 0;
-    if (!nota && __TransA != CblasTrans) {
-        info = 1;
-    } else if (!notb && __TransB != CblasTrans) {
-        info = 2
-    } else if (__M < 0) {
-        info = 3
-    } else if (__N < 0) {
-        info = 4
-    } else if (__K < 0) {
-        info = 5
-    } else if (__lda < max(1, nrowa)) {
-        info = 8
-    } else if (__ldb < max(1, nrowb)) {
-        info = 10
-    } else if (__ldc < max(1, __M)) {
-        info = 13
-    }
-    if (info != 0) {
-        fatalError("cblas_sgemm error: \(info)")
-    }
-
-    /*     Quick return if possible. */
-    if (__M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1) {
+    if __M == 0 || __N == 0 || (__alpha == 0 || __K == 0) && __beta == 1 {
         return
     }
-
-    /*     And if  alpha.eq.zero. */
-
-    if (__alpha == 0) {
-        if (__beta == 0) {
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    C(i,j,0)
-                    /* L10: */
-                }
-                /* L20: */
+    
+    if __alpha == 0 {
+        if __beta == 0 {
+            for i in 0 ..< Int(__M * __N) {
+                __C[i] = 0
             }
         } else {
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    C(i,j,__beta * C(i,j))
-                    /* L30: */
-                }
-                /* L40: */
+            for i in 0 ..< Int(__M * __N) {
+                __C[i] *= __beta
             }
         }
-        return
     }
-
-    /*     Start the operations. */
-
-    if (notb) {
-        if (nota) {
-    /*           Form  C := alpha*A*B + beta*C. */
-            for j in 1 ... __N {
-                if (__beta == 0) {
-                    for i in 1 ... __M {
-                        C(i,j,0)
+    
+    if __beta == 0 {
+        for i in 0 ..< Int(__M * __N) {
+            __C[i] = 0
+        }
+    } else {
+        for i in 0 ..< Int(__M * __N) {
+            __C[i] *= __beta
+        }
+    }
+    
+    if transA {
+        if transB {
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Int32 = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[r + l * Int(__M)] * __B[l + c * Int(__K)]
                     }
-                } else if (__beta != 1) {
-                    for i in 1 ... __M {
-                        C(i,j,__beta * C(i,j))
-                    }
-                }
-                for l in 1 ... __K {
-                    if (B(l,j) != 0) {
-                        let temp = __alpha * B(l,j);
-                        for i in 1 ... __M {
-                            C(i,j, C(i,j) + temp * A(i,l))
-                        }
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         } else {
-/*           Form  C := alpha*A'*B + beta*C */
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    var temp: Int32 = 0
-                    for l in 1 ... __K {
-                        temp += A(l,i) * B(l,j)
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Int32 = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[r + l * Int(__M)] * __B[l * Int(__N) + c]
                     }
-                    if (__beta == 0) {
-                        C(i,j,__alpha * temp)
-                    } else {
-                        C(i,j,__alpha * temp + __beta * C(i,j))
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         }
     } else {
-        if (nota) {
-/*           Form  C := alpha*A*B' + beta*C */
-
-            for j in 1 ... __N {
-                if (__beta == 0) {
-                    for i in 1 ... __M {
-                        C(i,j,0)
+        if transB {
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Int32 = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[l + r * Int(__K)] * __B[l + c * Int(__K)]
                     }
-                } else if (__beta != 1) {
-                    for i in 1 ... __M {
-                        C(i,j, __beta * C(i,j))
-                    }
-                }
-                for l in 1 ... __K {
-                    if (B(j,l) != 0) {
-                        let temp = __alpha * B(j,l)
-                        for i in 1 ... __M {
-                            C(i,j, C(i,j) + temp * A(i,l))
-                        }
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         } else {
-/*           Form  C := alpha*A'*B' + beta*C */
-
-            for j in 1 ... __N {
-                for i in 1 ... __M {
-                    var temp: Int32 = 0
-                    for l in 1 ... __K {
-                        temp += A(l,i) * B(j,l);
+            for r in 0 ..< Int(__M) {
+                for c in 0 ..< Int(__N) {
+                    var tmp: Int32 = 0
+                    for l in 0 ..< Int(__K) {
+                        tmp += __A[l + r * Int(__K)] * __B[l * Int(__N) + c]
                     }
-                    if (__beta == 0) {
-                        C(i,j,__alpha * temp)
-                    } else {
-                        C(i,j, __alpha * temp + __beta * C(i,j))
-                    }
+                    __C[r * Int(__N) + c] = __alpha * tmp
                 }
             }
         }
