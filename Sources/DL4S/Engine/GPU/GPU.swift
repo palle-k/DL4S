@@ -23,9 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
+#if canImport(Metal)
 import Foundation
 import Metal
-
 
 public struct GPU: DeviceType {
     public typealias Memory = VRAMAllocator
@@ -344,3 +344,5 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
 }
+
+#endif
