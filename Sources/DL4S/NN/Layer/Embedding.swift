@@ -136,8 +136,6 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
     
     public func callAsFunction(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Embedding") {
-            precondition(inputs.count == 1)
-            
             let embedded = (0 ..< inputs.shape[0]).map { i in
                 embeddingMatrix[Int(inputs[i].item)].unsqueezed(at: 0)
             }
