@@ -24,6 +24,9 @@
 //  SOFTWARE.
 
 import Foundation
+#if canImport(Accelerate)
+import Accelerate
+#endif
 
 
 public struct CPU: DeviceType {
@@ -122,7 +125,12 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: Buffer<Element, CPU>, count: Int) {
         // destination.memory.bindMemory(to: Element.self).assign(from: source.memory.bindMemory(to: Element.self).immutable, count: count)
-        memcpy(destination.memory.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
+        if let source = source as? Buffer<Float, CPU> {
+            Float.copy(values: source.memory.bindMemory(to: Float.self).immutable, srcStride: 1, result: destination.memory.bindMemory(to: Float.self), dstStride: 1, count: count)
+        } else {
+            memcpy(destination.memory.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
+        }
+        
     }
     
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: UnsafeMutableBufferPointer<Element>, count: Int) {
