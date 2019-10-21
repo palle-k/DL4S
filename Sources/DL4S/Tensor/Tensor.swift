@@ -165,6 +165,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         var grads: [UInt64: Tensor<Element, Device>] = [
             result.backpropID: Tensor(repeating: 1, shape: result.shape)
         ]
+        grads.reserveCapacity(operationOrder.count)
         
         for tensor in operationOrder.reversed() {
             guard let grad = grads[tensor.backpropID] else {
@@ -184,7 +185,9 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
                 } else {
                     srcGrad = fn(grad, nil)
                 }
+                #if DEBUG
                 assert(srcGrad.shape == src.shape)
+                #endif
                 
                 if retainGraph {
                     grads[src.backpropID] = srcGrad
