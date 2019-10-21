@@ -210,7 +210,9 @@ func vDSP_vdiv(_ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __A: UnsafePo
 }
 
 func vDSP_sve(_ __A: UnsafePointer<Float>, _ __I: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __N: vDSP_Length) {
-    __C[0] = cblas_sdot(Int32(__N), __A, Int32(__I), [0], 0)
+    for i in 0 ..< Int(__N) {
+        __C[0] += __A[i * __I]
+    }
 }
 
 func vDSP_vmsa(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __C: UnsafePointer<Float>, _ __D: UnsafeMutablePointer<Float>, _ __ID: vDSP_Stride, _ __N: vDSP_Length) {
@@ -226,13 +228,15 @@ func vDSP_vsma(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePo
 }
 
 func vDSP_mtrans(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __M: vDSP_Length, _ __N: vDSP_Length) {
-    let c = Int(__M)
-    let r = Int(__N)
-    for src_col in 0 ..< c {
-        for src_row in 0 ..< r {
-            __C[(src_col * r + src_row) * __IC] = __A[(src_col + src_row * c) * __IA]
-        }
-    }
+    MKL_Somatcopy(
+        82, // Row Major (ASCII R)
+        84, // Transpose (ASCII T)
+        Int(__M), Int(__N),
+        1, __A, // Scale __A by 1
+        Int(__M),
+        __C,
+        Int(__N)
+    )
 }
 
 func vDSP_dotpr(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __N: vDSP_Length) {
