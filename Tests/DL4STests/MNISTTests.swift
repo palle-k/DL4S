@@ -74,7 +74,7 @@ class MNISTTests: XCTestCase {
         for epoch in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
 
-            let predicted = optimizer.model(input)
+            let predicted = optimizer.model(input.view(as: [batchSize, 1, 28, 28]))
             let loss = categoricalCrossEntropy(expected: target, actual: predicted)
             
             let gradients = loss.gradients(of: optimizer.model.parameters)

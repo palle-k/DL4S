@@ -27,7 +27,7 @@
 
 import Foundation
 
-#if !canImport(Accelerate) || true
+#if !canImport(Accelerate)
 
 typealias vDSP_Stride = Int
 typealias vDSP_Length = UInt
