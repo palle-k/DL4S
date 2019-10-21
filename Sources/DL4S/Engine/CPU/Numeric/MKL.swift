@@ -159,13 +159,19 @@ func vDSP_vthr(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePo
 }
 
 func vDSP_vsadd(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePointer<Float>, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    cblas_scopy(Int32(__N), __A, Int32(__IA), __C, Int32(__IC))
-    cblas_saxpy(Int32(__N), 1, __B, 0, __C, Int32(__IC))
+    // cblas_scopy(Int32(__N), __A, Int32(__IA), __C, Int32(__IC))
+    // cblas_saxpy(Int32(__N), 1, __B, 0, __C, Int32(__IC))
+    for i in 0 ..< Int(__N) {
+        __C[i * __IC] = __A[i * __IA] + __B[0]
+    }
 }
 
 func vDSP_vsmul(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePointer<Float>, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    cblas_scopy(Int32(__N), __A, Int32(__IA), __C, Int32(__IC))
-    cblas_sscal(Int32(__N), __B[0], __C, Int32(__IC))
+    // cblas_scopy(Int32(__N), __A, Int32(__IA), __C, Int32(__IC))
+    // cblas_sscal(Int32(__N), __B[0], __C, Int32(__IC))
+    for i in 0 ..< Int(__N) {
+        __C[i * __IC] = __A[i * __IA] * __B[0]
+    }
 }
 
 func vDSP_svdiv(_ __A: UnsafePointer<Float>, _ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
@@ -187,9 +193,11 @@ func vDSP_vmul(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePo
 }
 
 func vDSP_vneg(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
-    cblas_scopy(Int32(__N), __A, Int32(__IA), __C, Int32(__IC))
-    cblas_sscal(Int32(__N), -1, __C, Int32(__IC))
-
+    // cblas_scopy(Int32(__N), __A, Int32(__IA), __C, Int32(__IC))
+    // cblas_sscal(Int32(__N), -1, __C, Int32(__IC))
+    for i in 0 ..< Int(__N) {
+        __C[i * __IC] = -__A[i * __IA]
+    }
 }
 
 func vDSP_vsub(_ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
@@ -199,8 +207,11 @@ func vDSP_vsub(_ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __A: UnsafePo
 }
 
 func vDSP_vma(_ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __C: UnsafePointer<Float>, _ __IC: vDSP_Stride, _ __D: UnsafeMutablePointer<Float>, _ __ID: vDSP_Stride, _ __N: vDSP_Length) {
-    vDSP_vmul(__A, __IA, __B, __IB, __D, __ID, __N)
-    vDSP_vadd(__C, __IC, __D, __ID, __D, __ID, __N)
+    // vDSP_vmul(__A, __IA, __B, __IB, __D, __ID, __N)
+    // vDSP_vadd(__C, __IC, __D, __ID, __D, __ID, __N)
+    for i in 0 ..< Int(__N) {
+        __D[i * __ID] = __A[i * __IA] * __B[i * __IB] + __C[i * __IC]
+    }
 }
 
 func vDSP_vdiv(_ __B: UnsafePointer<Float>, _ __IB: vDSP_Stride, _ __A: UnsafePointer<Float>, _ __IA: vDSP_Stride, _ __C: UnsafeMutablePointer<Float>, _ __IC: vDSP_Stride, _ __N: vDSP_Length) {
