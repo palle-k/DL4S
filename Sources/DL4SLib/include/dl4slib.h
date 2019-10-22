@@ -1,5 +1,5 @@
 //
-//  dl4s.lib
+//  dl4slib.h
 //  DL4SLib
 //
 //  Created by Palle Klewitz on 20.10.19.
