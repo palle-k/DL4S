@@ -27,15 +27,16 @@ import Foundation
 #if canImport(Accelerate)
 import Accelerate
 #endif
+import DL4SLib
 
 extension Float: CPUNumeric {
     
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {
-        vDSP_vfill([value], result.pointer(capacity: count), stride, UInt(count))
+        d4lib_sfill([value], result.pointer(capacity: count), stride, UInt(count))
     }
     
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vfill([value], result.pointer(capacity: count), 1, UInt(count))
+        d4lib_sfill([value], result.pointer(capacity: count), 1, UInt(count))
     }
     
     public static func relu(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
@@ -75,7 +76,7 @@ extension Float: CPUNumeric {
     }
     
     public static func vAdd(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vadd(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_saddv(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
     }
     
     public static func vNeg(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
@@ -166,12 +167,7 @@ extension Float: CPUNumeric {
     }
     
     public static func heaviside(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        let srcPtr = values.pointer(capacity: count)
-        let dstPtr = result.pointer(capacity: count)
-        
-        for i in 0 ..< count {
-            dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
-        }
+        d4lib_sheaviside(values.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func copy(values: UnsafeBufferPointer<Float>, srcStride: Int, result: UnsafeMutableBufferPointer<Float>, dstStride: Int, count: Int) {

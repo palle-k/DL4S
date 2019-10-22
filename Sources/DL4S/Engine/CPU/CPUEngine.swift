@@ -24,6 +24,7 @@
 //  SOFTWARE.
 
 import Foundation
+import DL4SLib
 
 
 extension ShapedBuffer where Device == CPU {
@@ -811,6 +812,11 @@ public struct CPUEngine: EngineType {
     }
     
     public static func heaviside<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
+        if let values = values as? ShapedBuffer<Float, CPU>, let result = result as? ShapedBuffer<Float, CPU> {
+            Float.heaviside(values: values.immutable, result: result.pointer, count: result.count)
+            return
+        }
+        
         let srcPtr = values.pointer.pointer(capacity: result.count)
         let dstPtr = result.pointer.pointer(capacity: result.count)
         
@@ -1064,6 +1070,27 @@ public struct CPUEngine: EngineType {
     @_specialize(where N == Float)
     public static func img2col<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(values.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
+        if let values = values as? ShapedBuffer<Float, CPU>, let result = result as? ShapedBuffer<Float, CPU> {
+            // no C implementation: 14.5 sec
+            //    C implementation: 12.8 sec
+            d4lib_img2col(
+                values.immutable.baseAddress!,
+                result.pointer.baseAddress!,
+                D4LIB_Img2ColSetup(
+                    batch_size: Int32(values.shape[0]),
+                    channels: Int32(values.shape[1]),
+                    height: Int32(values.shape[2]),
+                    width: Int32(values.shape[3]),
+                    kernel_height: Int32(kernelHeight),
+                    kernel_width: Int32(kernelWidth),
+                    padding: Int32(padding),
+                    stride: Int32(stride)
+                )
+            )
+            
+            return
+        }
+        
         
         let batchSize = values.shape[0]
         let channels = values.shape[1]
@@ -1136,6 +1163,24 @@ public struct CPUEngine: EngineType {
     @_specialize(where N == Float)
     public static func col2img<N: NumericType>(matrix: ShapedBuffer<N, CPU>, image: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(image.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
+        if let matrix = matrix as? ShapedBuffer<Float, CPU>, let image = image as? ShapedBuffer<Float, CPU> {
+            d4lib_col2img(
+                matrix.immutable.baseAddress!,
+                image.pointer.baseAddress!,
+                D4LIB_Img2ColSetup(
+                    batch_size: Int32(image.shape[0]),
+                    channels: Int32(image.shape[1]),
+                    height: Int32(image.shape[2]),
+                    width: Int32(image.shape[3]),
+                    kernel_height: Int32(kernelHeight),
+                    kernel_width: Int32(kernelWidth),
+                    padding: Int32(padding),
+                    stride: Int32(stride)
+                )
+            )
+            
+            return
+        }
         
         let batchSize = image.shape[0]
         let channels = image.shape[1]
