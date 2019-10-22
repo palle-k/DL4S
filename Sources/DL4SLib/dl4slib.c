@@ -26,7 +26,7 @@
 #include "dl4slib.h"
 #include <immintrin.h>
 
-void avxcpy(void* dst, const void* src, size_t count) {
+void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
 #ifdef __AVX2__
     const __m256i *pSrc = src;
     __m256i *pDest = dst;
