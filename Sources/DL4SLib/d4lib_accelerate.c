@@ -25,8 +25,8 @@
 
 #include <stdio.h>
 
-#ifdef __APPLE__
-#warning Using Accelerate Framework
+#if defined(__APPLE__)
+#pragma message "Using Accelerate Framework"
 #include "d4lib.h"
 #include <Accelerate/Accelerate.h>
 

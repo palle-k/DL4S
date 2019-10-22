@@ -29,43 +29,697 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <stdio.h>
+
 
 void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
-    memcpy(dst, src, count);
-    return;
 #ifdef __AVX2__
-#warning "AVX2 enabled"
+#pragma message "AVX2 support enabled"
     const __m256i *pSrc = src;
     __m256i *pDest = dst;
-    size_t nVects = (count + sizeof(*pSrc) - 1) / sizeof(*pSrc);
+    size_t nVects = count / sizeof(*pSrc);
     for (; nVects > 0; nVects--, pSrc++, pDest++) {
         const __m256i loaded = _mm256_stream_load_si256(pSrc);
         _mm256_stream_si256(pDest, loaded);
     }
     _mm_sfence();
+    
+    for (int i = count & ~(sizeof(__m256i) - 1); i < count; i++) {
+        ((char*) dst)[i] = ((const char*) src)[i];
+    }
 #elif defined __AVX__
-#warning "AVX enabled"
+#pragma message "AVX support enabled"
     const __m128 *pSrc = src;
-    __m128 *pDest = dst;
-    size_t nVects = (count + sizeof(*pSrc) - 1) / sizeof(*pSrc);
+    __m128i *pDest = dst;
+    size_t nVects = count / sizeof(__m128i);
     for (; nVects > 0; nVects--, pSrc++, pDest++) {
-      __m128 buffer = _mm_load_ps(pSrc);
-      _mm_store_ps(pDest, buffer);
+        __m128i buffer = _mm_load_ps((float*) pSrc);
+        _mm_store_ps((float*) pDest, buffer);
     }
     _mm_sfence();
+    for (size_t i = count & ~(sizeof(__m128i) - 1); i < count; i++) {
+        ((char*) dst)[i] = ((const char*) src)[i];
+    }
 #else
-#warning "NO AVX enabled"
+#warning NO AVX enabled. Compile with -Xcc -mavx or -Xcc -mavx2
     const long long *pSrc = src;
     long long *pDest = dst;
     size_t nVects = (count + sizeof(*pSrc) - 1) / sizeof(*pSrc);
     for (; nVects > 0; nVects--, pSrc++, pDest++) {
         *pDest = *pSrc;
     }
+    for (size_t i = count & ~(sizeof(long long) - 1); i < count; i++) {
+        ((char*) dst)[i] = ((const char*) src)[i];
+    }
 #endif
 }
 
 
-#if !defined(__APPLE__) && !defined(__INTEL_MKL__)
+#if !defined(__APPLE__)
+#warning Compiling DL4S without any accelerator library.
+#define MAX(x, y) (x >= y ? x : y)
+
+// Vector Fill
+void d4lib_sfill(const float* src, float* dst, d4lib_stride dst_stride, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i * dst_stride] = *src;
+    }
+}
+void d4lib_dfill(const double* src, double* dst, d4lib_stride dst_stride, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i * dst_stride] = *src;
+    }
+}
+void d4lib_ifill(const int* src, int* dst, d4lib_stride dst_stride, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i * dst_stride] = *src;
+    }
+}
+
+// Vector square
+void d4lib_ssquare(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = src[i] * src[i];
+    }
+}
+void d4lib_dsquare(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = src[i] * src[i];
+    }
+}
+void d4lib_isquare(const int* src, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = src[i] * src[i];
+    }
+}
+
+// Vector threshold
+void d4lib_sthreshold(const float* src, const float* thresh, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(*thresh, src[i]);
+    }
+}
+void d4lib_dthreshold(const double* src, const double* thresh, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(*thresh, src[i]);
+    }
+}
+void d4lib_ithreshold(const int* src, const int* thresh, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(*thresh, src[i]);
+    }
+}
+
+// Vector negate
+void d4lib_sneg(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = -src[i];
+    }
+}
+void d4lib_dneg(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = -src[i];
+    }
+}
+void d4lib_ineg(const int* src, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = -src[i];
+    }
+}
+
+// Vector add
+void d4lib_saddv(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] + rhs[i];
+    }
+}
+void d4lib_daddv(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] + rhs[i];
+    }
+}
+void d4lib_iaddv(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] + rhs[i];
+    }
+}
+
+// Vector scalar add
+void d4lib_saddvs(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] + *rhs;
+    }
+}
+void d4lib_daddvs(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] + *rhs;
+    }
+}
+void d4lib_iaddvs(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] + *rhs;
+    }
+}
+
+// Vector subtract
+void d4lib_ssubv(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] - rhs[i];
+    }
+}
+void d4lib_dsubv(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] - rhs[i];
+    }
+}
+void d4lib_isubv(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] - rhs[i];
+    }
+}
+
+// Scalar vector subtract
+void d4lib_ssubsv(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *lhs - rhs[i];
+    }
+}
+void d4lib_dsubsv(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *lhs - rhs[i];
+    }
+}
+void d4lib_isubsv(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *lhs - rhs[i];
+    }
+}
+
+// Vector multiply
+void d4lib_smulv(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] * rhs[i];
+    }
+}
+void d4lib_dmulv(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] * rhs[i];
+    }
+}
+void d4lib_imulv(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] * rhs[i];
+    }
+}
+
+// Vector scalar multiply
+void d4lib_smulvs(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] * *rhs;
+    }
+}
+void d4lib_dmulvs(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] * *rhs;
+    }
+}
+void d4lib_imulvs(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] * *rhs;
+    }
+}
+
+// Vector divide
+void d4lib_sdivv(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] / rhs[i];
+    }
+}
+void d4lib_ddivv(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] / rhs[i];
+    }
+}
+void d4lib_idivv(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = lhs[i] / rhs[i];
+    }
+}
+
+// Scalar vector divide
+void d4lib_sdivsv(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *lhs / rhs[i];
+    }
+}
+void d4lib_ddivsv(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *lhs / rhs[i];
+    }
+}
+void d4lib_idivsv(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *lhs / rhs[i];
+    }
+}
+
+// Vector Sum
+void d4lib_ssum(const float* src, d4lib_stride src_stride, float* dst, d4lib_length length) {
+    float sum = 0;
+    for (int i = 0; i < length; i++) {
+        sum += src[i];
+    }
+    *dst = sum;
+}
+void d4lib_dsum(const double* src, d4lib_stride src_stride, double* dst, d4lib_length length) {
+    double sum = 0;
+    for (int i = 0; i < length; i++) {
+        sum += src[i];
+    }
+    *dst = sum;
+}
+void d4lib_isum(const int* src, d4lib_stride src_stride, int* dst, d4lib_length length) {
+    int sum = 0;
+    for (int i = 0; i < length; i++) {
+        sum += src[i];
+    }
+    *dst = sum;
+}
+
+// Vector maximum value and index
+void d4lib_smaxi(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int max_i = -1;
+    float max_v = -INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] > max_v) {
+            max_v = src[i * src_stride];
+            max_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) max_i;
+    *dst = max_v;
+}
+void d4lib_dmaxi(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int max_i = -1;
+    double max_v = -INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] > max_v) {
+            max_v = src[i * src_stride];
+            max_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) max_i;
+    *dst = max_v;
+}
+void d4lib_imaxi(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int max_i = -1;
+    int max_v = -LONG_MIN;
+    for (int i = 0; i < length; i++) {
+        if (src[i] > max_v) {
+            max_v = src[i * src_stride];
+            max_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) max_i;
+    *dst = max_v;
+}
+
+// Vector vector max
+void d4lib_smax(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(lhs[i], rhs[i]);
+    }
+}
+void d4lib_dmax(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(lhs[i], rhs[i]);
+    }
+}
+void d4lib_imax(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(lhs[i], rhs[i]);
+    }
+}
+
+// Vector minimum value and index
+// Vector maximum value and index
+void d4lib_smini(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int min_i = -1;
+    float min_v = INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] < min_v) {
+            min_v = src[i * src_stride];
+            min_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) min_i;
+    *dst = min_v;
+}
+void d4lib_dmini(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int min_i = -1;
+    double min_v = INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] < min_v) {
+            min_v = src[i * src_stride];
+            min_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) min_i;
+    *dst = min_v;
+}
+void d4lib_imini(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int min_i = -1;
+    int min_v = LONG_MAX;
+    for (int i = 0; i < length; i++) {
+        if (src[i] < min_v) {
+            min_v = src[i * src_stride];
+            min_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) min_i;
+    *dst = min_v;
+}
+
+// Vector ramp
+void d4lib_sramp(const float* start, const float* increment, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *start + i * *increment;
+    }
+}
+void d4lib_dramp(const double* start, const double* increment, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *start + i * *increment;
+    }
+}
+void d4lib_iramp(const int* start, const int* increment, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *start + i * *increment;
+    }
+}
+
+// single vector math functions
+void d4lib_stanh(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = tanhf(src[i]);
+    }
+}
+void d4lib_dtanh(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = tanh(src[i]);
+    }
+}
+void d4lib_sexp(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = expf(src[i]);
+    }
+}
+void d4lib_dexp(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = exp(src[i]);
+    }
+}
+void d4lib_slog(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = logf(src[i]);
+    }
+}
+void d4lib_dlog(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = log(src[i]);
+    }
+}
+void d4lib_ssqrt(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = sqrtf(src[i]);
+    }
+}
+void d4lib_dsqrt(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = sqrt(src[i]);
+    }
+}
+void d4lib_ssin(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = sinf(src[i]);
+    }
+}
+void d4lib_dsin(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = sin(src[i]);
+    }
+}
+void d4lib_scos(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = cosf(src[i]);
+    }
+}
+void d4lib_dcos(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = cos(src[i]);
+    }
+}
+void d4lib_stan(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = tanf(src[i]);
+    }
+}
+void d4lib_dtan(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = tan(src[i]);
+    }
+}
+void d4lib_scopysign(const float* mag, const float* sig, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = copysignf(mag[i], sig[i]);
+    }
+}
+void d4lib_dcopysign(const double* mag, const double* sig, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = copysignf(mag[i], sig[i]);
+    }
+}
+void d4lib_sheaviside(const float* src, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = src[i] > 0 ? 1 : 0;
+    }
+}
+void d4lib_dheaviside(const double* src, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = src[i] > 0 ? 1 : 0;
+    }
+}
+
+void d4lib_scopy_strided(const float* src, d4lib_stride src_stride, float* dst, d4lib_stride dst_stride, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i * dst_stride] = src[i * src_stride];
+    }
+}
+void d4lib_dcopy_strided(const double* src, d4lib_stride src_stride, double* dst, d4lib_stride dst_stride, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i * dst_stride] = src[i * src_stride];
+    }
+}
+void d4lib_icopy_strided(const int* src, d4lib_stride src_stride, int* dst, d4lib_stride dst_stride, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i * dst_stride] = src[i * src_stride];
+    }
+}
+
+// MARK: Matrix Functions
+// Comparable to BLAS Level 3
+
+void d4lib_stranspose(const float* src, float* dst, d4lib_length src_cols, d4lib_length src_rows)  {
+    for (int x = 0; x < src_cols; x++) {
+        for (int y = 0; y < src_rows; y++) {
+            dst[y + x * src_rows] = src[y * src_cols + x];
+        }
+    }
+}
+
+void d4lib_dtranspose(const double* src, double* dst, d4lib_length src_cols, d4lib_length src_rows) {
+    for (int x = 0; x < src_cols; x++) {
+        for (int y = 0; y < src_rows; y++) {
+            dst[y + x * src_rows] = src[y * src_cols + x];
+        }
+    }
+}
+
+void d4lib_itranspose(const int* src, int* dst, d4lib_length src_cols, d4lib_length src_rows) {
+    for (int x = 0; x < src_cols; x++) {
+        for (int y = 0; y < src_rows; y++) {
+            dst[y + x * src_rows] = src[y * src_cols + x];
+        }
+    }
+}
+
+void d4lib_sgemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __transB, int __M, int __N, int __K, float alpha, const float* __A, int lda, const float* __B, int ldb, float beta, float* __C, int ldc) {
+    if (order == D4LIB_ColMajor) {
+        // fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
+        fprintf(stderr, "ColMajor layout is unsupported for d4lib_igemm.\n");
+        raise(SIGINT);
+    }
+    
+    bool transA = (__transA == D4LIB_Trans);
+    bool transB = (__transB == D4LIB_Trans);
+    
+    if (__M == 0 || __N == 0 || ((alpha == 0 || __K == 0) && beta == 1)) {
+        return;
+    }
+    
+    if (alpha == 0) {
+        if (beta == 0) {
+            for (int i = 0; i < __M * __N; i++) {
+                __C[i] = 0;
+            }
+        } else {
+            for (int i = 0; i < __M * __N; i++) {
+                __C[i] *= beta;
+            }
+        }
+    }
+    
+    if (beta == 0) {
+        for (int i = 0; i < __M * __N; i++) {
+            __C[i] = 0;
+        }
+    } else {
+        for (int i = 0; i < __M * __N; i++) {
+            __C[i] *= beta;
+        }
+    }
+    
+    if (transA) {
+        if (transB) {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    float tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[r + l * __M] * __B[l + c * __K];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        } else {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    float tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[r + l * __M] * __B[l * __N + c];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        }
+    } else {
+        if (transB) {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    float tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[l + r * __K] * __B[l + c * __K];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        } else {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    float tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[l + r * __K] * __B[l * __N + c];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        }
+    }
+}
+
+void d4lib_dgemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __transB, int __M, int __N, int __K, double alpha, const double* __A, int lda, const double* __B, int ldb, double beta, double* __C, int ldc) {
+    if (order == D4LIB_ColMajor) {
+        // fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
+        fprintf(stderr, "ColMajor layout is unsupported for d4lib_igemm.\n");
+        raise(SIGINT);
+    }
+    
+    bool transA = (__transA == D4LIB_Trans);
+    bool transB = (__transB == D4LIB_Trans);
+    
+    if (__M == 0 || __N == 0 || ((alpha == 0 || __K == 0) && beta == 1)) {
+        return;
+    }
+    
+    if (alpha == 0) {
+        if (beta == 0) {
+            for (int i = 0; i < __M * __N; i++) {
+                __C[i] = 0;
+            }
+        } else {
+            for (int i = 0; i < __M * __N; i++) {
+                __C[i] *= beta;
+            }
+        }
+    }
+    
+    if (beta == 0) {
+        for (int i = 0; i < __M * __N; i++) {
+            __C[i] = 0;
+        }
+    } else {
+        for (int i = 0; i < __M * __N; i++) {
+            __C[i] *= beta;
+        }
+    }
+    
+    if (transA) {
+        if (transB) {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    double tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[r + l * __M] * __B[l + c * __K];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        } else {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    double tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[r + l * __M] * __B[l * __N + c];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        }
+    } else {
+        if (transB) {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    double tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[l + r * __K] * __B[l + c * __K];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        } else {
+            for (int r = 0; r < __M; r++) {
+                for (int c = 0; c < __N; c++) {
+                    double tmp = 0;
+                    for (int l = 0; l < __K; l++) {
+                        tmp += __A[l + r * __K] * __B[l * __N + c];
+                    }
+                    __C[r * __N + c] = alpha * tmp;
+                }
+            }
+        }
+    }
+}
 
 #endif
 
