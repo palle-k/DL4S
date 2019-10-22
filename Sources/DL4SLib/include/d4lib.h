@@ -114,6 +114,11 @@ void d4lib_smaxi(const float* src, d4lib_stride src_stride, float* dst, d4lib_le
 void d4lib_dmaxi(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length);
 void d4lib_imaxi(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length);
 
+// Vector vector max
+void d4lib_smax(const float* lhs, const float* rhs, float* dst, d4lib_length length);
+void d4lib_dmax(const double* lhs, const double* rhs, double* dst, d4lib_length length);
+void d4lib_imax(const int* lhs, const int* rhs, int* dst, d4lib_length length);
+
 // Vector minimum value and index
 void d4lib_smini(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length);
 void d4lib_dmini(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length);
@@ -151,6 +156,10 @@ void d4lib_dcopysign(const double* mag, const double* sig, double* dst, d4lib_le
 
 void d4lib_sheaviside(const float* src, float* dst, d4lib_length length);
 void d4lib_dheaviside(const double* src, double* dst, d4lib_length length);
+
+void d4lib_scopy_strided(const float* src, d4lib_stride src_stride, float* dst, d4lib_stride dst_stride, d4lib_length length);
+void d4lib_dcopy_strided(const double* src, d4lib_stride src_stride, double* dst, d4lib_stride dst_stride, d4lib_length length);
+void d4lib_icopy_strided(const int* src, d4lib_stride src_stride, int* dst, d4lib_stride dst_stride, d4lib_length length);
 
 // MARK: Matrix Functions
 // Comparable to BLAS Level 3

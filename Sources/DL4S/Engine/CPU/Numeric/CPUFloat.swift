@@ -24,9 +24,6 @@
 //  SOFTWARE.
 
 import Foundation
-#if canImport(Accelerate)
-import Accelerate
-#endif
 import DL4SLib
 
 extension Float: CPUNumeric {
@@ -134,7 +131,7 @@ extension Float: CPUNumeric {
         var maxI: UInt = 0
         var maxV: Float = 0
         
-        vDSP_maxvi(values.pointer(capacity: count), 1, &maxV, &maxI, UInt(count))
+        d4lib_smaxi(values.pointer(capacity: count), 1, &maxV, &maxI, UInt(count))
         
         return (Int(maxI), maxV)
     }
@@ -143,7 +140,7 @@ extension Float: CPUNumeric {
         var minI: UInt = 0
         var minV: Float = 0
         
-        vDSP_minvi(values.pointer(capacity: count), 1, &minV, &minI, UInt(count))
+        d4lib_smini(values.pointer(capacity: count), 1, &minV, &minI, UInt(count))
         
         return (Int(minI), minV)
     }
@@ -152,7 +149,7 @@ extension Float: CPUNumeric {
         var minI: UInt = 0
         var minV: Float = 0
         
-        vDSP_maxvi(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
+        d4lib_smaxi(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
         
         return (Int(minI) / stride, minV)
     }
@@ -161,7 +158,7 @@ extension Float: CPUNumeric {
         var minI: UInt = 0
         var minV: Float = 0
         
-        vDSP_minvi(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
+        d4lib_smini(values.pointer(capacity: count), stride, &minV, &minI, UInt(count))
         
         return (Int(minI) / stride, minV)
     }
@@ -171,31 +168,31 @@ extension Float: CPUNumeric {
     }
     
     public static func copy(values: UnsafeBufferPointer<Float>, srcStride: Int, result: UnsafeMutableBufferPointer<Float>, dstStride: Int, count: Int) {
-        cblas_scopy(Int32(count), values.pointer(capacity: count * srcStride), Int32(srcStride), result.pointer(capacity: dstStride * count), Int32(dstStride))
+        d4lib_scopy_strided(values.pointer(capacity: count * srcStride), srcStride, result.pointer(capacity: dstStride * count), dstStride, UInt(count))
     }
     
     public static func arange(start: Float, end: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vramp([start], [end / Float(count)], result.pointer(capacity: count), 1, UInt(count))
+        d4lib_sramp([start], [end / Float(count)], result.pointer(capacity: count), UInt(count))
     }
     
     public static func max(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vmax(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_smax(lhs.pointer(capacity: count), rhs.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func min(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vmin(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_smax(lhs.pointer(capacity: count), rhs.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func sin(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vvsinf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+        d4lib_ssin(values.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func cos(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vvcosf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+        d4lib_scos(values.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func tan(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vvtanf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+        d4lib_stan(values.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func img2col(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
