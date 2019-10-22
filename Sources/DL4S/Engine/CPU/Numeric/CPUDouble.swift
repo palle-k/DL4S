@@ -27,6 +27,7 @@ import Foundation
 #if canImport(Accelerate)
 import Accelerate
 #endif
+import DL4SLib
 
 extension Double: CPUNumeric {
     public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, stride: Int, count: Int) {
@@ -190,5 +191,39 @@ extension Double: CPUNumeric {
     
     public static func tan(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         vvtan(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func img2col(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        d4lib_dimg2col(
+            values.baseAddress!,
+            result.baseAddress!,
+            D4LIB_Img2ColSetup(
+                batch_size: Int32(batchSize),
+                channels: Int32(channels),
+                height: Int32(height),
+                width: Int32(width),
+                kernel_height: Int32(kernelHeight),
+                kernel_width: Int32(kernelWidth),
+                padding: Int32(padding),
+                stride: Int32(stride)
+            )
+        )
+    }
+    
+    public static func col2img(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        d4lib_dcol2img(
+            values.baseAddress!,
+            result.baseAddress!,
+            D4LIB_Img2ColSetup(
+                batch_size: Int32(batchSize),
+                channels: Int32(channels),
+                height: Int32(height),
+                width: Int32(width),
+                kernel_height: Int32(kernelHeight),
+                kernel_width: Int32(kernelWidth),
+                padding: Int32(padding),
+                stride: Int32(stride)
+            )
+        )
     }
 }

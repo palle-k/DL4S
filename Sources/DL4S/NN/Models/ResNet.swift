@@ -83,6 +83,7 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Laye
             var x = inputs
             
             let r = downsample?(x) ?? x
+            
             x = conv1(x)
             x = bn1(x)
             x = relu(x)

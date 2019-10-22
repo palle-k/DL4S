@@ -40,70 +40,70 @@ extension Float: CPUNumeric {
     }
     
     public static func relu(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vthr(val.pointer(capacity: count), 1, [0.0], result.pointer(capacity: count), 1, UInt(count))
+        d4lib_sthreshold(val.pointer(capacity: count), [0.0], result.pointer(capacity: count), UInt(count))
     }
     
     public static func tanh(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vvtanhf(result.pointer(capacity: count), val.pointer(capacity: count), [Int32(count)])
+        d4lib_stanh(val.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func transpose(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, srcRows: Int, srcCols: Int) {
-        vDSP_mtrans(val.pointer(capacity: srcRows * srcCols), 1, result.pointer(capacity: srcRows * srcCols), 1, UInt(srcCols), UInt(srcRows))
+        d4lib_stranspose(val.pointer(capacity: srcRows * srcCols), result.pointer(capacity: srcRows * srcCols), UInt(srcCols), UInt(srcRows))
     }
     
     public static func sqrt(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vvsqrtf(result.pointer(capacity: count), val.pointer(capacity: count), [Int32(count)])
+        d4lib_ssqrt(val.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func vsAdd(lhs: UnsafeBufferPointer<Float>, rhs: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vsadd(lhs.pointer(capacity: count), 1, [rhs], result.pointer(capacity: count), 1, UInt(count))
+        d4lib_saddvs(lhs.pointer(capacity: count), [rhs], result.pointer(capacity: count), UInt(count))
     }
     
     public static func vsMul(lhs: UnsafeBufferPointer<Float>, rhs: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vsmul(lhs.pointer(capacity: count), 1, [rhs], result.pointer(capacity: count), 1, UInt(count))
+        d4lib_smulvs(lhs.pointer(capacity: count), [rhs], result.pointer(capacity: count), UInt(count))
     }
     
     public static func svDiv(lhs: Float, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_svdiv([lhs], rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_sdivsv([lhs], rhs.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func exp(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vvexpf(result.pointer(capacity: count), val.pointer(capacity: count), [Int32(count)])
+        d4lib_sexp(val.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func log(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vvlogf(result.pointer(capacity: count), val.pointer(capacity: count), [Int32(count)])
+        d4lib_slog(val.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func vAdd(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        d4lib_saddv(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_saddv(lhs.pointer(capacity: count), rhs.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func vNeg(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vneg(val.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_sneg(val.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func vSub(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vsub(rhs.pointer(capacity: count), 1, lhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_ssubv(lhs.pointer(capacity: count), rhs.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func vMul(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vmul(lhs.pointer(capacity: count), 1, rhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_smulv(lhs.pointer(capacity: count), rhs.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func vDiv(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
-        vDSP_vdiv(rhs.pointer(capacity: count), 1, lhs.pointer(capacity: count), 1, result.pointer(capacity: count), 1, UInt(count))
+        d4lib_sdivv(lhs.pointer(capacity: count), rhs.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
     public static func sum(val: UnsafeBufferPointer<Float>, count: Int) -> Float {
         var result: Float = 0
-        vDSP_sve(val.pointer(capacity: count), 1, &result, UInt(count))
+        d4lib_ssum(val.pointer(capacity: count), 1, &result, UInt(count))
         return result
     }
     
     public static func sum(val: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> Float {
         var result: Float = 0
-        vDSP_sve(val.pointer(capacity: count), stride, &result, UInt(count))
+        d4lib_ssum(val.pointer(capacity: count), stride, &result, UInt(count))
         return result
     }
     
@@ -111,11 +111,11 @@ extension Float: CPUNumeric {
         precondition((transposeFirst ? lhsShape.1 : lhsShape.0) == resultShape.0)
         precondition((transposeSecond ? rhsShape.0 : rhsShape.1) == resultShape.1)
         precondition((transposeFirst ? lhsShape.0 : lhsShape.1) == (transposeSecond ? rhsShape.1 : rhsShape.0))
-        
-        cblas_sgemm(
-            CblasRowMajor,
-            transposeFirst ? CblasTrans : CblasNoTrans,
-            transposeSecond ? CblasTrans : CblasNoTrans,
+
+        d4lib_sgemm(
+            D4LIB_RowMajor,
+            transposeFirst ? D4LIB_Trans : D4LIB_NoTrans,
+            transposeSecond ? D4LIB_Trans : D4LIB_NoTrans,
             Int32(resultShape.0),
             Int32(resultShape.1),
             Int32(transposeFirst ? lhsShape.0 : lhsShape.1),
@@ -196,5 +196,39 @@ extension Float: CPUNumeric {
     
     public static func tan(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         vvtanf(result.pointer(capacity: count), values.pointer(capacity: count), [Int32(count)])
+    }
+    
+    public static func img2col(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        d4lib_simg2col(
+            values.baseAddress!,
+            result.baseAddress!,
+            D4LIB_Img2ColSetup(
+                batch_size: Int32(batchSize),
+                channels: Int32(channels),
+                height: Int32(height),
+                width: Int32(width),
+                kernel_height: Int32(kernelHeight),
+                kernel_width: Int32(kernelWidth),
+                padding: Int32(padding),
+                stride: Int32(stride)
+            )
+        )
+    }
+    
+    public static func col2img(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        d4lib_scol2img(
+            values.baseAddress!,
+            result.baseAddress!,
+            D4LIB_Img2ColSetup(
+                batch_size: Int32(batchSize),
+                channels: Int32(channels),
+                height: Int32(height),
+                width: Int32(width),
+                kernel_height: Int32(kernelHeight),
+                kernel_width: Int32(kernelWidth),
+                padding: Int32(padding),
+                stride: Int32(stride)
+            )
+        )
     }
 }

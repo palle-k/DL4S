@@ -27,6 +27,7 @@ import Foundation
 #if canImport(Accelerate)
 import Accelerate
 #endif
+import DL4SLib
 
 
 extension Int32: CPUNumeric {
@@ -265,5 +266,39 @@ extension Int32: CPUNumeric {
     
     public static func tan(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         fatalError("\(#function) is unavailable for type \(Self.self)")
+    }
+    
+    public static func img2col(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        d4lib_iimg2col(
+            values.baseAddress!,
+            result.baseAddress!,
+            D4LIB_Img2ColSetup(
+                batch_size: Int32(batchSize),
+                channels: Int32(channels),
+                height: Int32(height),
+                width: Int32(width),
+                kernel_height: Int32(kernelHeight),
+                kernel_width: Int32(kernelWidth),
+                padding: Int32(padding),
+                stride: Int32(stride)
+            )
+        )
+    }
+    
+    public static func col2img(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        d4lib_icol2img(
+            values.baseAddress!,
+            result.baseAddress!,
+            D4LIB_Img2ColSetup(
+                batch_size: Int32(batchSize),
+                channels: Int32(channels),
+                height: Int32(height),
+                width: Int32(width),
+                kernel_height: Int32(kernelHeight),
+                kernel_width: Int32(kernelWidth),
+                padding: Int32(padding),
+                stride: Int32(stride)
+            )
+        )
     }
 }
