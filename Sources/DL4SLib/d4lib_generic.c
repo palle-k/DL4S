@@ -557,8 +557,7 @@ void d4lib_itranspose(const int* src, int* dst, d4lib_length src_cols, d4lib_len
 
 void d4lib_sgemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __transB, int __M, int __N, int __K, float alpha, const float* __A, int lda, const float* __B, int ldb, float beta, float* __C, int ldc) {
     if (order == D4LIB_ColMajor) {
-        // fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
-        fprintf(stderr, "ColMajor layout is unsupported for d4lib_igemm.\n");
+        fprintf(stderr, "ColMajor layout is unsupported for d4lib_sgemm.\n");
         raise(SIGINT);
     }
     
@@ -640,8 +639,7 @@ void d4lib_sgemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __
 
 void d4lib_dgemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __transB, int __M, int __N, int __K, double alpha, const double* __A, int lda, const double* __B, int ldb, double beta, double* __C, int ldc) {
     if (order == D4LIB_ColMajor) {
-        // fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
-        fprintf(stderr, "ColMajor layout is unsupported for d4lib_igemm.\n");
+        fprintf(stderr, "ColMajor layout is unsupported for d4lib_dgemm.\n");
         raise(SIGINT);
     }
     
@@ -725,7 +723,6 @@ void d4lib_dgemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __
 
 void d4lib_igemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __transB, int __M, int __N, int __K, int alpha, const int* __A, int lda, const int* __B, int ldb, int beta, int* __C, int ldc) {
     if (order == D4LIB_ColMajor) {
-        // fatalError("CblasColMajor is unsupported. This parameter only exists for compatibility purposes")
         fprintf(stderr, "ColMajor layout is unsupported for d4lib_igemm.\n");
         raise(SIGINT);
     }
