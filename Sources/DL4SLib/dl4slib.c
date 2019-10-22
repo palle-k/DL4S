@@ -30,7 +30,7 @@ void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
 #ifdef __AVX2__
     const __m256i *pSrc = src;
     __m256i *pDest = dst;
-    size_t nVects = count / sizeof(*pSrc);
+    size_t nVects = (count + sizeof(*pSrc) - 1) / sizeof(*pSrc);
     for (; nVects > 0; nVects--, pSrc++, pDest++) {
         const __m256i loaded = _mm256_stream_load_si256(pSrc);
         _mm256_stream_si256(pDest, loaded);
@@ -39,7 +39,7 @@ void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
 #else
     const __m128 *pSrc = src;
     __m128 *pDest = dst;
-    size_t nVects = count / sizeof(*pSrc);
+    size_t nVects = (count + sizeof(*pSrc) - 1) / sizeof(*pSrc);
     for (; nVects > 0; nVects--, pSrc++, pDest++) {
       __m128 buffer = _mm_load_ps(pSrc);
       _mm_store_ps(pDest, buffer);
