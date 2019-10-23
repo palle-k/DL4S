@@ -4,7 +4,7 @@
 ![CocoaPods](https://img.shields.io/cocoapods/p/DL4S.svg)
 [![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
 
-This framework provides reverse mode automatic differentiation (including second, third, etc. derivatives),
+This framework provides reverse mode automatic differentiation,
 vectorized implementations of common matrix and vector operators and high level neural network operations,
 such as convolution, recurrent units, and more.
 
@@ -30,7 +30,7 @@ such as convolution, recurrent units, and more.
 ```ruby
 target 'Your-App-Name' do
     use_frameworks!
-    pod 'DL4S', '~> 0.1.0'
+    pod 'DL4S', '~> 0.2.0'
 end
 ```
 
