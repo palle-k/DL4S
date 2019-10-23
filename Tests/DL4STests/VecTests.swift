@@ -28,7 +28,7 @@ import XCTest
 
 class VecTests: XCTestCase {
     func testVectorWriteItem() {
-        let vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
+        var vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
         
         vector[0, 0] = 2
         print(vector)
@@ -43,7 +43,7 @@ class VecTests: XCTestCase {
     }
     
     func testVectorWriteItem2() {
-        let vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
+        var vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
         
         vector[2, 1] = 10
         print(vector)
@@ -65,32 +65,21 @@ class VecTests: XCTestCase {
     }
     
     func testVectorWrite() {
-        let v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
+        var v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
         // v[0,0] = 10
         v[2,1] = 20
         print(v)
     }
     
-    func testVecOps() {
-        let v: Tensor<Float, CPU> = Tensor([0,1,2,3,2,1], shape:3,2)
-        
-        let result = log(exp(v * v))
-        print(result)
-        result.backwards()
-        
-        debugPrint(v)
-    }
-    
     func testVecOps2() {
-        func sigmoid<Element>(_ v: Tensor<Element, CPU>) -> Tensor<Element, CPU> {
-            return 1 / (1 + exp(0-v))
-        }
-        let input: Tensor<Double, CPU> = 0
+        var input: Tensor<Double, CPU> = 0
         input.requiresGradient = true
         let result = sigmoid(input)
         
+        let grad = result.gradients(of: [input])[0]
+        
         debugPrint(result)
-        XCTAssertEqual(result.gradientItem, 0)
+        XCTAssertEqual(grad.item, 0.25)
         XCTAssertEqual(result.item, 0.5)
     }
     
@@ -98,7 +87,7 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>([1,2,3])
         let b = Tensor<Float, CPU>([4,5,6])
         
-        let result = mmul(a, b)
+        let result = matMul(a, b)
         
         XCTAssertEqual(result.dim, 0)
         XCTAssertEqual(result.item, 32)
@@ -108,7 +97,7 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>([1,2,3])
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
-        let result = mmul(c, a)
+        let result = matMul(c, a)
         
         print(result)
         
@@ -122,7 +111,7 @@ class VecTests: XCTestCase {
         let d = Tensor<Float, CPU>([1,2])
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
-        let result = mmul(d, c)
+        let result = matMul(d, c)
         print(result)
         
         XCTAssertEqual(result.dim, 1)
@@ -135,7 +124,7 @@ class VecTests: XCTestCase {
     func testMMul2x2() {
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
-        let result = mmul(c.T, c)
+        let result = matMul(c.T, c)
         print(result)
         
         XCTAssertEqual(result.shape, [3, 3])
@@ -152,7 +141,7 @@ class VecTests: XCTestCase {
     func testMMul2x2_2() {
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
         
-        let result = mmul(c, c.T)
+        let result = matMul(c, c.T)
         print(result)
         
         XCTAssertEqual(result.shape, [2, 2])
@@ -167,8 +156,7 @@ class VecTests: XCTestCase {
     }
     
     func testLog() {
-        let x = Tensor<Float, CPU>(repeating: 0, shape: 10, 10)
-        Random.fill(x, a: -5, b: 5)
+        let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, min: -5, max: 5)
         
         let result = log(exp(x))
         
@@ -185,20 +173,19 @@ class VecTests: XCTestCase {
         let c = Tensor<Float, CPU>([[1, 1, 1], [2, 2, 2]], requiresGradient: true)
         
         let result = (a + b) * c
-        result.backwards()
+        let grads = result.gradients(of: [a, b, c])
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
-        print(c.gradientDescription!)
+        print(grads[0])
+        print(grads[1])
+        print(grads[2])
     }
     
     func testGradientExp() {
         let a = Tensor<Float, CPU>([[1, 2, 3], [0, -1, -2]], requiresGradient: true)
         
         let result = exp(a) * 2
-        result.backwards()
-        
-        print(a.gradientDescription!)
+        let aGrad = result.gradients(of: [a])[0]
+        print(aGrad)
         
         let e = Float(M_E)
         
@@ -209,7 +196,7 @@ class VecTests: XCTestCase {
         
         for r in 0 ..< result.shape[0] {
             for c in 0 ..< result.shape[1] {
-                XCTAssertEqual(a[r, c].gradientItem!, expected[r][c], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
             }
         }
     }
@@ -218,8 +205,8 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>([[1, 2, 3], [10, 20, 30]], requiresGradient: true)
         
         let result = log(a) * 4
-        result.backwards()
-        print(a.gradientDescription!)
+        let aGrad = result.gradients(of: [a])[0]
+        print(aGrad)
         
         let expected: [[Float]] = [
             [4, 2, 4.0 / 3.0],
@@ -228,7 +215,7 @@ class VecTests: XCTestCase {
         
         for r in 0 ..< result.shape[0] {
             for c in 0 ..< result.shape[1] {
-                XCTAssertEqual(a[r, c].gradientItem!, expected[r][c], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
             }
         }
     }
@@ -237,15 +224,15 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>([1, 2, 3], requiresGradient: true)
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
         
-        let result = mmul(c, a) * 2
+        let result = matMul(c, a) * 2
         print(result)
         
-        result.backwards()
-        print(a.gradientDescription!)
-        print(c.gradientDescription!)
+        let grads = result.gradients(of: [a, c])
+        print(grads[0])
+        print(grads[1])
     }
     
-    func testDiv() {
+    func testNeg() {
         let a = Tensor<Float, CPU>([1,2,3,4,5])
         
         let result = -a
@@ -253,38 +240,39 @@ class VecTests: XCTestCase {
     }
     
     func testSigmoid() {
-        let a = Tensor<Float, CPU>(repeating: 0, shape: 10)
-        Random.fillNormal(a)
+        let a = Tensor<Float, CPU>(normalDistributedWithShape: 10)
         
         let elements = (0 ..< 10).map { (x: Int) in a[x].item}
         
         let ref = elements.map {1 / (1 + exp(-$0))}
         let result = 1 / (1 + exp(-a))
         
-        print(a, ref)
-        
+        print(a)
+
+        print(elements.map {1 / $0})
+        print(1 / a)
+                
         for i in 0 ..< 10 {
             XCTAssertEqual(result[i].item, ref[i], accuracy: 0.0001)
         }
     }
     
     func testAddBackwards() {
-        //let a = Vector<Float>([[1,2],[3,4],[5,6]])
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b + c
-        result.backwards()
+        let grads = result.gradients(of: [b, c])
         
-        print(b.gradientDescription!)
-        print(c.gradientDescription!)
+        print(grads[0])
+        print(grads[1])
         
         let bExpected: [Float] = [1, 1]
         let cExpected: [Float] = [1, 1]
         
         for i in 0 ..< 2 {
-            XCTAssertEqual(b[i].gradientItem!, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(c[i].gradientItem!, cExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
     
@@ -293,21 +281,21 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a + b) * 2
-        result.backwards()
+        let grads = result.gradients(of: [a, b])
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        print(grads[0])
+        print(grads[1])
         
         let aExpected: [[Float]] = [[2,2],[2,2],[2,2]]
         let bExpected: [Float] = [6,6]
         
         for i in 0 ..< 2 {
-            XCTAssertEqual(b[i].gradientItem!, bExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[1][i].item, bExpected[i], accuracy: 0.0001)
         }
         
         for r in 0 ..< 3 {
             for c in 0 ..< 2 {
-                XCTAssertEqual(a[r, c].gradientItem, aExpected[r][c])
+                XCTAssertEqual(grads[0][r, c].item, aExpected[r][c])
             }
         }
     }
@@ -317,16 +305,15 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a + b) * 2
-        result.backwards()
+        let aGrad = result.gradients(of: [a])[0]
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        print(aGrad)
         
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -336,37 +323,35 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b + a) * 2
-        result.backwards()
+        let aGrad = result.gradients(of: [a])[0]
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        print(aGrad)
         
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
     
     func testSubBackwards() {
-        //let a = Vector<Float>([[1,2],[3,4],[5,6]])
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b - c
-        result.backwards()
+        let grads = result.gradients(of: [b, c])
         
-        print(b.gradientDescription!)
-        print(c.gradientDescription!)
+        print(grads[0])
+        print(grads[1])
         
         let bExpected: [Float] = [1, 1]
         let cExpected: [Float] = [-1, -1]
         
         for i in 0 ..< 2 {
-            XCTAssertEqual(b[i].gradientItem!, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(c[i].gradientItem!, cExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
     
@@ -375,16 +360,15 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a - b) * 2
-        result.backwards()
+        let aGrad = result.gradients(of: [a])[0]
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        print(aGrad)
         
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -394,37 +378,36 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b - a) * 2
-        result.backwards()
+        let aGrad = result.gradients(of: [a])[0]
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        print(aGrad)
         
         let refGrad: [[Float]] = [[-2.0, -2.0], [-2.0, -2.0], [-2.0, -2.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
     
     func testMulBackwards() {
-        //let a = Vector<Float>([[1,2],[3,4],[5,6]])
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b * c
-        result.backwards()
         
-        print(b.gradientDescription!)
-        print(c.gradientDescription!)
+        let grads = result.gradients(of: [b, c])
+        
+        print(grads[0])
+        print(grads[1])
         
         let bExpected: [Float] = [1, 2]
         let cExpected: [Float] = [1, 2]
         
         for i in 0 ..< 2 {
-            XCTAssertEqual(b[i].gradientItem!, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(c[i].gradientItem!, cExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
     
@@ -436,16 +419,15 @@ class VecTests: XCTestCase {
         
         print(a * b)
         
-        result.backwards()
+        let aGrad = result.gradients(of: [a])[0]
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        print(aGrad)
         
         let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -455,37 +437,36 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b * a) * 2
-        result.backwards()
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        let aGrad = result.gradients(of: [a])[0]
+        
+        print(aGrad)
         
         let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
     
     func testDivBackwards() {
-        //let a = Vector<Float>([[1,2],[3,4],[5,6]])
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = b / c
-        result.backwards()
+        let grads = result.gradients(of: [b, c])
         
-        print(b.gradientDescription!)
-        print(c.gradientDescription!)
+        print(grads[0])
+        print(grads[1])
         
         let bExpected: [Float] = [1, 0.5]
         let cExpected: [Float] = [-1, -0.5]
         
         for i in 0 ..< 2 {
-            XCTAssertEqual(b[i].gradientItem!, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(c[i].gradientItem!, cExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
     
@@ -494,16 +475,15 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (a / b) * 2
-        result.backwards()
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        let aGrad = result.gradients(of: [a])[0]
+        print(aGrad)
         
         let refGrad: [[Float]] = [[2.0, 1.0], [2.0, 1.0], [2.0, 1.0]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -513,16 +493,14 @@ class VecTests: XCTestCase {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         
         let result = (b / a) * 2
-        result.backwards()
         
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        let grads = result.gradients(of: [a, b])
         
         let refGrad: [[Float]] = [[-2.0, -1.0], [-0.22222222, -0.25], [-0.08, -0.11111111]]
         
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(a[row, column].gradientItem!, refGrad[row][column], accuracy: 0.0001)
+                XCTAssertEqual(grads[0][row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
@@ -542,7 +520,14 @@ class VecTests: XCTestCase {
     
     func testPadding() {
         let a = Tensor<Float, CPU>(repeating: 1, shape: 1, 28, 28)
-        let padded = a.padded([0, 2, 2])
+        let padded = a.padded(padding: [0, 2, 2])
         print(padded)
+    }
+
+    func testIPP() {
+        let a = Tensor<Float, CPU>([[1,2], [3,4]])
+        let b = Tensor<Float, CPU>([[1,2], [3,4]])
+        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+        print(c.T)
     }
 }

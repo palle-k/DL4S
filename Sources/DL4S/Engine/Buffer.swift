@@ -119,12 +119,22 @@ extension ShapedBuffer: CustomStringConvertible {
         return generateDescription()
     }
     
+    private func formatElement(_ element: Element) -> String {
+        if let f = element as? Float {
+            return f.format(maxDecimals: 3)
+        } else if let d = element as? Double {
+            return d.format(maxDecimals: 3)
+        } else {
+            return "\(element)"
+        }
+    }
+    
     func generateDescription() -> String {
         if dim == 0 {
-            return "\(values.pointee)"
+            return "\(formatElement(values.pointee))"
         } else if dim == 1 {
             let dim = self.shape[0]
-            return "[\((0 ..< dim).map {"\(values[$0])"}.joined(separator: ", "))]"
+            return "[\((0 ..< dim).map {"\(formatElement(values[$0]))"}.joined(separator: ", "))]"
         } else {
             let firstDim = shape.first!
             let restDim = Array(shape.dropFirst())
@@ -135,7 +145,7 @@ extension ShapedBuffer: CustomStringConvertible {
                 ShapedBuffer(values: values.advanced(by: stride * $0), shape: restDim).generateDescription()
             }
             
-            return "[\(slices.joined(separator: "\n").replacingOccurrences(of: "\n", with: "\n "))]"
+            return "[\(slices.joined(separator: ",\n").replacingOccurrences(of: "\n", with: "\n "))]"
         }
     }
 }

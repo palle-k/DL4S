@@ -27,15 +27,19 @@ import XCTest
 @testable import DL4S
 
 class EngineV2Tests: XCTestCase {
-    func testBroadcast() {
-        let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
-        let rhs = Tensor<Float, CPU>([1,2])
+    func testBroadcast1() {
+        // let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
+        // let rhs = Tensor<Float, CPU>([1,2])
         
-        let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
+        // let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
         
-        CPUEngine.broadcastMul(lhs: rhs.shapedValues, rhs: lhs.shapedValues, result: result.shapedValues)
+        // CPUEngine.broadcastMul(lhs: rhs.values, rhs: lhs.values, result: result.values)
         
-        print(result)
+        // print(result)
+        let lhs = Tensor<Float, CPU>([1,2,3,4])
+        let rhs = Tensor<Float, CPU>([2,4,6,8])
+
+        print(lhs + rhs)
     }
     
     func testBroadcast2() {
@@ -50,7 +54,7 @@ class EngineV2Tests: XCTestCase {
         
         let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
         
-        CPUEngine.broadcastAdd(lhs: lhs.shapedValues, rhs: rhs.shapedValues, result: result.shapedValues)
+        CPUEngine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: result.values)
         
         print(result)
     }
@@ -59,15 +63,14 @@ class EngineV2Tests: XCTestCase {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let b = Tensor<Float, CPU>([1,3,3,7])
         
-        let result = a.unsqueeze(at: 2) + b.view(as: -1, 1, 1)
+        let result = a.unsqueezed(at: 2) + b.view(as: -1, 1, 1)
         
-        print(result.squeeze())
+        print(result.squeezed())
     }
     
     func testBroadcast5() {
         let a = Tensor<Float, CPU>(repeating: 0, shape: 16, 16)
-        let b = Tensor<Float, CPU>(repeating: 0, shape: 16, 1)
-        Random.fill(b, a: 0, b: 1)
+        let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: 16, 1, min: 0, max: 1)
         
         let result = a + b
         
@@ -76,9 +79,9 @@ class EngineV2Tests: XCTestCase {
     
     func testReduceSum1() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
-        let v = a.shapedValues
+        let v = a.values
         let result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
-        let r = result.shapedValues
+        let r = result.values
         
         CPU.Engine.reduceSum(values: v, result: r, axis: 0)
         
@@ -87,9 +90,9 @@ class EngineV2Tests: XCTestCase {
     
     func testReduceSum2() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
-        let v = a.shapedValues
+        let v = a.values
         let result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
-        let r = result.shapedValues
+        let r = result.values
         
         CPU.Engine.reduceSum(values: v, result: r, axis: 1)
         
@@ -98,9 +101,9 @@ class EngineV2Tests: XCTestCase {
     
     func testReduceSum3() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
-        let v = a.shapedValues
+        let v = a.values
         let result = Tensor<Float, CPU>(repeating: Float(0), shape: [])
-        let r = result.shapedValues
+        let r = result.values
         
         CPU.Engine.reduceSum(values: v, result: r, axes: [0, 1])
         
@@ -125,7 +128,7 @@ class EngineV2Tests: XCTestCase {
         let qt1 = a / b.T
         let qt2 = b.T / a
         
-        let bf = b.squeeze()
+        let bf = b.squeezed()
         
         let sf = a + bf
         let df1 = a - bf
@@ -156,13 +159,10 @@ class EngineV2Tests: XCTestCase {
         XCTAssertEqual(qf2.shape, [4, 4])
         
         for x in [s, d1, d2, p, q1, q2, st, dt1, dt2, pt, qt1, qt2, sf, df1, df2, pf, qf1, qf2] {
-            a.zeroGradient()
-            b.zeroGradient()
+            let grads = x.gradients(of: [a, b])
             
-            x.backwards()
-            
-            print(a.gradientDescription!)
-            print(b.gradientDescription!)
+            print(grads[0])
+            print(grads[1])
             print()
         }
     }

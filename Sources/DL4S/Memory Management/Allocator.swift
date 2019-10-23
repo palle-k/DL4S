@@ -31,7 +31,7 @@ extension UnsafeMutableRawBufferPointer: Hashable {
     }
     
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(bytes: UnsafeRawBufferPointer(self))
+        hasher.combine(String(describing: self.baseAddress!))
     }
 }
 
@@ -106,7 +106,7 @@ enum CPUAllocator {
     
     static func allocate<T>(count: Int) -> UnsafeMutableBufferPointer<T> {
         let stride = MemoryLayout<T>.stride
-        let alignment = max(MemoryLayout<T>.alignment, 16) // Some vDSP routines perform better with 16 byte alignment
+        let alignment = max(MemoryLayout<T>.alignment, 64) // Some vDSP routines perform better with 16 byte alignment
         
         let byteCount = count * stride
         usedCache += byteCount
@@ -118,7 +118,6 @@ enum CPUAllocator {
             }
             return ptr.bindMemory(to: T.self)
         } else {
-            UnsafeMutableRawBufferPointer.allocate(byteCount: 1, alignment: 1).bindMemory(to: Double.self)
             let ptr = UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: alignment)
             return ptr.bindMemory(to: T.self)
         }

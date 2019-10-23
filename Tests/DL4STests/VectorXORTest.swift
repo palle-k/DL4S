@@ -27,54 +27,50 @@ import XCTest
 @testable import DL4S
 
 class VectorXORTest: XCTestCase {
-    func testXOR() {
-        
-        let net = Sequential<Float, CPU>(
-            Dense(inputFeatures: 2, outputFeatures: 6).asAny(),
-            Sigmoid().asAny(),
-            Dense(inputFeatures: 6, outputFeatures: 1).asAny(),
-            // Logging().asAny(),
-            Sigmoid().asAny()
-        )
-        
-        let inputs = Tensor<Float, CPU>([
+    func testXNN() {
+        var xor_src = Tensor<Float, CPU>([
             [0, 0],
             [0, 1],
             [1, 0],
             [1, 1]
         ])
+        var xor_dst = Tensor<Float, CPU>([
+            [0],
+            [1],
+            [1],
+            [0]
+        ])
         
-        let expectedOutputs = Tensor<Float, CPU>([0, 1, 1, 0])
+        #if DEBUG
+        xor_src.tag = "xor_src"
+        xor_dst.tag = "xor_dst"
+        #endif
         
-        let optimizer = Momentum(parameters: net.trainableParameters, learningRate: 0.05)
-        // let optimizer = Adam(parameters: net.parameters, learningRate: 0.05)
+        let net = Sequential {
+            Dense<Float, CPU>(inputSize: 2, outputSize: 6)
+            Tanh<Float, CPU>()
+            Dense<Float, CPU>(inputSize: 6, outputSize: 1)
+            Sigmoid<Float, CPU>()
+        }
+        var optim = Adam(model: net, learningRate: 0.05)
         
-        let epochs = 1000
-        
-        for epoch in 1 ... epochs {
-            optimizer.zeroGradient()
-            let predictions = net.forward(inputs)
-            let loss = binaryCrossEntropy(expected: expectedOutputs, actual: predictions)
+        for epoch in 1 ... 100 {
+            let pred = optim.model(xor_src)
+            let loss = binaryCrossEntropy(expected: xor_dst, actual: pred)
+            let grads = loss.gradients(of: optim.model.parameters)
             
-            loss.backwards()
-            optimizer.step()
+            optim.update(along: grads)
             
-            let lossValue = loss.item
-            
-            if epoch % 100 == 0 {
-                print("[\(epoch)/\(epochs)] loss: \(lossValue / 4)")
+            if epoch.isMultiple(of: 10) {
+                print("[\(epoch)/\(100)] loss: \(loss.item)")
             }
         }
         
-//        let correctCount = dataset.lazy.filter { input, output -> Bool in
-//            round(net.forward(input).view().item) == output.item
-//        }.count
-        
-        let predictions = net.forward(inputs).view(as: -1)
+        let predictions = optim.model(xor_src).view(as: -1)
         
         var correctCount = 0
         for i in 0 ..< 4 {
-            if round(predictions[i].item) == expectedOutputs[i].item {
+            if round(predictions[i].item) == xor_dst[i, 0].item {
                 correctCount += 1
             }
         }
