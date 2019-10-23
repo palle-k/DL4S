@@ -78,7 +78,7 @@ void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
 }
 
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(MKL_ENABLE)
 #warning Compiling DL4S without any accelerator library.
 #define MAX(x, y) (x >= y ? x : y)
 
@@ -336,7 +336,7 @@ void d4lib_dmaxi(const double* src, d4lib_stride src_stride, double* dst, d4lib_
 }
 void d4lib_imaxi(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length) {
     int max_i = -1;
-    int max_v = -LONG_MIN;
+    int max_v = INT_MIN;
     for (int i = 0; i < length; i++) {
         if (src[i] > max_v) {
             max_v = src[i * src_stride];
@@ -392,7 +392,7 @@ void d4lib_dmini(const double* src, d4lib_stride src_stride, double* dst, d4lib_
 }
 void d4lib_imini(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length) {
     int min_i = -1;
-    int min_v = LONG_MAX;
+    int min_v = INT_MAX;
     for (int i = 0; i < length; i++) {
         if (src[i] < min_v) {
             min_v = src[i * src_stride];
