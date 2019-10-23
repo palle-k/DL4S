@@ -1,41 +1,35 @@
 # DL4S
-
-[![CocoaPods](https://img.shields.io/cocoapods/v/DL4S.svg)](https://cocoapods.org/pods/DL4S)
-![CocoaPods](https://img.shields.io/cocoapods/p/DL4S.svg)
 [![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
+[![tag](https://img.shields.io/github/v/tag/palle-k/DL4S)](https://github.com/palle-k/DL4S/releases)
 
-This framework provides reverse mode automatic differentiation (including second, third, etc. derivatives),
+This framework provides reverse mode automatic differentiation,
 vectorized implementations of common matrix and vector operators and high level neural network operations,
 such as convolution, recurrent units, and more.
 
 ## Overview
 1. [Installation](#installation)
 2. [Features](#features)
-    1. [Layers](#layers)
-    2. [Optimizers](#optimizers)
-    3. [Losses](#losses)
-    4. [Tensor Operations](#tensor-operations)
-    5. [Engines](#engines)
-    6. [Architectures](#architectures)
+    1. Layers
+    2. Optimizers
+    3. Losses
+    4. Tensor Operations
+    5. Engines
+    6. Architectures
 3. [Examples](#examples)
-    1. [Convolutional Networks](#convolutional-networks)
-    2. [Recurrent Network (LSTM)](#recurrent-networks)
-    3. [Generative Adversarial Network](#generative-adversarial-networks)
 
 
 ## Installation
 
-### CocoaPods
+### iOS / tvOS / macOS
 
-```ruby
-target 'Your-App-Name' do
-    use_frameworks!
-    pod 'DL4S', '~> 0.1.0'
-end
-```
+1. In Xcode, select "File" > "Swift Packages" > "Add Package Dependency"
+2. Enter `https://github.com/palle-k/DL4S.git` into the Package URL field and click "Next".
+3. Select "Version", "Up to Next Major", 1.0.0 and click "Next".
+4. Enable the Package Product DL4S, your app in the "Add to Target" column and click "Next". 
 
+**Note**: Installation via CocoaPods is no longer supported for newer versions.
 
-### Swift Package Manager
+### Swift Package
 Add the dependency to your `Package.swift` file:
 
 ```swift
@@ -175,8 +169,13 @@ Engines
 </summary>
 <p>
 
+<<<<<<< HEAD
 - [x] CPU (Accelerate framework)
 - [x] CPU (Intel Math Kernel Library)
+=======
+- [x] CPU (Accelerate for Apple devices)
+- [x] CPU (Generic)
+>>>>>>> develop
 - [ ] GPU (Metal)
 
 </p>
@@ -190,8 +189,8 @@ Architectures
 
 Default implementations are provided for the following architectures:
 
-- [x] ResNet (currently only ResNet-18)
-- [x] VGG
+- [x] ResNet18
+- [x] VGG (11, 13, 16, 19)
 - [x] AlexNet
 
 </p>
@@ -202,16 +201,16 @@ Default implementations are provided for the following architectures:
 
 Some high level examples have been implemented in other repositories:
 
-- [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S): Seq2seq with attention.
-- [Gridworld](https://github.com/palle-k/REINFORCE-DL4S): Reinforcement Learning using the REINFORCE algorithm.
+- [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S) based on seq2seq with Attention
+- [Generative Adversarial Networks](https://github.com/palle-k/DL4S-WGAN-GP) - Wasserstein GAN with Gradient Penalty (WGAN-GP)
 
 ### Arithmetic & Differentiation
 
 DL4S provides a high-level interface to many vectorized operations on tensors.
 
 ```swift
-let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-let prod = a.transposed().matMul(a)
+let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+let prod = a.transposed().matrixMultipled(with: a)
 let s = prod.reduceSum()
 let l = log(s)
 print(l) // 5.1873856
@@ -236,12 +235,11 @@ print(dl_da)
 #### Second derivatives
 
 The operations used during backpropagation are themselves differentiable. 
-Therefore, second derivatives (diagonal of Hessian) can be computed by computing the gradient of the gradient.
+Therefore, second derivatives can be computed by computing the gradient of the gradient.
 
 When higher order derivatives are required, the compute graph of the backwards pass has to be explicitly retained.
-Otherwise it will be automatically discarded.
 ```swift
-let t = XTensor<Float, CPU>([1,2,3,4], requiresGradient: true)
+let t = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
 
 let result = t * t * t
 print(result) // [1, 8, 27, 64]
@@ -281,7 +279,7 @@ var model = Sequential {
    Softmax<Float, CPU>()
 }
 
-var optimizer = XAdam(model: model, learningRate: 0.001)
+var optimizer = Adam(model: model, learningRate: 0.001)
 
 // Single iteration of minibatch gradient descent
 let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]

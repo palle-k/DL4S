@@ -24,6 +24,7 @@
 //  SOFTWARE.
 
 import Foundation
+import DL4SLib
 
 
 extension ShapedBuffer where Device == CPU {
@@ -811,6 +812,11 @@ public struct CPUEngine: EngineType {
     }
     
     public static func heaviside<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
+        if let values = values as? ShapedBuffer<Float, CPU>, let result = result as? ShapedBuffer<Float, CPU> {
+            Float.heaviside(values: values.immutable, result: result.pointer, count: result.count)
+            return
+        }
+        
         let srcPtr = values.pointer.pointer(capacity: result.count)
         let dstPtr = result.pointer.pointer(capacity: result.count)
         
@@ -1064,144 +1070,13 @@ public struct CPUEngine: EngineType {
     @_specialize(where N == Float)
     public static func img2col<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(values.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
-        
-        let batchSize = values.shape[0]
-        let channels = values.shape[1]
-        let height = values.shape[2]
-        let width = values.shape[3]
-        
-        let verticalStride = width
-        let depthStride = width * height
-        let featureMapStride = depthStride * channels
-        
-        let rows = result.shape[0]
-        let cols = result.shape[1]
-        
-        let outputHeight = (height + 2 * padding - kernelHeight) / stride + 1
-        let outputWidth = (width + 2 * padding - kernelWidth) / stride + 1
-        
-        #if DEBUG
-        precondition(rows == kernelWidth * kernelHeight * channels)
-        precondition(cols == outputWidth * outputHeight * batchSize)
-        #endif
-        
-        let srcPtr = values.immutable.pointer(capacity: featureMapStride * batchSize)
-        let dstPtr = result.pointer.pointer(capacity: rows * cols)
-        
-        let patchesPerKernel = outputWidth * outputHeight
-        // let patchesPerFeatureMap = patchesPerKernel * kernelCount
-        
-        var rowBuffer = [Int](repeating: 0, count: rows)
-        var colBuffer = [Int](repeating: 0, count: rows)
-        var chanDepthStrideBuffer = [Int](repeating: 0, count: rows)
-        var rColsBuffer = [Int](repeating: 0, count: rows)
-        
-        for r in 0 ..< rows {
-            rowBuffer[r] = r / kernelWidth
-            colBuffer[r] = r % kernelWidth
-            chanDepthStrideBuffer[r] = (r / (kernelWidth * kernelHeight)) * depthStride
-            rColsBuffer[r] = r * cols
-        }
-        
-        for c in 0 ..< cols {
-            let patchIdx = c % patchesPerKernel
-            let featureMapIdx = c / patchesPerKernel
-            
-            let baseDstCol = patchIdx % outputWidth
-            let baseDstRow = (patchIdx / outputWidth) % outputHeight
-            
-            let baseSrcCol = baseDstCol * stride - padding
-            let baseSrcRow = baseDstRow * stride - padding
-            
-            let featureMap = srcPtr.advanced(by: featureMapStride * featureMapIdx)
-            
-            // Using a while-loop gives a ~5% performance gain
-            var r = 0
-            while r < rows {
-                let row = baseSrcRow + rowBuffer[r]
-                let col = baseSrcCol + colBuffer[r]
-                
-                if row < 0 || row >= height || col < 0 || col >= width {
-                    dstPtr[rColsBuffer[r] + c] = 0
-                } else {
-                    // TODO: Try advancing featureMap by baseSrcCol + baseSrcRow * verticalStride in advance
-                    // TODO: Also try advancing dstPtr by c in advance
-                    dstPtr[rColsBuffer[r] + c] = featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col]
-                }
-                r += 1
-            }
-        }
+        N.img2col(values: values.immutable, result: result.pointer, batchSize: values.shape[0], channels: values.shape[1], height: values.shape[2], width: values.shape[3], kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride);
     }
     
     @_specialize(where N == Float)
     public static func col2img<N: NumericType>(matrix: ShapedBuffer<N, CPU>, image: ShapedBuffer<N, CPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(image.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
-        
-        let batchSize = image.shape[0]
-        let channels = image.shape[1]
-        let height = image.shape[2]
-        let width = image.shape[3]
-        
-        let verticalStride = width
-        let depthStride = width * height
-        let featureMapStride = depthStride * channels
-        
-        let rows = matrix.shape[0]
-        let cols = matrix.shape[1]
-        
-        let outputHeight = (height + 2 * padding - kernelHeight) / stride + 1
-        let outputWidth = (width + 2 * padding - kernelWidth) / stride + 1
-        
-        #if DEBUG
-        precondition(rows == kernelWidth * kernelHeight * channels)
-        precondition(cols == outputWidth * outputHeight * batchSize)
-        #endif
-        
-        let dstPtr = image.pointer.pointer(capacity: featureMapStride * batchSize)
-        let srcPtr = matrix.immutable.pointer(capacity: rows * cols)
-        
-        let patchesPerKernel = outputWidth * outputHeight
-        // let patchesPerFeatureMap = patchesPerKernel * kernelCount
-        
-        // Zero fill image
-        //N.fill(value: 0, result: image.pointer, count: image.count)
-        image.pointer.assign(repeating: 0)
-        
-        var rowBuffer = [Int](repeating: 0, count: rows)
-        var colBuffer = [Int](repeating: 0, count: rows)
-        var chanDepthStrideBuffer = [Int](repeating: 0, count: rows)
-        var rColsBuffer = [Int](repeating: 0, count: rows)
-        
-        for r in 0 ..< rows {
-            rowBuffer[r] = r / kernelWidth
-            colBuffer[r] = r % kernelWidth
-            chanDepthStrideBuffer[r] = (r / (kernelWidth * kernelHeight)) * depthStride
-            rColsBuffer[r] = r * cols
-        }
-        
-        for c in 0 ..< cols {
-            let patchIdx = c % patchesPerKernel
-            let featureMapIdx = c / patchesPerKernel
-            
-            let baseSrcCol = patchIdx % outputWidth
-            let baseSrcRow = (patchIdx / outputWidth) % outputHeight
-            
-            let baseDstCol = baseSrcCol * stride - padding
-            let baseDstRow = baseSrcRow * stride - padding
-            
-            let featureMap = dstPtr.advanced(by: featureMapStride * featureMapIdx)
-            
-            var r = 0
-            while r < rows {
-                let row = baseDstRow + rowBuffer[r]
-                let col = baseDstCol + colBuffer[r]
-                
-                if row >= 0 && row < height && col >= 0 && col < width {
-                    featureMap[chanDepthStrideBuffer[r] + row * verticalStride + col] += srcPtr[rColsBuffer[r] + c]
-                }
-                r += 1
-            }
-        }
+        N.col2img(values: matrix.immutable, result: image.pointer, batchSize: image.shape[0], channels: image.shape[1], height: image.shape[2], width: image.shape[3], kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride);
     }
     
 }

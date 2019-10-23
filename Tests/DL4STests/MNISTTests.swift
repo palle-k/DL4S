@@ -47,11 +47,11 @@ class MNISTTests: XCTestCase {
     
     func testConvNet() {
         var model = Sequential {
-            Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5))
+            Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0)
             LayerNorm<Float, CPU>(inputSize: [4, 24, 24])
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
-            Convolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5))
+            Convolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5), padding: 0)
             LayerNorm<Float, CPU>(inputSize: [16, 8, 8])
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
@@ -74,7 +74,7 @@ class MNISTTests: XCTestCase {
         for epoch in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
 
-            let predicted = optimizer.model(input)
+            let predicted = optimizer.model(input.view(as: [batchSize, 1, 28, 28]))
             let loss = categoricalCrossEntropy(expected: target, actual: predicted)
             
             let gradients = loss.gradients(of: optimizer.model.parameters)

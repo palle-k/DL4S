@@ -89,7 +89,7 @@ class ConvTests: XCTestCase {
         
         let ((images, _), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
         
-        let batch = Random.minibatch(from: images, count: 64)
+        let batch = images[0 ..< 64]
         
         let filtered = batch.convolved2d(filters: filters)
         
@@ -103,7 +103,7 @@ class ConvTests: XCTestCase {
             
             for j in 0 ..< dst.shape[0] {
                 let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
-                try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j).png")
+                try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j)a.png")
             }
         }
         #endif

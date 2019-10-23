@@ -1,8 +1,8 @@
 //
-//  ResNet.swift
-//  DL4STests
+//  DL4SLib.h
+//  DL4S
 //
-//  Created by Palle Klewitz on 21.04.19.
+//  Created by Palle Klewitz on 22.10.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,28 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
-@testable import DL4S
+#ifndef DL4SLib_h
+#define DL4SLib_h
 
+#include "d4lib.h"
 
-class ResNetTests: XCTestCase {
-    func testResNet() {
-        let resnet = ResNet18<Float, CPU>(inputShape: [3, 64, 64], classes: 256)
-        var optim = Adam(model: resnet, learningRate: 0.001)
-        
-        let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 32, 3, 64, 64, min: 0, max: 1)
-        let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 32, min: 0, max: 255)
-        
-        let epochs = 100
-        
-        for i in 1 ... epochs {
-            let result = optim.model(t)
-            
-//            let loss = categoricalCrossEntropy(expected: expected, actual: result)
-//            let grads = loss.gradients(of: optim.model.parameters)
-//            optim.update(along: grads)
-            
-            print("[\(i)/\(epochs)] \(result.backpropID)")
-        }
-    }
-}
+#endif /* DL4SLib_h */

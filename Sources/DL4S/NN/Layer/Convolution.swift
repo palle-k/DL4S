@@ -46,7 +46,7 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
         self.filters = Tensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
             mean: 0,
-            stdev: (2 / Element(kernelSize.height * kernelSize.width * inputChannels)).sqrt(),
+            stdev: 2 / Element(kernelSize.height * kernelSize.width * inputChannels).sqrt(),
             requiresGradient: true
         )
         self.bias = Tensor(repeating: 0, shape: [1, outputChannels, 1, 1], requiresGradient: true)

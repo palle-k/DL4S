@@ -26,10 +26,9 @@
 import Foundation
 
 public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
-        \.shift,
-        \.scale
-    ]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+        [\.shift, \.scale]
+    }
     public var parameters: [Tensor<Element, Device>] {
         get {[shift, scale]}
     }
@@ -66,10 +65,9 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
 
 
 public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
-        \.shift,
-        \.scale
-    ]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+        [\.shift, \.scale]
+    }
     public var parameters: [Tensor<Element, Device>] {
         get {[shift, scale]}
     }
