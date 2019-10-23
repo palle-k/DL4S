@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
     
     s.subspec 'Core' do |core|
         core.source_files = 'Sources/DL4S/**/*.swift'
-        core.dependency 'DL4S/Lib' '~> 0.2'
+        core.dependency 'DL4S/Lib'
     end
     
     s.subspec 'Lib' do |lib|
