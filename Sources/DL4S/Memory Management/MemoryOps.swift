@@ -305,7 +305,6 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
             dstStart.assign(from: source, count: count)
         } else {
             let srcShape = zip(dstIndex, dstStrides)
-                .filter {$0.0 == nil}
                 .map {$1}
             let srcStrides = MemoryOps.strides(from: srcShape)
             let sStride = srcStrides[0]
@@ -376,88 +375,5 @@ enum MemoryOps {
     static func index(from linearIndex: Int, shape: [Int]) -> [Int] {
         let strides = MemoryOps.strides(from: shape)
         return zip(shape, strides).map { dim, str in (linearIndex / str) % dim}
-    }
-    
-    
-    /// Retrieves the values of the source buffer and copies them into a newly allocated destination buffer if needed.
-    ///
-    /// - Parameters:
-    ///   - slice: Index or range to access the vector at
-    ///   - buffer: Vector
-    ///   - shape: Shape of vector
-    /// - Returns: Vector and boolean indicating, whether a new memory region has been allocated, and the shape of the result.
-    static func get<Element>(slice: [Int?], of buffer: UnsafeMutableBufferPointer<Element>, with shape: [Int]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
-        precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
-        
-        let nonNilIndices = slice.compactMap {$0}
-        let strides = MemoryOps.strides(from: shape)
-        
-        if nonNilIndices.count == slice.count {
-            // Simple offset into storage
-            let offset = zip(nonNilIndices, strides).map(*).reduce(0, +)
-            return (buffer.advanced(by: offset), false, Array(shape.dropFirst(nonNilIndices.count)))
-        } else {
-            let padded = slice + [Int?](repeating: nil, count: shape.count - slice.count)
-            
-            let resultShape = zip(padded, shape).enumerated().map { idx, el -> Int? in
-                let (index, dimSize) = el
-                return index == nil ? dimSize : nil
-            }
-            let flattenedResultShape = resultShape.compactMap {$0}
-            
-            let resultCount = flattenedResultShape.reduce(1, *)
-            let resultBuffer: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: resultCount)
-
-            recursiveRead(source: buffer.immutable, destination: resultBuffer, srcIndex: padded, srcStrides: strides, srcShape: shape)
-            
-            return (resultBuffer, true, flattenedResultShape)
-        }
-        
-    }
-    
-    /// Retrieves the values of the source buffer and copies them into a newly allocated destination buffer if needed.
-    ///
-    /// - Parameters:
-    ///   - slice: Index or range to access the vector at
-    ///   - buffer: Vector
-    ///   - shape: Shape of vector
-    /// - Returns: Vector and boolean indicating, whether a new memory region has been allocated, and the shape of the result.
-    static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: UnsafeMutableBufferPointer<Element>, with shape: [Int]) -> (UnsafeMutableBufferPointer<Element>, Bool, [Int]) {
-        precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
-        
-        let strides = MemoryOps.strides(from: shape)
-        
-        let padded = slice + [Range<Int>?](repeating: nil, count: shape.count - slice.count)
-        
-        let resultShape = zip(padded, shape).enumerated().map { idx, el -> Int? in
-            let (index, dimSize) = el
-            return index.map {$0.count} ?? dimSize
-        }
-        let flattenedResultShape = resultShape.compactMap {$0}
-        
-        let resultCount = flattenedResultShape.reduce(1, *)
-        let resultBuffer: UnsafeMutableBufferPointer<Element> = CPUAllocator.allocate(count: resultCount)
-        
-        recursiveRead(source: buffer.immutable, destination: resultBuffer, srcIndex: padded, srcStrides: strides, srcShape: shape)
-        
-        return (resultBuffer, true, flattenedResultShape)
-    }
-    
-    static func set<Element>(slice: [Int?], of buffer: UnsafeMutableBufferPointer<Element>, with dstShape: [Int], from source: UnsafeBufferPointer<Element>, with sourceShape: [Int]) {
-        precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Shape of source must be equal to source of destination minus number of knowns in slice")
-        
-        let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
-        
-        let dstStrides = MemoryOps.strides(from: dstShape)
-        iterativeWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
-    }
-    
-    static func set<Element>(slice: [Range<Int>?], of buffer: UnsafeMutableBufferPointer<Element>, with dstShape: [Int], from source: UnsafeBufferPointer<Element>, with sourceShape: [Int]) {
-        precondition(sourceShape.count == dstShape.count - slice.filter {$0 != nil}.count, "Shape of source must be equal to source of destination minus number of knowns in slice")
-        
-        let padded = slice + [Range<Int>?](repeating: nil, count: dstShape.count - slice.count)
-        let dstStrides = MemoryOps.strides(from: dstShape)
-        
-        recursiveWrite(source: source, destination: buffer, dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
 }

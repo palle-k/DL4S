@@ -28,7 +28,7 @@ import Foundation
 
 public protocol DeviceType {
     associatedtype Memory: MemoryOperatorsType where Memory.Device == Self
-    associatedtype Engine: EngineType & EngineTypeV2 where Engine.Device == Self
+    associatedtype Engine: EngineType where Engine.Device == Self
 }
 
 
@@ -58,91 +58,75 @@ public protocol MemoryOperatorsType {
     static func advance<Element>(buffer: Buffer<Element, Device>, by advancement: Int) -> Buffer<Element, Device>
 }
 
-
 public protocol EngineType {
     associatedtype Device: DeviceType where Device.Engine == Self
     
-    static func sqrt<N: NumericType>(_ value: N) -> N
-    static func log<N: NumericType>(_ value: N) -> N
-    static func exp<N: NumericType>(_ value: N) -> N
-    static func sin<N: NumericType>(_ value: N) -> N
-    static func cos<N: NumericType>(_ value: N) -> N
-    static func tan<N: NumericType>(_ value: N) -> N
-    static func sinh<N: NumericType>(_ value: N) -> N
-    static func cosh<N: NumericType>(_ value: N) -> N
-    static func tanh<N: NumericType>(_ value: N) -> N
-    static func pow<N: NumericType>(base: N, exponent: N) -> N
-    
     static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int)
-    static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, stride: Int, count: Int)
-    static func transpose<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, srcRows: Int, srcCols: Int)
     static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vsAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int)
     static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vMA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vsMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int)
     static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func svDiv<N: NumericType>(lhs: N, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func vSquare<N: NumericType>(values: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func matMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsRows: Int, lhsCols: Int, rhsCols: Int)
-    static func matMulAddInPlace<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool, transposeSecond: Bool)
-    static func dot<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, count: Int) -> N
-    static func vMulSA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: N, result: Buffer<N, Device>, count: Int)
-    static func vsMulVAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func log<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func exp<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func relu<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func tanh<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func sqrt<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
-    static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N
-    static func copysign<N: NumericType>(values: Buffer<N, Device>, signs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
     static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N)
-    static func permuteAxes<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], destination: Buffer<N, Device>)
-    static func permuteAxesAdd<N: NumericType>(input: Buffer<N, Device>, arangement: [Int], shape: [Int], add: Buffer<N, Device>, destination: Buffer<N, Device>)
-}
 
+    
+    // MARK: New Engine API
+    static func gemm<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
+    static func broadcastGemm<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
+    
+    static func broadcastAdd<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func broadcastSub<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func broadcastMul<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func broadcastDiv<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    
+    static func reduceSum<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    static func reduceMax<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
+    static func reduceMin<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axis: Int)
+    static func reduceMean<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    
+    static func reduceSum<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axes: [Int])
+    static func reduceMax<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axes: [Int])
+    static func reduceMin<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>?, axes: [Int])
+    static func reduceMean<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, axes: [Int])
+    
+    static func expandContext<N>(reduced: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    
+    static func sum<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func mean<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    @discardableResult static func max<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>) -> Int
+    @discardableResult static func min<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>) -> Int
+    
+    static func exp<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func log<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func sqrt<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
 
-extension EngineType {
-    public static func sqrt<N: NumericType>(_ value: N) -> N {
-        return value.sqrt()
-    }
+    static func relu<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func heaviside<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    public static func log<N: NumericType>(_ value: N) -> N {
-        return value.log()
-    }
+    static func sin<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func cos<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func tan<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func sinh<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func cosh<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func tanh<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    public static func exp<N: NumericType>(_ value: N) -> N {
-        return value.exp()
-    }
+    static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, arangement: [Int])
+    static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, arangement: [Int])
     
-    public static func sin<N: NumericType>(_ value: N) -> N {
-        return value.sin()
-    }
+    static func subscriptRead<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    static func subscriptWrite<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    static func subscriptReadAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    static func subscriptWriteAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
     
-    public static func cos<N: NumericType>(_ value: N) -> N {
-        return value.cos()
-    }
+    static func reverse<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    static func reverseAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    public static func tan<N: NumericType>(_ value: N) -> N {
-        return value.tan()
-    }
+    static func stack<N>(buffers: [ShapedBuffer<N, Device>], result: ShapedBuffer<N, Device>, axis: Int)
+    static func unstackAdd<N: NumericType>(stacked: ShapedBuffer<N, Device>, add: [ShapedBuffer<N, Device>], result: [ShapedBuffer<N, Device>], axis: Int)
+    static func unstack<N: NumericType>(stacked: ShapedBuffer<N, Device>, result: [ShapedBuffer<N, Device>], axis: Int)
     
-    public static func sinh<N: NumericType>(_ value: N) -> N {
-        return value.sinh()
-    }
+    static func arange<N: NumericType>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, Device>)
     
-    public static func cosh<N: NumericType>(_ value: N) -> N {
-        return value.cosh()
-    }
-    
-    public static func tanh<N: NumericType>(_ value: N) -> N {
-        return value.tanh()
-    }
-    
-    public static func pow<N: NumericType>(base: N, exponent: N) -> N {
-        return N.pow(base: base, exponent: exponent)
-    }
+    static func img2col<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+    static func col2img<N: NumericType>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
 }

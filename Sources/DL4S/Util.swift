@@ -25,6 +25,11 @@
 
 import Foundation
 
+#if os(Linux)
+func autoreleasepool<Result>(_ function: () -> Result) -> Result {
+    function()
+}
+#endif
 
 extension Sequence {
     func count(where predicate: (Element) throws -> Bool) rethrows -> Int {
@@ -179,20 +184,13 @@ public class Queue<Element> {
 }
 
 
-fileprivate let intervalFormatter: DateComponentsFormatter = {
-    var calendar = Calendar(identifier: .iso8601)
-    calendar.locale = Locale(identifier: "en")
-    
-    let formatter = DateComponentsFormatter()
-    
-    formatter.calendar = calendar
-    formatter.allowedUnits = [.hour, .minute, .second]
-    formatter.includesApproximationPhrase = true
-    formatter.includesTimeRemainingPhrase = true
-    formatter.unitsStyle = .positional
-    
-    return formatter
-}()
+fileprivate let intervalFormatter: (TimeInterval) -> String = { interval in
+    let totalSeconds = Int(interval)
+    let hours = totalSeconds / 3600
+    let minutes = (totalSeconds % 3600) / 60
+    let seconds = totalSeconds % 60
+    return "About \(hours):\(minutes):\(seconds) remaining"
+}
 
 
 public struct ProgressBar<UserInfo> {
@@ -215,7 +213,7 @@ public struct ProgressBar<UserInfo> {
         let interval = Date().timeIntervalSince(startTime)
         let perUnitDuration = interval / Double(currentUnitCount)
         let remainingDuration = perUnitDuration * Double(totalUnitCount - currentUnitCount)
-        let remainingString = intervalFormatter.string(from: remainingDuration)!
+        let remainingString = intervalFormatter(remainingDuration)
         
         
         let filled = String(repeating: "#", count: currentUnitCount * 30 / totalUnitCount)
@@ -349,20 +347,6 @@ public enum ConvUtil {
         ]
     }
 }
-
-public extension Tensor {
-    func batches(sized batchSize: Int) -> AnySequence<Tensor<Element, Device>> {
-        precondition(batchSize >= 1, "Batch size must be at least 1.")
-        precondition(dim >= 1, "Tensor must be at least 1-dimensional.")
-        
-        let seq = stride(from: 0, to: shape[0], by: batchSize).lazy.map { offset in
-            self[(offset ..< (offset + batchSize)).clamped(to: 0 ..< self.shape[0])]
-        }
-        
-        return AnySequence(seq)
-    }
-}
-
 
 struct File: Sequence {
     struct LineIterator: IteratorProtocol {

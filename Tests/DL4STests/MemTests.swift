@@ -34,5 +34,10 @@ class MemTests: XCTestCase {
         print(a[1, nil])
         print(a[2, nil])
         print(a[3, nil])
+        
+        print(a[nil, 0])
+        print(a[nil, 1])
+        print(a[nil, 2])
+        print(a[nil, 3])
     }
 }

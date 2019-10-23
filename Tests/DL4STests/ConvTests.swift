@@ -25,6 +25,7 @@
 
 import XCTest
 @testable import DL4S
+#if canImport(AppKit)
 import AppKit
 
 extension NSImage {
@@ -38,23 +39,24 @@ extension NSImage {
         try png.write(to: URL(fileURLWithPath: path))
     }
 }
+#endif
 
 class ConvTests: XCTestCase {
     func testIm2col() {
         let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
-        let c = `repeat`(a, count: 4)
+        let c = a.repeated(4)
         let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
         print(d)
         
         let result = Tensor<Float, CPU>(repeating: 0, shape: 9, 64)
-        CPU.Engine.img2col(values: d.shapedValues, result: result.shapedValues, kernelWidth: 3, kernelHeight: 3, padding: 1, stride: 1)
+        CPU.Engine.img2col(values: d.values, result: result.values, kernelWidth: 3, kernelHeight: 3, padding: 1, stride: 1)
         print(result.permuted(to: 1, 0))
     }
     
     func testConv1() {
         let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
-        let c = `repeat`(a, count: 4)
+        let c = a.repeated(4)
         let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
         let filters = Tensor<Float, CPU>([
@@ -66,7 +68,7 @@ class ConvTests: XCTestCase {
             ]
         ])
         
-        print(conv2d(images: d, filters: filters))
+        print(d.convolved2d(filters: filters))
     }
     
     func testConv() {
@@ -85,12 +87,13 @@ class ConvTests: XCTestCase {
         
         print(filters.shape)
         
-        let ((images, _), _) = MNistTest.images(from: "/Users/Palle/Downloads/", maxCount: 32)
+        let ((images, _), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
         
-        let batch = Random.minibatch(from: images, count: 64).unsqueeze(at: 1) // add depth dimension
+        let batch = images[0 ..< 64]
         
-        let filtered = conv2d(images: batch, filters: filters)
+        let filtered = batch.convolved2d(filters: filters)
         
+        #if canImport(AppKit)
         for i in 0 ..< batch.shape[0] {
             let src = batch[i]
             let dst = filtered[i]
@@ -99,9 +102,10 @@ class ConvTests: XCTestCase {
             try? srcImg?.save(to: "/Users/Palle/Desktop/conv/src_\(i).png")
             
             for j in 0 ..< dst.shape[0] {
-                let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueeze(at: 0))
-                try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j).png")
+                let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
+                try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j)a.png")
             }
         }
+        #endif
     }
 }
