@@ -11,12 +11,12 @@ such as convolution, recurrent units, and more.
 ## Overview
 1. [Installation](#installation)
 2. [Features](#features)
-    1. [Layers](#layers)
-    2. [Optimizers](#optimizers)
-    3. [Losses](#losses)
-    4. [Tensor Operations](#tensor-operations)
-    5. [Engines](#engines)
-    6. [Architectures](#architectures)
+    1. Layers
+    2. Optimizers
+    3. Losses
+    4. Tensor Operations
+    5. Engines
+    6. Architectures
 3. [Examples](#examples)
     1. [Convolutional Networks](#convolutional-networks)
     2. [Recurrent Network (LSTM)](#recurrent-networks)
@@ -25,17 +25,7 @@ such as convolution, recurrent units, and more.
 
 ## Installation
 
-### CocoaPods
-
-```ruby
-target 'Your-App-Name' do
-    use_frameworks!
-    pod 'DL4S', '~> 0.2.0'
-end
-```
-
-
-### Swift Package Manager
+### Swift Package
 Add the dependency to your `Package.swift` file:
 
 ```swift
@@ -47,6 +37,16 @@ Then add `DL4S` as a dependency to your target:
 ```swift
 .target(name: "MyPackage", dependencies: ["DL4S"])
 ```
+
+### iOS / tvOS / macOS / watchOS
+
+1. In Xcode, select "File" > "Swift Packages" > "Add Package Dependency"
+2. Enter `https://github.com/palle-k/DL4S.git` into the Package URL field and click "Next".
+3. Select "Version", "Up to Next Major", 1.0.0 and click "Next".
+4. Enable the Package Product DL4S, your app in the "Add to Target" column and click "Next". 
+
+**Note**: Installation via CocoaPods is no longer supported for newer versions.
+
 
 ## Features
 
@@ -157,7 +157,8 @@ Engines
 </summary>
 <p>
 
-- [x] CPU (Accelerate framework)
+- [x] CPU (Accelerate for Apple devices)
+- [x] CPU (Generic)
 - [ ] GPU (Metal)
 
 </p>
@@ -171,8 +172,8 @@ Architectures
 
 Default implementations are provided for the following architectures:
 
-- [x] ResNet (currently only ResNet-18)
-- [x] VGG
+- [x] ResNet18
+- [x] VGG (11, 13, 16, 19)
 - [x] AlexNet
 
 </p>
