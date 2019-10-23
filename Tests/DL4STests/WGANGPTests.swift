@@ -56,7 +56,7 @@ class WGANGPTests: XCTestCase {
         critic.tag = "Discriminator"
         
         print("Loading images...")
-        let ((_images, labels_cat), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Downloads/", type: Float.self, device: CPU.self)
+        let ((_images, labels_cat), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
         let images = _images.view(as: [-1, 28 * 28])
         let labels = labels_cat.oneHotEncoded(dim: 10, type: Float.self)

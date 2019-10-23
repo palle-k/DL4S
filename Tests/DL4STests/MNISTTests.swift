@@ -26,6 +26,12 @@
 import XCTest
 @testable import DL4S
 
+#if os(Linux)
+let MNIST_PATH = "/home/palle/Downloads/MNIST/"
+#else
+let MNIST_PATH = "/Users/Palle/Developer/DL4S/"
+#endif
+
 class MNISTTests: XCTestCase {
     static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
         do {
@@ -72,7 +78,7 @@ class MNISTTests: XCTestCase {
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/home/palle/Downloads/MNIST/", type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
         let epochs = 10_000
         let batchSize = 128
@@ -124,7 +130,7 @@ class MNISTTests: XCTestCase {
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/home/palle/Downloads/MNIST/", type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
         let epochs = 10_000
         let batchSize = 128
@@ -162,7 +168,7 @@ class MNISTTests: XCTestCase {
     }
     
     func testGRU() {
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/home/palle/Downloads/MNIST/", type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
         print("Loaded images")
 

@@ -28,6 +28,7 @@
 #if defined(MKL_ENABLE)
 #pragma message "Using MKL"
 #include "mkl.h"
+// #include "ipp.h"
 #include <math.h>
 #include <limits.h>
 #define MAX(x, y) (x >= y ? x : y)

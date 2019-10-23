@@ -31,7 +31,7 @@ import XCTest
 class GANTests: XCTestCase {
     func testGAN() {
         print("Loading images...")
-        let ((images, labels_cat), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
+        let ((images, labels_cat), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
 
         let labels = labels_cat.oneHotEncoded(dim: 10, type: Float.self)
         

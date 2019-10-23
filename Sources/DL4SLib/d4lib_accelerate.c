@@ -25,7 +25,7 @@
 
 #include <stdio.h>
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(MKL_ENABLE)
 #pragma message "Using Accelerate Framework"
 #include "d4lib.h"
 #include <Accelerate/Accelerate.h>
