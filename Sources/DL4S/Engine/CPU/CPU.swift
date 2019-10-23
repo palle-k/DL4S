@@ -25,7 +25,6 @@
 
 import Foundation
 import DL4SLib
-import MKL
 
 
 public struct CPU: DeviceType {
