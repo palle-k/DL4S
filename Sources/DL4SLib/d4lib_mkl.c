@@ -180,12 +180,10 @@ void d4lib_imulv(const int* lhs, const int* rhs, int* dst, d4lib_length length) 
 
 // Vector scalar multiply
 void d4lib_smulvs(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
-    avxcpy(dst, lhs, sizeof(float) * length);
-    cblas_sscal(length, *rhs, dst, 1);
+    ippsMulC_32f(lhs, *rhs, dst, length);
 }
 void d4lib_dmulvs(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
-    avxcpy(dst, lhs, sizeof(double) * length);
-    cblas_dscal(length, *rhs, dst, 1);
+    ippsMulC_64f(lhs, *rhs, dst, length);
 }
 void d4lib_imulvs(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
     for (int i = 0; i < length; i++) {
@@ -223,7 +221,15 @@ void d4lib_idivsv(const int* lhs, const int* rhs, int* dst, d4lib_length length)
 
 // Vector Sum
 void d4lib_ssum(const float* src, d4lib_stride src_stride, float* dst, d4lib_length length) {
-    ippsSum_32f(src, length, dst, ippAlgHintNone);
+    if (src_stride == 1) {
+        ippsSum_32f(src, length, dst, ippAlgHintNone);
+        return;
+    }
+    float sum = 0;
+    for (int i = 0; i < length; i++) {
+        sum += src[i * src_stride];
+    }
+    *dst = sum;
 }
 void d4lib_dsum(const double* src, d4lib_stride src_stride, double* dst, d4lib_length length) {
     ippsSum_64f(src, length, dst);
@@ -231,7 +237,7 @@ void d4lib_dsum(const double* src, d4lib_stride src_stride, double* dst, d4lib_l
 void d4lib_isum(const int* src, d4lib_stride src_stride, int* dst, d4lib_length length) {
     int sum = 0;
     for (int i = 0; i < length; i++) {
-        sum += src[i];
+        sum += src[i * src_stride];
     }
     *dst = sum;
 }
@@ -443,7 +449,7 @@ void d4lib_icopy_strided(const int* src, d4lib_stride src_stride, int* dst, d4li
 // Comparable to BLAS Level 3
 
 void d4lib_stranspose(const float* src, float* dst, d4lib_length src_cols, d4lib_length src_rows) {
-    mkl_somatcopy('R', 'T', src_cols, src_rows, 1, src, src_cols, dst, src_rows);
+    mkl_somatcopy('R', 'T', src_rows, src_cols, 1, src, src_cols, dst, src_rows);
 }
 void d4lib_dtranspose(const double* src, double* dst, d4lib_length src_cols, d4lib_length src_rows) {
     mkl_domatcopy('R', 'T', src_cols, src_rows, 1, src, src_cols, dst, src_rows);

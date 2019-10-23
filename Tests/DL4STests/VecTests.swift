@@ -525,7 +525,9 @@ class VecTests: XCTestCase {
     }
 
     func testIPP() {
-        let a = Tensor<Float, CPU>([[-1, 0, 1], [-2, 0, 2]])
-        print(a.sigmoid())
+        let a = Tensor<Float, CPU>([[1,2], [3,4]])
+        let b = Tensor<Float, CPU>([[1,2], [3,4]])
+        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+        print(c.T)
     }
 }
