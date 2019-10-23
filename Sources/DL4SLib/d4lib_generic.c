@@ -364,7 +364,6 @@ void d4lib_imax(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
     }
 }
 
-// Vector minimum value and index
 // Vector maximum value and index
 void d4lib_smini(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length) {
     int min_i = -1;

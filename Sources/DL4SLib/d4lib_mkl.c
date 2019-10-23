@@ -29,6 +29,7 @@
 #pragma message "Using MKL"
 #include "mkl.h"
 #include <math.h>
+#include <limits.h>
 #define MAX(x, y) (x >= y ? x : y)
 
 // Vector Fill
@@ -234,25 +235,116 @@ void d4lib_isum(const int* src, d4lib_stride src_stride, int* dst, d4lib_length 
     *dst = sum;
 }
 
+
 // Vector maximum value and index
-void d4lib_smaxi(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length);
-void d4lib_dmaxi(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length);
-void d4lib_imaxi(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length);
+void d4lib_smaxi(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int max_i = -1;
+    float max_v = -INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] > max_v) {
+            max_v = src[i * src_stride];
+            max_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) max_i;
+    *dst = max_v;
+}
+void d4lib_dmaxi(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int max_i = -1;
+    double max_v = -INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] > max_v) {
+            max_v = src[i * src_stride];
+            max_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) max_i;
+    *dst = max_v;
+}
+void d4lib_imaxi(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int max_i = -1;
+    int max_v = INT_MIN;
+    for (int i = 0; i < length; i++) {
+        if (src[i] > max_v) {
+            max_v = src[i * src_stride];
+            max_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) max_i;
+    *dst = max_v;
+}
 
 // Vector vector max
-void d4lib_smax(const float* lhs, const float* rhs, float* dst, d4lib_length length);
-void d4lib_dmax(const double* lhs, const double* rhs, double* dst, d4lib_length length);
-void d4lib_imax(const int* lhs, const int* rhs, int* dst, d4lib_length length);
+void d4lib_smax(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(lhs[i], rhs[i]);
+    }
+}
+void d4lib_dmax(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(lhs[i], rhs[i]);
+    }
+}
+void d4lib_imax(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = MAX(lhs[i], rhs[i]);
+    }
+}
 
-// Vector minimum value and index
-void d4lib_smini(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length);
-void d4lib_dmini(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length);
-void d4lib_imini(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length);
+// Vector maximum value and index
+void d4lib_smini(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int min_i = -1;
+    float min_v = INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] < min_v) {
+            min_v = src[i * src_stride];
+            min_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) min_i;
+    *dst = min_v;
+}
+void d4lib_dmini(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int min_i = -1;
+    double min_v = INFINITY;
+    for (int i = 0; i < length; i++) {
+        if (src[i] < min_v) {
+            min_v = src[i * src_stride];
+            min_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) min_i;
+    *dst = min_v;
+}
+void d4lib_imini(const int* src, d4lib_stride src_stride, int* dst, d4lib_length* dst_idx, d4lib_length length) {
+    int min_i = -1;
+    int min_v = INT_MAX;
+    for (int i = 0; i < length; i++) {
+        if (src[i] < min_v) {
+            min_v = src[i * src_stride];
+            min_i = i;
+        }
+    }
+    *dst_idx = (d4lib_length) min_i;
+    *dst = min_v;
+}
 
 // Vector ramp
-void d4lib_sramp(const float* start, const float* increment, float* dst, d4lib_length length);
-void d4lib_dramp(const double* start, const double* increment, double* dst, d4lib_length length);
-void d4lib_iramp(const int* start, const int* increment, int* dst, d4lib_length length);
+void d4lib_sramp(const float* start, const float* increment, float* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *start + i * *increment;
+    }
+}
+void d4lib_dramp(const double* start, const double* increment, double* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *start + i * *increment;
+    }
+}
+void d4lib_iramp(const int* start, const int* increment, int* dst, d4lib_length length) {
+    for (int i = 0; i < length; i++) {
+        dst[i] = *start + i * *increment;
+    }
+}
 
 // single vector math functions
 void d4lib_stanh(const float* src, float* dst, d4lib_length length) {

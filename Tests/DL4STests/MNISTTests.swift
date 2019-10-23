@@ -28,21 +28,27 @@ import XCTest
 
 class MNISTTests: XCTestCase {
     static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
-        let trainingData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
-        let trainingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
-        let testingData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
-        let testingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
+        do {
+            let trainingData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
+            let trainingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
+            let testingData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
+            let testingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
+            
+            let trainImages = Tensor<Element, Device>(trainingData.dropFirst(16).prefix(28 * 28 * 60_000).map(Element.init)) / 256
+            let testImages = Tensor<Element, Device>(testingData.dropFirst(16).prefix(28 * 28 * 10_000).map(Element.init)) / 256
+            
+            let trainLabels = Tensor<Int32, Device>(trainingLabelData.dropFirst(8).prefix(60_000).map(Int32.init))
+            let testLabels = Tensor<Int32, Device>(testingLabelData.dropFirst(8).prefix(10_000).map(Int32.init))
+            
+            return (
+                train: (trainImages.view(as: [-1, 1, 28, 28]), trainLabels),
+                test: (testImages.view(as: [-1, 1, 28, 28]), testLabels)
+            )
+        } catch let error {
+            print(error)
+            fatalError()
+        }
         
-        let trainImages = Tensor<Element, Device>(trainingData.dropFirst(16).prefix(28 * 28 * 60_000).map(Element.init)) / 256
-        let testImages = Tensor<Element, Device>(testingData.dropFirst(16).prefix(28 * 28 * 10_000).map(Element.init)) / 256
-        
-        let trainLabels = Tensor<Int32, Device>(trainingLabelData.dropFirst(8).prefix(60_000).map(Int32.init))
-        let testLabels = Tensor<Int32, Device>(testingLabelData.dropFirst(8).prefix(10_000).map(Int32.init))
-        
-        return (
-            train: (trainImages.view(as: [-1, 1, 28, 28]), trainLabels),
-            test: (testImages.view(as: [-1, 1, 28, 28]), testLabels)
-        )
     }
     
     func testConvNet() {
@@ -158,6 +164,8 @@ class MNISTTests: XCTestCase {
     func testGRU() {
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: "/home/palle/Downloads/MNIST/", type: Float.self, device: CPU.self)
         
+        print("Loaded images")
+
         var model = Sequential {
             GRU<Float, CPU>(inputSize: 28, hiddenSize: 128, direction: .forward)
             Lambda<GRU<Float, CPU>.Outputs, Tensor<Float, CPU>, Float, CPU> { inputs in
@@ -172,6 +180,8 @@ class MNISTTests: XCTestCase {
         let batchSize = 128
         
         var optimizer = Adam(model: model, learningRate: 0.001)
+
+        print("Created model and optimizer")
         
         let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
         let workers = 1
