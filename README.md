@@ -213,10 +213,9 @@ print(dl_da)
 #### Second derivatives
 
 The operations used during backpropagation are themselves differentiable. 
-Therefore, second derivatives (diagonal of Hessian) can be computed by computing the gradient of the gradient.
+Therefore, second derivatives can be computed by computing the gradient of the gradient.
 
 When higher order derivatives are required, the compute graph of the backwards pass has to be explicitly retained.
-Otherwise it will be automatically discarded.
 ```swift
 let t = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
 
@@ -258,7 +257,7 @@ var model = Sequential {
    Softmax<Float, CPU>()
 }
 
-var optimizer = XAdam(model: model, learningRate: 0.001)
+var optimizer = Adam(model: model, learningRate: 0.001)
 
 // Single iteration of minibatch gradient descent
 let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
