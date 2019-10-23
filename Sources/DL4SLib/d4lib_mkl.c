@@ -28,23 +28,35 @@
 #if defined(MKL_ENABLE)
 #pragma message "Using MKL"
 #include "mkl.h"
-// #include "ipp.h"
+#include "ipp.h"
 #include <math.h>
 #include <limits.h>
 #define MAX(x, y) (x >= y ? x : y)
 
 // Vector Fill
 void d4lib_sfill(const float* src, float* dst, d4lib_stride dst_stride, d4lib_length length) {
+    if (dst_stride == 1) {
+        ippsSet_32f(*src, dst, length);
+        return;
+    }
     for (int i = 0; i < length; i++) {
         dst[i * dst_stride] = *src;
     }
 }
 void d4lib_dfill(const double* src, double* dst, d4lib_stride dst_stride, d4lib_length length) {
+    if (dst_stride == 1) {
+        ippsSet_64f(*src, dst, length);
+        return;
+    }
     for (int i = 0; i < length; i++) {
         dst[i * dst_stride] = *src;
     }
 }
 void d4lib_ifill(const int* src, int* dst, d4lib_stride dst_stride, d4lib_length length) {
+    if (dst_stride == 1) {
+        ippsSet_32s(*src, dst, length);
+        return;
+    }
     for (int i = 0; i < length; i++) {
         dst[i * dst_stride] = *src;
     }
@@ -82,12 +94,10 @@ void d4lib_ithreshold(const int* src, const int* thresh, int* dst, d4lib_length 
 
 // Vector negate
 void d4lib_sneg(const float* src, float* dst, d4lib_length length) {
-    avxcpy(dst, src, sizeof(float) * length);
-    cblas_sscal(length, -1, dst, 1);
+    ippsMulC_32f(src, -1, dst, length);
 }
 void d4lib_dneg(const double* src, double* dst, d4lib_length length) {
-    avxcpy(dst, src, sizeof(double) * length);
-    cblas_dscal(length, -1, dst, 1);
+    ippsMulC_64f(src, -1, dst, length);
 }
 void d4lib_ineg(const int* src, int* dst, d4lib_length length) {
     for (int i = 0; i < length; i++) {
@@ -198,9 +208,7 @@ void d4lib_idivv(const int* lhs, const int* rhs, int* dst, d4lib_length length) 
 
 // Scalar vector divide
 void d4lib_sdivsv(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
-    for (int i = 0; i < length; i++) {
-        dst[i] = *lhs / rhs[i];
-    }
+    ippsDivCRev_32f(rhs, *lhs, dst, length);
 }
 void d4lib_ddivsv(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
     for (int i = 0; i < length; i++) {
@@ -215,18 +223,10 @@ void d4lib_idivsv(const int* lhs, const int* rhs, int* dst, d4lib_length length)
 
 // Vector Sum
 void d4lib_ssum(const float* src, d4lib_stride src_stride, float* dst, d4lib_length length) {
-    float sum = 0;
-    for (int i = 0; i < length; i++) {
-        sum += src[i];
-    }
-    *dst = sum;
+    ippsSum_32f(src, length, dst, ippAlgHintNone);
 }
 void d4lib_dsum(const double* src, d4lib_stride src_stride, double* dst, d4lib_length length) {
-    double sum = 0;
-    for (int i = 0; i < length; i++) {
-        sum += src[i];
-    }
-    *dst = sum;
+    ippsSum_64f(src, length, dst);
 }
 void d4lib_isum(const int* src, d4lib_stride src_stride, int* dst, d4lib_length length) {
     int sum = 0;
@@ -239,6 +239,12 @@ void d4lib_isum(const int* src, d4lib_stride src_stride, int* dst, d4lib_length 
 
 // Vector maximum value and index
 void d4lib_smaxi(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length) {
+    if (src_stride == 1) {
+        int maxI;
+        ippsMaxIndx_32f(src, length, dst, &maxI);
+        *dst_idx = maxI;
+        return;
+    }
     int max_i = -1;
     float max_v = -INFINITY;
     for (int i = 0; i < length; i++) {
@@ -251,6 +257,12 @@ void d4lib_smaxi(const float* src, d4lib_stride src_stride, float* dst, d4lib_le
     *dst = max_v;
 }
 void d4lib_dmaxi(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length) {
+    if (src_stride == 1) {
+        int maxI;
+        ippsMaxIndx_64f(src, length, dst, &maxI);
+        *dst_idx = maxI;
+        return;
+    }
     int max_i = -1;
     double max_v = -INFINITY;
     for (int i = 0; i < length; i++) {
@@ -277,14 +289,10 @@ void d4lib_imaxi(const int* src, d4lib_stride src_stride, int* dst, d4lib_length
 
 // Vector vector max
 void d4lib_smax(const float* lhs, const float* rhs, float* dst, d4lib_length length) {
-    for (int i = 0; i < length; i++) {
-        dst[i] = MAX(lhs[i], rhs[i]);
-    }
+    ippsMaxEvery_32f(lhs, rhs, dst, length);
 }
 void d4lib_dmax(const double* lhs, const double* rhs, double* dst, d4lib_length length) {
-    for (int i = 0; i < length; i++) {
-        dst[i] = MAX(lhs[i], rhs[i]);
-    }
+    ippsMaxEvery_64f(lhs, rhs, dst, length);
 }
 void d4lib_imax(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
     for (int i = 0; i < length; i++) {
@@ -294,6 +302,12 @@ void d4lib_imax(const int* lhs, const int* rhs, int* dst, d4lib_length length) {
 
 // Vector maximum value and index
 void d4lib_smini(const float* src, d4lib_stride src_stride, float* dst, d4lib_length* dst_idx, d4lib_length length) {
+    if (src_stride == 1) {
+        int minI;
+        ippsMinIndx_32f(src, length, dst, &minI);
+        *dst_idx = minI;
+        return;
+    }
     int min_i = -1;
     float min_v = INFINITY;
     for (int i = 0; i < length; i++) {
@@ -306,6 +320,12 @@ void d4lib_smini(const float* src, d4lib_stride src_stride, float* dst, d4lib_le
     *dst = min_v;
 }
 void d4lib_dmini(const double* src, d4lib_stride src_stride, double* dst, d4lib_length* dst_idx, d4lib_length length) {
+    if (src_stride == 1) {
+        int minI;
+        ippsMinIndx_64f(src, length, dst, &minI);
+        *dst_idx = minI;
+        return;
+    }
     int min_i = -1;
     double min_v = INFINITY;
     for (int i = 0; i < length; i++) {
@@ -332,19 +352,13 @@ void d4lib_imini(const int* src, d4lib_stride src_stride, int* dst, d4lib_length
 
 // Vector ramp
 void d4lib_sramp(const float* start, const float* increment, float* dst, d4lib_length length) {
-    for (int i = 0; i < length; i++) {
-        dst[i] = *start + i * *increment;
-    }
+    ippsVectorSlope_32f(dst, length, *start, *increment);
 }
 void d4lib_dramp(const double* start, const double* increment, double* dst, d4lib_length length) {
-    for (int i = 0; i < length; i++) {
-        dst[i] = *start + i * *increment;
-    }
+    ippsVectorSlope_64f(dst, length, *start, *increment);
 }
 void d4lib_iramp(const int* start, const int* increment, int* dst, d4lib_length length) {
-    for (int i = 0; i < length; i++) {
-        dst[i] = *start + i * *increment;
-    }
+    ippsVectorSlope_32s(dst, length, *start, *increment);
 }
 
 // single vector math functions

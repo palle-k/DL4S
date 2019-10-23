@@ -135,6 +135,7 @@ extension VecTests {
         ("testVectorWrite", testVectorWrite),
         ("testVectorWriteItem", testVectorWriteItem),
         ("testVectorWriteItem2", testVectorWriteItem2),
+        ("testIPP", testIPP),
     ]
 }
 

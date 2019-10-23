@@ -247,8 +247,11 @@ class VecTests: XCTestCase {
         let ref = elements.map {1 / (1 + exp(-$0))}
         let result = 1 / (1 + exp(-a))
         
-        print(a, ref)
-        
+        print(a)
+
+        print(elements.map {1 / $0})
+        print(1 / a)
+                
         for i in 0 ..< 10 {
             XCTAssertEqual(result[i].item, ref[i], accuracy: 0.0001)
         }
@@ -519,5 +522,10 @@ class VecTests: XCTestCase {
         let a = Tensor<Float, CPU>(repeating: 1, shape: 1, 28, 28)
         let padded = a.padded(padding: [0, 2, 2])
         print(padded)
+    }
+
+    func testIPP() {
+        let a = Tensor<Float, CPU>([[-1, 0, 1], [-2, 0, 2]])
+        print(a.sigmoid())
     }
 }
