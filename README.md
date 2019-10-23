@@ -36,7 +36,7 @@ Then add `DL4S` as a dependency to your target:
 .target(name: "MyPackage", dependencies: ["DL4S"])
 ```
 
-### iOS / tvOS / macOS / watchOS
+### iOS / tvOS / macOS
 
 1. In Xcode, select "File" > "Swift Packages" > "Add Package Dependency"
 2. Enter `https://github.com/palle-k/DL4S.git` into the Package URL field and click "Next".
