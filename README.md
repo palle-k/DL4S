@@ -184,15 +184,14 @@ Default implementations are provided for the following architectures:
 Some high level examples have been implemented in other repositories:
 
 - [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S): Seq2seq with attention.
-- [Gridworld](https://github.com/palle-k/REINFORCE-DL4S): Reinforcement Learning using the REINFORCE algorithm.
 
 ### Arithmetic & Differentiation
 
 DL4S provides a high-level interface to many vectorized operations on tensors.
 
 ```swift
-let a = XTensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-let prod = a.transposed().matMul(a)
+let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
+let prod = a.transposed().matrixMultipled(with: a)
 let s = prod.reduceSum()
 let l = log(s)
 print(l) // 5.1873856
@@ -222,7 +221,7 @@ Therefore, second derivatives (diagonal of Hessian) can be computed by computing
 When higher order derivatives are required, the compute graph of the backwards pass has to be explicitly retained.
 Otherwise it will be automatically discarded.
 ```swift
-let t = XTensor<Float, CPU>([1,2,3,4], requiresGradient: true)
+let t = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
 
 let result = t * t * t
 print(result) // [1, 8, 27, 64]
