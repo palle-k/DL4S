@@ -16,9 +16,6 @@ such as convolution, recurrent units, and more.
     5. Engines
     6. Architectures
 3. [Examples](#examples)
-    1. [Convolutional Networks](#convolutional-networks)
-    2. [Recurrent Network (LSTM)](#recurrent-networks)
-    3. [Generative Adversarial Network](#generative-adversarial-networks)
 
 
 ## Installation
@@ -182,7 +179,8 @@ Default implementations are provided for the following architectures:
 
 Some high level examples have been implemented in other repositories:
 
-- [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S): Seq2seq with attention.
+- [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S) based on seq2seq with Attention
+- [Generative Adversarial Networks](https://github.com/palle-k/DL4S-WGAN-GP) - Wasserstein GAN with Gradient Penalty (WGAN-GP)
 
 ### Arithmetic & Differentiation
 
@@ -215,10 +213,9 @@ print(dl_da)
 #### Second derivatives
 
 The operations used during backpropagation are themselves differentiable. 
-Therefore, second derivatives (diagonal of Hessian) can be computed by computing the gradient of the gradient.
+Therefore, second derivatives can be computed by computing the gradient of the gradient.
 
 When higher order derivatives are required, the compute graph of the backwards pass has to be explicitly retained.
-Otherwise it will be automatically discarded.
 ```swift
 let t = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
 
@@ -260,7 +257,7 @@ var model = Sequential {
    Softmax<Float, CPU>()
 }
 
-var optimizer = XAdam(model: model, learningRate: 0.001)
+var optimizer = Adam(model: model, learningRate: 0.001)
 
 // Single iteration of minibatch gradient descent
 let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
