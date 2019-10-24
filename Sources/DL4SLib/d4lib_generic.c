@@ -24,7 +24,6 @@
 //  SOFTWARE.
 
 #include "d4lib.h"
-#include <immintrin.h>
 #include <string.h>
 #include <signal.h>
 #include <stdio.h>
@@ -34,6 +33,9 @@
 #include <math.h>
 #include <stdio.h>
 
+#if defined(__AVX2__) || defined(__AVX__)
+#include <immintrin.h>
+#endif
 
 void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
 #ifdef __AVX2__

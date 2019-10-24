@@ -188,14 +188,12 @@ Engines
 </summary>
 <p>
 
-<<<<<<< HEAD
-- [x] CPU (Accelerate framework)
-- [x] CPU (Intel Math Kernel Library)
-=======
-- [x] CPU (Accelerate for Apple devices)
+- [x] CPU (Accelerate framework for Apple Devices)
+- [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
 - [x] CPU (Generic)
->>>>>>> develop
 - [ ] GPU (Metal)
+
+For an experimental, early stage Metal implementation, check out `feature/metal`.
 
 </p>
 </details>
