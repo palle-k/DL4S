@@ -80,4 +80,10 @@ public struct AnyLayer<Inputs, Outputs, Parameter: NumericType, Device: DeviceTy
     public func callAsFunction(_ inputs: Inputs) -> Outputs {
         forward(inputs)
     }
+    
+    public mutating func usingCurrentWeights<OtherLayer: LayerType>(of other: OtherLayer) where Parameter == OtherLayer.Parameter {
+        for (src, dst) in zip(other.parameterPaths, self.parameterPaths) {
+            self[keyPath: dst] = other[keyPath: src].copied(to: Device.self)
+        }
+    }
 }

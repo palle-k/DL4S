@@ -434,10 +434,6 @@ public struct GPUEngine: EngineType {
         GPU.function(named: "vFillStride_\(N.gpuTypeIdentifier)").execute(workSize: (count, 1, 1), value, result, stride)
     }
 
-    public static func transpose<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, srcRows: Int, srcCols: Int) {
-        GPU.function(named: "mTrans_\(N.gpuTypeIdentifier)").execute(workSize: (srcCols, srcRows, 1), val.memory, srcCols, srcRows, result.memory)
-    }
-
     public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
         GPU.function(named: "vAdd_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), lhs.memory, rhs.memory, result.memory)
     }
@@ -495,14 +491,14 @@ public struct GPUEngine: EngineType {
         )
     }
     
-    public static func matMulAddInPlace<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), transposeFirst: Bool, transposeSecond: Bool) {
+    public static func gemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
         let function = MPSMatrixMultiplication(
             device: GPU.device,
             transposeLeft: transposeFirst,
             transposeRight: transposeSecond,
-            resultRows: resultShape.0,
-            resultColumns: resultShape.1,
-            interiorColumns: transposeFirst ? lhsShape.0 : lhsShape.1,
+            resultRows: result.shape[0],
+            resultColumns: result.shape[1],
+            interiorColumns: transposeFirst ? lhs.shape[0] : lhs.shape[1],
             alpha: 1,
             beta: 1
         )
@@ -511,21 +507,25 @@ public struct GPUEngine: EngineType {
         function.encode(
             commandBuffer: cmdBuffer,
             leftMatrix: MPSMatrix(
-                buffer: lhs.memory.buffer,
-                offset: lhs.memory.offset,
-                descriptor: MPSMatrixDescriptor(rows: lhsShape.0, columns: lhsShape.1, rowBytes: lhsShape.1 * MemoryLayout<N>.stride, dataType: N.mpsDataType)
+                buffer: lhs.values.memory.buffer,
+                offset: lhs.values.memory.offset,
+                descriptor: MPSMatrixDescriptor(rows: lhs.shape[0], columns: lhs.shape[1], rowBytes: lhs.shape[1] * MemoryLayout<N>.stride, dataType: N.mpsDataType)
             ),
             rightMatrix: MPSMatrix(
-                buffer: rhs.memory.buffer,
-                offset: rhs.memory.offset,
-                descriptor: MPSMatrixDescriptor(rows: rhsShape.0, columns: rhsShape.1, rowBytes: rhsShape.1 * MemoryLayout<N>.stride, dataType: N.mpsDataType)
+                buffer: rhs.values.memory.buffer,
+                offset: rhs.values.memory.offset,
+                descriptor: MPSMatrixDescriptor(rows: rhs.shape[0], columns: rhs.shape[1], rowBytes: rhs.shape[1] * MemoryLayout<N>.stride, dataType: N.mpsDataType)
             ),
             resultMatrix: MPSMatrix(
-                buffer: result.memory.buffer,
-                offset: result.memory.offset,
-                descriptor: MPSMatrixDescriptor(rows: resultShape.0, columns: resultShape.1, rowBytes: resultShape.1 * MemoryLayout<N>.stride, dataType: N.mpsDataType)
+                buffer: result.values.memory.buffer,
+                offset: result.values.memory.offset,
+                descriptor: MPSMatrixDescriptor(rows: result.shape[0], columns: result.shape[1], rowBytes: result.shape[1] * MemoryLayout<N>.stride, dataType: N.mpsDataType)
             )
         )
+    }
+    
+    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
     }
     
     public static func dot<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, count: Int) -> N {
@@ -577,14 +577,6 @@ public struct GPUEngine: EngineType {
     }
     
     public static func sum<N: NumericType>(val: Buffer<N, Device>, count: Int) -> N {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func gemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
     

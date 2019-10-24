@@ -356,3 +356,16 @@ public extension UIImage {
     }
 }
 #endif
+
+public extension Tensor {
+    func copied<TargetDevice: DeviceType>(to device: TargetDevice.Type) -> Tensor<Element, TargetDevice> {
+        let tmp = UnsafeMutableBufferPointer<Element>.allocate(capacity: self.count)
+        Device.Memory.assign(from: values.values, to: tmp, count: count)
+        
+        let targetBuffer = TargetDevice.Memory.allocateBuffer(withShape: shape, type: Element.self)
+        TargetDevice.Memory.assign(from: tmp.immutable, to: targetBuffer.values, count: count)
+        tmp.deallocate()
+        
+        return Tensor<Element, TargetDevice>(using: targetBuffer, context: nil)
+    }
+}

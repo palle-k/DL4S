@@ -33,9 +33,10 @@ class GPUTests: XCTestCase {
         
         let sum = a + b
         print(sum)
-        sum.backwards()
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        
+        let grads = sum.gradients(of: [a, b])
+        print(grads[0])
+        print(grads[1])
     }
     
     func testGPU4() {
@@ -44,9 +45,10 @@ class GPUTests: XCTestCase {
         
         let prod = a * b
         print(prod)
-        prod.backwards()
-        print(a.gradientDescription!)
-        print(b.gradientDescription!)
+        
+        let grads = prod.gradients(of: [a, b])
+        print(grads[0])
+        print(grads[1])
     }
     
     func testGPU5() {
@@ -56,9 +58,40 @@ class GPUTests: XCTestCase {
             [0, 1, 1, 0]
         ], requiresGradient: true)
         
-        let result = max(a, axis: 0)
+        let result = a.reduceMax(along: 1)
         print(result)
-        result.backwards()
-        print(a.gradientDescription!)
+        let grads = result.gradients(of: [a])
+        print(grads[0])
+    }
+    
+    func testGPUXOR() {
+        let xorInputs = Tensor<Float, GPU>([
+            [0, 0],
+            [0, 1],
+            [1, 0],
+            [1, 1]
+        ])
+        let xorLabels = Tensor<Float, GPU>([0, 1, 1, 0])
+        
+        let model = Sequential {
+            Dense<Float, GPU>(inputSize: 2, outputSize: 6)
+            Tanh<Float, GPU>()
+            Dense<Float, GPU>(inputSize: 6, outputSize: 1)
+            Sigmoid<Float, GPU>()
+        }
+        var optimizer = SGD(model: model, learningRate: 0.01)
+        
+        let epochs = 100
+        for epoch in 1 ... epochs {
+            let p = optimizer.model(xorInputs)
+            let d = (p.flattened() - xorLabels)
+            let l = d * d / 4
+            let grads = l.gradients(of: optimizer.model.parameters)
+            optimizer.update(along: grads)
+            
+            if epoch.isMultiple(of: 1) {
+                print("[\(epoch)/\(epochs)] loss: \(l)")
+            }
+        }
     }
 }
