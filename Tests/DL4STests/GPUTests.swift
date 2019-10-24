@@ -136,4 +136,9 @@ class GPUTests: XCTestCase {
         let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
         print(a.reduceSum(along: 0, 1))
     }
+    
+    func testSoftmax() {
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
+        print(softmax(a))
+    }
 }

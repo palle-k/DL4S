@@ -96,14 +96,6 @@ public struct GPUEngine: EngineType {
         GPU.function(named: "vSquare_\(N.gpuTypeIdentifier)").execute(workSize: (count, 1, 1), values.memory, result.memory)
     }
     
-    public static func matMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, lhsRows: Int, lhsCols: Int, rhsCols: Int) {
-        matMul(
-            lhs: ShapedBuffer(values: lhs, shape: [lhsRows, lhsCols]),
-            rhs: ShapedBuffer(values: rhs, shape: [lhsCols, rhsCols]),
-            result: ShapedBuffer(values: result, shape: [lhsRows, rhsCols])
-        )
-    }
-    
     public static func gemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
         let function = MPSMatrixMultiplication(
             device: GPU.device,
@@ -141,30 +133,6 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func dot<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, count: Int) -> N {
-        let result = GPU.Memory.allocateBuffer(withCapacity: 1, type: N.self)
-        matMul(
-            lhs: ShapedBuffer(values: lhs, shape: [1, count]),
-            rhs: ShapedBuffer(values: rhs, shape: [count, 1]),
-            result: ShapedBuffer(values: result, shape: [1, 1])
-        )
-        return result.pointee
-    }
-    
-    public static func vMulSA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: N, result: Buffer<N, Device>, count: Int) {
-        guard let add = add as? GPUArgument else {
-            fatalError("Cannot use value of type \(N.self) as an argument.")
-        }
-        GPU.function(named: "vMulSA_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), lhs.memory, rhs.memory, add, result.memory)
-    }
-    
-    public static func vsMulVAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        guard let rhs = rhs as? GPUArgument else {
-            fatalError("Cannot use value of type \(N.self) as an argument.")
-        }
-        GPU.function(named: "vsMulVAdd_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), lhs.memory, rhs, add.memory, result.memory)
-    }
-    
     public static func log<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
         GPU.function(named: "vLog_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), val.memory, result.memory)
     }
@@ -175,10 +143,6 @@ public struct GPUEngine: EngineType {
     
     public static func relu<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
         GPU.function(named: "vRelu_\(N.gpuTypeIdentifier)").execute(workSize: (count, 1, 1), val.memory, result.memory)
-    }
-    
-    public static func isPositive<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        GPU.function(named: "vHeaviside_\(N.gpuTypeIdentifier)").execute(workSize: (count, 1, 1), val.memory, result.memory)
     }
     
     public static func tanh<N: NumericType>(val: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
@@ -207,10 +171,6 @@ public struct GPUEngine: EngineType {
         )
     }
     
-    public static func conv2d<N>(input: Buffer<N, GPU>, filter: Buffer<N, GPU>, result: Buffer<N, GPU>, width: Int, height: Int, batchSize: Int, kernelWidth: Int, kernelHeight: Int, kernelDepth: Int, kernelCount: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
     public static func permuteAxes<N>(input: Buffer<N, GPU>, arangement: [Int], shape: [Int], destination: Buffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
@@ -219,14 +179,6 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
 
-    public static func matMul<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
-        GPU.function(named: "mMul_\(N.gpuTypeIdentifier)").execute(workSize: (result.shape[1], result.shape[0], 1), lhs, rhs, result)
-    }
-    
-    public static func matMulAdd<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
     public static func broadcastAdd<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         GPU.function(named: "vAdd_Broadcast_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), lhs, rhs, result)
     }
@@ -330,11 +282,19 @@ public struct GPUEngine: EngineType {
     }
     
     public static func reduceMax<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, axes: [Int]) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
+        if axes.count == 1 {
+            reduceMax(values: values, result: result, context: context, axis: axes[0])
+        } else {
+            fatalError("\(#function) not available with multiple axes")
+        }
     }
     
     public static func reduceMin<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>?, axes: [Int]) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
+        if axes.count == 1 {
+            reduceMin(values: values, result: result, context: context, axis: axes[0])
+        } else {
+            fatalError("\(#function) not available with multiple axes")
+        }
     }
     
     public static func reduceMean<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axes: [Int]) where N : NumericType {
@@ -378,7 +338,7 @@ public struct GPUEngine: EngineType {
     }
     
     public static func heaviside<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
+        GPU.function(named: "vHeaviside_\(N.gpuTypeIdentifier)").execute(workSize: (values.count, 1, 1), values.values.memory, result.values.memory)
     }
     
     public static func permuteAxes<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, arangement: [Int]) where N: NumericType {

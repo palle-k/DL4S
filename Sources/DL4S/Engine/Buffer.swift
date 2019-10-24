@@ -89,7 +89,7 @@ public struct ShapedBuffer<Element, Device: DeviceType>: Hashable {
     }
     
     var count: Int {
-        return values.count
+        return shape.reduce(1, *)
     }
     
     init(values: Buffer<Element, Device>, shape: [Int]) {

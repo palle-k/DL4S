@@ -146,7 +146,6 @@ kernel void permuteAxes_Float32(
     uint pos [[thread_position_in_grid]]
 ) {
     auto src_sh = Shape(src_dim, src_shape);
-    auto dst_sh = Shape(dst_dim, dst_shape);
     uint dst_pos = src_sh.permute(pos, strides, arangement);
     dst_vals[dst_pos] = src_vals[pos];
 }

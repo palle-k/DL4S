@@ -38,7 +38,7 @@ public struct VRAMAllocator: MemoryOperatorsType {
         guard let buffer = Device.device.makeBuffer(length: stride * capacity, options: .storageModeShared) else {
             fatalError("Could not allocate memory")
         }
-        return Buffer<Element, GPU>(memory: VRAMBuffer(buffer: buffer, offset: 0))
+        return Buffer<Element, GPU>(memory: VRAMBuffer(buffer: buffer, offset: 0, length: stride * capacity))
     }
     
     public static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, GPU> {
@@ -151,7 +151,7 @@ public struct VRAMAllocator: MemoryOperatorsType {
 
 public struct VRAMBuffer: Hashable {
     public static func == (lhs: VRAMBuffer, rhs: VRAMBuffer) -> Bool {
-        return lhs.buffer.hash == rhs.buffer.hash && lhs.offset == rhs.offset
+        return lhs.buffer.hash == rhs.buffer.hash && lhs.offset == rhs.offset && lhs.length == rhs.length
     }
     
     public func hash(into hasher: inout Hasher) {
@@ -161,9 +161,15 @@ public struct VRAMBuffer: Hashable {
     
     var buffer: MTLBuffer
     var offset: Int
+    var length: Int
     
     func advanced(by offset: Int) -> VRAMBuffer {
-        VRAMBuffer(buffer: buffer, offset: self.offset + offset)
+        VRAMBuffer(buffer: buffer, offset: self.offset + offset, length: length - offset)
+    }
+    
+    func prefix(_ length: Int) -> VRAMBuffer {
+        precondition(length <= self.length, "Cannot create prefix of length \(length) on buffer of length \(self.length)")
+        return VRAMBuffer(buffer: buffer, offset: self.offset + offset, length: length)
     }
 }
 

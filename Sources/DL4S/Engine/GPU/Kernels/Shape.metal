@@ -85,7 +85,6 @@ const int Shape::indexWithInsertedAxes(const int index, device const int* insert
     for (int i = 0; i < dstShape.dim; i++) {
         if (inserted_axes[sax_i] == i) {
             stride *= dstShape.shape[i];
-            dstIdx += stride;
         } else {
             dstIdx += stride * (idx % this->shape[src_i]);
             idx /= this->shape[src_i];

@@ -117,20 +117,20 @@ class MNISTTests: XCTestCase {
     
     func testFCN() {
         var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            Relu<Float, CPU>()
+            Dense<Float, GPU>(inputSize: 28 * 28, outputSize: 500)
+            Relu<Float, GPU>()
             
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            Relu<Float, CPU>()
+            Dense<Float, GPU>(inputSize: 500, outputSize: 300)
+            Relu<Float, GPU>()
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
+            Dense<Float, GPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, GPU>()
         }
         
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: GPU.self)
         
         let epochs = 10_000
         let batchSize = 128

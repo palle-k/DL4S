@@ -27,7 +27,6 @@
 using namespace metal;
 
 #include "Shape.hpp"
-#include "Tensor.hpp"
 
 
 kernel void vAdd_Float32(
@@ -91,34 +90,4 @@ kernel void svDiv_Float32(
     uint pos [[thread_position_in_grid]]
 ) {
     result_vals[pos] = lhs_val / rhs_vals[pos];
-}
-
-kernel void vMA_Float32(
-    const device float* lhs_vals [[buffer(0)]],
-    const device float* rhs_vals [[buffer(1)]],
-    const device float* add_vals [[buffer(2)]],
-    device float* result_vals [[buffer(3)]],
-    uint pos [[thread_position_in_grid]]
-) {
-    result_vals[pos] = lhs_vals[pos] * rhs_vals[pos] + add_vals[pos];
-}
-
-kernel void vMulSA_Float32(
-    const device float* lhs_vals [[buffer(0)]],
-    const device float* rhs_vals [[buffer(1)]],
-    constant float &add_val [[buffer(2)]],
-    device float* result_vals [[buffer(3)]],
-    uint pos [[thread_position_in_grid]]
-) {
-    result_vals[pos] = lhs_vals[pos] * rhs_vals[pos] + add_val;
-}
-
-kernel void vsMulVAdd_Float32(
-    const device float* lhs_vals [[buffer(0)]],
-    constant float &rhs_val [[buffer(1)]],
-    const device float* add_vals [[buffer(2)]],
-    device float* result_vals [[buffer(3)]],
-    uint pos [[thread_position_in_grid]]
-) {
-    result_vals[pos] = lhs_vals[pos] * rhs_val + add_vals[pos];
 }

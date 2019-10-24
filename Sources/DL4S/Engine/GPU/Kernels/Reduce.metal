@@ -154,6 +154,40 @@ kernel void vMul_Reduce_Float32(
     dst_vals[pos] = prod;
 }
 
+kernel void vMul_ReduceMulti_Float32(
+    const device float* src_vals [[buffer(0)]],
+    constant int &src_dim [[buffer(1)]],
+    const device int* src_shape [[buffer(2)]],
+    const device int* src_strides [[buffer(3)]],
+    device float* dst_vals [[buffer(4)]],
+    constant int &dst_dim [[buffer(5)]],
+    const device int* dst_shape [[buffer(6)]],
+    constant int &reduced_axis_count [[buffer(7)]],
+    const device int* reduced_axes [[buffer(8)]],
+    uint pos [[thread_position_in_grid]]
+) {
+    thread int reduce_idx[REDUCE_AXIS_LIMIT];
+    
+    const auto sourceShape = Shape(src_dim, src_shape);
+    const auto dstShape = Shape(dst_dim, dst_shape);
+    const int baseIdx = dstShape.indexWithInsertedAxes(pos, reduced_axes, sourceShape);
+    auto context = ReduceContext(reduced_axis_count, baseIdx, reduce_idx, reduced_axes, sourceShape, src_strides);
+    
+    int reduceCount = 1;
+    for (int i = 0; i < reduced_axis_count; i++) {
+        reduceCount *= src_shape[reduced_axes[i]];
+    }
+    
+    float product = 1.0f;
+    for (int i = 0; i < reduceCount; i++) {
+        int idx = context.linearSourceIndex();
+        product *= src_vals[idx];
+        context.advance();
+    }
+    
+    dst_vals[pos] = product;
+}
+
 kernel void vMax_ReduceCtx_Float32(
     const device float* src_vals [[buffer(0)]],
     constant int &src_dim [[buffer(1)]],
