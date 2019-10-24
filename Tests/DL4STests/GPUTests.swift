@@ -3,7 +3,25 @@
 //  DL4STests
 //
 //  Created by Palle Klewitz on 05.07.19.
+//  Copyright (c) 2019 - Palle Klewitz
 //
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
 
 import XCTest
 @testable import DL4S
@@ -79,19 +97,43 @@ class GPUTests: XCTestCase {
             Dense<Float, GPU>(inputSize: 6, outputSize: 1)
             Sigmoid<Float, GPU>()
         }
-        var optimizer = SGD(model: model, learningRate: 0.01)
+        var optimizer = Adam(model: model, learningRate: 0.01)
         
-        let epochs = 100
+        let epochs = 1000
         for epoch in 1 ... epochs {
             let p = optimizer.model(xorInputs)
+            
             let d = (p.flattened() - xorLabels)
-            let l = d * d / 4
+            let l = (d * d).reduceSum()
             let grads = l.gradients(of: optimizer.model.parameters)
             optimizer.update(along: grads)
             
-            if epoch.isMultiple(of: 1) {
+            if epoch.isMultiple(of: 100) {
                 print("[\(epoch)/\(epochs)] loss: \(l)")
             }
         }
+    }
+    
+    func testMMul() {
+        let a = Tensor<Float, GPU>([[1,2,3]])
+        let b = Tensor<Float, GPU>([[4],[5],[6]])
+        
+        let result = matMul(a, b)
+        print(result)
+    }
+    
+    func testRandom() {
+        let a = Tensor<Float, GPU>(normalDistributedWithShape: [4, 4], mean: 0, stdev: 1)
+        print(a)
+    }
+    
+    func testTranspose() {
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
+        print(a.transposed())
+    }
+    
+    func testReduce() {
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
+        print(a.reduceSum(along: 0, 1))
     }
 }
