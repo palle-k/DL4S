@@ -29,6 +29,9 @@
 #pragma message "Using Accelerate Framework"
 #include "d4lib.h"
 #include <Accelerate/Accelerate.h>
+#if !defined(MAX)
+#define MAX(a, b) ((a)<(b)?(b):(a))
+#endif
 
 void d4lib_sfill(const float* src, float* dst, d4lib_stride dst_stride, d4lib_length length) { vDSP_vfill(src, dst, dst_stride, length); }
 void d4lib_dfill(const double* src, double* dst, d4lib_stride dst_stride, d4lib_length length)  { vDSP_vfillD(src, dst, dst_stride, length); }
