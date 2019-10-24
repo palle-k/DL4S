@@ -37,7 +37,6 @@
 #include <immintrin.h>
 #endif
 
-
 void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
 #ifdef __AVX2__
 #pragma message "AVX2 support enabled"
