@@ -162,7 +162,7 @@ public extension Tensor {
                     { resultGradient, acc in
                         let res: Self
                         if let acc = acc {
-                            res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther)
+                            res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther, inplaceAdd: !acc.requiresGradient)
                         } else {
                              res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
                         }
@@ -176,7 +176,7 @@ public extension Tensor {
                         let res: Self
                         
                         if let acc = acc {
-                            res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false)
+                            res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false, inplaceAdd: !acc.requiresGradient)
                         } else {
                             res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
                         }
@@ -192,7 +192,7 @@ public extension Tensor {
         )
     }
     
-    private func _matMulAdd(_ other: Self, add: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
+    private func _matMulAdd(_ other: Self, add: Self, transposeSelf: Bool = false, transposeOther: Bool = false, inplaceAdd: Bool = false) -> Self {
         precondition(self.dim == 2)
         precondition(other.dim == 2)
         precondition(self.shape[transposeSelf ? 0 : 1] == other.shape[transposeOther ? 1 : 0])
@@ -201,7 +201,9 @@ public extension Tensor {
         precondition(resultShape == add.shape)
         
         var target = add
-        target.ensureOwnership()
+        if !inplaceAdd {
+            target.ensureOwnership()
+        }
         
         Device.Engine.gemm(
             lhs: self.values,
