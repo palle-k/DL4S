@@ -86,9 +86,11 @@ kernel void vSum_Reduce_Float32(
     uint posAfter = pos % src_strides[reduced_axis];
     
     uint offset = posAfter + (reduced_axis != 0 ? posBefore * src_strides[reduced_axis - 1] : 0);
+    uint stride = src_strides[reduced_axis];
+    uint count = src_shape[reduced_axis];
     
-    for (int i = 0; i < src_shape[reduced_axis]; i++) {
-        sum += src_vals[offset + i * src_strides[reduced_axis]];
+    for (uint i = 0; i < count; i++) {
+        sum += src_vals[i * stride + offset];
     }
     
     dst_vals[pos] = sum;
@@ -146,9 +148,11 @@ kernel void vMul_Reduce_Float32(
     uint posAfter = pos % src_strides[reduced_axis];
     
     uint offset = posAfter + (reduced_axis != 0 ? posBefore * src_strides[reduced_axis - 1] : 0);
+    uint stride = src_strides[reduced_axis];
+    uint count = src_shape[reduced_axis];
     
-    for (int i = 0; i < src_shape[reduced_axis]; i++) {
-        prod *= src_vals[offset + i * src_strides[reduced_axis]];
+    for (uint i = 0; i < count; i++) {
+        prod *= src_vals[i * stride + offset];
     }
     
     dst_vals[pos] = prod;
@@ -209,8 +213,11 @@ kernel void vMax_ReduceCtx_Float32(
     
     uint offset = posAfter + (reduced_axis != 0 ? posBefore * src_strides[reduced_axis - 1] : 0);
     
-    for (int i = 0; i < src_shape[reduced_axis]; i++) {
-        auto v = src_vals[offset + i * src_strides[reduced_axis]];
+    uint stride = src_strides[reduced_axis];
+    uint count = src_shape[reduced_axis];
+    
+    for (uint i = 0; i < count; i++) {
+        auto v = src_vals[i * stride + offset];
         if (v > maxVal) {
             maxVal = v;
             ctx = i;
@@ -241,9 +248,11 @@ kernel void vMin_ReduceCtx_Float32(
     uint posAfter = pos % src_strides[reduced_axis];
     
     uint offset = posAfter + (reduced_axis != 0 ? posBefore * src_strides[reduced_axis - 1] : 0);
+    uint stride = src_strides[reduced_axis];
+    uint count = src_shape[reduced_axis];
     
-    for (int i = 0; i < src_shape[reduced_axis]; i++) {
-        auto v = src_vals[offset + i * src_strides[reduced_axis]];
+    for (uint i = 0; i < count; i++) {
+        auto v = src_vals[i * stride + offset];
         if (v < minVal) {
             minVal = v;
             ctx = i;
@@ -272,9 +281,11 @@ kernel void vMax_Reduce_Float32(
     uint posAfter = pos % src_strides[reduced_axis];
     
     uint offset = posAfter + (reduced_axis != 0 ? posBefore * src_strides[reduced_axis - 1] : 0);
+    uint stride = src_strides[reduced_axis];
+    uint count = src_shape[reduced_axis];
     
-    for (int i = 0; i < src_shape[reduced_axis]; i++) {
-        auto v = src_vals[offset + i * src_strides[reduced_axis]];
+    for (uint i = 0; i < count; i++) {
+        auto v = src_vals[i * stride + offset];
         if (v > maxVal) {
             maxVal = v;
         }
@@ -301,9 +312,11 @@ kernel void vMin_Reduce_Float32(
     uint posAfter = pos % src_strides[reduced_axis];
     
     uint offset = posAfter + (reduced_axis != 0 ? posBefore * src_strides[reduced_axis - 1] : 0);
+    uint stride = src_strides[reduced_axis];
+    uint count = src_shape[reduced_axis];
     
-    for (int i = 0; i < src_shape[reduced_axis]; i++) {
-        auto v = src_vals[offset + i * src_strides[reduced_axis]];
+    for (uint i = 0; i < count; i++) {
+        auto v = src_vals[i * stride + offset];
         if (v < minVal) {
             minVal = v;
         }

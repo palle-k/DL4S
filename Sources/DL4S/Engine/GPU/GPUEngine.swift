@@ -256,6 +256,11 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
+    
+    public static func reduceMean<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axes: [Int]) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func reduceSum<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axes: [Int]) where N : NumericType {
         if axes.isEmpty || axes.allSatisfy({values.shape[$0] == 1}) {
             GPU.Memory.assign(from: values.values, to: result.values, count: values.count)
@@ -295,10 +300,6 @@ public struct GPUEngine: EngineType {
         } else {
             fatalError("\(#function) not available with multiple axes")
         }
-    }
-    
-    public static func reduceMean<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, axes: [Int]) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
     }
     
     public static func expandContext<N: NumericType>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) {
@@ -387,7 +388,23 @@ public struct GPUEngine: EngineType {
     }
     
     public static func stack<N>(buffers: [ShapedBuffer<N, GPU>], result: ShapedBuffer<N, GPU>, axis: Int) {
-        fatalError("\(#function) not available for GPU")
+        if axis == 0 {
+            _ = buffers.reduce(0) { offset, buffer in
+                let commandBuffer = GPU.currentCommandBuffer
+                let encoder = commandBuffer.makeBlitCommandEncoder()!
+                encoder.copy(
+                    from: buffer.values.memory.buffer,
+                    sourceOffset: buffer.values.memory.offset,
+                    to: result.values.memory.buffer,
+                    destinationOffset: offset,
+                    size: buffer.values.memory.length
+                )
+                encoder.endEncoding()
+                return offset + buffer.values.memory.length
+            }
+        } else {
+            fatalError("Stacking on GPU not available along axes > 0")
+        }
     }
     
     public static func unstackAdd<N>(stacked: ShapedBuffer<N, GPU>, add: [ShapedBuffer<N, GPU>], result: [ShapedBuffer<N, GPU>], axis: Int) where N : NumericType {

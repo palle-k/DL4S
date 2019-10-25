@@ -89,7 +89,7 @@ public struct VRAMAllocator: MemoryOperatorsType {
     }
     
     public static func getSize<Element>(of buffer: Buffer<Element, GPU>) -> Int {
-        return buffer.memory.buffer.length / MemoryLayout<Element>.stride
+        return buffer.memory.length / MemoryLayout<Element>.stride
     }
     
     public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> (Buffer<Element, GPU>, Bool, [Int]) {
@@ -105,7 +105,12 @@ public struct VRAMAllocator: MemoryOperatorsType {
             // Simple offset into storage
             let offset = zip(nonNilIndices, strides).map(*).reduce(0, +)
             let rawOffset = MemoryLayout<Element>.stride * offset
-            let advanced = buffer.memory.advanced(by: rawOffset)
+            let resultShape = Array(shape.dropFirst(nonNilIndices.count))
+            let resultCount = resultShape.reduce(1, *)
+            let rawCount = MemoryLayout<Element>.stride * resultCount
+            
+            let advanced = buffer.memory.advanced(by: rawOffset).prefix(rawCount)
+            
             return (Buffer<Element, GPU>(memory: advanced), false, Array(shape.dropFirst(nonNilIndices.count)))
         } else {
             let padded = slice + [Int?](repeating: nil, count: shape.count - slice.count)

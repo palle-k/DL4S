@@ -35,10 +35,10 @@ let MNIST_PATH = "/Users/Palle/Developer/DL4S/"
 class MNISTTests: XCTestCase {
     static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
         do {
-            let trainingData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
-            let trainingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
-            let testingData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
-            let testingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
+            let trainingData = try Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
+            let trainingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
+            let testingData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
+            let testingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
             
             let trainImages = Tensor<Element, Device>(trainingData.dropFirst(16).prefix(28 * 28 * 60_000).map(Element.init)) / 256
             let testImages = Tensor<Element, Device>(testingData.dropFirst(16).prefix(28 * 28 * 10_000).map(Element.init)) / 256
@@ -116,21 +116,23 @@ class MNISTTests: XCTestCase {
     }
     
     func testFCN() {
+        typealias Device = GPU
+        
         var model = Sequential {
-            Dense<Float, GPU>(inputSize: 28 * 28, outputSize: 500)
-            Relu<Float, GPU>()
+            Dense<Float, Device>(inputSize: 28 * 28, outputSize: 500)
+            Relu<Float, Device>()
             
-            Dense<Float, GPU>(inputSize: 500, outputSize: 300)
-            Relu<Float, GPU>()
+            Dense<Float, Device>(inputSize: 500, outputSize: 300)
+            Relu<Float, Device>()
 
-            Dense<Float, GPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, GPU>()
+            Dense<Float, Device>(inputSize: 300, outputSize: 10)
+            Softmax<Float, Device>()
         }
         
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: GPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: Device.self)
         
         let epochs = 10_000
         let batchSize = 128
@@ -138,13 +140,13 @@ class MNISTTests: XCTestCase {
         for epoch in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
             
-            let predicted = optimizer.model(input.view(as: [batchSize, 28 * 28]))
+            let predicted = optimizer.model(input.view(as: [-1, 28 * 28]).detached())
             let loss = categoricalCrossEntropy(expected: target, actual: predicted)
             
             let gradients = loss.gradients(of: optimizer.model.parameters)
             optimizer.update(along: gradients)
             
-            if epoch.isMultiple(of: 100) {
+            if epoch.isMultiple(of: 10) {
                 print("[\(epoch)/\(epochs)] loss: \(loss)")
             }
         }

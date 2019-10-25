@@ -133,12 +133,22 @@ class GPUTests: XCTestCase {
     }
     
     func testReduce() {
-        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
-        print(a.reduceSum(along: 0, 1))
+        let a = Tensor<Float, GPU>([
+            [[1, 2, 3], [4, 5, 6]],
+            [[7, 8, 9], [10, 11, 12]]
+        ])
+        print(a.reduceSum(along: 1))
     }
     
     func testSoftmax() {
         let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
         print(softmax(a))
+    }
+    
+    func testStack() {
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
+        let b = Tensor<Float, GPU>([[7, 8, 9]])
+        
+        print(Tensor(stacking: [a, b]))
     }
 }
