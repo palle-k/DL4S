@@ -80,7 +80,7 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 10_000
+        let epochs = 1_000
         let batchSize = 128
         
         for epoch in 1 ... epochs {
@@ -93,7 +93,7 @@ class MNISTTests: XCTestCase {
             
             optimizer.update(along: gradients)
             
-            if epoch.isMultiple(of: 10) {
+            if epoch.isMultiple(of: 100) {
                 print("[\(epoch)/\(epochs)] loss: \(loss)")
             }
         }
@@ -132,7 +132,7 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 10_000
+        let epochs = 1_000
         let batchSize = 128
         
         for epoch in 1 ... epochs {
@@ -190,7 +190,7 @@ class MNISTTests: XCTestCase {
         print("Created model and optimizer")
         
         let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
-        let workers = 1
+        let workers = 3
 
         for i in 0 ..< workers {
             DispatchQueue.global().async {
