@@ -24,7 +24,6 @@
 //  SOFTWARE.
 
 #include "d4lib.h"
-#include <immintrin.h>
 #include <string.h>
 #include <signal.h>
 #include <stdio.h>
@@ -37,6 +36,10 @@
 #if defined MKL_ENABLE
 #include "ipp.h"
 #include "mkl.h"
+#endif
+
+#if defined(__AVX2__) || defined(__AVX__)
+#include <immintrin.h>
 #endif
 
 void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
