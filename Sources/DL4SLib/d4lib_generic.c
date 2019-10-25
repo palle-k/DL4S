@@ -43,9 +43,7 @@
 #endif
 
 void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
-#if defined(MKL_ENABLE)
-    ippsCopy_32s(src, dst, count / 4);
-#elif defined __AVX2__
+#if defined __AVX2__
     const __m256i *pSrc = src;
     __m256i *pDest = dst;
     size_t nVects = count / sizeof(*pSrc);
