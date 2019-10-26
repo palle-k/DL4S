@@ -40,11 +40,11 @@ class ResNetTests: XCTestCase {
         for i in 1 ... epochs {
             let result = optim.model(t)
             
-//            let loss = categoricalCrossEntropy(expected: expected, actual: result)
-//            let grads = loss.gradients(of: optim.model.parameters)
-//            optim.update(along: grads)
+            let loss = categoricalCrossEntropy(expected: expected, actual: result)
+            let grads = loss.gradients(of: optim.model.parameters)
+            optim.update(along: grads)
             
-            print("[\(i)/\(epochs)] \(result.backpropID)")
+            print("[\(i)/\(epochs)] \(loss)")
         }
     }
 }

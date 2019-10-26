@@ -33,13 +33,17 @@
 #include <math.h>
 #include <stdio.h>
 
+#if defined MKL_ENABLE
+#include "ipp.h"
+#include "mkl.h"
+#endif
+
 #if defined(__AVX2__) || defined(__AVX__)
 #include <immintrin.h>
 #endif
 
 void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
-#ifdef __AVX2__
-#pragma message "AVX2 support enabled"
+#if defined __AVX2__
     const __m256i *pSrc = src;
     __m256i *pDest = dst;
     size_t nVects = count / sizeof(*pSrc);
@@ -53,7 +57,6 @@ void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
         ((char*) dst)[i] = ((const char*) src)[i];
     }
 #elif defined __AVX__
-#pragma message "AVX support enabled"
     const __m128 *pSrc = src;
     __m128i *pDest = dst;
     size_t nVects = count / sizeof(__m128i);
@@ -66,7 +69,6 @@ void avxcpy(void* __restrict dst, const void* __restrict src, size_t count) {
         ((char*) dst)[i] = ((const char*) src)[i];
     }
 #else
-#warning NO AVX enabled. Compile with -Xcc -mavx or -Xcc -mavx2
     const long long *pSrc = src;
     long long *pDest = dst;
     size_t nVects = (count + sizeof(*pSrc) - 1) / sizeof(*pSrc);
@@ -813,13 +815,13 @@ void d4lib_simg2col(const float* __restrict src, float* __restrict dst, const D4
     const int dst_batch_stride = output_width * output_height;
     const int dst_full_stride = dst_batch_stride * setup.batch_size;
     
+    #pragma omp parallel for num_threads(2)
     for (int k = 0; k < setup.kernel_width * setup.kernel_height * setup.channels; k++) {
         int kx = k % setup.kernel_width;
         int kyz = k / setup.kernel_width;
         int ky = kyz % setup.kernel_height;
         int kz = kyz / setup.kernel_height;
         int ko = ky * setup.width;
-        
         for (int b = 0; b < setup.batch_size; b++) {
             int bs = b * output_width * output_height;
             
@@ -829,7 +831,6 @@ void d4lib_simg2col(const float* __restrict src, float* __restrict dst, const D4
                 if (in_y >= 0 && in_y < setup.height) {
                     for (int x = 0; x < output_width; x++) {
                         int in_x = x * setup.stride - setup.padding + kx;
-                        
                         float in;
                         if (in_x >= 0 && in_x < setup.width) {
                             in = src[in_x + in_y * setup.width + kz * depth_stride + b * featuremap_stride];

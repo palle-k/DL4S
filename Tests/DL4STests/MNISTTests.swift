@@ -35,10 +35,10 @@ let MNIST_PATH = "/Users/Palle/Developer/DL4S/"
 class MNISTTests: XCTestCase {
     static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
         do {
-            let trainingData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
-            let trainingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
-            let testingData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
-            let testingLabelData = try! Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
+            let trainingData = try Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
+            let trainingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
+            let testingData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
+            let testingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
             
             let trainImages = Tensor<Element, Device>(trainingData.dropFirst(16).prefix(28 * 28 * 60_000).map(Element.init)) / 256
             let testImages = Tensor<Element, Device>(testingData.dropFirst(16).prefix(28 * 28 * 10_000).map(Element.init)) / 256
@@ -80,7 +80,7 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 10_000
+        let epochs = 1_000
         let batchSize = 128
         
         for epoch in 1 ... epochs {
@@ -93,7 +93,7 @@ class MNISTTests: XCTestCase {
             
             optimizer.update(along: gradients)
             
-            if epoch.isMultiple(of: 10) {
+            if epoch.isMultiple(of: 100) {
                 print("[\(epoch)/\(epochs)] loss: \(loss)")
             }
         }
@@ -132,7 +132,7 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 10_000
+        let epochs = 1_000
         let batchSize = 128
         
         for epoch in 1 ... epochs {
@@ -190,7 +190,7 @@ class MNISTTests: XCTestCase {
         print("Created model and optimizer")
         
         let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
-        let workers = 1
+        let workers = 3
 
         for i in 0 ..< workers {
             DispatchQueue.global().async {
