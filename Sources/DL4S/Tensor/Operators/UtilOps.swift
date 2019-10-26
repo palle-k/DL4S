@@ -85,4 +85,19 @@ public extension Tensor {
         )
     }
 
+    func bandMatrix(belowDiagonal: Int?, aboveDiagonal: Int?) -> Self {
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
+        Device.Engine.band(buffer: values, result: resultBuffer, belowDiagonal: belowDiagonal, aboveDiagonal: aboveDiagonal)
+        
+        return Tensor(
+            using: resultBuffer,
+            context: requiresGradient ? TensorContext(
+                tag: "band",
+                sources: [self],
+                backpropagate: [{ resultGradient in
+                    resultGradient.bandMatrix(belowDiagonal: belowDiagonal, aboveDiagonal: aboveDiagonal)
+                }]
+            ) : nil
+        )
+    }
 }

@@ -129,4 +129,6 @@ public protocol EngineType {
     
     static func img2col<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
     static func col2img<N: NumericType>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+    
+    static func band<N: NumericType>(buffer: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, belowDiagonal: Int?, aboveDiagonal: Int?)
 }
