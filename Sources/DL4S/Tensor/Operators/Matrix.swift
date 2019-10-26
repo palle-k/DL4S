@@ -76,7 +76,7 @@ public extension Tensor {
     ///   - transposeOther: Whether to transpose the other operand before the multiplication
     func broadcastMatrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         precondition(self.dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
-        precondition(self.shape.suffix(2)[transposeSelf ? 0 : 1] == other.shape.suffix(2)[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
+        precondition(Array(self.shape.suffix(2))[transposeSelf ? 0 : 1] == Array(other.shape.suffix(2))[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
         
         let lhs: Self
         let rhs: Self
@@ -93,7 +93,7 @@ public extension Tensor {
         }
         
         let broadcastResultShape = shapeForBroadcastedOperands(lhs.shape.dropLast(2), rhs.shape.dropLast(2))
-        let matMulResultShape = [lhs.shape.suffix(2)[transposeSelf ? 1 : 0], rhs.shape.suffix(2)[transposeOther ? 0 : 1]]
+        let matMulResultShape = [Array(lhs.shape.suffix(2))[transposeSelf ? 1 : 0], Array(rhs.shape.suffix(2))[transposeOther ? 0 : 1]]
         
         let resultBuffer = Device.Memory.allocateBuffer(
             withShape: broadcastResultShape + matMulResultShape,
