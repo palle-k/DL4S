@@ -125,7 +125,7 @@ extension Digraph: CustomStringConvertible {
 }
 
 
-enum OperationGroup {
+public enum OperationGroup {
     static private(set) var operationStack: [(id: UInt64, name: String)] = []
     
     @inline(__always)
@@ -143,7 +143,7 @@ enum OperationGroup {
     }
     
     @inline(__always)
-    static func capture<Output>(named name: String, _ operations: () -> Output) -> Output {
+    public static func capture<Output>(named name: String, _ operations: () -> Output) -> Output {
         push(name)
         let result = operations()
         pop()
@@ -193,13 +193,13 @@ public extension Tensor {
             } else if let tag = self.tag {
                 label = tag
             } else {
-                label = ""
+                label = "\(shape)"
             }
             #else
             if shape == [] {
                 label = "\(item)"
             } else {
-                label = ""
+                label = "\(shape)"
             }
             #endif
             
