@@ -227,7 +227,7 @@ public extension Tensor {
             var initial = Digraph(id: "cluster_\(last.id)", name: last.name, nodes: [Digraph.Node(id: opID)])
             
             for node in ctx.sources where node.context == nil {
-                initial.addNode(id: "\(node.backpropID)", shape: "circle")
+                initial.addNode(id: "\(node.backpropID)", shape: "box")
             }
             
             let g = ctx.operationStack.dropLast().reversed().reduce(initial) { acc, item in
