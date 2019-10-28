@@ -343,6 +343,10 @@ public struct GPUEngine: EngineType {
     public static func tanh<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
+    
+    public static func band<N>(buffer: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, belowDiagonal: Int?, aboveDiagonal: Int?) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
 }
 
 #endif
