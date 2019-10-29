@@ -44,7 +44,8 @@ Then add `DL4S` as a dependency to your target:
 
 #### MKL / IPP Support
 
-DL4S can be accelerated with Intel's Math Kernel Library and Integrated Performance Primitives ([Installation Instructions](https://software.intel.com/en-us/get-started-with-mkl-for-linux)). 
+DL4S can be accelerated with Intel's Math Kernel Library and Integrated Performance Primitives ([Installation Instructions](https://software.intel.com/en-us/get-started-with-mkl-for-linux)).
+
 On Apple devices, DL4S uses vectorized functions provided by the builtin Accelerate framework by default.
 If no acceleration library is available, a generic fallback is used.
 
@@ -52,6 +53,8 @@ Compiling with MKL/IPP:
 ```bash
 export MKLROOT=/opt/intel/mkl  # change depending on your system configuration
 export IPPROOT=/opt/intel/ipp
+
+export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$IPPROOT/lib/intel64:$LD_LIBRARY_PATH
 
 swift build -c release \
     -Xlinker -L${MKLROOT}/lib/intel64 \
@@ -71,11 +74,7 @@ swift build -c release \
     -Xcc -I${IPPROOT}/include
 ```
 
-To run, LD_LIBRARY_PATH needs to be set:
 
-```bash
-export LD_LIBRARY_PATH=/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
-```
 
 
 ## Features
