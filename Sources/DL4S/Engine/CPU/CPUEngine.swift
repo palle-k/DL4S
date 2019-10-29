@@ -743,30 +743,12 @@ public struct CPUEngine: EngineType {
         }
     }
     
-    public static func expandContext<N>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
-        let srcStrides = CPUMemoryOperators.strides(from: reduced.shape)
-        var dstStrides = CPUMemoryOperators.strides(from: result.shape)
-        let axisStride = dstStrides.remove(at: axis)
-        
-        let srcPtr = reduced.immutable.pointer(capacity: reduced.count)
-        let ctxPtr = context.immutable.pointer(capacity: reduced.count)
-        let dstPtr = result.pointer.pointer(capacity: result.count)
-        
-        let count = reduced.count
-        let dim = reduced.dim
-        let indices = flatIterate(reduced.shape)
-        
-        for i in 0 ..< count {
-            var srcIdx = 0
-            var dstIdx = 0
-            for j in 0 ..< dim {
-                srcIdx += indices[i * dim + j] * srcStrides[j]
-                dstIdx += indices[i * dim + j] * dstStrides[j]
-            }
-            
-            dstIdx += axisStride * Int(ctxPtr[srcIdx])
-            dstPtr[dstIdx] = srcPtr[srcIdx]
-        }
+    public static func scatter<N: NumericType>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
+        N.scatter(values: reduced.immutable, context: context.immutable, result: result.pointer, dst_shape: result.shape, axis: axis)
+    }
+    
+    public static func gather<N: NumericType>(expanded: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
+        N.gather(values: expanded.immutable, context: context.immutable, result: result.pointer, src_shape: expanded.shape, axis: axis)
     }
     
     @_specialize(where N == Float)

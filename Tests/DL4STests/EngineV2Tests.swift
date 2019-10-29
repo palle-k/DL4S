@@ -166,4 +166,26 @@ class EngineV2Tests: XCTestCase {
             print()
         }
     }
+    
+    func testScatter1() {
+        let a = Tensor<Float, CPU>([1,2,3])
+        let c = Tensor<Int32, CPU>([0,1,2])
+
+        let result = a.scatter(using: c, alongAxis: 1, withSize: 3)
+        print(result)
+        
+        let gathered = result.gather(using: c, alongAxis: 1)
+        print(gathered)
+    }
+    
+    func testScatter2() {
+        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
+        let c = Tensor<Int32, CPU>([[0,1,0,1],[1,0,1,0]])
+        
+        let result = a.scatter(using: c, alongAxis: 1, withSize: 2)
+        print(result)
+        
+        let gathered = result.gather(using: c, alongAxis: 1)
+        print(gathered)
+    }
 }

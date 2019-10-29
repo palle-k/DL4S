@@ -158,6 +158,8 @@ public extension Tensor {
         
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         if requiresGradient {
+            precondition(axes.count == 1, "Scattering (reduceMax backpropagation) is only available along a single axis.")
+            
             let contextBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
             if let axis = axes.first, axes.count == 1 {
                 Device.Engine.reduceMax(values: values, result: resultBuffer, context: contextBuffer, axis: axis)
@@ -167,13 +169,15 @@ public extension Tensor {
             
             let context = Tensor<Int32, Device>(using: contextBuffer, context: nil)
             
+            let axisShape = self.shape[axes[0]]
+            
             return Tensor(
                 using: resultBuffer,
                 context: TensorContext(
                     tag: "max\(axes)",
                     sources: [self],
                     backpropagate: [{ resultGradient in
-                        resultGradient.scatter(context: context, axes: axes, shape: self.shape)
+                        return resultGradient.scatter(using: context, alongAxis: axes[0], withSize: axisShape)
                     }]
                 )
             )
@@ -190,23 +194,5 @@ public extension Tensor {
     
     func reduceMax() -> Self {
         reduceMax(along: Array(0 ..< dim))
-    }
-    
-    private func scatter(context: Tensor<Int32, Device>, axes: [Int], shape: [Int]) -> Self {
-        precondition(axes.count == 1, "Scatter is only available along a single axis.")
-        let axis = axes.first!
-        
-        let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
-        Device.Engine.expandContext(reduced: values, context: context.values, result: resultBuffer, axis: axis)
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "scatter",
-                sources: [self],
-                backpropagate: [{ resultGradient -> Self in
-                    fatalError("Backpropagation is not available for Scatter operation.")
-                }]
-            ) : nil
-        )
     }
 }

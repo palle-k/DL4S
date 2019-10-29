@@ -31,6 +31,6 @@ let package = Package(
             dependencies: ["DL4SLib"]),
         .testTarget(
             name: "DL4STests",
-            dependencies: ["DL4S"]),
+            dependencies: ["DL4S"])
     ]
 )

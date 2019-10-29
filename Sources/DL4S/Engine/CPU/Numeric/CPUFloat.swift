@@ -228,4 +228,30 @@ extension Float: CPUNumeric {
             )
         )
     }
+    
+    public static func scatter(values: UnsafeBufferPointer<Float>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Float>, dst_shape: [Int], axis: Int) {
+        var src_shape = dst_shape
+        src_shape.remove(at: axis)
+        d4lib_sscatter(
+            values.pointer(capacity: src_shape.reduce(1, *)),
+            context.pointer(capacity: src_shape.reduce(1, *)),
+            result.pointer(capacity: dst_shape.reduce(1, *)),
+            Int32(dst_shape.count),
+            dst_shape.map(Int32.init),
+            Int32(axis)
+        )
+    }
+    
+    public static func gather(values: UnsafeBufferPointer<Float>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Float>, src_shape: [Int], axis: Int) {
+        var dst_shape = src_shape
+        dst_shape.remove(at: axis)
+        d4lib_sgather(
+            values.pointer(capacity: src_shape.reduce(1, *)),
+            Int32(src_shape.count),
+            src_shape.map(Int32.init),
+            context.pointer(capacity: dst_shape.reduce(1, *)),
+            result.pointer(capacity: dst_shape.reduce(1, *)),
+            Int32(axis)
+        )
+    }
 }

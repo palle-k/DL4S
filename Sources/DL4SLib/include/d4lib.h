@@ -206,3 +206,11 @@ void d4lib_dcol2img(const double* src, double* dst, D4LIB_Img2ColSetup setup);
 
 void d4lib_iimg2col(const int* src, int* dst, D4LIB_Img2ColSetup setup);
 void d4lib_icol2img(const int* src, int* dst, D4LIB_Img2ColSetup setup);
+
+void d4lib_sscatter(const float* src, const int* context, float* target, const int dst_dim, const int* dst_shape, const int axis);
+void d4lib_dscatter(const double* src, const int* context, double* target, const int dst_dim, const int* dst_shape, const int axis);
+void d4lib_iscatter(const int* src, const int* context, int* target, const int dst_dim, const int* dst_shape, const int axis);
+
+void d4lib_sgather(const float* src, const int src_dim, const int* src_shape, const int* context, float* target, const int axis);
+void d4lib_dgather(const double* src, const int src_dim, const int* src_shape, const int* context, double* target, const int axis);
+void d4lib_igather(const int* src, const int src_dim, const int* src_shape, const int* context, int* target, const int axis);

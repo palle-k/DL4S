@@ -108,4 +108,39 @@ class ConvTests: XCTestCase {
         }
         #endif
     }
+    
+    func testTransposedConv() {
+        let filters = Tensor<Float, CPU>([
+            [
+                [[1, 2, 1],
+                 [2, 4, 2],
+                 [1, 2, 1]]
+            ],
+            [
+                [[-1, 0, 1],
+                [-2, 0, 2],
+                [-1, 0, 1]]
+            ]
+        ]) / Tensor<Float, CPU>([4, 1]).view(as: -1, 1, 1, 1)
+        
+        let ((images, _), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
+        let batch = images[0 ..< 64]
+        
+        let filtered = batch.transposedConvolved2d(filters: filters, stride: 2)
+        
+        #if canImport(AppKit)
+        for i in 0 ..< batch.shape[0] {
+            let src = batch[i]
+            let dst = filtered[i]
+            
+            let srcImg = NSImage(src.view(as: [28, 28]).permuted(to: 1, 0).unsqueezed(at: 0))
+            try? srcImg?.save(to: "/Users/Palle/Desktop/conv/\(i)_src.png")
+            
+            for j in 0 ..< dst.shape[0] {
+                let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
+                try? dstImg?.save(to: "/Users/Palle/Desktop/conv/\(i)_\(j)_t.png")
+            }
+        }
+        #endif
+    }
 }

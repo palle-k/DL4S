@@ -65,3 +65,45 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
         }
     }
 }
+
+public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+        \.filters,
+        \.bias
+    ]}
+    
+    public var filters: Tensor<Element, Device>
+    public var bias: Tensor<Element, Device>
+    public let stride: Int
+    public let padding: Int?
+    
+    public var parameters: [Tensor<Element, Device>] {
+        get {
+            [filters, bias]
+        }
+    }
+    
+    public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = nil, stride: Int = 1) {
+        self.filters = Tensor(
+            normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
+            mean: 0,
+            stdev: 2 / Element(kernelSize.height * kernelSize.width * inputChannels).sqrt(),
+            requiresGradient: true
+        )
+        self.bias = Tensor(repeating: 0, shape: [1, outputChannels, 1, 1], requiresGradient: true)
+        self.stride = stride
+        self.padding = padding
+        
+        #if DEBUG
+        filters.tag = "W"
+        bias.tag = "b"
+        #endif
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        OperationGroup.capture(named: "TransposedConv2D") {
+            let t_conv = inputs.transposedConvolved2d(filters: filters, padding: padding, stride: stride)
+            return t_conv + bias
+        }
+    }
+}

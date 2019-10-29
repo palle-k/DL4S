@@ -120,13 +120,44 @@ public extension Tensor {
             (shape[3] + 2 * padding - filters.shape[3]) / stride + 1
         ]
         
+        // => [channels * kernelWidth * kernelHeight, outputWidth * outputHeight * batchSize]
         let cols = self.img2col(kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
         let conv = filters
-            .view(as: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]])
+            .view(as: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]]) // [outputChannels, inputChannels * kernelWidth * kernelHeight]
+            // [outputChannels, inputChannels * kernelWidth * kernelHeight] x [inputChannels * kernelWidth * kernelHeight, outputWidth * outputHeight * batchSize]
+            // => [outputChannels, outputWidth * outputHeight * batchSize]
             .matrixMultiplied(with: cols)
+            // => [batchSize, outputChannels, outputHeight, outputWidth]
             .view(as: [outputShape[1], outputShape[0], outputShape[2], outputShape[3]])
         
         return conv.permuted(to: [1, 0, 2, 3])
+    }
+    
+    func transposedConvolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
+        let padding = padding ?? ((filters.shape[2] - 1) / 2)
+        // transposed convolution is equivalent to the backwards pass of convolution
+        let outputShape = [
+            shape[0],
+            filters.shape[0],
+            (shape[2] - 1) * stride - 2 * padding + filters.shape[2],
+            (shape[3] - 1) * stride - 2 * padding + filters.shape[3],
+        ]
+        let permuted = self.permuted(to: [1, 0, 2, 3])
+        let preMulView = permuted.view(as: [shape[1], shape[0] * shape[2] * shape[3]])
+        
+        let filterView = filters.view(as: [filters.shape[1], filters.shape[0] * filters.shape[2] * filters.shape[3]])
+        let multiplied = filterView
+            .transposed()
+            .matrixMultiplied(with: preMulView)
+        
+        let img = multiplied.col2img(
+            kernelWidth: filters.shape[3],
+            kernelHeight: filters.shape[2],
+            padding: padding,
+            stride: stride,
+            resultShape: outputShape
+        )
+        return img
     }
 }
 

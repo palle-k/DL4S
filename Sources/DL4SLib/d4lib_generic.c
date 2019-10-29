@@ -1039,3 +1039,218 @@ void d4lib_icol2img(const int* __restrict src, int* __restrict dst, D4LIB_Img2Co
     }
 }
 
+void d4lib_sscatter(const float* __restrict src, const int* __restrict context, float* __restrict target, const int dst_dim, const int* __restrict dst_shape, const int axis) {
+    int* src_strides = alloca(sizeof(int) * dst_dim - 1);
+    int* src_shape = alloca(sizeof(int) * dst_dim - 1);
+    int* dst_strides = alloca(sizeof(int) * dst_dim);
+    
+    dst_strides[dst_dim - 1] = 1;
+    src_strides[dst_dim - 2] = 1;
+    
+    for (int i = dst_dim - 2; i >= 0; i--) {
+        dst_strides[i] = dst_shape[i + 1] * dst_strides[i + 1];
+    }
+    for (int i = dst_dim - 2; i >= 0; i--) {
+        src_shape[i] = dst_shape[i >= axis ? i + 1 : i];
+        if (i < dst_dim - 2) {
+            src_strides[i] = src_shape[i + 1] * src_strides[i + 1];
+        } else {
+            src_strides[i] = 1;
+        }
+    }
+    
+    int count = src_shape[0] * src_strides[0];
+    
+    int dst_count = dst_strides[0] * dst_shape[0];
+    float zero = 0;
+    d4lib_sfill(&zero, target, 1, dst_count);
+    
+    for (int i = 0; i < count; i++) {
+        int src_idx = i;
+        int dst_idx = context[i] * dst_strides[axis];
+        
+        for (int a = 0; a < dst_dim - 1; a++) {
+            int src_dim_idx = (i / src_strides[a]) % src_shape[a];
+            dst_idx += src_dim_idx * dst_strides[a >= axis ? a + 1 : a];
+        }
+        target[dst_idx] = src[src_idx];
+    }
+}
+
+void d4lib_sgather(const float* src, const int src_dim, const int* src_shape, const int* context, float* target, const int axis) {
+    int* dst_strides = alloca(sizeof(int) * src_dim - 1);
+    int* dst_shape = alloca(sizeof(int) * src_dim - 1);
+    int* src_strides = alloca(sizeof(int) * src_dim);
+    
+    src_strides[src_dim - 1] = 1;
+    dst_strides[src_dim - 2] = 1;
+    
+    for (int i = src_dim - 2; i >= 0; i--) {
+        src_strides[i] = src_shape[i + 1] * src_strides[i + 1];
+    }
+    for (int i = src_dim - 2; i >= 0; i--) {
+        dst_shape[i] = src_shape[i >= axis ? i + 1 : i];
+        if (i < src_dim - 2) {
+            dst_strides[i] = dst_shape[i + 1] * dst_strides[i + 1];
+        } else {
+            dst_strides[i] = 1;
+        }
+    }
+    
+    int count = dst_shape[0] * dst_strides[0];
+    
+    for (int i = 0; i < count; i++) {
+        int dst_idx = i;
+        int src_idx = context[i] * src_strides[axis];
+        
+        for (int a = 0; a < src_dim - 1; a++) {
+            int dst_dim_idx = (i / dst_strides[a]) % dst_shape[a];
+            src_idx += dst_dim_idx * src_strides[a >= axis ? a + 1 : a];
+        }
+        target[dst_idx] = src[src_idx];
+    }
+}
+
+void d4lib_dscatter(const double* __restrict src, const int* __restrict context, double* __restrict target, const int dst_dim, const int* __restrict dst_shape, const int axis) {
+    int* src_strides = alloca(sizeof(int) * dst_dim - 1);
+    int* src_shape = alloca(sizeof(int) * dst_dim - 1);
+    int* dst_strides = alloca(sizeof(int) * dst_dim);
+    
+    dst_strides[dst_dim - 1] = 1;
+    src_strides[dst_dim - 2] = 1;
+    
+    for (int i = dst_dim - 2; i >= 0; i--) {
+        dst_strides[i] = dst_shape[i + 1] * dst_strides[i + 1];
+    }
+    for (int i = dst_dim - 2; i >= 0; i--) {
+        src_shape[i] = dst_shape[i >= axis ? i + 1 : i];
+        if (i < dst_dim - 2) {
+            src_strides[i] = src_shape[i + 1] * src_strides[i + 1];
+        } else {
+            src_strides[i] = 1;
+        }
+    }
+    
+    int count = src_shape[0] * src_strides[0];
+    
+    int dst_count = dst_strides[0] * dst_shape[0];
+    double zero = 0;
+    d4lib_dfill(&zero, target, 1, dst_count);
+    
+    for (int i = 0; i < count; i++) {
+        int src_idx = i;
+        int dst_idx = context[i] * dst_strides[axis];
+        
+        for (int a = 0; a < dst_dim - 1; a++) {
+            int src_dim_idx = (i / src_strides[a]) % src_shape[a];
+            dst_idx += src_dim_idx * dst_strides[a >= axis ? a + 1 : a];
+        }
+        target[dst_idx] = src[src_idx];
+    }
+}
+
+void d4lib_dgather(const double* src, const int src_dim, const int* src_shape, const int* context, double* target, const int axis) {
+    int* dst_strides = alloca(sizeof(int) * src_dim - 1);
+    int* dst_shape = alloca(sizeof(int) * src_dim - 1);
+    int* src_strides = alloca(sizeof(int) * src_dim);
+    
+    src_strides[src_dim - 1] = 1;
+    dst_strides[src_dim - 2] = 1;
+    
+    for (int i = src_dim - 2; i >= 0; i--) {
+        src_strides[i] = src_shape[i + 1] * src_strides[i + 1];
+    }
+    for (int i = src_dim - 2; i >= 0; i--) {
+        dst_shape[i] = src_shape[i >= axis ? i + 1 : i];
+        if (i < src_dim - 2) {
+            dst_strides[i] = dst_shape[i + 1] * dst_strides[i + 1];
+        } else {
+            dst_strides[i] = 1;
+        }
+    }
+    
+    int count = dst_shape[0] * dst_strides[0];
+    
+    for (int i = 0; i < count; i++) {
+        int dst_idx = i;
+        int src_idx = context[i] * src_strides[axis];
+        
+        for (int a = 0; a < src_dim - 1; a++) {
+            int dst_dim_idx = (i / dst_strides[a]) % dst_shape[a];
+            src_idx += dst_dim_idx * src_strides[a >= axis ? a + 1 : a];
+        }
+        target[dst_idx] = src[src_idx];
+    }
+}
+
+void d4lib_iscatter(const int* __restrict src, const int* __restrict context, int* __restrict target, const int dst_dim, const int* __restrict dst_shape, const int axis) {
+    int* src_strides = alloca(sizeof(int) * dst_dim - 1);
+    int* src_shape = alloca(sizeof(int) * dst_dim - 1);
+    int* dst_strides = alloca(sizeof(int) * dst_dim);
+    
+    dst_strides[dst_dim - 1] = 1;
+    src_strides[dst_dim - 2] = 1;
+    
+    for (int i = dst_dim - 2; i >= 0; i--) {
+        dst_strides[i] = dst_shape[i + 1] * dst_strides[i + 1];
+    }
+    for (int i = dst_dim - 2; i >= 0; i--) {
+        src_shape[i] = dst_shape[i >= axis ? i + 1 : i];
+        if (i < dst_dim - 2) {
+            src_strides[i] = src_shape[i + 1] * src_strides[i + 1];
+        } else {
+            src_strides[i] = 1;
+        }
+    }
+    
+    int count = src_shape[0] * src_strides[0];
+    
+    int dst_count = dst_strides[0] * dst_shape[0];
+    int zero = 0;
+    d4lib_ifill(&zero, target, 1, dst_count);
+    
+    for (int i = 0; i < count; i++) {
+        int src_idx = i;
+        int dst_idx = context[i] * dst_strides[axis];
+        
+        for (int a = 0; a < dst_dim - 1; a++) {
+            int src_dim_idx = (i / src_strides[a]) % src_shape[a];
+            dst_idx += src_dim_idx * dst_strides[a >= axis ? a + 1 : a];
+        }
+        target[dst_idx] = src[src_idx];
+    }
+}
+
+void d4lib_igather(const int* src, const int src_dim, const int* src_shape, const int* context, int* target, const int axis) {
+    int* dst_strides = alloca(sizeof(int) * src_dim - 1);
+    int* dst_shape = alloca(sizeof(int) * src_dim - 1);
+    int* src_strides = alloca(sizeof(int) * src_dim);
+    
+    src_strides[src_dim - 1] = 1;
+    dst_strides[src_dim - 2] = 1;
+    
+    for (int i = src_dim - 2; i >= 0; i--) {
+        src_strides[i] = src_shape[i + 1] * src_strides[i + 1];
+    }
+    for (int i = src_dim - 2; i >= 0; i--) {
+        dst_shape[i] = src_shape[i >= axis ? i + 1 : i];
+        if (i < src_dim - 2) {
+            dst_strides[i] = dst_shape[i + 1] * dst_strides[i + 1];
+        } else {
+            dst_strides[i] = 1;
+        }
+    }
+    
+    int count = dst_shape[0] * dst_strides[0];
+    
+    for (int i = 0; i < count; i++) {
+        int dst_idx = i;
+        int src_idx = context[i] * src_strides[axis];
+        
+        for (int a = 0; a < src_dim - 1; a++) {
+            int dst_dim_idx = (i / dst_strides[a]) % dst_shape[a];
+            src_idx += dst_dim_idx * src_strides[a >= axis ? a + 1 : a];
+        }
+        target[dst_idx] = src[src_idx];
+    }
+}

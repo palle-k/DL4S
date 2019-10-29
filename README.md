@@ -87,6 +87,7 @@ Layers
 <p>
 
 - [x] Convolution
+- [x] Transposed Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
@@ -101,9 +102,9 @@ Layers
 - [x] Embedding
 - [x] Batch Norm
 - [x] Layer Norm
-- [x] Lambda 
 - [x] Sequential
 - [x] Dropout
+- [x] Lambda 
 
 </p>
 </details>
@@ -158,15 +159,16 @@ Tensor Operations
 - [x] cos
 - [x] tan
 - [x] tanh
-- [x] l1 norm
-- [x] l2 norm
 - [x] sum
 - [x] max
 - [x] relu
 - [x] leaky relu
 - [x] reduce sum
 - [x] reduce max
+- [x] scatter
+- [x] gather
 - [x] conv2d
+- [x] transposed conv2d
 - [x] max pool
 - [x] avg pool
 - [x] subscript
