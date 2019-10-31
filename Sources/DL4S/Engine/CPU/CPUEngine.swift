@@ -24,7 +24,6 @@
 //  SOFTWARE.
 
 import Foundation
-import DL4SLib
 
 
 extension ShapedBuffer where Device == CPU {
@@ -1078,7 +1077,7 @@ public struct CPUEngine: EngineType {
             let start = Swift.max(0, i - belowDiagonal)
             let end = Swift.max(cols, i + aboveDiagonal)
             
-            avxcpy(
+            memcpy(
                 UnsafeMutableRawPointer(dst.advanced(by: i * cols + start)),
                 UnsafeRawPointer(src.advanced(by: i * cols + start)),
                 MemoryLayout<N>.stride * (end - start)

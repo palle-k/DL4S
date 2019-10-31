@@ -1,4 +1,0 @@
-module DL4SLib {
-    header "DL4SLib.h"
-    export *
-}

@@ -1,8 +1,8 @@
 //
-//  DL4SLib.h
+//  mkl.h
 //  DL4S
 //
-//  Created by Palle Klewitz on 22.10.19.
+//  Created by Palle Klewitz on 31.10.19.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,9 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-#ifndef DL4SLib_h
-#define DL4SLib_h
+#ifndef mkl_h
+#define mkl_h
 
-#include "d4lib.h"
+void foo();
 
-#endif /* DL4SLib_h */
+#endif /* mkl_h */
