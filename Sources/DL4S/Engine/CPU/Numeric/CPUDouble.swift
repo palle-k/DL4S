@@ -200,14 +200,14 @@ extension Double: CPUNumeric {
             values.baseAddress!,
             result.baseAddress!,
             D4LIB_Img2ColSetup(
-                batch_size: Int32(batchSize),
-                channels: Int32(channels),
-                height: Int32(height),
-                width: Int32(width),
-                kernel_height: Int32(kernelHeight),
-                kernel_width: Int32(kernelWidth),
-                padding: Int32(padding),
-                stride: Int32(stride)
+                batch_size: batchSize,
+                channels: channels,
+                height: height,
+                width: width,
+                kernel_height: kernelHeight,
+                kernel_width: kernelWidth,
+                padding: padding,
+                stride: stride
             )
         )
     }
@@ -217,14 +217,14 @@ extension Double: CPUNumeric {
             values.baseAddress!,
             result.baseAddress!,
             D4LIB_Img2ColSetup(
-                batch_size: Int32(batchSize),
-                channels: Int32(channels),
-                height: Int32(height),
-                width: Int32(width),
-                kernel_height: Int32(kernelHeight),
-                kernel_width: Int32(kernelWidth),
-                padding: Int32(padding),
-                stride: Int32(stride)
+                batch_size: batchSize,
+                channels: channels,
+                height: height,
+                width: width,
+                kernel_height: kernelHeight,
+                kernel_width: kernelWidth,
+                padding: padding,
+                stride: stride
             )
         )
     }

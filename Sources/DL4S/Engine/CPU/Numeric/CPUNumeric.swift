@@ -25,7 +25,7 @@
 
 import Foundation
 
-public protocol CPUNumeric {
+public protocol CPUNumeric: Numeric {
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
     

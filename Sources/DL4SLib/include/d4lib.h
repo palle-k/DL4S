@@ -188,14 +188,14 @@ void d4lib_igemm(D4LIB_ORDER order, D4LIB_TRANSPOSE transA, D4LIB_TRANSPOSE tran
 // MARK: Tensor Functions
 
 typedef struct {
-    int batch_size;
-    int channels;
-    int height;
-    int width;
-    int kernel_height;
-    int kernel_width;
-    int padding;
-    int stride;
+    size_t batch_size;
+    size_t channels;
+    size_t height;
+    size_t width;
+    size_t kernel_height;
+    size_t kernel_width;
+    size_t padding;
+    size_t stride;
 } D4LIB_Img2ColSetup;
 
 void d4lib_simg2col(const float* src, float* dst, D4LIB_Img2ColSetup setup);

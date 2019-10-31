@@ -27,7 +27,6 @@ import Foundation
 import DL4SLib
 
 extension Float: CPUNumeric {
-    
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {
         d4lib_sfill([value], result.pointer(capacity: count), stride, UInt(count))
     }
@@ -195,40 +194,6 @@ extension Float: CPUNumeric {
         d4lib_stan(values.pointer(capacity: count), result.pointer(capacity: count), UInt(count))
     }
     
-    public static func img2col(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
-        d4lib_simg2col(
-            values.baseAddress!,
-            result.baseAddress!,
-            D4LIB_Img2ColSetup(
-                batch_size: Int32(batchSize),
-                channels: Int32(channels),
-                height: Int32(height),
-                width: Int32(width),
-                kernel_height: Int32(kernelHeight),
-                kernel_width: Int32(kernelWidth),
-                padding: Int32(padding),
-                stride: Int32(stride)
-            )
-        )
-    }
-    
-    public static func col2img(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
-        d4lib_scol2img(
-            values.baseAddress!,
-            result.baseAddress!,
-            D4LIB_Img2ColSetup(
-                batch_size: Int32(batchSize),
-                channels: Int32(channels),
-                height: Int32(height),
-                width: Int32(width),
-                kernel_height: Int32(kernelHeight),
-                kernel_width: Int32(kernelWidth),
-                padding: Int32(padding),
-                stride: Int32(stride)
-            )
-        )
-    }
-    
     public static func scatter(values: UnsafeBufferPointer<Float>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Float>, dst_shape: [Int], axis: Int) {
         var src_shape = dst_shape
         src_shape.remove(at: axis)
@@ -255,3 +220,6 @@ extension Float: CPUNumeric {
         )
     }
 }
+
+
+

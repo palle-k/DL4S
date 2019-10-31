@@ -807,30 +807,30 @@ void d4lib_igemm(D4LIB_ORDER order, D4LIB_TRANSPOSE __transA, D4LIB_TRANSPOSE __
 }
 
 void d4lib_simg2col(const float* __restrict src, float* __restrict dst, const D4LIB_Img2ColSetup setup) {
-    const int depth_stride = setup.width * setup.height;
-    const int featuremap_stride = depth_stride * setup.channels;
+    const long depth_stride = setup.width * setup.height;
+    const long featuremap_stride = depth_stride * setup.channels;
     
-    const int output_height = (setup.height + 2 * setup.padding - setup.kernel_height) / setup.stride + 1;
-    const int output_width = (setup.width + 2 * setup.padding - setup.kernel_width) / setup.stride + 1;
-    const int dst_batch_stride = output_width * output_height;
-    const int dst_full_stride = dst_batch_stride * setup.batch_size;
+    const long output_height = (setup.height + 2 * setup.padding - setup.kernel_height) / setup.stride + 1;
+    const long output_width = (setup.width + 2 * setup.padding - setup.kernel_width) / setup.stride + 1;
+    const long dst_batch_stride = output_width * output_height;
+    const long dst_full_stride = dst_batch_stride * setup.batch_size;
     
     #pragma omp parallel for num_threads(2)
-    for (int k = 0; k < setup.kernel_width * setup.kernel_height * setup.channels; k++) {
-        int kx = k % setup.kernel_width;
-        int kyz = k / setup.kernel_width;
-        int ky = kyz % setup.kernel_height;
-        int kz = kyz / setup.kernel_height;
-        int ko = ky * setup.width;
-        for (int b = 0; b < setup.batch_size; b++) {
-            int bs = b * output_width * output_height;
+    for (long k = 0; k < setup.kernel_width * setup.kernel_height * setup.channels; k++) {
+        const long kx = k % setup.kernel_width;
+        const long kyz = k / setup.kernel_width;
+        const long ky = kyz % setup.kernel_height;
+        const long kz = kyz / setup.kernel_height;
+        const long ko = ky * setup.width;
+        for (long b = 0; b < setup.batch_size; b++) {
+            long bs = b * output_width * output_height;
             
-            for (int y = 0; y < output_height; y++) {
-                int in_y = y * setup.stride - setup.padding + ky;
+            for (long y = 0; y < output_height; y++) {
+                long in_y = y * setup.stride - setup.padding + ky;
                 
                 if (in_y >= 0 && in_y < setup.height) {
                     for (int x = 0; x < output_width; x++) {
-                        int in_x = x * setup.stride - setup.padding + kx;
+                        long in_x = x * setup.stride - setup.padding + kx;
                         float in;
                         if (in_x >= 0 && in_x < setup.width) {
                             in = src[in_x + in_y * setup.width + kz * depth_stride + b * featuremap_stride];

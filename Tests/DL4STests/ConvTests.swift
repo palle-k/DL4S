@@ -54,6 +54,14 @@ class ConvTests: XCTestCase {
         print(result.permuted(to: 1, 0))
     }
     
+    func testIm2colPerformance() {
+        let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32, 128, 128])
+        
+        measure {
+            _ = a.img2col(kernelWidth: 3, kernelHeight: 3, padding: 0, stride: 1)
+        }
+    }
+    
     func testConv1() {
         let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
         let c = a.repeated(4)
