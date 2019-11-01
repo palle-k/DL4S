@@ -356,7 +356,7 @@ extension Float: CPUNumeric {
         #else
         var maxI: Int = 0
         var maxV: Float = -Float.infinity
-        let src = values.pointer(capacity: stride * count)
+        let src = values.pointer(capacity: stride * (count - 1) + 1)
         for i in 0 ..< count {
             let v = src[i &* stride]
             if v > maxV {

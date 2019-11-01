@@ -60,7 +60,7 @@ class MNISTTests: XCTestCase {
     func testConvNet() {
         var model = Sequential {
             Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0)
-            LayerNorm<Float, CPU>(inputSize: [4, 24, 24])
+            LayerNorm<Float, CPU>(inputSize: [6, 24, 24])
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
             Convolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5), padding: 0)
@@ -68,7 +68,7 @@ class MNISTTests: XCTestCase {
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
             Flatten<Float, CPU>()
-            Dense<Float, CPU>(inputSize: 256, outputSize: 120)
+            Dense<Float, CPU>(inputSize: 16 * 4 * 4, outputSize: 120)
             LayerNorm<Float, CPU>(inputSize: [120])
             Relu<Float, CPU>()
             Dense<Float, CPU>(inputSize: 120, outputSize: 10)
@@ -80,8 +80,8 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 1_000
-        let batchSize = 128
+        let epochs = 10_000
+        let batchSize = 256
         
         for epoch in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
@@ -132,8 +132,8 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 1_000
-        let batchSize = 128
+        let epochs = 10_000
+        let batchSize = 256
         
         for epoch in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
