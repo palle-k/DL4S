@@ -141,7 +141,7 @@ public extension CPUNumeric {
             #if MKL_ENABLE
             ippsSet_32f(0, (dst as! UnsafeMutablePointer<Float>), Int32(setup.width * setup.height * setup.channels * setup.batch_size))
             #elseif canImport(Accelerate)
-            vDSP_vfill([0], (dst as! UnsafeMutablePointer<Float>), stride, UInt(setup.width * setup.height * setup.channels * setup.batch_size))
+            vDSP_vfill([0], (dst as! UnsafeMutablePointer<Float>), 1, UInt(setup.width * setup.height * setup.channels * setup.batch_size))
             #else
             for i in 0 ..< count {
                 dst[i &* stride] = 0;

@@ -237,7 +237,7 @@ extension Float: CPUNumeric {
     }
     
     public static func sum(val: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> Float {
-        let src = val.pointer(capacity: count * stride)
+        let src = val.pointer(capacity: (count - 1) * stride + 1)
         var dst: Float = 0
         
         #if MKL_ENABLE
@@ -351,7 +351,7 @@ extension Float: CPUNumeric {
         #if canImport(Accelerate) && !MKL_ENABLE
         var maxI: UInt = 0
         var maxV: Float = 0
-        vDSP_maxvi(values.pointer(capacity: count * stride), stride, &maxV, &maxI, UInt(count))
+        vDSP_maxvi(values.pointer(capacity: (count - 1) * stride + 1), stride, &maxV, &maxI, UInt(count))
         return (Int(maxI) / stride, maxV)
         #else
         var maxI: Int = 0
@@ -376,7 +376,7 @@ extension Float: CPUNumeric {
         #if canImport(Accelerate) && !MKL_ENABLE
         var minI: UInt = 0
         var minV: Float = 0
-        vDSP_minvi(values.pointer(capacity: count * stride), stride, &minV, &minI, UInt(count))
+        vDSP_minvi(values.pointer(capacity: (count - 1) * stride + 1), stride, &minV, &minI, UInt(count))
         return (Int(minI) / stride, minV)
         #else
         var minI: Int = 0
