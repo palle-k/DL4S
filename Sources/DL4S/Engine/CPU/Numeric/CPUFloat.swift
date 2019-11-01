@@ -29,6 +29,7 @@ import MKL
 import Accelerate
 #else
 #warning("Compiling DL4S without any accelerator library")
+#warning("DL4S can be accelerated with Intel MKL, IPP and TBB. See README.md")
 #endif
 #if os(Linux)
 import Glibc
