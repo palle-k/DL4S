@@ -44,38 +44,26 @@ Then add `DL4S` as a dependency to your target:
 
 #### MKL / IPP Support
 
-DL4S can be accelerated with Intel's Math Kernel Library and Integrated Performance Primitives ([Installation Instructions](https://software.intel.com/en-us/get-started-with-mkl-for-linux)).
+DL4S can be accelerated with Intel's Math Kernel Library, Integrated Performance Primitives and OpenMP ([Installation Instructions](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo)).
 
 On Apple devices, DL4S uses vectorized functions provided by the builtin Accelerate framework by default.
-If no acceleration library is available, a generic fallback is used.
+If no acceleration library is available, a fallback implementation is used.
 
 Compiling with MKL/IPP:
 ```bash
-export MKLROOT=/opt/intel/mkl  # change depending on your system configuration
+# After adding the APT repository as described in the installation instructions
+sudo apt-get install intel-mkl-64bit-2019.5-075 intel-ipp-64bit-2019.5-075 libiomp-dev
+
+export MKLROOT=/opt/intel/mkl
 export IPPROOT=/opt/intel/ipp
+export LD_LIBRARY_PATH=${MKLROOT}/lib/intel64:${IPPROOT}/lib/intel64:${LD_LIBRARY_PATH}
 
-export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$IPPROOT/lib/intel64:$LD_LIBRARY_PATH
-
+# -c release is optional but recommended.
 swift build -c release \
+    -Xswiftc -DMKL_ENABLE \
     -Xlinker -L${MKLROOT}/lib/intel64 \
-    -Xlinker -L${IPPROOT}/lib/intel64 \
-    -Xlinker -lmkl_intel_lp64 \
-    -Xlinker -lmkl_sequential \
-    -Xlinker -lmkl_core \
-    -Xlinker -lpthread \
-    -Xlinker -lippcore \
-    -Xlinker -lippvm \
-    -Xlinker -lipps \                
-    -Xlinker -lm \
-    -Xlinker -ldl \
-    -Xcc -m64 \
-    -Xcc -DMKL_ENABLE \
-    -Xcc -I${MKLROOT}/include \
-    -Xcc -I${IPPROOT}/include
+    -Xlinker -L${IPPROOT}/lib/intel64
 ```
-
-
-
 
 ## Features
 
