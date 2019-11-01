@@ -87,11 +87,11 @@ class WGANGPTests: XCTestCase {
             
             Reshape<Float, CPU>(outputShape: [8, 8, 8])
             
-            TransposedConvolution2D<Float, CPU>(inputChannels: 8, outputChannels: 6, kernelSize: (3, 3), padding: 1, stride: 2)
+            TransposedConvolution2D<Float, CPU>(inputChannels: 8, outputChannels: 6, kernelSize: (3, 3), inset: 1, stride: 2)
             BatchNorm<Float, CPU>(inputSize: [6, 15, 15])
             LeakyRelu<Float, CPU>(leakage: 0.2)
             
-            TransposedConvolution2D<Float, CPU>(inputChannels: 6, outputChannels: 3, kernelSize: (3, 3), padding: 1, stride: 2)
+            TransposedConvolution2D<Float, CPU>(inputChannels: 6, outputChannels: 3, kernelSize: (3, 3), inset: 1, stride: 2)
             BatchNorm<Float, CPU>(inputSize: [3, 29, 29])
             LeakyRelu<Float, CPU>(leakage: 0.2)
             

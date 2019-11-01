@@ -26,6 +26,7 @@
 import Foundation
 
 
+/// Adagrad optimizer
 public struct Adagrad<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     

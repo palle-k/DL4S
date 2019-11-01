@@ -78,6 +78,10 @@ public enum Random {
         buffer.deallocate()
     }
     
+    /// Samples a random minibatch of tensors from the given data set with shape [sample count, sample_dim1, ..., sample_dim_n]
+    /// - Parameters:
+    ///   - dataset: Dataset to sample a batch from
+    ///   - count: Number of elements to include in the batch
     public static func minibatch<Element: NumericType, Device: DeviceType>(from dataset: Tensor<Element, Device>, count: Int) -> Tensor<Element, Device> {
         let n = dataset.shape[0]
         
@@ -91,6 +95,11 @@ public enum Random {
         )
     }
     
+    /// Samples a random minibatch of tensors from the given data set with shape [sample count, sample_dim1, ..., sample_dim_n] and their corresponding expected output vectors.
+    /// - Parameters:
+    ///   - dataset: Dataset to sample a batch from
+    ///   - labels: Corresponding expected output vectors
+    ///   - count: Number of elements to include in the batch
     public static func minibatch<E1: NumericType, E2: NumericType, D1: DeviceType, D2: DeviceType>(from dataset: Tensor<E1, D1>, labels: Tensor<E2, D2>, count: Int) -> (Tensor<E1, D1>, Tensor<E2, D2>) {
         let n = dataset.shape[0]
         
@@ -112,5 +121,4 @@ public enum Random {
         Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)
         buffer.deallocate()
     }
-    
 }

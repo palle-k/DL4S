@@ -25,7 +25,6 @@
 
 import Foundation
 
-
 public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
         Array([

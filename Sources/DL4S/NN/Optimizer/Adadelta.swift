@@ -25,6 +25,7 @@
 
 import Foundation
 
+/// Adadelta Optimizer
 public struct Adadelta<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     

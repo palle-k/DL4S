@@ -25,8 +25,9 @@
 
 import Foundation
 
-/// Computes the (element-wise) binary cross entropy loss on the given and expected probabilities.
-/// expected and predicted are assumed to be in the interval (0, 1)
+/// Computes the (element-wise) binary cross entropy loss on the given and expected probabilities and
+/// uses the mean as a reduction.
+/// expected and predicted are assumed to be in the interval (0, 1).
 ///
 /// The binary cross entropy loss is defined as
 ///
@@ -35,6 +36,7 @@ import Foundation
 /// - Parameters:
 ///   - expected: Expected values
 ///   - actual: Predicted values
+/// - Returns: Loss, scalar value
 public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     OperationGroup.capture(named: "BinaryCrossEntropy") {
         let e = expected.view(as: [-1])
@@ -46,7 +48,8 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
     }
 }
 
-/// Computes the categorical cross entropy loss on the given expected probabilities and the expected labels
+/// Computes the categorical cross entropy loss on the given expected probabilities and the expected labels and
+/// uses the mean as a reduction.
 /// predicted values are assumed to be in the interval (0, 1)
 ///
 /// The categorical cross entropy loss is defined as
@@ -56,6 +59,7 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
 /// - Parameters:
 ///   - expected: Expected labels
 ///   - actual: Predicted values
+/// - Returns: Loss, scalar value
 public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     OperationGroup.capture(named: "CategoricalCrossEntropy") {
         precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
@@ -84,7 +88,7 @@ public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>,
     }
 }
 
-/// Computes the l2 weight decay loss of the given tensor
+/// Computes the L2 loss of the given tensor.
 /// - Parameters:
 ///   - vector: Tensor to apply weight decay on
 ///   - loss: Weight decay importance scaling factor
@@ -92,11 +96,11 @@ public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Ele
     return mean(vector * vector) * Tensor(loss)
 }
 
-/// Computes the l1 weight decay loss of the given tensor
+/// Computes the L1 loss of the given tensor.
 /// - Parameters:
 ///   - vector: Tensor to apply weight decay on
 ///   - loss: Weight decay importance scaling factor
 public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
     // max(x, -x)
-    return leakyRelu(vector, leakage: -1) * Tensor(loss)
+    return leakyRelu(vector, leakage: -1).reduceMean() * Tensor(loss)
 }

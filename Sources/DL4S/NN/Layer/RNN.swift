@@ -40,12 +40,38 @@ public protocol RNN: LayerType where Outputs == (State, () -> StateSequence) {
     
     var direction: RNNDirection { get }
     
+    /// Number of steps to perform given the inputs of the RNN
+    /// - Parameter inputs: Inputs of the RNN
     func numberOfSteps(for inputs: Inputs) -> Int
+    
+    /// Creates the initial state of the RNN for processing the given sequence
+    /// - Parameter inputs: Sequence to process
     func initialState(for inputs: Inputs) -> State
+    
+    /// Performs the input transformation on all timesteps of the input at once
+    /// - Parameter inputs: Sequence to process
     func prepare(inputs: Inputs) -> PreparedInput
+    
+    /// Concatenates the given array of states into a state sequence
+    /// - Parameter states: States to concatenate
     func concatenate(_ states: [State]) -> StateSequence
+    
+    /// Extracts the inputs of the RNN at a given timestep from the preprocessed input sequence
+    /// - Parameters:
+    ///   - step: Timestep
+    ///   - preparedInput: Prepared input sequence
     func input(at step: Int, using preparedInput: PreparedInput) -> StepInput
+    
+    /// Performs a single RNN timestep
+    /// - Parameters:
+    ///   - preparedInput: Preprocessed input for the current timestep
+    ///   - previousState: Previous hidden state
     func step(_ preparedInput: StepInput, previousState: State) -> State
+    
+    /// Applies the RNN to the given input sequence using the provided initial state
+    /// - Parameters:
+    ///   - inputs: Input sequence
+    ///   - state: Initial state, optional
     func callAsFunction(_ inputs: Inputs, state: State?) -> (State, () -> StateSequence)
 }
 

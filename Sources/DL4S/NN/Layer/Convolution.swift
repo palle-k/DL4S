@@ -25,15 +25,20 @@
 
 import Foundation
 
+/// A 2D convolutional layer
 public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
         \.filters,
         \.bias
     ]}
     
+    /// Convolution filters, shape [outputChannels, inputChannels, kernelHeight, kernelWidth]
     public var filters: Tensor<Element, Device>
+    /// Bias, shape [1, outputChannels, 1, 1]
     public var bias: Tensor<Element, Device>
+    // Convolution stride >= 1
     public let stride: Int
+    // Padding around the edges of the input
     public let padding: Int?
     
     public var parameters: [Tensor<Element, Device>] {
@@ -42,6 +47,16 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
         }
     }
     
+    /// Creates a 2D convolutional layer.
+    ///
+    /// The inputs of the layer must have a shape [batchSize, channels, height, width]
+    ///
+    /// - Parameters:
+    ///   - inputChannels: Number of channels in the input
+    ///   - outputChannels: Number of channels in the output
+    ///   - kernelSize: Width and height of the convolution kernel
+    ///   - padding: Padding, that will be applied around the edges of the input
+    ///   - stride: Stride, with which the convolution kernel is moved over the input tensor, >= 1.
     public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = nil, stride: Int = 1) {
         self.filters = Tensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
@@ -66,16 +81,24 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
     }
 }
 
+/// A 2D transposed (fractionally strided) convolutional layer
 public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
         \.filters,
         \.bias
     ]}
     
+    /// Convolution filters, shape [outputChannels, inputChannels, kernelHeight, kernelWidth]
     public var filters: Tensor<Element, Device>
+    
+    /// Bias vector, shape [1, outputChannels, 1, 1]
     public var bias: Tensor<Element, Device>
+    
+    /// Stride fraction >= 1
     public let stride: Int
-    public let padding: Int?
+    
+    /// Number of elements that are removed from the edges of the output.
+    public let inset: Int?
     
     public var parameters: [Tensor<Element, Device>] {
         get {
@@ -83,7 +106,17 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
         }
     }
     
-    public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = nil, stride: Int = 1) {
+    /// Creates a 2D transposed (fractionally strided) convolutional layer.
+    ///
+    /// The inputs of the layer must have a shape [batchSize, channels, height, width]
+    ///
+    /// - Parameters:
+    ///   - inputChannels: Number of channels in the input
+    ///   - outputChannels: Number of channels in the output
+    ///   - kernelSize: Width and height of the convolution kernel
+    ///   - inset: Number of elements that are removed from the edges of the output.
+    ///   - stride: Inverse of stride, with which the convolution kernel is moved over the input tensor, >= 1.
+    public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), inset: Int? = nil, stride: Int = 1) {
         self.filters = Tensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
             mean: 0,
@@ -92,7 +125,7 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
         )
         self.bias = Tensor(repeating: 0, shape: [1, outputChannels, 1, 1], requiresGradient: true)
         self.stride = stride
-        self.padding = padding
+        self.inset = inset
         
         #if DEBUG
         filters.tag = "W"
@@ -102,7 +135,7 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "TransposedConv2D") {
-            let t_conv = inputs.transposedConvolved2d(filters: filters, padding: padding, stride: stride)
+            let t_conv = inputs.transposedConvolved2d(filters: filters, inset: inset, stride: stride)
             return t_conv + bias
         }
     }

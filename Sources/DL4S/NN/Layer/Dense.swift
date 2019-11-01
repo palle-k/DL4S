@@ -25,13 +25,17 @@
 
 import Foundation
 
+/// Dense (Linear, Fully connected) layer with no activation function.
 public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
         \.weights,
         \.bias
     ]}
     
+    /// Weights, shape [inputSize, outputSize]
     public var weights: Tensor<Element, Device>
+    
+    /// Bias, shape [outputSize]
     public var bias: Tensor<Element, Device>
     
     public var parameters: [Tensor<Element, Device>] {
@@ -40,6 +44,13 @@ public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, C
         }
     }
     
+    /// Creates a dense / linear / fully connected layer with no output activation function.
+    ///
+    /// The layer expects inputs to have a shape of [batchSize, inputSize].
+    ///
+    /// - Parameters:
+    ///   - inputSize: Number of elements in an input vector
+    ///   - outputSize: Number of elements in an output vector
     public init(inputSize: Int, outputSize: Int) {
         weights = Tensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true)
         bias = Tensor(repeating: 0, shape: [outputSize], requiresGradient: true)

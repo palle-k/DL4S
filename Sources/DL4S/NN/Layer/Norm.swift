@@ -25,6 +25,7 @@
 
 import Foundation
 
+/// A layer that normalizes its inputs along the batch dimension
 public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
         [\.shift, \.scale]
@@ -33,13 +34,19 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
         get {[shift, scale]}
     }
     
+    /// Whether the layer is training, currently ignored.
     public var isTraining = true
     
+    /// Learned shift vector
     public var shift: Tensor<Element, Device>
+    
+    /// Learned scale vector
     public var scale: Tensor<Element, Device>
     
+    /// Momentum with which to update mean and variance. Currently ignored
     public var momentum: Element
-    
+
+    /// A layer that normalizes its inputs along the batch dimension.
     public init(inputSize: [Int], momentum: Element = 0.9) {
         shift = Tensor(repeating: 0, shape: inputSize, requiresGradient: true)
         scale = Tensor(repeating: 1, shape: inputSize, requiresGradient: true)
@@ -63,7 +70,7 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
     }
 }
 
-
+/// A layer that normalizes its inputs along all dimensions except the batch dimension
 public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
         [\.shift, \.scale]
@@ -72,13 +79,19 @@ public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
         get {[shift, scale]}
     }
     
+    /// Whether the layer is training, currently ignored.
     public var isTraining = true
     
+    /// Learned shift vector
     public var shift: Tensor<Element, Device>
+    
+    /// Learned scale vector
     public var scale: Tensor<Element, Device>
     
+    /// Momentum with which to update mean and variance. Currently ignored
     public var momentum: Element
-    
+
+    /// A layer that normalizes its inputs along all dimensions except the batch dimension
     public init(inputSize: [Int], momentum: Element = 0.9) {
         shift = Tensor(repeating: 0, shape: inputSize, requiresGradient: true)
         scale = Tensor(repeating: 1, shape: inputSize, requiresGradient: true)

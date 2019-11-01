@@ -42,6 +42,7 @@ final class TensorHandle<Element, Device: DeviceType> {
     }
 }
 
+/// A tensor is an n-dimensional array of numbers with a given shape.
 public struct Tensor<Element: NumericType, Device: DeviceType> {
     var handle: TensorHandle<Element, Device>
     var context: TensorContext<Element, Device>? = nil
@@ -51,10 +52,24 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     /// The id will vary across different runs and different tensors with the same values.
     let backpropID: UInt64 = UInt64.random(in: 0 ... UInt64.max)
     
+    /// Shape of the tensor.
+    ///
+    /// A tensor with an empty shape is a scalar.
+    /// When shape.count == 1, the tensor is a vector.
+    /// When shape.count == 2, the tensor is a matrix, etc.
     public let shape: [Int]
+    
+    /// Whether the compute graph of operations originating from this tensor should be captured.
+    /// If the compute graph is captured, the resources associated with this tensor are only released
+    /// after all tensors that have been derived from this tensor are released.
+    ///
+    /// All tensors derived from gradient requiring tensors will also require a gradient.
+    ///
+    /// To detach a tensor from the compute graph, use `tensor.detached()`.
     public var requiresGradient: Bool
     
     #if DEBUG
+    /// Debug tag for the tensor. If you use `tensor.graph()` to visualize the compute graph, the tensor is labelled with the appropriate tag.
     public var tag: String? = nil
     #endif
     
@@ -62,18 +77,31 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         ShapedBuffer(values: handle.values, shape: shape)
     }
     
+    /// Number of elements in the tensor.
     public var count: Int {
         values.count
     }
-    
+
+    /// Dimensionality of the tensor. (0: scalar, 1: vector, 2: matrix, ...)
     public var dim: Int {
         shape.count
     }
     
+    
+    /// Creates a tensor with the given shape and fills it with `value`
+    /// - Parameters:
+    ///   - value: Value to fill tensor with
+    ///   - shape: Shape of the tensor
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     public init(repeating value: Element, shape: Int..., requiresGradient: Bool = false) {
         self.init(repeating: value, shape: shape, requiresGradient: requiresGradient)
     }
     
+    /// Creates a tensor with the given shape and fills it with `value`
+    /// - Parameters:
+    ///   - value: Value to fill tensor with
+    ///   - shape: Shape of the tensor
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     public init(repeating value: Element, shape: [Int], requiresGradient: Bool = false) {
         let values = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.fill(value: value, result: values.values, count: values.count)
@@ -82,6 +110,10 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         self.shape = shape
     }
     
+    /// Creates a tensor with the given shape and fills it with the given array of elements
+    /// - Parameters:
+    ///   - v: Value to fill tensor with
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     public init(_ v: [Element], requiresGradient: Bool = false) {
         let values = Device.Memory.allocateBuffer(withShape: [v.count], type: Element.self)
         v.withUnsafeBufferPointer { ptr in
@@ -92,6 +124,11 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         self.shape = [v.count]
     }
     
+    /// Creates a tensor with the given shape and fills it with the given array of elements
+    /// - Parameters:
+    ///   - v: Value to fill tensor with
+    ///   - shape: Shape of the tensor. The number of elements in `v` must be compatible with the shape.
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     public init(_ v: [Element], shape: [Int], requiresGradient: Bool = false) {
         precondition(v.count == shape.reduce(1, *), "Number of elements must match number of elements specified by shape")
         
@@ -104,6 +141,11 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         self.shape = shape
     }
     
+    /// Creates a tensor with the given shape and fills it with the given array of elements
+    /// - Parameters:
+    ///   - v: Value to fill tensor with
+    ///   - shape: Shape of the tensor. The number of elements in `v` must be compatible with the shape.
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     public init(_ v: [Element], shape: Int..., requiresGradient: Bool = false) {
         self.init(v, shape: shape, requiresGradient: requiresGradient)
     }
@@ -227,10 +269,12 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         )
     }
     
+    /// In-place detaches the tensor from the compute graph.
     public mutating func discardContext() {
         self.context = nil
     }
     
+    /// Detaches the tensor from the compute graph. No gradients can be computed for the resulting tensor.
     public func detached() -> Self {
         Tensor(handle: handle, shape: shape, context: nil)
     }

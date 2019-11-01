@@ -26,6 +26,21 @@
 import Foundation
 
 public extension Tensor {
+    
+    /// Gathers elements at indices determined by the context along the specified axis.
+    ///
+    ///```
+    /// Example: Gathering from Tensor [[1,2,3], [4,5,6], [7,8,9]]
+    /// Context: [0, 1, 2], axis: 0
+    /// => [1,5,9]
+    ///
+    /// Context: [2, 2, 1], axis: 1
+    /// => [3, 6, 8]
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - context: Indices along gathering axis.
+    ///   - axis: Axis to gather from
     func gather(using context: Tensor<Int32, Device>, alongAxis axis: Int) -> Self {
         var resultShape = shape
         resultShape.remove(at: axis)
@@ -46,6 +61,22 @@ public extension Tensor {
         )
     }
     
+    
+    /// Scatters elements to indices determined by the context along the specified axis.
+    ///
+    ///```
+    /// Example: Scattering Tensor [3, 1, 4]
+    /// Context: [0, 1, 2], axis: 0, axisSize: 3
+    /// => [[3, 0, 0], [0, 1, 0], [0, 0, 4]]
+    ///
+    /// Context: [2, 2, 1], axis: 1, axisSize: 3
+    /// => [[0, 0, 3], [0, 0, 1], [0, 4, 0]]
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - context: Indices along scattering axis
+    ///   - axis: Axis to scatter along
+    ///   - axisSize: Number of elements along the axis in the result tensor. Must be greater than `max(context)`
     func scatter(using context: Tensor<Int32, Device>, alongAxis axis: Int, withSize axisSize: Int) -> Self {
         var resultShape = shape
         resultShape.insert(axisSize, at: axis)

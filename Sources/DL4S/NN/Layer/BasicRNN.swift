@@ -25,6 +25,8 @@
 
 import Foundation
 
+/// A 'vanilla' RNN.
+/// In each step, the RNN performs the transformation matMul(x\_t, W) + matMul(h\_t-1, U) + b
 public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (Tensor<Element, Device>, () -> Tensor<Element, Device>)
@@ -49,7 +51,13 @@ public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Coda
     public var parameters: [Tensor<Element, Device>] {
         get {[W, U, b]}
     }
-    
+
+    /// A 'vanilla' RNN.
+    /// In each step, the RNN performs the transformation matMul(x\_t, W) + matMul(h\_t-1, U) + b.
+    ///
+    /// - Parameters:
+    ///  - inputSize: Number of elements in each input vector of the RNN. The RNN expects inputs to have a shape of [sequence length, batch size, input size].
+    ///  - hiddenSize: Number of elements in each output vector of the RNN.
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {
         self.direction = direction
         

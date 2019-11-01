@@ -25,9 +25,16 @@
 
 import Foundation
 
+/// Optimizer that updates a neural network along its gradients
 public protocol Optimizer {
+    /// Type of the layer that is optimized
     associatedtype Layer: LayerType
     
+    /// Model that is updated by the optimizer
     var model: Layer { get }
+    
+    /// Updates the model along its gradient.
+    /// The provided gradients must match the order of parameters in the network.
+    /// - Parameter gradients: Gradients of the model.
     mutating func update(along gradients: [Tensor<Layer.Parameter, Layer.Device>])
 }

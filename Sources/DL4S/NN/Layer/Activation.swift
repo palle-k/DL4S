@@ -25,10 +25,12 @@
 
 import Foundation
 
+/// Element-wise hyperbolic tangent activation layer.
 public struct Tanh<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Element-wise hyperbolic tangent activation layer.
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -36,10 +38,12 @@ public struct Tanh<Element: NumericType, Device: DeviceType>: LayerType, Codable
     }
 }
 
+/// Element-wise sigmoid activation layer.
 public struct Sigmoid<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Element-wise sigmoid activation layer.
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -48,11 +52,12 @@ public struct Sigmoid<Element: NumericType, Device: DeviceType>: LayerType, Coda
         }
     }
 }
-
+/// Element-wise rectified linear unit activation layer.
 public struct Relu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+
+    /// Element-wise rectified linear unit activation layer.
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -60,11 +65,13 @@ public struct Relu<Element: NumericType, Device: DeviceType>: LayerType, Codable
     }
 }
 
+/// Element-wise leaky linear rectified unit activation layer.
 public struct LeakyRelu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     public var leakage: Element
     
+    /// Element-wise leaky rectified linear unit activation layer.
     public init(leakage: Element) {
         self.leakage = leakage
     }
@@ -76,10 +83,12 @@ public struct LeakyRelu<Element: NumericType, Device: DeviceType>: LayerType, Co
     }
 }
 
+/// Softmax activation layer
 public struct Softmax<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Softmax activation layer
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -89,13 +98,16 @@ public struct Softmax<Element: NumericType, Device: DeviceType>: LayerType, Coda
     }
 }
 
-
+/// Layer wrapping an arbitrary transform provided by a closure.
 public struct Lambda<Inputs, Outputs, Element: NumericType, Device: DeviceType>: LayerType {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Transformation performed by the layer
     public var transform: (Inputs) -> Outputs
     
+    /// Creates a layer that performs the given transformation on its inputs
+    /// - Parameter transform: Transformation to perform
     public init(_ transform: @escaping (Inputs) -> Outputs) {
         self.transform = transform
     }

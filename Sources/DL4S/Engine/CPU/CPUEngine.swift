@@ -515,9 +515,9 @@ public struct CPUEngine: EngineType {
         let rhsStrides = CPU.Memory.strides(from: rhs.shape)
         let resultStrides = CPU.Memory.strides(from: result.shape)
         
-        let lhsGemmShape = lhs.shape.suffix(2)
-        let rhsGemmShape = rhs.shape.suffix(2)
-        let resultGemmShape = result.shape.suffix(2)
+        let lhsGemmShape = Array(lhs.shape.suffix(2))
+        let rhsGemmShape = Array(rhs.shape.suffix(2))
+        let resultGemmShape = Array(result.shape.suffix(2))
         
         for index in iterate(result.shape.dropLast(2)) {
             let lhsIndex = zip(index, lhs.shape).map { idx, dim in

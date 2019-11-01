@@ -6,4 +6,5 @@
 *.idx1-ubyte
 /.idea
 /.vscode
+/build
 

@@ -27,6 +27,17 @@ import Foundation
 
 
 public extension Tensor {
+    /// Gets or sets a subtensor at the given index.
+    ///
+    /// When an element of the index is nil, all elements along the corresponding axis are read or written.
+    ///
+    /// Example:
+    /// ```
+    /// let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+    /// print(a[nil, 1]) // [2, 5]
+    /// print(a[1]) // [4, 5, 6]
+    /// print(a[1, nil] == a[1]) // true
+    /// ```
     subscript(index: [Int?]) -> Self {
         get {
             let index = zip(index, shape).map { idx, dim -> Int? in
@@ -85,11 +96,32 @@ public extension Tensor {
         }
     }
     
+    /// Gets or sets a subtensor at the given index.
+    ///
+    /// When an element of the index is nil, all elements along the corresponding axis are read or written.
+    ///
+    /// Example:
+    /// ```
+    /// let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+    /// print(a[nil, 1]) // [2, 5]
+    /// print(a[1]) // [4, 5, 6]
+    /// print(a[1, nil] == a[1]) // true
+    /// ```
     subscript(index: Int?...) -> Self {
         get {self[index]}
         set (slice) {self[index] = slice}
     }
     
+    /// Gets or sets a subtensor at the given window.
+    ///
+    /// When an element of the index is nil, all elements along the corresponding axis are read or written.
+    ///
+    /// Example:
+    /// ```
+    /// let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+    /// print(a[0 ..< 2]) // [[1, 2], [4, 5]]
+    /// print(a[nil, 0 ..< 1]) // [[1, 2, 3]]
+    /// ```
     subscript(index: [Range<Int>?]) -> Self {
         get {
             let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: self.shape)
@@ -138,6 +170,16 @@ public extension Tensor {
         }
     }
     
+    /// Gets or sets a subtensor at the given window.
+    ///
+    /// When an element of the index is nil, all elements along the corresponding axis are read or written.
+    ///
+    /// Example:
+    /// ```
+    /// let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
+    /// print(a[0 ..< 2]) // [[1, 2], [4, 5]]
+    /// print(a[nil, 0 ..< 1]) // [[1, 2, 3]]
+    /// ```
     subscript(index: Range<Int>?...) -> Self {
         get {self[index]}
         set (slice) {self[index] = slice}

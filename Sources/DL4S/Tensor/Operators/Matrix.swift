@@ -78,6 +78,8 @@ public extension Tensor {
         precondition(self.dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
         precondition(Array(self.shape.suffix(2))[transposeSelf ? 0 : 1] == Array(other.shape.suffix(2))[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
         
+        // TODO: Fix Gradients
+        
         let lhs: Self
         let rhs: Self
         
@@ -116,18 +118,38 @@ public extension Tensor {
                 sources: [lhs, rhs],
                 backpropagate: [
                     { (resultGradient: Self) in
+                        let lhsReducedAxes = zip(lhs.shape, resultGradient.shape)
+                            .dropLast(2)
+                            .enumerated()
+                            .filter {$1.0 != $1.1 && $1.0 == 1}
+                            .map {$0.0}
                         let res = resultGradient.broadcastMatrixMultiplied(with: other, transposeSelf: false, transposeOther: !transposeOther)
                         if transposeSelf {
-                            return res.permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
+                            return res
+                                .permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
+                                .reduceSum(along: lhsReducedAxes)
+                                .view(as: lhs.shape)
                         } else {
                             return res
+                                .reduceSum(along: lhsReducedAxes)
+                                .view(as: lhs.shape)
                         }
                     }, { resultGradient in
+                        let rhsReducedAxes = zip(rhs.shape, resultGradient.shape)
+                            .dropLast(2)
+                            .enumerated()
+                            .filter {$1.0 != $1.1 && $1.0 == 1}
+                            .map {$0.0}
                         let res = self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
                         if transposeOther {
-                            return res.permuted(to: Array(0 ..< (rhs.dim - 2)) + [rhs.dim - 1, rhs.dim - 2])
+                            return res
+                                .permuted(to: Array(0 ..< (rhs.dim - 2)) + [rhs.dim - 1, rhs.dim - 2])
+                                .reduceSum(along: rhsReducedAxes)
+                                .view(as: rhs.shape)
                         } else {
                             return res
+                                .reduceSum(along: rhsReducedAxes)
+                                .view(as: rhs.shape)
                         }
                     }
                 ]

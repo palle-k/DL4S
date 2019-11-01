@@ -25,6 +25,7 @@
 
 import Foundation
 
+/// 'Vanilla' stochastic gradient descent optimizer
 public struct SGD<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     
@@ -46,6 +47,7 @@ public struct SGD<Layer: LayerType>: Optimizer {
     }
 }
 
+/// Gradient descent optimizer with momentum
 public struct Momentum<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     

@@ -25,12 +25,16 @@
 
 import Foundation
 
+/// Layer that reshapes its inputs to a given target size, except the batch size
 public struct Reshape<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Target size (except batch size)
     public var outputShape: [Int]
     
+    /// Layer that reshapes its inputs to a given target size, except the batch size
+    /// - Parameter outputShape: Target size (except batch size)
     public init(outputShape: [Int]) {
         self.outputShape = outputShape
     }
@@ -41,10 +45,12 @@ public struct Reshape<Element: NumericType, Device: DeviceType>: LayerType, Coda
     }
 }
 
+/// Layer that flattens its inputs into a tensor of shape [batchSize, -1]
 public struct Flatten<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+
+    /// Layer that flattens its inputs into a tensor of shape [batchSize, -1]
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
@@ -53,10 +59,12 @@ public struct Flatten<Element: NumericType, Device: DeviceType>: LayerType, Coda
     }
 }
 
+/// Layer that concatenates a list of input tensors along their second dimension
 public struct Concat<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+
+    /// Layer that concatenates a list of input tensors along their second dimension
     public init() {}
     
     public func callAsFunction(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {

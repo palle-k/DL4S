@@ -25,6 +25,7 @@
 
 import Foundation
 
+/// Root mean square optimizer
 public struct RMSProp<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     

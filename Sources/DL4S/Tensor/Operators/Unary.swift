@@ -27,6 +27,8 @@ import Foundation
 
 
 public extension Tensor {
+    
+    /// Element-wise exponentiates the tensor
     func exp() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.exp(values: values, result: resultBuffer)
@@ -47,6 +49,7 @@ public extension Tensor {
         return result
     }
     
+    /// Computes the element-wise logarithm of the tensor.
     func log() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.log(values: values, result: resultBuffer)
@@ -65,6 +68,7 @@ public extension Tensor {
         return result
     }
     
+    /// Computes the element-wise hyperbolic tangent of the tensor.
     func tanh() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.tanh(values: values, result: resultBuffer)
@@ -84,6 +88,7 @@ public extension Tensor {
         return result
     }
     
+    /// Computes the element-wise square root of the tensor.
     func sqrt() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sqrt(values: values, result: resultBuffer)
@@ -104,6 +109,9 @@ public extension Tensor {
         return result
     }
     
+    /// Computes the element-wise heaviside step function of the tensor.
+    ///
+    /// The heaviside step function is defined as `value > 0 ? 1 : 0`
     func heaviside() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.heaviside(values: values, result: resultBuffer)
@@ -124,6 +132,9 @@ public extension Tensor {
         return result
     }
     
+    /// Computes the element-wise relu function.
+    ///
+    /// The relu function is defined as `max(value, 0)`
     func rectifiedLinear() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.relu(values: values, result: resultBuffer)
@@ -146,20 +157,27 @@ public extension Tensor {
         return result
     }
     
+    /// Computes the element-wise leaky relu function.
+    ///
+    /// The leaky relu function is defined as `max(value, leakage * value)`
     func leakyRectifiedLinear(leakage: Self) -> Self {
         rectifiedLinear() - leakage * (-self).rectifiedLinear()
     }
     
+    /// Computes the element-wise sigmoid function.
     func sigmoid() -> Self {
         0.5 * (self * 0.5).tanh() + 0.5
     }
     
+    /// Computes the softmax function along the given axis.
+    /// If no axis is provided, the softmax is computed along axis 1.
     func softmax(axis: Int = 1) -> Self {
         let normalizer = detached().reduceMax(along: [axis]).unsqueezed(at: axis)
         let exponentiated = (self - normalizer).exp()
         return exponentiated / exponentiated.reduceSum(along: [axis]).unsqueezed(at: axis)
     }
     
+    /// Computes the element-wise sine.
     func sine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sin(values: values, result: resultBuffer)
@@ -177,6 +195,7 @@ public extension Tensor {
         return result
     }
     
+    /// Computes the element-wise cosine.
     func cosine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sin(values: values, result: resultBuffer)
@@ -195,46 +214,64 @@ public extension Tensor {
     }
 }
 
+/// Element-wise exponentiates the tensor.
 public func exp<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.exp()
 }
 
+/// Computes the element-wise logarithm.
 public func log<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.log()
 }
 
+/// Computes the element-wise square root.
 public func sqrt<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.sqrt()
 }
 
+/// Computes the element-wise hyperbolic tangent.
 public func tanh<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.tanh()
 }
 
+/// Computes the element-wise sigmoid function.
 public func sigmoid<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.sigmoid()
 }
 
+/// Computes the element-wise sine.
 public func sin<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.sine()
 }
 
+/// Computes the element-wise cosine.
 public func cos<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.cosine()
 }
 
+/// Computes the element-wise relu function.
+///
+/// The relu function is defined as `max(value, 0)`
 public func relu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.rectifiedLinear()
 }
 
+/// Computes the element-wise leaky relu function.
+///
+/// The leaky relu function is defined as `max(value, leakage * value)`
 public func leakyRelu<Element, Device>(_ tensor: Tensor<Element, Device>, leakage: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.leakyRectifiedLinear(leakage: leakage)
 }
 
+/// Computes the element-wise heaviside step function of the tensor.
+///
+/// The heaviside step function is defined as `value > 0 ? 1 : 0`
 public func heaviside<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.heaviside()
 }
 
+/// Computes the softmax function along the given axis.
+/// If no axis is provided, the softmax is computed along axis 1.
 public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
     tensor.softmax(axis: axis)
 }

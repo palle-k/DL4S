@@ -30,7 +30,13 @@ public extension Tensor {
     
     /// Performs an img2col transformation, which allows convolutions to be performed by matrix multiplication.
     ///
-    /// The source tensor is expected to have a shape of [batchSize, channels, height, width]
+    /// The source tensor is expected to have a shape of [batchSize, channels, height, width].
+    /// The result is a tensor with shape [window_size, window_count].
+    ///
+    /// The window size is the size of the kernel (width \* height \* depth).
+    /// The window count is the number of windows that fit into the source tensor when using the given padding and stride.
+    ///
+    /// Windows are layed out from left to right and from top to bottom, where (0, 0) is the top left corner of the image.
     ///
     /// - Parameters:
     ///   - kernelWidth: Width of the convolution kernel
@@ -68,7 +74,11 @@ public extension Tensor {
         )
     }
     
-    /// Performs an inverse of the img2col operation
+    /// Computes the inverse of the img2col operation.
+    ///
+    /// The source tensor is expected to be a tensor with shape [window_size, window_count].
+    /// The result tensor will have the given result shape, which is expected to be 4-dimensional ([batch_size, channels, height, width])
+    ///
     /// - Parameters:
     ///   - kernelWidth: Width of the convolution kernel
     ///   - kernelHeight: Height of the convolution kernel
@@ -110,6 +120,7 @@ public extension Tensor {
     ///   - filters: Filters to convolve the tensor with
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
+    /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
     func convolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let padding = padding ?? ((filters.shape[2] - 1) / 2)
         
@@ -133,8 +144,18 @@ public extension Tensor {
         return conv.permuted(to: [1, 0, 2, 3])
     }
     
-    func transposedConvolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
-        let padding = padding ?? ((filters.shape[2] - 1) / 2)
+    /// Performs a transposed 2d convolution (also called fractionally strided convolution).
+    ///
+    /// The source tensor is expected to have a shape of [batchSize, channels, width, height]
+    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelWidth, kernelHeight]
+    ///
+    /// - Parameters:
+    ///   - filters: Filters to convolve the tensor with
+    ///   - inset: Inset from edge of the source tensor
+    ///   - stride: Stride, with which the kernel moves over the result image. Larger strides result in larger output shapes.
+    /// - Returns: A tensor of shape [batchSize, outputChannels, (height - 1) * stride - 2 \* padding + kernelHeight, (width - 1) * stride - 2 \* padding + kernelWidth]
+    func transposedConvolved2d(filters: Tensor<Element, Device>, inset: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
+        let padding = inset ?? ((filters.shape[2] - 1) / 2)
         // transposed convolution is equivalent to the backwards pass of convolution
         let outputShape = [
             shape[0],
@@ -165,10 +186,14 @@ public extension Tensor {
 public extension Tensor {
     
     /// Performs max pooling on the tensor. Max pooling selects the maximum value for every given window of a tensor.
+    ///
+    /// The source tensor is expected to have a shape of [batchSize, channels, width, height].
+    ///
     /// - Parameters:
     ///   - windowSize: Window size
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
+    /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
     func maxPooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "MaxPool2D") {
             let padding = padding ?? ((windowSize - 1) / 2)
@@ -195,10 +220,14 @@ public extension Tensor {
     }
 
     /// Performs average pooling on the tensor. Average pooling computes the average of every given window of a tensor.
+    ///
+    /// The source tensor is expected to have a shape of [batchSize, channels, width, height].
+    ///
     /// - Parameters:
     ///   - windowSize: Window size
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
+    /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
     func averagePooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "AveragePool2D") {
             let padding = padding ?? ((windowSize - 1) / 2)

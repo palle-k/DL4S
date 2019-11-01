@@ -2,9 +2,13 @@
 [![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
 [![tag](https://img.shields.io/github/v/tag/palle-k/DL4S)](https://github.com/palle-k/DL4S/releases)
 
-This framework provides reverse mode automatic differentiation,
-vectorized implementations of common matrix and vector operators and high level neural network operations,
-such as convolution, recurrent units, and more.
+DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
+It furthermore has automatic differentiation, which allows you to create and train neural networks without needing to manually
+implement backpropagation.
+
+Features include accelerated implementations for many basic binary and unary operators,
+matrix operations, convolutional and recurrent neural networks, 
+commonly used optimizers, second derivatives and much more.
 
 ## Overview
 1. [Installation](#installation)
@@ -131,6 +135,8 @@ Losses
 Tensor Operations
 </summary>
 <p>
+
+Behavior of broadcast operations is consistent with numpy rules.
 
 - [x] broadcast-add
 - [x] broadcast-sub

@@ -26,6 +26,7 @@
 import Foundation
 
 
+/// A bidirectional RNN
 public struct Bidirectional<RNNLayer: RNN>: LayerType {
     public typealias Inputs = RNNLayer.Inputs
     public typealias Outputs = (forward: RNNLayer.Outputs, backward: RNNLayer.Outputs)
@@ -44,9 +45,16 @@ public struct Bidirectional<RNNLayer: RNN>: LayerType {
         get {forwardLayer.parameters + backwardLayer.parameters}
     }
     
+    /// RNN for forwards direction
     public var forwardLayer: RNNLayer
+    
+    /// RNN for backwards direction
     public var backwardLayer: RNNLayer
     
+    /// Creates a bidirectional RNN with the given RNNs for the forward and backward pass.
+    /// - Parameters:
+    ///   - forward: RNN for forward pass. Must have `direction == .forward`.
+    ///   - backward: RNN for backward pass. Must have `direction == .backward`.
     public init(forward: RNNLayer, backward: RNNLayer) {
         precondition(forward.direction == .forward, "Forward RNN layer must have forward direction")
         precondition(backward.direction == .backward, "Backward RNN layer must have backward direction")

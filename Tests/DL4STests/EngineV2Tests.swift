@@ -188,4 +188,47 @@ class EngineV2Tests: XCTestCase {
         let gathered = result.gather(using: c, alongAxis: 1)
         print(gathered)
     }
+    
+    func testBroadcastMatrixMultiply() {
+        let a = Tensor<Float, CPU>([
+            [[1, 2],
+             [3, 4]],
+            [[5, 6],
+             [7, 8]]
+        ])
+        var lhs = a.view(as: 2, 1, 2, 2)
+        lhs.requiresGradient = true
+        var rhs = a.view(as: 1, 2, 2, 2)
+        rhs.requiresGradient = true
+        
+        let bmm = lhs.broadcastMatrixMultiplied(with: rhs)
+        let ref = Tensor(stacking: [
+            lhs[0, 0].matrixMultiplied(with: rhs[0, 0]).unsqueezed(at: 0),
+            lhs[0, 0].matrixMultiplied(with: rhs[0, 1]).unsqueezed(at: 0),
+            lhs[1, 0].matrixMultiplied(with: rhs[0, 0]).unsqueezed(at: 0),
+            lhs[1, 0].matrixMultiplied(with: rhs[0, 1]).unsqueezed(at: 0),
+        ]).view(as: 2, 2, 2, 2)
+        
+        print(bmm, terminator: "\n\n")
+        print(ref, terminator: "\n\n")
+        
+        let grads = bmm.gradients(of: [lhs, rhs])
+        print("Gradients:")
+        print(grads[0], grads[1], separator: "\n", terminator: "\n\n")
+        
+        print("Reference Gradients:")
+        let refGrads = ref.gradients(of: [lhs, rhs])
+        print(refGrads[0], refGrads[1], separator: "\n", terminator: "\n\n")
+        
+        print("Ref2 Gradients:")
+        let ref2 = [
+            lhs[0, 0].matrixMultiplied(with: rhs[0, 0]).unsqueezed(at: 0),
+            lhs[0, 0].matrixMultiplied(with: rhs[0, 1]).unsqueezed(at: 0),
+            lhs[1, 0].matrixMultiplied(with: rhs[0, 0]).unsqueezed(at: 0),
+            lhs[1, 0].matrixMultiplied(with: rhs[0, 1]).unsqueezed(at: 0),
+        ].reduce(0, +)
+        let ref2Grads = ref2.gradients(of: [lhs, rhs])
+        print(ref2Grads[0], ref2Grads[1], separator: "\n", terminator: "\n\n")
+        
+    }
 }

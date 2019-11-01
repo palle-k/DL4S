@@ -25,6 +25,7 @@
 
 import Foundation
 
+/// Adam optimizer (Adaptive moment estimation)
 public struct Adam<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     

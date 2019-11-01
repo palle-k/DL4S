@@ -35,6 +35,7 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
         get {[embeddingMatrix]}
     }
     
+    /// Matrix of embedding vectors, shape [inputFeatures, outputSize]
     public var embeddingMatrix: Tensor<Element, Device>
     
     /// Number of input features
@@ -47,6 +48,13 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
         embeddingMatrix.shape[1]
     }
     
+    /// Creates an embedding layer that has an input vocabulary of size `inputFeatures` and returns embeddings with the size `outputSize`.
+    ///
+    /// The layer expects categorial inputs with a shape of [batch size] and returns embeddings with a shape of [batch size, outputSize]
+    ///
+    /// - Parameters:
+    ///   - inputFeatures: Vocabulary size.
+    ///   - outputSize: Embedding dimensionality.
     public init(inputFeatures: Int, outputSize: Int) {
         self.embeddingMatrix = Tensor<Element, Device>(xavierNormalWithShape: [inputFeatures, outputSize], requiresGradient: true)
         #if DEBUG
