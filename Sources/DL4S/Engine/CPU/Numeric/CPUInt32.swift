@@ -34,8 +34,6 @@ import Glibc
 import Foundation
 #endif
 
-import Accelerate
-
 
 extension Int32: CPUNumeric {
     public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, stride: Int, count: Int) {

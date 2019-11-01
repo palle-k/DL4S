@@ -98,8 +98,9 @@ public extension CPUNumeric {
                             #elseif canImport(Accelerate)
                             vDSP_vfill([0], &dst_float[dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width], 1, UInt(output_width))
                             #else
-                            for i in 0 ..< count {
-                                dst[i &* stride] = 0;
+                            let dst_offset = dst_float.advanced(by: dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width)
+                            for i in 0 ..< output_width {
+                                dst_offset[i] = 0;
                             }
                             #endif
                         } else {
@@ -143,8 +144,8 @@ public extension CPUNumeric {
             #elseif canImport(Accelerate)
             vDSP_vfill([0], (dst as! UnsafeMutablePointer<Float>), 1, UInt(setup.width * setup.height * setup.channels * setup.batch_size))
             #else
-            for i in 0 ..< count {
-                dst[i &* stride] = 0;
+            for i in 0 ..< setup.width * setup.height * setup.channels * setup.batch_size {
+                dst[i] = 0;
             }
             #endif
         } else {
