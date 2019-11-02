@@ -23,7 +23,7 @@
         <a class="header-link" href="../index.html">
           DL4S Docs
         </a>
-         (42% documented)
+         (57% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -440,7 +440,7 @@
 
                 </div>
               </div>
-            <p>Undocumented</p>
+            <p>Tensor operation engine for a device</p>
 
           </div>
         </section>
@@ -476,6 +476,17 @@
                     </section>
                   </div>
                 </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Simple%20operations"></a>
+                <a name="//apple_ref/swift/Section/Simple operations" class="dashAnchor"></a>
+                <a href="#/Simple%20operations">
+                  <h3 class="section-name">Simple operations</h3>
+                </a>
+              </div>
+              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -489,7 +500,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Fills a buffer with a given value</p>
 
                       </div>
                       <div class="declaration">
@@ -499,6 +510,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">fill</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">value</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>value</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Value to fill the buffer with</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to fill</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>count</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements to write</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -516,7 +570,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Element-wise Vector-vector add</p>
 
                       </div>
                       <div class="declaration">
@@ -526,6 +580,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">vAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>First summand</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Second summand</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>count</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements to add</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -543,7 +652,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Element-wise Vector negate</p>
 
                       </div>
                       <div class="declaration">
@@ -553,6 +662,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">vNeg</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>val</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Vector to negate</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>count</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements to negate</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -570,7 +722,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Element-wise Vector-vector subtract</p>
 
                       </div>
                       <div class="declaration">
@@ -580,6 +732,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">vSub</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Left-hand side vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Right-hand side vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result bufffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>count</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements to subtract</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -597,7 +804,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Element-wise Vector-vector multiply</p>
 
                       </div>
                       <div class="declaration">
@@ -607,6 +814,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">vMul</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>First factor</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Second factor</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>count</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements to multiply</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -624,7 +886,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Element-wise Vector-vector divide</p>
 
                       </div>
                       <div class="declaration">
@@ -635,32 +897,60 @@
 
                         </div>
                       </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP6argmax6values5countSi_qd__tAA6BufferVyqd__6DeviceQzG_SitAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/argmax(values:count:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP6argmax6values5countSi_qd__tAA6BufferVyqd__6DeviceQzG_SitAA07NumericC0Rd__lFZ">argmax(values:count:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">argmax</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">N</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Dividend</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Divisor</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>count</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements to divide</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -669,10 +959,10 @@
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/New%20Engine%20API"></a>
-                <a name="//apple_ref/swift/Section/New Engine API" class="dashAnchor"></a>
-                <a href="#/New%20Engine%20API">
-                  <h3 class="section-name">New Engine API</h3>
+                <a name="/Matrix%20operations"></a>
+                <a name="//apple_ref/swift/Section/Matrix operations" class="dashAnchor"></a>
+                <a href="#/Matrix%20operations">
+                  <h3 class="section-name">Matrix operations</h3>
                 </a>
               </div>
               <ul class="item-container">
@@ -689,7 +979,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Matrix multiply add in-place</p>
 
                       </div>
                       <div class="declaration">
@@ -699,6 +989,97 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">gemm</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">alpha</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">beta</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">transposeFirst</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">,</span> <span class="nv">transposeSecond</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Left-hand side matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Right-hand side matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Summand and result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>alpha</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Matrix multiplication scale</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>beta</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Add scale</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>transposeFirst</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Whether to transpose the first matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>transposeSecond</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Whether to transpose the second matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -716,7 +1097,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Broadcast matrix multiply add in-place</p>
 
                       </div>
                       <div class="declaration">
@@ -727,9 +1108,193 @@
 
                         </div>
                       </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Left-hand side matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Right-hand side matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Summand and result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>alpha</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Matrix multiplication scale</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>beta</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Add scale</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>transposeFirst</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Whether to transpose the first matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>transposeSecond</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Whether to transpose the second matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </section>
                   </div>
                 </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP4band6buffer6result13belowDiagonal05aboveH0yAA12ShapedBufferVyqd__6DeviceQzG_AMSiSgANtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/band(buffer:result:belowDiagonal:aboveDiagonal:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP4band6buffer6result13belowDiagonal05aboveH0yAA12ShapedBufferVyqd__6DeviceQzG_AMSiSgANtAA07NumericC0Rd__lFZ">band(buffer:result:belowDiagonal:aboveDiagonal:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Band matrix extraction</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">band</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">belowDiagonal</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?,</span> <span class="nv">aboveDiagonal</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>buffer</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Source matrix</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>belowDiagonal</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements below diagonal to keep, nil for all elements</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>aboveDiagonal</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements above diagonal to keep, nil for all elements</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Broadcasting"></a>
+                <a name="//apple_ref/swift/Section/Broadcasting" class="dashAnchor"></a>
+                <a href="#/Broadcasting">
+                  <h3 class="section-name">Broadcasting</h3>
+                </a>
+              </div>
+              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -743,7 +1308,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Broadcast adds two buffers</p>
 
                       </div>
                       <div class="declaration">
@@ -753,6 +1318,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>First summand</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Second summand</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Sum vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -770,7 +1378,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Broadcast subtracts one vector from another</p>
 
                       </div>
                       <div class="declaration">
@@ -780,6 +1388,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastSub</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Left-hand side vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Vector to subtact from lhs</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -797,7 +1448,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Broadcast multiplies two buffers</p>
 
                       </div>
                       <div class="declaration">
@@ -807,6 +1458,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastMul</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>First factor</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Second factor</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Product vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -824,7 +1518,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Broadcast divides one vector by another</p>
 
                       </div>
                       <div class="declaration">
@@ -835,9 +1529,63 @@
 
                         </div>
                       </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Left-hand side vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>rhs</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Vector to divide lhs with</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </section>
                   </div>
                 </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Reduction"></a>
+                <a name="//apple_ref/swift/Section/Reduction" class="dashAnchor"></a>
+                <a href="#/Reduction">
+                  <h3 class="section-name">Reduction</h3>
+                </a>
+              </div>
+              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -851,7 +1599,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along one axis by computing the sum.</p>
 
                       </div>
                       <div class="declaration">
@@ -861,6 +1609,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceSum</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -878,7 +1669,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along one axis by computing the maximum.</p>
 
                       </div>
                       <div class="declaration">
@@ -888,6 +1679,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMax</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Context vector that stores the argmax</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -905,7 +1751,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along one axis by computing the minimum.</p>
 
                       </div>
                       <div class="declaration">
@@ -915,6 +1761,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMin</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Context vector that stores the argmin</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -932,7 +1833,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along one axis by computing the mean.</p>
 
                       </div>
                       <div class="declaration">
@@ -942,6 +1843,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMean</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -959,7 +1903,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along multiple axes by computing the sum.</p>
 
                       </div>
                       <div class="declaration">
@@ -969,6 +1913,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceSum</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axes</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axes</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axes to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -986,7 +1973,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along multiple axes by computing the maximum.</p>
 
                       </div>
                       <div class="declaration">
@@ -996,6 +1983,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMax</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axes</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Context buffer that stores the argmax</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axes</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axes to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -1013,7 +2055,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along multiple axes by computing the minimum.</p>
 
                       </div>
                       <div class="declaration">
@@ -1023,6 +2065,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMin</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axes</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Context buffer that stores the argmin</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axes</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axes to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -1040,7 +2137,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reduces one buffer into another along multiple axes by computing the mean.</p>
 
                       </div>
                       <div class="declaration">
@@ -1051,9 +2148,1004 @@
 
                         </div>
                       </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reduce</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axes</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axes to reduce along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </section>
                   </div>
                 </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3sum6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/sum(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3sum6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sum(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Computes the sum of a buffer</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sum</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to sum up</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP4mean6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/mean(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP4mean6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">mean(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Computes the mean of a buffer</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">mean</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to compute the mean of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3max6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/max(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3max6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">max(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Stores the maximum value in result and returns the argmax</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">static</span> <span class="kd">func</span> <span class="n">max</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Value buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3min6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/min(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3min6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">min(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Stores the minimum value in result and returns the argmin</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">static</span> <span class="kd">func</span> <span class="n">min</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Value buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP6argmax6values5countSi_qd__tAA6BufferVyqd__6DeviceQzG_SitAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/argmax(values:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP6argmax6values5countSi_qd__tAA6BufferVyqd__6DeviceQzG_SitAA07NumericC0Rd__lFZ">argmax(values:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Computes the argmax of a buffer</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">argmax</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">N</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to compute the argmax of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>count</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Number of elements in the buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Element-wise%20functions"></a>
+                <a name="//apple_ref/swift/Section/Element-wise functions" class="dashAnchor"></a>
+                <a href="#/Element-wise%20functions">
+                  <h3 class="section-name">Element-wise functions</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3exp6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/exp(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3exp6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">exp(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise exponentiate</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">exp</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to exponentiate</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3log6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/log(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3log6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">log(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise log</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">log</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the log of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP4sqrt6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/sqrt(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP4sqrt6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sqrt(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise square root</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sqrt</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the square root of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP4relu6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/relu(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP4relu6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">relu(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise recitified linear unit</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">relu</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the relu of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP9heaviside6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/heaviside(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP9heaviside6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">heaviside(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise heaviside step function</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">heaviside</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the heaviside step function of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3sin6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/sin(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3sin6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sin(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise sine</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sin</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the sine of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3cos6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/cos(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3cos6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">cos(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise cosine</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">cos</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the cosine of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP3tan6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/tan(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP3tan6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">tan(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise tangent</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">tan</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the tangent of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP4sinh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/sinh(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP4sinh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sinh(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise hyperbolic sine</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sinh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the hyperbolic sine of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP4cosh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/cosh(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP4cosh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">cosh(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise hyperbolic cosine</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">cosh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the hyperbolic cosine of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10EngineTypeP4tanh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
+                    <a name="//apple_ref/swift/Method/tanh(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10EngineTypeP4tanh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">tanh(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Element-wise hyperbolic tangent</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">tanh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to compute the hyperbolic tangent of</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Shuffling"></a>
+                <a name="//apple_ref/swift/Section/Shuffling" class="dashAnchor"></a>
+                <a href="#/Shuffling">
+                  <h3 class="section-name">Shuffling</h3>
+                </a>
+              </div>
+              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -1102,413 +3194,6 @@
                         <div class="language">
                           <p class="aside-title">Swift</p>
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">gather</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expanded</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3sum6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/sum(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3sum6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sum(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sum</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP4mean6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/mean(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP4mean6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">mean(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">mean</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3max6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/max(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3max6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">max(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
-<span class="kd">static</span> <span class="kd">func</span> <span class="n">max</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3min6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/min(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3min6values6resultSiAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">min(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
-<span class="kd">static</span> <span class="kd">func</span> <span class="n">min</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3exp6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/exp(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3exp6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">exp(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">exp</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3log6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/log(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3log6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">log(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">log</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP4sqrt6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/sqrt(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP4sqrt6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sqrt(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sqrt</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP4relu6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/relu(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP4relu6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">relu(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">relu</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP9heaviside6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/heaviside(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP9heaviside6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">heaviside(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">heaviside</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3sin6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/sin(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3sin6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sin(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sin</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3cos6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/cos(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3cos6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">cos(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">cos</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP3tan6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/tan(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP3tan6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">tan(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">tan</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP4sinh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/sinh(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP4sinh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">sinh(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">sinh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP4cosh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/cosh(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP4cosh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">cosh(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">cosh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP4tanh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/tanh(values:result:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP4tanh6values6resultyAA12ShapedBufferVyqd__6DeviceQzG_AKtAA07NumericC0Rd__lFZ">tanh(values:result:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">tanh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
                       </div>
@@ -1839,6 +3524,17 @@
                     </section>
                   </div>
                 </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Convolution%20Helpers"></a>
+                <a name="//apple_ref/swift/Section/Convolution Helpers" class="dashAnchor"></a>
+                <a href="#/Convolution%20Helpers">
+                  <h3 class="section-name">Convolution Helpers</h3>
+                </a>
+              </div>
+              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -1887,33 +3583,6 @@
                         <div class="language">
                           <p class="aside-title">Swift</p>
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">col2img</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">matrix</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">image</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">kernelWidth</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelHeight</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">padding</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S10EngineTypeP4band6buffer6result13belowDiagonal05aboveH0yAA12ShapedBufferVyqd__6DeviceQzG_AMSiSgANtAA07NumericC0Rd__lFZ"></a>
-                    <a name="//apple_ref/swift/Method/band(buffer:result:belowDiagonal:aboveDiagonal:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10EngineTypeP4band6buffer6result13belowDiagonal05aboveH0yAA12ShapedBufferVyqd__6DeviceQzG_AMSiSgANtAA07NumericC0Rd__lFZ">band(buffer:result:belowDiagonal:aboveDiagonal:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">band</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">belowDiagonal</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?,</span> <span class="nv">aboveDiagonal</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
                       </div>
