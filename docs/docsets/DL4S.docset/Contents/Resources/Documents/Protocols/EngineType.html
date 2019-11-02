@@ -23,7 +23,7 @@
         <a class="header-link" href="../index.html">
           DL4S Docs
         </a>
-         (57% documented)
+         (61% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -3159,7 +3159,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Scatters elements to indices determined by the context along the specified axis.</p>
 
                       </div>
                       <div class="declaration">
@@ -3169,6 +3169,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">scatter</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">reduced</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>reduced</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Values to scatter</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Index vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to scatter to</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to scatter along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3186,7 +3241,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Gathers elements from indices determined by the context along the specified axis</p>
 
                       </div>
                       <div class="declaration">
@@ -3196,6 +3251,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">gather</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expanded</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>expanded</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to gather elements from</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>context</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Index vector</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to gather along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3213,7 +3323,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Performs an axis permutation / transpose oepration</p>
 
                       </div>
                       <div class="declaration">
@@ -3223,6 +3333,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">permuteAxes</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">arangement</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to permute</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>arangement</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Arangement of axes.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3240,7 +3393,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Performs an axis permutation / transpose oepration and adds another value vector</p>
 
                       </div>
                       <div class="declaration">
@@ -3250,6 +3403,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">permuteAxesAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">arangement</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to permute</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>add</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to add to the result</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>arangement</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Arangement of axes.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3267,7 +3475,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reads elements from the given index</p>
 
                       </div>
                       <div class="declaration">
@@ -3277,6 +3485,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptRead</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to read</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to write the values to</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Index to read from, nil values indicate that all values along the corresponding axis should be read</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3294,7 +3545,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Writes elements to the result tensor at the given index</p>
 
                       </div>
                       <div class="declaration">
@@ -3304,6 +3555,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptWrite</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Values to write</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to write to</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Index to write to, nil values indicate that all values along the corresponding axis should be written</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3321,7 +3615,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reads elements from the given index and adds a second vector</p>
 
                       </div>
                       <div class="declaration">
@@ -3331,6 +3625,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptReadAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer of values to read</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>add</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to add</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to write the values to</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Index to read from, nil values indicate that all values along the corresponding axis should be read</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3348,7 +3697,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Writes elements to the result tensor at the given index and adds a second vector</p>
 
                       </div>
                       <div class="declaration">
@@ -3358,6 +3707,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptWriteAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Values to write</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>add</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to add</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to write to</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>index</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Index to write to, nil values indicate that all values along the corresponding axis should be written</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3375,7 +3779,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reverses the order of elements along the first dimension of the buffer</p>
 
                       </div>
                       <div class="declaration">
@@ -3385,6 +3789,37 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reverse</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reverse</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3402,7 +3837,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reverses the order of elements along the first dimension of the buffer and adds a second buffer</p>
 
                       </div>
                       <div class="declaration">
@@ -3412,6 +3847,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">reverseAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to reverse</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>add</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer to add</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3429,7 +3907,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Stacks the given array of buffers along the stacking axis into the result buffer.</p>
 
                       </div>
                       <div class="declaration">
@@ -3439,6 +3917,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">stack</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">buffers</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>buffers</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffers to stack</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to stack the buffers along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3456,7 +3977,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reverses the stacking operation and adds a list of buffers to the unstacked results</p>
 
                       </div>
                       <div class="declaration">
@@ -3466,6 +3987,61 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">unstackAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">stacked</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">result</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>stacked</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer that stores elements of stacked buffers</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>add</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffers to add to the corresponding result buffers</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffers to write the result to</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to unstack along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3483,7 +4059,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Reverses the stacking operation</p>
 
                       </div>
                       <div class="declaration">
@@ -3493,6 +4069,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">unstack</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">stacked</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>stacked</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer that stores elements of stacked buffers</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffers to write the result to</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>axis</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Axis to unstack along</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3510,7 +4129,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Writes linear interpolation values from lowerBound to upperBound into the result buffer.</p>
 
                       </div>
                       <div class="declaration">
@@ -3520,6 +4139,49 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">arange</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lowerBound</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">upperBound</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>lowerBound</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Start value</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>upperBound</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>End value</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3548,7 +4210,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Performs an img2col transformation that extracts all windows for a convolution into a matrix.</p>
 
                       </div>
                       <div class="declaration">
@@ -3558,6 +4220,85 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">img2col</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">kernelWidth</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelHeight</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">padding</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Image buffer, shape [batchSize, channels, height, width]</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Result buffer, shape [channels * kernelWidth * kernelHeight, number of windows]</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>kernelWidth</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Width of the convolution kernel</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>kernelHeight</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Height of the convolution kernel</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>padding</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Zero padding applied around the input image</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>stride</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Stride, with which the window is moved over the input image</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
@@ -3575,7 +4316,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>Performs an col2img transformation that aggregates all windows from a convolution matrix into an image tensor.</p>
 
                       </div>
                       <div class="declaration">
@@ -3585,6 +4326,85 @@
                           <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="n">col2img</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">matrix</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">image</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Protocols/EngineType.html#/s:4DL4S10EngineTypeP6DeviceQa">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">kernelWidth</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelHeight</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">padding</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>values</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Buffer, shape [channels * kernelWidth * kernelHeight, number of windows]</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>result</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Image buffer, shape [batchSize, channels, height, width]</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>kernelWidth</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Width of the convolution kernel</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>kernelHeight</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Height of the convolution kernel</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>padding</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Zero padding applied around the input image</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>stride</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Stride, with which the window is moved over the input image</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>

@@ -414,27 +414,129 @@ public protocol EngineType {
     static func tanh<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
     //MARK: Shuffling
+    
+    /// Scatters elements to indices determined by the context along the specified axis.
+    /// - Parameters:
+    ///   - reduced: Values to scatter
+    ///   - context: Index vector
+    ///   - result: Buffer to scatter to
+    ///   - axis: Axis to scatter along
     static func scatter<N: NumericType>(reduced: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    
+    /// Gathers elements from indices determined by the context along the specified axis
+    /// - Parameters:
+    ///   - expanded: Buffer to gather elements from
+    ///   - context: Index vector
+    ///   - result: Result buffer
+    ///   - axis: Axis to gather along
     static func gather<N: NumericType>(expanded: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
     
+    /// Performs an axis permutation / transpose oepration
+    /// - Parameters:
+    ///   - values: Buffer of values to permute
+    ///   - result: Result buffer
+    ///   - arangement: Arangement of axes.
     static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, arangement: [Int])
+    
+    /// Performs an axis permutation / transpose oepration and adds another value vector
+    /// - Parameters:
+    ///   - values: Buffer of values to permute
+    ///   - add: Buffer of values to add to the result
+    ///   - result: Result buffer
+    ///   - arangement: Arangement of axes.
     static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, arangement: [Int])
     
+    /// Reads elements from the given index
+    /// - Parameters:
+    ///   - values: Buffer of values to read
+    ///   - result: Buffer to write the values to
+    ///   - index: Index to read from, nil values indicate that all values along the corresponding axis should be read
     static func subscriptRead<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    
+    /// Writes elements to the result tensor at the given index
+    /// - Parameters:
+    ///   - values: Values to write
+    ///   - result: Buffer to write to
+    ///   - index: Index to write to, nil values indicate that all values along the corresponding axis should be written
     static func subscriptWrite<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    
+    /// Reads elements from the given index and adds a second vector
+    /// - Parameters:
+    ///   - values: Buffer of values to read
+    ///   - add: Buffer to add
+    ///   - result: Buffer to write the values to
+    ///   - index: Index to read from, nil values indicate that all values along the corresponding axis should be read
     static func subscriptReadAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
+    
+    /// Writes elements to the result tensor at the given index and adds a second vector
+    /// - Parameters:
+    ///   - values: Values to write
+    ///   - add: Buffer to add
+    ///   - result: Buffer to write to
+    ///   - index: Index to write to, nil values indicate that all values along the corresponding axis should be written
     static func subscriptWriteAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
     
+    /// Reverses the order of elements along the first dimension of the buffer
+    /// - Parameters:
+    ///   - values: Buffer to reverse
+    ///   - result: Result buffer
     static func reverse<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    
+    /// Reverses the order of elements along the first dimension of the buffer and adds a second buffer
+    /// - Parameters:
+    ///   - values: Buffer to reverse
+    ///   - add: Buffer to add
+    ///   - result: Result buffer
     static func reverseAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
+    /// Stacks the given array of buffers along the stacking axis into the result buffer.
+    /// - Parameters:
+    ///   - buffers: Buffers to stack
+    ///   - result: Result buffer
+    ///   - axis: Axis to stack the buffers along
     static func stack<N>(buffers: [ShapedBuffer<N, Device>], result: ShapedBuffer<N, Device>, axis: Int)
+    
+    /// Reverses the stacking operation and adds a list of buffers to the unstacked results
+    /// - Parameters:
+    ///   - stacked: Buffer that stores elements of stacked buffers
+    ///   - add: Buffers to add to the corresponding result buffers
+    ///   - result: Buffers to write the result to
+    ///   - axis: Axis to unstack along
     static func unstackAdd<N: NumericType>(stacked: ShapedBuffer<N, Device>, add: [ShapedBuffer<N, Device>], result: [ShapedBuffer<N, Device>], axis: Int)
+    
+    /// Reverses the stacking operation
+    /// - Parameters:
+    ///   - stacked: Buffer that stores elements of stacked buffers
+    ///   - result: Buffers to write the result to
+    ///   - axis: Axis to unstack along
     static func unstack<N: NumericType>(stacked: ShapedBuffer<N, Device>, result: [ShapedBuffer<N, Device>], axis: Int)
     
+    /// Writes linear interpolation values from lowerBound to upperBound into the result buffer.
+    /// - Parameters:
+    ///   - lowerBound: Start value
+    ///   - upperBound: End value
+    ///   - result: Result buffer
     static func arange<N: NumericType>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, Device>)
     
     //MARK: Convolution Helpers
+    
+    /// Performs an img2col transformation that extracts all windows for a convolution into a matrix.
+    /// - Parameters:
+    ///   - values: Image buffer, shape [batchSize, channels, height, width]
+    ///   - result: Result buffer, shape [channels * kernelWidth * kernelHeight, number of windows]
+    ///   - kernelWidth: Width of the convolution kernel
+    ///   - kernelHeight: Height of the convolution kernel
+    ///   - padding: Zero padding applied around the input image
+    ///   - stride: Stride, with which the window is moved over the input image
     static func img2col<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+    
+    /// Performs an col2img transformation that aggregates all windows from a convolution matrix into an image tensor.
+    /// - Parameters:
+    ///   - values: Buffer, shape [channels * kernelWidth * kernelHeight, number of windows]
+    ///   - result: Image buffer, shape [batchSize, channels, height, width]
+    ///   - kernelWidth: Width of the convolution kernel
+    ///   - kernelHeight: Height of the convolution kernel
+    ///   - padding: Zero padding applied around the input image
+    ///   - stride: Stride, with which the window is moved over the input image
     static func col2img<N: NumericType>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
 }
