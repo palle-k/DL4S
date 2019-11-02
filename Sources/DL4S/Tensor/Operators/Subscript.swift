@@ -25,6 +25,7 @@
 
 import Foundation
 
+//MARK: Subscripting
 
 public extension Tensor {
     /// Gets or sets a subtensor at the given index.

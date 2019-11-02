@@ -25,6 +25,7 @@
 
 import Foundation
 
+//MARK: Tensor Stacking
 
 public extension Tensor {
     /// Inverts stacking of tensors.

@@ -25,7 +25,7 @@
 
 import Foundation
 
-
+//MARK: Matrix Multiplication
 public extension Tensor {
     
     /// Computes the matrix-matrix product, the vector-matrix product, the matrix-vector product or the vector-vector product of the tensor with the given other tensor

@@ -25,6 +25,8 @@
 
 import Foundation
 
+//MARK: Broadcasting Operators
+
 public extension Tensor {
     
     /// Element-wise broadcast adds the given tensors

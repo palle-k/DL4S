@@ -25,6 +25,8 @@
 
 import Foundation
 
+//MARK: Tensor Shape Modifiers
+
 public extension Tensor {
     
     /// Reshapes the tensor to the given shape.

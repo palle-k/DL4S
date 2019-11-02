@@ -25,6 +25,8 @@
 
 import Foundation
 
+// MARK: Utility operations
+
 public extension Tensor where Element == Int32 {
     
     /// One-hot encodes a tensor of indices

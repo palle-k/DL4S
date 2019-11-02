@@ -42,6 +42,8 @@ final class TensorHandle<Element, Device: DeviceType> {
     }
 }
 
+//MARK: Core Tensor functionality
+
 /// A tensor is an n-dimensional array of numbers with a given shape.
 public struct Tensor<Element: NumericType, Device: DeviceType> {
     var handle: TensorHandle<Element, Device>

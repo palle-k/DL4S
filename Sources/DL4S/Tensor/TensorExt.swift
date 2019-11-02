@@ -25,6 +25,7 @@
 
 import Foundation
 
+//MARK: Tensor extensions
 
 extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
@@ -78,6 +79,7 @@ public extension Tensor {
     }
 }
 
+//MARK: Tensor - array conversion
 public extension Tensor {
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
@@ -134,6 +136,8 @@ public extension Tensor {
         )
     }
 }
+
+//MARK: Tensor initialization
 
 public extension Tensor where Element: RandomizableType {
     /// Creates a tensor and fills it with random values sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
@@ -249,6 +253,7 @@ public extension Tensor {
     }
 }
 
+//MARK: Tensor - Image conversion
 #if canImport(CoreGraphics)
 import CoreGraphics
 
@@ -291,6 +296,10 @@ private func copy<Element: NumericType>(from image: CGImage, to buffer: UnsafeMu
 }
 
 public extension Tensor {
+    /// Creates a tensor from the given CGImage
+    /// - Parameters:
+    ///   - image: Image
+    ///   - range: Range to normalize pixel values to
     init?(_ image: CGImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
         let shape = [
             (image.colorSpace ?? CGColorSpaceCreateDeviceRGB()).numberOfComponents,
@@ -368,6 +377,10 @@ public extension Tensor {
 import Cocoa
 
 public extension Tensor {
+    /// Creates a tensor from the given NSImage
+    /// - Parameters:
+    ///   - image: Image
+    ///   - range: Range to normalize pixel values to
     init?(_ image: NSImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return nil
@@ -377,6 +390,10 @@ public extension Tensor {
 }
 
 public extension NSImage {
+    /// Creates a NSImage from the given tensor
+    /// - Parameters:
+    ///   - tensor: Tensor
+    ///   - tensorRange: Range to normalize pixel values to
     convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil
@@ -390,6 +407,10 @@ public extension NSImage {
 import UIKit
 
 public extension Tensor {
+    /// Creates a tensor from the given UIImage
+    /// - Parameters:
+    ///   - image: Image
+    ///   - range: Range to normalize pixel values to
     init?(_ image: UIImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = image.cgImage else {
             return nil
@@ -399,6 +420,10 @@ public extension Tensor {
 }
 
 public extension UIImage {
+    /// Creates a UIImage from the given tensor
+    /// - Parameters:
+    ///   - tensor: Tensor
+    ///   - tensorRange: Range to normalize pixel values to
     convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil
