@@ -52,9 +52,7 @@ public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
     }
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "MaxPool2D") {
-            inputs.maxPooled2d(windowSize: windowSize, padding: padding, stride: stride)
-        }
+        inputs.maxPooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
 }
 
@@ -84,9 +82,7 @@ public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
     }
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "AvgPool2D") {
-            inputs.averagePooled2d(windowSize: windowSize, padding: padding, stride: stride)
-        }
+        inputs.averagePooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
 }
 

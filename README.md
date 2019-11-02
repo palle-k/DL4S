@@ -12,7 +12,7 @@ DL4S provides a high-level API for many accelerated operations common in neural 
 It furthermore has automatic differentiation builtin, which allows you to create and train neural networks without needing to manually
 implement backpropagation.
 
-Features include accelerated implementations for many basic binary and unary operators,
+Features include implementations for many basic binary and unary operators,
 matrix operations, convolutional and recurrent neural networks, 
 commonly used optimizers, second derivatives and much more.
 
@@ -94,6 +94,8 @@ Layers
 - [x] Bidirectional RNNs
 - [x] Max Pooling
 - [x] Average Pooling
+- [x] Adaptive Max Pooling
+- [x] Adaptive Average Pooling
 - [x] Relu
 - [x] Tanh
 - [x] Sigmoid
@@ -101,8 +103,8 @@ Layers
 - [x] Embedding
 - [x] Batch Norm
 - [x] Layer Norm
-- [x] Sequential
 - [x] Dropout
+- [x] Sequential
 - [x] Lambda 
 
 </p>

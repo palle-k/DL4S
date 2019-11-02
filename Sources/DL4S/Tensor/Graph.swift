@@ -204,13 +204,13 @@ public extension Tensor {
             } else if let tag = self.tag {
                 label = tag
             } else {
-                label = "\(shape)"
+                label = "shape: \(shape)"
             }
             #else
             if shape == [] {
                 label = "\(item)"
             } else {
-                label = "\(shape)"
+                label = "shape: \(shape)"
             }
             #endif
             
