@@ -3,7 +3,7 @@
 [![tag](https://img.shields.io/github/v/tag/palle-k/DL4S)](https://github.com/palle-k/DL4S/releases)
 
 DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
-It furthermore has automatic differentiation, which allows you to create and train neural networks without needing to manually
+It furthermore has automatic differentiation builtin, which allows you to create and train neural networks without needing to manually
 implement backpropagation.
 
 Features include accelerated implementations for many basic binary and unary operators,
