@@ -6,6 +6,7 @@
 <a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
 <a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a>
+<a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
 </p>
 
 DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
