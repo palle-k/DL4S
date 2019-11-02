@@ -26,6 +26,19 @@
 import Foundation
 
 /// A sequential layer that concatenates the computations of two other layers.
+///
+/// With function builders, a sequential layer can be used to express sequential models in a type safe way.
+///
+/// Example:
+/// ```
+/// let model = Sequential {
+///     Dense<Float, CPU>(inputSize: 32, outputSize: 64)
+///     Relu<Float, CPU>()
+///     Dense<Float, CPU>(inputSize: 64, outputSize: 10)
+///     Softmax<Float, CPU>()
+/// }
+/// ```
+/// `model` will have a type `Sequential<Sequential<Dense<Float, CPU>, Relu<Float, CPU>>, Sequential<Dense<Float, CPU>, Softmax<Float, CPU>>>`.
 public struct Sequential<First: LayerType, Second: LayerType>: LayerType where First.Outputs == Second.Inputs, First.Parameter == Second.Parameter, First.Device == Second.Device {
     /// First transform
     public var first: First
@@ -159,9 +172,7 @@ public extension LayerBuilder {
 }
 
 public extension Sequential {
-    /// A sequential layer that concatenates the computations of two other layers.
-    ///
-    /// The layer is created with the sequence of transforms, that is specified in the provided layer builder builder closure.
+    /// Creates a sequential layer with the sequence of transforms, that is specified in the provided layer builder builder closure.
     ///
     /// Example:
     /// ```

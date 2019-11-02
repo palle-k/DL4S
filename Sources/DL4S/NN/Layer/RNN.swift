@@ -32,6 +32,7 @@ public enum RNNDirection: String, Codable {
 }
 
 
+/// Base protocol for recurrent neural networks.
 public protocol RNN: LayerType where Outputs == (State, () -> StateSequence) {
     associatedtype State
     associatedtype StateSequence

@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://github.com/palle-k/DL4S/blob/develop/.github/logo.png?raw=true" alt="DL4S" width="350" />
+<img src="https://github.com/palle-k/DL4S/blob/develop/.github/logo.png?raw=true" alt="DL4S" width="300" />
 </p>
 
 <p align="center">
