@@ -523,11 +523,4 @@ class VecTests: XCTestCase {
         let padded = a.padded(padding: [0, 2, 2])
         print(padded)
     }
-
-    func testIPP() {
-        let a = Tensor<Float, CPU>([[1,2], [3,4]])
-        let b = Tensor<Float, CPU>([[1,2], [3,4]])
-        let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
-        print(c.T)
-    }
 }
