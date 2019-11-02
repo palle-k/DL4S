@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>CPUEngine Structure Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Struct/CPUEngine" class="dashAnchor"></a>
+
+    <a title="CPUEngine Structure Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          DL4S Docs
+        </a>
+         (42% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">DL4S Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      CPUEngine Structure Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Math.html">Math</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Tensor.html">Tensor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Tensor.html">Tensor</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Network%20Layers.html">Network Layers</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Sequential.html">Sequential</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Dense.html">Dense</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Convolution2D.html">Convolution2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TransposedConvolution2D.html">TransposedConvolution2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MaxPool2D.html">MaxPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AvgPool2D.html">AvgPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveMaxPool2D.html">AdaptiveMaxPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveAvgPool2D.html">AdaptiveAvgPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RNN.html">RNN</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LSTM.html">LSTM</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/GRU.html">GRU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/BasicRNN.html">BasicRNN</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Bidirectional.html">Bidirectional</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Embedding.html">Embedding</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LayerNorm.html">LayerNorm</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/BatchNorm.html">BatchNorm</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Tanh.html">Tanh</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Sigmoid.html">Sigmoid</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Relu.html">Relu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LeakyRelu.html">LeakyRelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Softmax.html">Softmax</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Lambda.html">Lambda</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Dropout.html">Dropout</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Flatten.html">Flatten</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Reshape.html">Reshape</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Concat.html">Concat</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AnyLayer.html">AnyLayer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Optimizers.html">Optimizers</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SGD.html">SGD</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Momentum.html">Momentum</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Adam.html">Adam</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Adadelta.html">Adadelta</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Adagrad.html">Adagrad</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/RMSProp.html">RMSProp</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Model%20Zoo.html">Model Zoo</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AlexNet.html">AlexNet</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ResNet18.html">ResNet18</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ResidualBlock.html">ResidualBlock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG11.html">VGG11</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG13.html">VGG13</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG16.html">VGG16</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG19.html">VGG19</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Classes.html">Other Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/Queue.html">Queue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/SummaryWriter.html">SummaryWriter</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Enums.html">Other Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ConvUtil.html">ConvUtil</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/LayerBuilder.html">LayerBuilder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/OperationGroup.html">OperationGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/RNNDirection.html">RNNDirection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/Random.html">Random</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Extensions.html">Other Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Collection.html">Collection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Double.html">Double</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/FileHandle.html">FileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Float.html">Float</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Int32.html">Int32</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/NSImage.html">NSImage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Sequence.html">Sequence</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Slice.html">Slice</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UIImage.html">UIImage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt8.html">UInt8</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableBufferPointer.html">UnsafeMutableBufferPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableRawBufferPointer.html">UnsafeMutableRawBufferPointer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Functions.html">Other Functions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF">categoricalCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3expyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">exp(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">heaviside(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">leakyRelu(_:leakage:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3logyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">log(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S6matMulyAA6TensorVyxq_GAE_AEtAA11NumericTypeRzAA06DeviceF0R_r0_lF">matMul(_:_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4meanyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">mean(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">relu(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S7sigmoidyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sigmoid(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sinyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sin(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S7softmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">softmax(_:axis:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4sqrtyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sqrt(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S5stack_5alongAA6TensorVyxq_GSayAFG_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">stack(_:along:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sumyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sum(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4tanhyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">tanh(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S8varianceyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">variance(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Protocols.html">Other Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/CPUNumeric.html">CPUNumeric</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/DeviceType.html">DeviceType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EngineType.html">EngineType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MemoryOperatorsType.html">MemoryOperatorsType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/NumericType.html">NumericType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Optimizer.html">Optimizer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RandomizableType.html">RandomizableType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/VGGBase.html">VGGBase</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ZeroableType.html">ZeroableType</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Structs.html">Other Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Buffer.html">Buffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CPU.html">CPU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CPUEngine.html">CPUEngine</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CPUMemoryOperators.html">CPUMemoryOperators</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/GPU.html">GPU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/GPUEngine.html">GPUEngine</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Progress.html">Progress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ProgressBar.html">ProgressBar</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ShapedBuffer.html">ShapedBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VRAMAllocator.html">VRAMAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VRAMBuffer.html">VRAMBuffer</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>CPUEngine</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">CPUEngine</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/EngineType.html">EngineType</a></span></code></pre>
+
+                </div>
+              </div>
+            <p>Undocumented</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV6Devicea"></a>
+                    <a name="//apple_ref/swift/Alias/Device" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV6Devicea">Device</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">typealias</span> <span class="kt">Device</span> <span class="o">=</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4fill5value6result5countyx_AA6BufferVyxAA3CPUVGSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/fill(value:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4fill5value6result5countyx_AA6BufferVyxAA3CPUVGSitAA11NumericTypeRzlFZ">fill(value:result:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">fill</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">value</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4vAdd3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/vAdd(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4vAdd3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ">vAdd(lhs:rhs:result:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">vAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4vNeg3val6result5countyAA6BufferVyxAA3CPUVG_ALSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/vNeg(val:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4vNeg3val6result5countyAA6BufferVyxAA3CPUVG_ALSitAA11NumericTypeRzlFZ">vNeg(val:result:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">vNeg</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4vSub3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/vSub(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4vSub3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ">vSub(lhs:rhs:result:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">vSub</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4vMul3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/vMul(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4vMul3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ">vMul(lhs:rhs:result:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">vMul</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4vDiv3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/vDiv(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4vDiv3lhs3rhs6result5countyAA6BufferVyxAA3CPUVG_A2MSitAA11NumericTypeRzlFZ">vDiv(lhs:rhs:result:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">vDiv</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV6argmax6values5countSi_xtAA6BufferVyxAA3CPUVG_SitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/argmax(values:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV6argmax6values5countSi_xtAA6BufferVyxAA3CPUVG_SitAA11NumericTypeRzlFZ">argmax(values:count:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">argmax</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/Buffer.html">Buffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPUEngine.html#/s:4DL4S9CPUEngineV6Devicea">Device</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">N</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4gemm3lhs3rhs6result5alpha4beta14transposeFirst0I6SecondyAA12ShapedBufferVyxAA3CPUVG_A2PxxS2btAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/gemm(lhs:rhs:result:alpha:beta:transposeFirst:transposeSecond:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4gemm3lhs3rhs6result5alpha4beta14transposeFirst0I6SecondyAA12ShapedBufferVyxAA3CPUVG_A2PxxS2btAA11NumericTypeRzlFZ">gemm(lhs:rhs:result:alpha:beta:transposeFirst:transposeSecond:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">gemm</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">alpha</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">beta</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">transposeFirst</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">,</span> <span class="nv">transposeSecond</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV13broadcastGemm3lhs3rhs6result5alpha4beta14transposeFirst0J6SecondyAA12ShapedBufferVyxAA3CPUVG_A2PxxS2btAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/broadcastGemm(lhs:rhs:result:alpha:beta:transposeFirst:transposeSecond:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV13broadcastGemm3lhs3rhs6result5alpha4beta14transposeFirst0J6SecondyAA12ShapedBufferVyxAA3CPUVG_A2PxxS2btAA11NumericTypeRzlFZ">broadcastGemm(lhs:rhs:result:alpha:beta:transposeFirst:transposeSecond:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastGemm</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">alpha</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">beta</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">transposeFirst</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">,</span> <span class="nv">transposeSecond</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV12broadcastAdd3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/broadcastAdd(lhs:rhs:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV12broadcastAdd3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ">broadcastAdd(lhs:rhs:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV12broadcastSub3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/broadcastSub(lhs:rhs:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV12broadcastSub3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ">broadcastSub(lhs:rhs:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastSub</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV12broadcastMul3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/broadcastMul(lhs:rhs:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV12broadcastMul3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ">broadcastMul(lhs:rhs:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastMul</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV12broadcastDiv3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/broadcastDiv(lhs:rhs:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV12broadcastDiv3lhs3rhs6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ">broadcastDiv(lhs:rhs:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">broadcastDiv</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV9reduceSum6values6result4axisyAA12ShapedBufferVyxAA3CPUVG_ALSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceSum(values:result:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV9reduceSum6values6result4axisyAA12ShapedBufferVyxAA3CPUVG_ALSitAA11NumericTypeRzlFZ">reduceSum(values:result:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceSum</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV9reduceMax6values6result7context4axisyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceMax(values:result:context:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV9reduceMax6values6result7context4axisyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSitAA11NumericTypeRzlFZ">reduceMax(values:result:context:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMax</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV9reduceMin6values6result7context4axisyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceMin(values:result:context:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV9reduceMin6values6result7context4axisyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSitAA11NumericTypeRzlFZ">reduceMin(values:result:context:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMin</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV10reduceMean6values6result4axisyAA12ShapedBufferVyxAA3CPUVG_ALSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceMean(values:result:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV10reduceMean6values6result4axisyAA12ShapedBufferVyxAA3CPUVG_ALSitAA11NumericTypeRzlFZ">reduceMean(values:result:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMean</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV9reduceSum6values6result4axesyAA12ShapedBufferVyxAA3CPUVG_ALSaySiGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceSum(values:result:axes:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV9reduceSum6values6result4axesyAA12ShapedBufferVyxAA3CPUVG_ALSaySiGtAA11NumericTypeRzlFZ">reduceSum(values:result:axes:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceSum</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axes</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV10reduceMean6values6result4axesyAA12ShapedBufferVyxAA3CPUVG_ALSaySiGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceMean(values:result:axes:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV10reduceMean6values6result4axesyAA12ShapedBufferVyxAA3CPUVG_ALSaySiGtAA11NumericTypeRzlFZ">reduceMean(values:result:axes:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMean</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axes</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV9reduceMax6values6result7context4axesyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSaySiGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceMax(values:result:context:axes:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV9reduceMax6values6result7context4axesyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSaySiGtAA11NumericTypeRzlFZ">reduceMax(values:result:context:axes:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMax</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axes</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV9reduceMin6values6result7context4axesyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSaySiGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reduceMin(values:result:context:axes:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV9reduceMin6values6result7context4axesyAA12ShapedBufferVyxAA3CPUVG_AmJys5Int32VALGSgSaySiGtAA11NumericTypeRzlFZ">reduceMin(values:result:context:axes:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reduceMin</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">?,</span> <span class="nv">axes</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV7scatter7reduced7context6result4axisyAA12ShapedBufferVyxAA3CPUVG_AJys5Int32VALGAMSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/scatter(reduced:context:result:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV7scatter7reduced7context6result4axisyAA12ShapedBufferVyxAA3CPUVG_AJys5Int32VALGAMSitAA11NumericTypeRzlFZ">scatter(reduced:context:result:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">scatter</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">reduced</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV6gather8expanded7context6result4axisyAA12ShapedBufferVyxAA3CPUVG_AJys5Int32VALGAMSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/gather(expanded:context:result:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV6gather8expanded7context6result4axisyAA12ShapedBufferVyxAA3CPUVG_AJys5Int32VALGAMSitAA11NumericTypeRzlFZ">gather(expanded:context:result:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">gather</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expanded</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3sum6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/sum(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3sum6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">sum(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">sum</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4mean6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/mean(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4mean6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">mean(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">mean</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3max6values6resultSiAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/max(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3max6values6resultSiAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">max(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">max</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3min6values6resultSiAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/min(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3min6values6resultSiAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">min(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span>
+<span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">min</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3exp6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/exp(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3exp6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">exp(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">exp</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3log6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/log(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3log6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">log(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">log</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4sqrt6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/sqrt(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4sqrt6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">sqrt(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">sqrt</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4relu6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/relu(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4relu6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">relu(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">relu</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV9heaviside6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/heaviside(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV9heaviside6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">heaviside(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">heaviside</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3sin6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/sin(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3sin6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">sin(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">sin</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3cos6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/cos(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3cos6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">cos(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">cos</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV3tan6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/tan(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV3tan6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">tan(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">tan</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4sinh6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/sinh(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4sinh6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">sinh(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">sinh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4cosh6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/cosh(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4cosh6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">cosh(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">cosh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4tanh6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/tanh(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4tanh6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtAA11NumericTypeRzlFZ">tanh(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">tanh</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV11permuteAxes6values6result10arangementyAA12ShapedBufferVyxAA3CPUVG_ALSaySiGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/permuteAxes(values:result:arangement:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV11permuteAxes6values6result10arangementyAA12ShapedBufferVyxAA3CPUVG_ALSaySiGtAA11NumericTypeRzlFZ">permuteAxes(values:result:arangement:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">permuteAxes</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">arangement</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV14permuteAxesAdd6values3add6result10arangementyAA12ShapedBufferVyxAA3CPUVG_A2MSaySiGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/permuteAxesAdd(values:add:result:arangement:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV14permuteAxesAdd6values3add6result10arangementyAA12ShapedBufferVyxAA3CPUVG_A2MSaySiGtAA11NumericTypeRzlFZ">permuteAxesAdd(values:add:result:arangement:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">permuteAxesAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">arangement</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV6arange10lowerBound05upperE06resultyx_xAA12ShapedBufferVyxAA3CPUVGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/arange(lowerBound:upperBound:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV6arange10lowerBound05upperE06resultyx_xAA12ShapedBufferVyxAA3CPUVGtAA11NumericTypeRzlFZ">arange(lowerBound:upperBound:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">arange</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">lowerBound</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">upperBound</span><span class="p">:</span> <span class="kt">N</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV13subscriptRead6values6result5indexyAA12ShapedBufferVyxAA3CPUVG_ALSaySiSgGtlFZ"></a>
+                    <a name="//apple_ref/swift/Method/subscriptRead(values:result:index:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV13subscriptRead6values6result5indexyAA12ShapedBufferVyxAA3CPUVG_ALSaySiSgGtlFZ">subscriptRead(values:result:index:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptRead</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV14subscriptWrite6values6result5indexyAA12ShapedBufferVyxAA3CPUVG_ALSaySiSgGtlFZ"></a>
+                    <a name="//apple_ref/swift/Method/subscriptWrite(values:result:index:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV14subscriptWrite6values6result5indexyAA12ShapedBufferVyxAA3CPUVG_ALSaySiSgGtlFZ">subscriptWrite(values:result:index:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptWrite</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV16subscriptReadAdd6values3add6result5indexyAA12ShapedBufferVyxAA3CPUVG_A2MSaySiSgGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/subscriptReadAdd(values:add:result:index:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV16subscriptReadAdd6values3add6result5indexyAA12ShapedBufferVyxAA3CPUVG_A2MSaySiSgGtAA11NumericTypeRzlFZ">subscriptReadAdd(values:add:result:index:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptReadAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV17subscriptWriteAdd6values3add6result5indexyAA12ShapedBufferVyxAA3CPUVG_A2MSaySiSgGtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/subscriptWriteAdd(values:add:result:index:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV17subscriptWriteAdd6values3add6result5indexyAA12ShapedBufferVyxAA3CPUVG_A2MSaySiSgGtAA11NumericTypeRzlFZ">subscriptWriteAdd(values:add:result:index:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">subscriptWriteAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">index</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">?])</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV5stack7buffers6result4axisySayAA12ShapedBufferVyxAA3CPUVGG_ALSitlFZ"></a>
+                    <a name="//apple_ref/swift/Method/stack(buffers:result:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV5stack7buffers6result4axisySayAA12ShapedBufferVyxAA3CPUVGG_ALSitlFZ">stack(buffers:result:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">stack</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">buffers</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV10unstackAdd7stacked3add6result4axisyAA12ShapedBufferVyxAA3CPUVG_SayAMGANSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/unstackAdd(stacked:add:result:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV10unstackAdd7stacked3add6result4axisyAA12ShapedBufferVyxAA3CPUVG_SayAMGANSitAA11NumericTypeRzlFZ">unstackAdd(stacked:add:result:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">unstackAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">stacked</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">result</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV7unstack7stacked6result4axisyAA12ShapedBufferVyxAA3CPUVG_SayALGSitAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/unstack(stacked:result:axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV7unstack7stacked6result4axisyAA12ShapedBufferVyxAA3CPUVG_SayALGSitAA11NumericTypeRzlFZ">unstack(stacked:result:axis:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">unstack</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">stacked</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV7reverse6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reverse(values:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV7reverse6values6resultyAA12ShapedBufferVyxAA3CPUVG_AKtlFZ">reverse(values:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reverse</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV10reverseAdd6values3add6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/reverseAdd(values:add:result:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV10reverseAdd6values3add6resultyAA12ShapedBufferVyxAA3CPUVG_A2LtAA11NumericTypeRzlFZ">reverseAdd(values:add:result:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">reverseAdd</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">add</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV7img2col6values6result11kernelWidth0F6Height7padding6strideyAA12ShapedBufferVyxAA3CPUVG_AOS4itAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/img2col(values:result:kernelWidth:kernelHeight:padding:stride:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV7img2col6values6result11kernelWidth0F6Height7padding6strideyAA12ShapedBufferVyxAA3CPUVG_AOS4itAA11NumericTypeRzlFZ">img2col(values:result:kernelWidth:kernelHeight:padding:stride:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">img2col</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">kernelWidth</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelHeight</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">padding</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV7col2img6matrix5image11kernelWidth0F6Height7padding6strideyAA12ShapedBufferVyxAA3CPUVG_AOS4itAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/col2img(matrix:image:kernelWidth:kernelHeight:padding:stride:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV7col2img6matrix5image11kernelWidth0F6Height7padding6strideyAA12ShapedBufferVyxAA3CPUVG_AOS4itAA11NumericTypeRzlFZ">col2img(matrix:image:kernelWidth:kernelHeight:padding:stride:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">@_specialize</span><span class="p">(</span><span class="nv">exported</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">kind</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span> <span class="k">where</span> <span class="kt">N</span> <span class="o">==</span> <span class="kt">Float</span><span class="p">)</span>
+<span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">col2img</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">matrix</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">image</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">kernelWidth</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelHeight</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">padding</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S9CPUEngineV4band6buffer6result13belowDiagonal05aboveG0yAA12ShapedBufferVyxAA3CPUVG_AMSiSgANtAA11NumericTypeRzlFZ"></a>
+                    <a name="//apple_ref/swift/Method/band(buffer:result:belowDiagonal:aboveDiagonal:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S9CPUEngineV4band6buffer6result13belowDiagonal05aboveG0yAA12ShapedBufferVyxAA3CPUVG_AMSiSgANtAA11NumericTypeRzlFZ">band(buffer:result:belowDiagonal:aboveDiagonal:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="n">band</span><span class="o">&lt;</span><span class="kt">N</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt"><a href="../Structs/ShapedBuffer.html">ShapedBuffer</a></span><span class="o">&lt;</span><span class="kt">N</span><span class="p">,</span> <span class="kt"><a href="../Structs/CPU.html">CPU</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">belowDiagonal</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?,</span> <span class="nv">aboveDiagonal</span><span class="p">:</span> <span class="kt">Int</span><span class="p">?)</span> <span class="k">where</span> <span class="kt">N</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k/DL4S" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-02)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>
