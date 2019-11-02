@@ -1,6 +1,8 @@
 <p align="center">
 <img src="https://github.com/palle-k/DL4S/blob/develop/.github/logo.png?raw=true" alt="DL4S" width="400" />
+</p>
 
+<p align="center">
 <a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
 </p>
