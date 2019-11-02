@@ -10,6 +10,8 @@ Features include accelerated implementations for many basic binary and unary ope
 matrix operations, convolutional and recurrent neural networks, 
 commonly used optimizers, second derivatives and much more.
 
+[Read the full documentation](https://palle-k.github.io/DL4S/)
+
 ## Overview
 1. [Installation](#installation)
 2. [Features](#features)
