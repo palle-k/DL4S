@@ -1395,51 +1395,37 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/RNN.swift",
-      "line": 35,
-      "symbol": "RNN",
-      "symbol_kind": "source.lang.swift.decl.protocol",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/RNN.swift",
-      "line": 36,
+      "line": 37,
       "symbol": "RNN.State",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/RNN.swift",
-      "line": 37,
+      "line": 38,
       "symbol": "RNN.StateSequence",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/RNN.swift",
-      "line": 38,
+      "line": 39,
       "symbol": "RNN.PreparedInput",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/RNN.swift",
-      "line": 39,
+      "line": 40,
       "symbol": "RNN.StepInput",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/RNN.swift",
-      "line": 41,
+      "line": 42,
       "symbol": "RNN.direction",
       "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/RNN.swift",
-      "line": 78,
-      "symbol": "RNN",
-      "symbol_kind": "source.lang.swift.decl.extension",
       "warning": "undocumented"
     },
     {
@@ -1899,170 +1885,30 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adadelta.swift",
-      "line": 30,
+      "line": 32,
       "symbol": "Adadelta.ParamTensor",
       "symbol_kind": "source.lang.swift.decl.typealias",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adadelta.swift",
-      "line": 34,
-      "symbol": "Adadelta.learningRate",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adadelta.swift",
-      "line": 35,
-      "symbol": "Adadelta.gamma",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adadelta.swift",
-      "line": 36,
-      "symbol": "Adadelta.epsilon",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adadelta.swift",
-      "line": 45,
-      "symbol": "Adadelta.init(model:learningRate:gamma:epsilon:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adadelta.swift",
-      "line": 60,
-      "symbol": "Adadelta.reset()",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adagrad.swift",
-      "line": 31,
+      "line": 33,
       "symbol": "Adagrad.ParamTensor",
       "symbol_kind": "source.lang.swift.decl.typealias",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adagrad.swift",
-      "line": 34,
-      "symbol": "Adagrad.learningRate",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adagrad.swift",
-      "line": 35,
-      "symbol": "Adagrad.epsilon",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adagrad.swift",
-      "line": 40,
-      "symbol": "Adagrad.init(model:learningRate:epsilon:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adagrad.swift",
-      "line": 51,
-      "symbol": "Adagrad.reset()",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
-      "line": 30,
+      "line": 32,
       "symbol": "Adam.ParamTensor",
       "symbol_kind": "source.lang.swift.decl.typealias",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
-      "line": 34,
-      "symbol": "Adam.learningRate",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
-      "line": 35,
-      "symbol": "Adam.beta1",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
-      "line": 36,
-      "symbol": "Adam.beta2",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
-      "line": 37,
-      "symbol": "Adam.epsilon",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
-      "line": 47,
-      "symbol": "Adam.init(model:learningRate:beta1:beta2:epsilon:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
-      "line": 68,
-      "symbol": "Adam.reset()",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
-      "line": 30,
+      "line": 32,
       "symbol": "RMSProp.ParamTensor",
       "symbol_kind": "source.lang.swift.decl.typealias",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
-      "line": 34,
-      "symbol": "RMSProp.learningRate",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
-      "line": 35,
-      "symbol": "RMSProp.gamma",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
-      "line": 36,
-      "symbol": "RMSProp.epsilon",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
-      "line": 42,
-      "symbol": "RMSProp.init(model:learningRate:gamma:epsilon:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
-      "line": 54,
-      "symbol": "RMSProp.reset()",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
@@ -2081,37 +1927,9 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/SGD.swift",
-      "line": 36,
-      "symbol": "SGD.init(model:learningRate:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/SGD.swift",
-      "line": 52,
+      "line": 57,
       "symbol": "Momentum.ParamTensor",
       "symbol_kind": "source.lang.swift.decl.typealias",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/SGD.swift",
-      "line": 57,
-      "symbol": "Momentum.learningRate",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/SGD.swift",
-      "line": 58,
-      "symbol": "Momentum.momentum",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/SGD.swift",
-      "line": 61,
-      "symbol": "Momentum.init(model:learningRate:momentum:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {

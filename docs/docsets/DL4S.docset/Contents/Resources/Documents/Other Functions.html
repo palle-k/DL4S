@@ -23,7 +23,7 @@
         <a class="header-link" href="index.html">
           DL4S Docs
         </a>
-         (61% documented)
+         (64% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -147,6 +147,26 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/AnyLayer.html">AnyLayer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Loss%20Functions.html">Loss Functions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF">categoricalCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
               </li>
             </ul>
           </li>
@@ -275,12 +295,6 @@
             <a class="nav-group-name-link" href="Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF">categoricalCrossEntropy(expected:actual:)</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -288,12 +302,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">heaviside(_:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">leakyRelu(_:leakage:)</a>
@@ -312,9 +320,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">relu(_:)</a>
@@ -441,327 +446,6 @@
 
         <section class="section">
           <div class="section-content">
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Losses"></a>
-                <a name="//apple_ref/swift/Section/Losses" class="dashAnchor"></a>
-                <a href="#/Losses">
-                  <h3 class="section-name">Losses</h3>
-                </a>
-              </div>
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF"></a>
-                    <a name="//apple_ref/swift/Function/binaryCrossEntropy(expected:actual:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Computes the (element-wise) binary cross entropy loss on the given and expected probabilities and
-uses the mean as a reduction.
-expected and predicted are assumed to be in the interval (0, 1).</p>
-
-<p>The binary cross entropy loss is defined as</p>
-<pre class="highlight swift"><code><span class="o">-</span><span class="n">expected</span> <span class="o">*</span> <span class="nf">log</span><span class="p">(</span><span class="n">predicted</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">expected</span><span class="p">)</span> <span class="o">*</span> <span class="nf">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">predicted</span><span class="p">)</span>
-</code></pre>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">binaryCrossEntropy</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>expected</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Expected values</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>actual</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Predicted values</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                      <div>
-                        <h4>Return Value</h4>
-                        <p>Loss, scalar value</p>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF"></a>
-                    <a name="//apple_ref/swift/Function/categoricalCrossEntropy(expected:actual:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF">categoricalCrossEntropy(expected:actual:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Computes the categorical cross entropy loss on the given expected probabilities and the expected labels and
-uses the mean as a reduction.
-predicted values are assumed to be in the interval (0, 1)</p>
-
-<p>The categorical cross entropy loss is defined as</p>
-<pre class="highlight swift"><code><span class="o">-</span><span class="nf">log</span><span class="p">(</span><span class="n">predicted</span><span class="p">[</span><span class="n">expected</span><span class="p">])</span>
-</code></pre>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">categoricalCrossEntropy</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>expected</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Expected labels</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>actual</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Predicted values</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                      <div>
-                        <h4>Return Value</h4>
-                        <p>Loss, scalar value</p>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF"></a>
-                    <a name="//apple_ref/swift/Function/meanSquaredError(expected:actual:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Computes the element-wise mean squared error between the given predicted and expected values</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">meanSquaredError</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>expected</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Expected values</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>actual</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Predicted values</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
-                    <a name="//apple_ref/swift/Function/l2loss(_:loss:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Computes the L2 loss of the given tensor.</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">l2loss</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">vector</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">loss</span><span class="p">:</span> <span class="kt">Element</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>vector</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Tensor to apply weight decay on</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>loss</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Weight decay importance scaling factor</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
-                    <a name="//apple_ref/swift/Function/l1loss(_:loss:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Computes the L1 loss of the given tensor.</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">l1loss</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">vector</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">loss</span><span class="p">:</span> <span class="kt">Element</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>vector</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Tensor to apply weight decay on</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>loss</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Weight decay importance scaling factor</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
             <div class="task-group">
               <div class="task-name-container">
                 <a name="/Matrix%20Multiplication"></a>
@@ -1756,7 +1440,7 @@ If no axis is provided, the softmax is computed along axis 1.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-02)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-03)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
