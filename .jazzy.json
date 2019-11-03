@@ -53,6 +53,7 @@
     }, {
         "name": "Optimizers",
         "children": [
+            "Optimizer",
             "SGD",
             "Momentum",
             "Adam",

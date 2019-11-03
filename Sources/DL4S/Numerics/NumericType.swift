@@ -25,11 +25,24 @@
 
 import Foundation
 
+/// A type conforming to the ZeroableType protocol is required to have a zero value, which fulfills the following requirements for any other value x:
+///
+/// - x * .zero = .zero
+/// - x + .zero = x
 public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
+    
+    /// Zero value
+    ///
+    /// - x * .zero = .zero
+    /// - x + .zero = x
     static var zero: Self { get }
 }
 
+/// A type that can be used as a number in a Tensor.
 public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable, CPUNumeric {
+    
+    /// Formats the number with the given amount of decimal places
+    /// - Parameter maxDecimals: Maximum amount of decimal places
     func format(maxDecimals: Int) -> String
     
     init(_ floatValue: Double)

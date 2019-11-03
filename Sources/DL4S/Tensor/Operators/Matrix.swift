@@ -68,7 +68,7 @@ public extension Tensor {
     /// Broadcast matrix multiplies self with the given other operand.
     ///
     /// Broadcasting is applied along all axes except the last two.
-    /// Operands are expected to have a dimensionality of 2.
+    /// Operands are expected to have a dimensionality of 2 or higher.
     ///
     /// - Parameters:
     ///   - other: Other operand
