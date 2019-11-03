@@ -25,6 +25,8 @@
 
 import Foundation
 
+//MARK: Compute Graph Debugging
+
 extension String {
     fileprivate func escaped() -> String {
         replacingOccurrences(of: "\"", with: "\\\"")
@@ -125,7 +127,11 @@ extension Digraph: CustomStringConvertible {
 }
 
 
-enum OperationGroup {
+/// OperationGroup allows the grouping of operations in the compute graph.
+/// This improves the readability, when displaying the compute graph using `result.graph()`.
+/// It has no effect on the way that computations are performed. When optimization is enabled,
+/// operation groups are not captured.
+public enum OperationGroup {
     static private(set) var operationStack: [(id: UInt64, name: String)] = []
     
     @inline(__always)
@@ -142,8 +148,13 @@ enum OperationGroup {
         #endif
     }
     
+    /// Captures a group of operations that is displayed within a box in the compute graph, when using `result.graph()`.
+    /// Only applicable for debug builds. In release builds, the operation closure is executed but otherwise, the operation group has no effect.
+    /// - Parameters:
+    ///   - name: Name of the operation
+    ///   - operations: Operations to group
     @inline(__always)
-    static func capture<Output>(named name: String, _ operations: () -> Output) -> Output {
+    public static func capture<Output>(named name: String, _ operations: () -> Output) -> Output {
         push(name)
         let result = operations()
         pop()
@@ -193,13 +204,13 @@ public extension Tensor {
             } else if let tag = self.tag {
                 label = tag
             } else {
-                label = ""
+                label = "shape: \(shape)"
             }
             #else
             if shape == [] {
                 label = "\(item)"
             } else {
-                label = ""
+                label = "shape: \(shape)"
             }
             #endif
             
@@ -227,7 +238,7 @@ public extension Tensor {
             var initial = Digraph(id: "cluster_\(last.id)", name: last.name, nodes: [Digraph.Node(id: opID)])
             
             for node in ctx.sources where node.context == nil {
-                initial.addNode(id: "\(node.backpropID)", shape: "circle")
+                initial.addNode(id: "\(node.backpropID)", shape: "box")
             }
             
             let g = ctx.operationStack.dropLast().reversed().reduce(initial) { acc, item in
@@ -242,6 +253,12 @@ public extension Tensor {
     }
     #endif
     
+    /// Prints the compute graph, from which the tensor has been derived.
+    ///
+    /// The graph is in graphviz format and can be rendered with command line tools such as `dot`.
+    ///
+    /// **Note**: When running release builds, some information about the compute graph is discarded.
+    /// To obtain a detailed compute graph, compile in debug mode.
     func graph() -> String {
         var visited: Set<UInt64> = []
         var graph = follow(visited: &visited)

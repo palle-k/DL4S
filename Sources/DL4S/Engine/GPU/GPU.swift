@@ -51,7 +51,7 @@ public struct GPU: DeviceType {
             fatalError("Cannot get metal library (\(error))")
         }
     }()
-    
+
     private static var functionCache: [String: GPUFunction] = [:]
     
     static func function(named functionName: String) -> GPUFunction {

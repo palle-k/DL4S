@@ -24,7 +24,6 @@
 //  SOFTWARE.
 
 import Foundation
-import DL4SLib
 
 
 extension ShapedBuffer where Device == CPU {
@@ -516,9 +515,9 @@ public struct CPUEngine: EngineType {
         let rhsStrides = CPU.Memory.strides(from: rhs.shape)
         let resultStrides = CPU.Memory.strides(from: result.shape)
         
-        let lhsGemmShape = lhs.shape.suffix(2)
-        let rhsGemmShape = rhs.shape.suffix(2)
-        let resultGemmShape = result.shape.suffix(2)
+        let lhsGemmShape = Array(lhs.shape.suffix(2))
+        let rhsGemmShape = Array(rhs.shape.suffix(2))
+        let resultGemmShape = Array(result.shape.suffix(2))
         
         for index in iterate(result.shape.dropLast(2)) {
             let lhsIndex = zip(index, lhs.shape).map { idx, dim in
@@ -743,30 +742,12 @@ public struct CPUEngine: EngineType {
         }
     }
     
-    public static func expandContext<N>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
-        let srcStrides = CPUMemoryOperators.strides(from: reduced.shape)
-        var dstStrides = CPUMemoryOperators.strides(from: result.shape)
-        let axisStride = dstStrides.remove(at: axis)
-        
-        let srcPtr = reduced.immutable.pointer(capacity: reduced.count)
-        let ctxPtr = context.immutable.pointer(capacity: reduced.count)
-        let dstPtr = result.pointer.pointer(capacity: result.count)
-        
-        let count = reduced.count
-        let dim = reduced.dim
-        let indices = flatIterate(reduced.shape)
-        
-        for i in 0 ..< count {
-            var srcIdx = 0
-            var dstIdx = 0
-            for j in 0 ..< dim {
-                srcIdx += indices[i * dim + j] * srcStrides[j]
-                dstIdx += indices[i * dim + j] * dstStrides[j]
-            }
-            
-            dstIdx += axisStride * Int(ctxPtr[srcIdx])
-            dstPtr[dstIdx] = srcPtr[srcIdx]
-        }
+    public static func scatter<N: NumericType>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
+        N.scatter(values: reduced.immutable, context: context.immutable, result: result.pointer, dst_shape: result.shape, axis: axis)
+    }
+    
+    public static func gather<N: NumericType>(expanded: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
+        N.gather(values: expanded.immutable, context: context.immutable, result: result.pointer, src_shape: expanded.shape, axis: axis)
     }
     
     @_specialize(where N == Float)
@@ -1079,4 +1060,28 @@ public struct CPUEngine: EngineType {
         N.col2img(values: matrix.immutable, result: image.pointer, batchSize: image.shape[0], channels: image.shape[1], height: image.shape[2], width: image.shape[3], kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride);
     }
     
+    public static func band<N>(buffer: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, belowDiagonal: Int?, aboveDiagonal: Int?) where N : NumericType {
+        precondition(buffer.shape == result.shape, "Shape of result must be equal to shape of buffer.")
+        precondition(buffer.dim == 2, "Band can only be computed on tensor of dimensionality 2.")
+        
+        let rows = buffer.shape[0]
+        let cols = buffer.shape[1]
+        
+        let belowDiagonal = belowDiagonal ?? Swift.max(rows, cols)
+        let aboveDiagonal = aboveDiagonal ?? Swift.max(rows, cols)
+        
+        let src = buffer.values.memory.bindMemory(to: N.self).immutable.pointer(capacity: rows * cols)
+        let dst = result.values.memory.bindMemory(to: N.self).pointer(capacity: rows * cols)
+        
+        for i in 0 ..< rows {
+            let start = Swift.max(0, i - belowDiagonal)
+            let end = Swift.max(cols, i + aboveDiagonal)
+            
+            memcpy(
+                UnsafeMutableRawPointer(dst.advanced(by: i * cols + start)),
+                UnsafeRawPointer(src.advanced(by: i * cols + start)),
+                MemoryLayout<N>.stride * (end - start)
+            )
+        }
+    }
 }

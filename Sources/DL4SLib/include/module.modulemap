@@ -1,6 +1,0 @@
-module DL4SLib {
-    header "DL4SLib.h"
-    header "/opt/intel/mkl/include/mkl.h"
-    header "/opt/intel/ipp/include/ipp.h"
-    export *
-}

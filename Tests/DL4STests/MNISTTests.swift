@@ -26,11 +26,7 @@
 import XCTest
 @testable import DL4S
 
-#if os(Linux)
-let MNIST_PATH = "/home/palle/Downloads/MNIST/"
-#else
-let MNIST_PATH = "/Users/Palle/Developer/DL4S/"
-#endif
+let MNIST_PATH = "./Tests/DL4STests/"
 
 class MNISTTests: XCTestCase {
     static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
@@ -60,7 +56,7 @@ class MNISTTests: XCTestCase {
     func testConvNet() {
         var model = Sequential {
             Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0)
-            LayerNorm<Float, CPU>(inputSize: [4, 24, 24])
+            LayerNorm<Float, CPU>(inputSize: [6, 24, 24])
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
             Convolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5), padding: 0)
@@ -68,7 +64,7 @@ class MNISTTests: XCTestCase {
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
             Flatten<Float, CPU>()
-            Dense<Float, CPU>(inputSize: 256, outputSize: 120)
+            Dense<Float, CPU>(inputSize: 16 * 4 * 4, outputSize: 120)
             LayerNorm<Float, CPU>(inputSize: [120])
             Relu<Float, CPU>()
             Dense<Float, CPU>(inputSize: 120, outputSize: 10)
@@ -80,10 +76,12 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 10_000
-        let batchSize = 128
+        let epochs = 100
+        let batchSize = 256
         
-        for epoch in 1 ... epochs {
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        
+        for _ in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
 
             let predicted = optimizer.model(input.view(as: [batchSize, 1, 28, 28]))
@@ -93,10 +91,12 @@ class MNISTTests: XCTestCase {
             
             optimizer.update(along: gradients)
             
-            if epoch.isMultiple(of: 10) {
-                print("[\(epoch)/\(epochs)] loss: \(loss)")
-            }
+//            if epoch.isMultiple(of: 100) {
+//                print("[\(epoch)/\(epochs)] loss: \(loss)")
+//            }
+            bar.next(userInfo: loss.item)
         }
+        bar.complete()
         
         var correctCount = 0
         
@@ -113,6 +113,7 @@ class MNISTTests: XCTestCase {
         let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
         
         print("accuracy: \(accuracy * 100)%")
+        XCTAssertGreaterThan(accuracy, 0.7)
     }
     
     func testFCN() {
@@ -134,10 +135,12 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: Device.self)
         
-        let epochs = 10_000
-        let batchSize = 128
+        let epochs = 100
+        let batchSize = 256
         
-        for epoch in 1 ... epochs {
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        
+        for _ in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
             
             let predicted = optimizer.model(input.view(as: [-1, 28 * 28]).detached())
@@ -146,10 +149,13 @@ class MNISTTests: XCTestCase {
             let gradients = loss.gradients(of: optimizer.model.parameters)
             optimizer.update(along: gradients)
             
-            if epoch.isMultiple(of: 10) {
-                print("[\(epoch)/\(epochs)] loss: \(loss)")
-            }
+//            if epoch.isMultiple(of: 100) {
+//                print("[\(epoch)/\(epochs)] loss: \(loss)")
+//            }
+            bar.next(userInfo: loss.item)
         }
+        
+        bar.complete()
         
         var correctCount = 0
         
@@ -167,6 +173,7 @@ class MNISTTests: XCTestCase {
         let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
         
         print("accuracy: \(accuracy * 100)%")
+        XCTAssertGreaterThan(accuracy, 0.7)
     }
     
     func testGRU() {
@@ -184,32 +191,18 @@ class MNISTTests: XCTestCase {
         }
         model.tag = "Classifier"
         
-        let epochs = 10_000
-        let batchSize = 128
+        let epochs = 100
+        let batchSize = 256
         
         var optimizer = Adam(model: model, learningRate: 0.001)
 
         print("Created model and optimizer")
         
-        let queue = Queue<(Tensor<Float, CPU>, Tensor<Int32, CPU>)>(maxLength: 16)
-        let workers = 1
-
-        for i in 0 ..< workers {
-            DispatchQueue.global().async {
-                print("starting worker \(i)")
-                while !queue.isStopped {
-                    let (batch, expected) = Random.minibatch(from: images, labels: labels, count: batchSize)
-                    let x = batch.view(as: [-1, 28, 28]).permuted(to: [1, 0, 2])
-                    queue.enqueue((x, expected))
-                }
-                print("stopping worker \(i)")
-            }
-        }
-        
         var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
         
         for _ in 1 ... epochs {
-            let (input, target) = queue.dequeue()!
+            let (batch, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
+            let input = batch.view(as: [-1, 28, 28]).permuted(to: [1, 0, 2])
             
             let predicted = optimizer.model(input)
             let loss = categoricalCrossEntropy(expected: target, actual: predicted)
@@ -221,7 +214,6 @@ class MNISTTests: XCTestCase {
         }
         
         bar.complete()
-        queue.stop()
         
         var correctCount = 0
         
@@ -241,5 +233,6 @@ class MNISTTests: XCTestCase {
         let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
         
         print("accuracy: \(accuracy * 100)%")
+        XCTAssertGreaterThan(accuracy, 0.7)
     }
 }

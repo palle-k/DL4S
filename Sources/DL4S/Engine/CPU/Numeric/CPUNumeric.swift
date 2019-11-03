@@ -25,7 +25,7 @@
 
 import Foundation
 
-public protocol CPUNumeric {
+public protocol CPUNumeric: Numeric {
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
     
@@ -71,4 +71,7 @@ public protocol CPUNumeric {
     
     static func img2col(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int)
     static func col2img(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int)
+    
+    static func scatter(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, dst_shape: [Int], axis: Int)
+    static func gather(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, src_shape: [Int], axis: Int)
 }

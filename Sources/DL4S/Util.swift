@@ -140,11 +140,7 @@ public class Queue<Element> {
     
     public init(maxLength: Int? = nil) {
         self.maxLength = maxLength
-        if let maxLength = maxLength {
-            self.maxLenSema = DispatchSemaphore(value: maxLength)
-        } else {
-            self.maxLenSema = nil
-        }
+        self.maxLenSema = maxLength.map(DispatchSemaphore.init(value:))
     }
     
     public func enqueue(_ element: Element) {
@@ -186,10 +182,32 @@ public class Queue<Element> {
 
 fileprivate let intervalFormatter: (TimeInterval) -> String = { interval in
     let totalSeconds = Int(interval)
-    let hours = totalSeconds / 3600
-    let minutes = (totalSeconds % 3600) / 60
-    let seconds = totalSeconds % 60
-    return "About \(hours):\(minutes):\(seconds) remaining"
+    
+    var remainingSeconds = totalSeconds
+    var formattedString = ""
+    
+    if totalSeconds >= 86400 {
+        let days = remainingSeconds / 86400
+        remainingSeconds %= 86400
+        formattedString += "\(days) day\(days > 1 ? "s" : ""), "
+    }
+    if totalSeconds >= 3600 {
+        let hours = remainingSeconds / 3600
+        remainingSeconds %= 3600
+        formattedString += "\(hours):"
+    }
+    if totalSeconds >= 60 {
+        let minutes = String(format: "%02ld", (totalSeconds % 3600) / 60)
+        remainingSeconds %= 60
+        formattedString += "\(minutes):"
+    }
+    let seconds = String(format: "%02ld", remainingSeconds)
+    formattedString += seconds
+    if totalSeconds < 60 {
+        formattedString += " seconds"
+    }
+    
+    return "About \(formattedString) remaining"
 }
 
 

@@ -63,6 +63,14 @@ public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable 
         get {[Wi, Wo, Wf, Wc, Ui, Uo, Uf, Uc, bi, bo, bf, bc]}
     }
     
+    /// Creates a Long Short-Term Memory (LSTM) layer.
+    ///
+    /// The RNN expects inputs to have a shape of [sequence length, batch size, input size].
+    ///
+    /// - Parameters:
+    ///   - inputSize: Number of elements at each timestep of the input
+    ///   - hiddenSize: Number of elements at each timestep in the output
+    ///   - direction: Direction, in which the RNN consumes the input sequence.
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {
         self.direction = direction
         

@@ -25,7 +25,7 @@
 
 import Foundation
 
-
+//MARK: Matrix Multiplication
 public extension Tensor {
     
     /// Computes the matrix-matrix product, the vector-matrix product, the matrix-vector product or the vector-vector product of the tensor with the given other tensor
@@ -68,7 +68,7 @@ public extension Tensor {
     /// Broadcast matrix multiplies self with the given other operand.
     ///
     /// Broadcasting is applied along all axes except the last two.
-    /// Operands are expected to have a dimensionality of 2.
+    /// Operands are expected to have a dimensionality of 2 or higher.
     ///
     /// - Parameters:
     ///   - other: Other operand
@@ -76,7 +76,9 @@ public extension Tensor {
     ///   - transposeOther: Whether to transpose the other operand before the multiplication
     func broadcastMatrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         precondition(self.dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
-        precondition(self.shape.suffix(2)[transposeSelf ? 0 : 1] == other.shape.suffix(2)[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
+        precondition(Array(self.shape.suffix(2))[transposeSelf ? 0 : 1] == Array(other.shape.suffix(2))[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
+        
+        // TODO: Fix Gradients
         
         let lhs: Self
         let rhs: Self
@@ -93,7 +95,7 @@ public extension Tensor {
         }
         
         let broadcastResultShape = shapeForBroadcastedOperands(lhs.shape.dropLast(2), rhs.shape.dropLast(2))
-        let matMulResultShape = [lhs.shape.suffix(2)[transposeSelf ? 1 : 0], rhs.shape.suffix(2)[transposeOther ? 0 : 1]]
+        let matMulResultShape = [Array(lhs.shape.suffix(2))[transposeSelf ? 1 : 0], Array(rhs.shape.suffix(2))[transposeOther ? 0 : 1]]
         
         let resultBuffer = Device.Memory.allocateBuffer(
             withShape: broadcastResultShape + matMulResultShape,
@@ -116,18 +118,38 @@ public extension Tensor {
                 sources: [lhs, rhs],
                 backpropagate: [
                     { (resultGradient: Self) in
+                        let lhsReducedAxes = zip(lhs.shape, resultGradient.shape)
+                            .dropLast(2)
+                            .enumerated()
+                            .filter {$1.0 != $1.1 && $1.0 == 1}
+                            .map {$0.0}
                         let res = resultGradient.broadcastMatrixMultiplied(with: other, transposeSelf: false, transposeOther: !transposeOther)
                         if transposeSelf {
-                            return res.permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
+                            return res
+                                .permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
+                                .reduceSum(along: lhsReducedAxes)
+                                .view(as: lhs.shape)
                         } else {
                             return res
+                                .reduceSum(along: lhsReducedAxes)
+                                .view(as: lhs.shape)
                         }
                     }, { resultGradient in
+                        let rhsReducedAxes = zip(rhs.shape, resultGradient.shape)
+                            .dropLast(2)
+                            .enumerated()
+                            .filter {$1.0 != $1.1 && $1.0 == 1}
+                            .map {$0.0}
                         let res = self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
                         if transposeOther {
-                            return res.permuted(to: Array(0 ..< (rhs.dim - 2)) + [rhs.dim - 1, rhs.dim - 2])
+                            return res
+                                .permuted(to: Array(0 ..< (rhs.dim - 2)) + [rhs.dim - 1, rhs.dim - 2])
+                                .reduceSum(along: rhsReducedAxes)
+                                .view(as: rhs.shape)
                         } else {
                             return res
+                                .reduceSum(along: rhsReducedAxes)
+                                .view(as: rhs.shape)
                         }
                     }
                 ]
@@ -162,7 +184,7 @@ public extension Tensor {
                     { resultGradient, acc in
                         let res: Self
                         if let acc = acc {
-                            res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther)
+                            res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther, inplaceAdd: !acc.requiresGradient)
                         } else {
                              res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
                         }
@@ -176,7 +198,7 @@ public extension Tensor {
                         let res: Self
                         
                         if let acc = acc {
-                            res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false)
+                            res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false, inplaceAdd: !acc.requiresGradient)
                         } else {
                             res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
                         }
@@ -192,7 +214,7 @@ public extension Tensor {
         )
     }
     
-    private func _matMulAdd(_ other: Self, add: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
+    private func _matMulAdd(_ other: Self, add: Self, transposeSelf: Bool = false, transposeOther: Bool = false, inplaceAdd: Bool = false) -> Self {
         precondition(self.dim == 2)
         precondition(other.dim == 2)
         precondition(self.shape[transposeSelf ? 0 : 1] == other.shape[transposeOther ? 1 : 0])
@@ -201,7 +223,9 @@ public extension Tensor {
         precondition(resultShape == add.shape)
         
         var target = add
-        target.ensureOwnership()
+        if !inplaceAdd {
+            target.ensureOwnership()
+        }
         
         Device.Engine.gemm(
             lhs: self.values,

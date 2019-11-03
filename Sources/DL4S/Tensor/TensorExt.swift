@@ -25,6 +25,7 @@
 
 import Foundation
 
+//MARK: Tensor extensions
 
 extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
@@ -64,22 +65,34 @@ extension Tensor: ExpressibleByIntegerLiteral {
 }
 
 public extension Tensor {
+    /// Creates a scalar tensor with the given value. The tensor will have a shape of []
+    /// - Parameter value: Value of the tensor.
     init(_ value: Element) {
         self.init([value], shape: [])
     }
 }
 
 public extension Tensor {
+    /// Element at the first index in the tensor.
     var item: Element {
         Device.Memory.getValue(from: values.values)
     }
 }
 
+//MARK: Tensor - array conversion
 public extension Tensor {
+    /// Creates a tensor with the given shape and fills it with the given array of elements
+    /// - Parameters:
+    ///   - v: Values to fill tensor with
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(_ v: [[Element]], requiresGradient: Bool = false) {
         self.init(Array(v.joined()), shape: [v.count, v.first?.count ?? 0], requiresGradient: requiresGradient)
     }
     
+    /// Creates a tensor with the given shape and fills it with the given array of elements
+    /// - Parameters:
+    ///   - v: Values to fill tensor with
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(_ v: [[[Element]]], requiresGradient: Bool = false) {
         self.init(
             Array(v.joined().joined()),
@@ -88,6 +101,10 @@ public extension Tensor {
         )
     }
     
+    /// Creates a tensor with the given shape and fills it with the given array of elements
+    /// - Parameters:
+    ///   - v: Values to fill tensor with
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(_ v: [[[[Element]]]], requiresGradient: Bool = false) {
         self.init(
             Array(v.joined().joined().joined()),
@@ -101,6 +118,10 @@ public extension Tensor {
         )
     }
     
+    /// Creates a tensor with the given shape and fills it with the given array of elements
+    /// - Parameters:
+    ///   - v: Values to fill tensor with
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(_ v: [[[[[Element]]]]], requiresGradient: Bool = false) {
         self.init(
             Array(v.joined().joined().joined().joined()),
@@ -116,30 +137,64 @@ public extension Tensor {
     }
 }
 
+//MARK: Tensor initialization
+
 public extension Tensor where Element: RandomizableType {
+    /// Creates a tensor and fills it with random values sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor, must be two dimensional
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(xavierNormalWithShape shape: [Int], requiresGradient: Bool = false) {
         precondition(shape.count == 2, "Shape must be 2-dimensional")
         self.init(normalDistributedWithShape: shape, mean: 0, stdev: (2 / Element(shape[0])).sqrt(), requiresGradient: requiresGradient)
     }
     
+    /// Creates a tensor and fills it with random values sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor, must be two dimensional
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(xavierNormalWithShape shape: Int..., requiresGradient: Bool = false) {
         self.init(xavierNormalWithShape: shape, requiresGradient: requiresGradient)
     }
     
-    init(normalDistributedWithShape shape: [Int], mean: Element = 1, stdev: Element = 1, requiresGradient: Bool = false) {
+    /// Creates a tensor and fills it with random values sampled from a normal distribution with the given mean and variance.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor, must be two dimensional
+    ///   - mean: Mean of the normal distribution.
+    ///   - stdev: Standard deviation of the normal distribution
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
+    init(normalDistributedWithShape shape: [Int], mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
         Random.fillNormal(self.values, mean: mean, stdev: stdev)
     }
     
-    init(normalDistributedWithShape shape: Int..., mean: Element = 1, stdev: Element = 1, requiresGradient: Bool = false) {
+    /// Creates a tensor and fills it with random values sampled from a normal distribution with the given mean and variance.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor, must be two dimensional
+    ///   - mean: Mean of the normal distribution.
+    ///   - stdev: Standard deviation of the normal distribution
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
+    init(normalDistributedWithShape shape: Int..., mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false) {
         self.init(normalDistributedWithShape: shape, mean: mean, stdev: stdev, requiresGradient: requiresGradient)
     }
-        
+    
+    /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor, must be two dimensional
+    ///   - min: Minimum value of the uniform distribution
+    ///   - max: Maximum value of the uniform distribution
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
         Random.fill(self.values, a: min, b: max)
     }
     
+    /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor, must be two dimensional
+    ///   - min: Minimum value of the uniform distribution
+    ///   - max: Maximum value of the uniform distribution
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(uniformlyDistributedWithShape shape: Int..., min: Element = 0, max: Element = 1, requiresGradient: Bool = false) {
         self.init(uniformlyDistributedWithShape: shape, min: min, max: max, requiresGradient: requiresGradient)
     }
@@ -198,6 +253,7 @@ public extension Tensor {
     }
 }
 
+//MARK: Tensor - Image conversion
 #if canImport(CoreGraphics)
 import CoreGraphics
 
@@ -240,6 +296,10 @@ private func copy<Element: NumericType>(from image: CGImage, to buffer: UnsafeMu
 }
 
 public extension Tensor {
+    /// Creates a tensor from the given CGImage
+    /// - Parameters:
+    ///   - image: Image
+    ///   - range: Range to normalize pixel values to
     init?(_ image: CGImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
         let shape = [
             (image.colorSpace ?? CGColorSpaceCreateDeviceRGB()).numberOfComponents,
@@ -317,6 +377,10 @@ public extension Tensor {
 import Cocoa
 
 public extension Tensor {
+    /// Creates a tensor from the given NSImage
+    /// - Parameters:
+    ///   - image: Image
+    ///   - range: Range to normalize pixel values to
     init?(_ image: NSImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return nil
@@ -326,6 +390,10 @@ public extension Tensor {
 }
 
 public extension NSImage {
+    /// Creates a NSImage from the given tensor
+    /// - Parameters:
+    ///   - tensor: Tensor
+    ///   - tensorRange: Range to normalize pixel values to
     convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil
@@ -339,6 +407,10 @@ public extension NSImage {
 import UIKit
 
 public extension Tensor {
+    /// Creates a tensor from the given UIImage
+    /// - Parameters:
+    ///   - image: Image
+    ///   - range: Range to normalize pixel values to
     init?(_ image: UIImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = image.cgImage else {
             return nil
@@ -348,6 +420,10 @@ public extension Tensor {
 }
 
 public extension UIImage {
+    /// Creates a UIImage from the given tensor
+    /// - Parameters:
+    ///   - tensor: Tensor
+    ///   - tensorRange: Range to normalize pixel values to
     convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
         guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil

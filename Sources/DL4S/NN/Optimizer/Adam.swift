@@ -25,14 +25,24 @@
 
 import Foundation
 
+/// Adam optimizer (Adaptive moment estimation)
+///
+/// Follows [Kingma et al. - Adam: A method for stochastic optimization](https://arxiv.org/pdf/1412.6980.pdf)
 public struct Adam<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     
     public private(set) var model: Layer
     
+    /// Learning rate scaling factor
     public var learningRate: ParamTensor
+    
+    /// Exponential decay rate for first moment
     public var beta1: ParamTensor
+    
+    /// Exponential decay rate for second moment
     public var beta2: ParamTensor
+    
+    /// Normalization scalar added to divisors
     public var epsilon: ParamTensor
     
     private var beta1t: ParamTensor
@@ -42,7 +52,16 @@ public struct Adam<Layer: LayerType>: Optimizer {
     private var secondMoments: [ParamTensor]
     
     private var paths: [WritableKeyPath<Layer, ParamTensor>]
-    
+
+    /// Adam optimizer (Adaptive moment estimation)
+    ///
+    /// Follows [Kingma et al. - Adam: A method for stochastic optimization](https://arxiv.org/pdf/1412.6980.pdf)
+    /// - Parameters:
+    ///   - model: Model to optimize
+    ///   - learningRate: Learning rate scaling factor
+    ///   - beta1: Exponential decay rate for first moment
+    ///   - beta2: Exponential decay rate for second moment
+    ///   - epsilon: Normalization scalar added to divisors
     public init(model: Layer, learningRate: ParamTensor, beta1: ParamTensor = 0.9, beta2: ParamTensor = 0.999, epsilon: ParamTensor = 1e-8) {
         self.model = model
         
@@ -64,6 +83,7 @@ public struct Adam<Layer: LayerType>: Optimizer {
         self.paths = model.parameterPaths
     }
     
+    /// Resets the state of the optimizer
     public mutating func reset() {
         beta1t = beta1
         beta2t = beta2

@@ -25,13 +25,21 @@
 
 import Foundation
 
+/// Adadelta Optimizer
+///
+/// Follows [Matthew D. Zeiler - Adadelta: An adaptive learning rate method](https://arxiv.org/pdf/1212.5701.pdf)
 public struct Adadelta<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     
     public private(set) var model: Layer
     
+    /// Initial learning rate scaling factor. Only used in first optimization step after initialization or reset.
     public var learningRate: ParamTensor
+    
+    /// Exponential decay rate for squared gradient history
     public var gamma: ParamTensor
+    
+    /// Normalization scalar added to divisors
     public var epsilon: ParamTensor
     
     private var gradientSums: [ParamTensor]
@@ -40,7 +48,15 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
     private var isInitialized = false
     
     private var paths: [WritableKeyPath<Layer, ParamTensor>]
-    
+
+    /// Adadelta Optimizer
+    ///
+    /// Follows [Matthew D. Zeiler - Adadelta: An adaptive learning rate method](https://arxiv.org/pdf/1212.5701.pdf)
+    /// - Parameters:
+    ///   - model: Model to optimize
+    ///   - learningRate: Initial learning rate, ignored after first step
+    ///   - gamma: Exponential decay rate for squared gradient history
+    ///   - epsilon: Normalization scalar added to divisors
     public init(model: Layer, learningRate: ParamTensor = 0.001, gamma: ParamTensor = 0.9, epsilon: ParamTensor = 1e-8) {
         self.model = model
         self.learningRate = learningRate
@@ -56,6 +72,7 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
         self.paths = model.parameterPaths
     }
     
+    /// Resets the state of the optimizer
     public mutating func reset() {
         self.gradientSums = model.parameters.map {
             Tensor(repeating: 0, shape: $0.shape)
@@ -96,5 +113,42 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
             
             model[keyPath: path].discardContext()
         }
+    }
+}
+
+extension Adadelta: Codable where Layer: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.model = try container.decode(Layer.self, forKey: .model)
+        self.learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
+        self.gamma = try container.decode(ParamTensor.self, forKey: .gamma)
+        self.epsilon = try container.decode(ParamTensor.self, forKey: .epsilon)
+        self.gradientSums = try container.decode([ParamTensor].self, forKey: .gradientSums)
+        self.updateSums = try container.decode([ParamTensor].self, forKey: .updateSums)
+        self.isInitialized = try container.decode(Bool.self, forKey: .isInitialized)
+        self.paths = self.model.parameterPaths
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(model, forKey: .model)
+        try container.encode(learningRate, forKey: .learningRate)
+        try container.encode(gamma, forKey: .gamma)
+        try container.encode(epsilon, forKey: .epsilon)
+        try container.encode(gradientSums, forKey: .gradientSums)
+        try container.encode(updateSums, forKey: .updateSums)
+        try container.encode(isInitialized, forKey: .isInitialized)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case model
+        case learningRate
+        case gamma
+        case epsilon
+        case gradientSums
+        case updateSums
+        case isInitialized
     }
 }

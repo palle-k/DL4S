@@ -35,16 +35,21 @@ class ResNetTests: XCTestCase {
         let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 32, 3, 64, 64, min: 0, max: 1)
         let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 32, min: 0, max: 255)
         
-        let epochs = 100
+        let epochs = 5
         
         for i in 1 ... epochs {
             let result = optim.model(t)
             
-//            let loss = categoricalCrossEntropy(expected: expected, actual: result)
-//            let grads = loss.gradients(of: optim.model.parameters)
-//            optim.update(along: grads)
+            let loss = categoricalCrossEntropy(expected: expected, actual: result)
+            let grads = loss.gradients(of: optim.model.parameters)
+            optim.update(along: grads)
             
-            print("[\(i)/\(epochs)] \(result.backpropID)")
+            print("[\(i)/\(epochs)] \(loss)")
         }
+        
+        XCTAssertLessThan(
+            categoricalCrossEntropy(expected: expected, actual: optim.model(t)).item,
+            0.01
+        )
     }
 }

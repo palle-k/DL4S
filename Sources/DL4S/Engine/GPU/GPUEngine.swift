@@ -31,6 +31,7 @@ import MetalPerformanceShaders
 
 
 public struct GPUEngine: EngineType {
+    
     public typealias Device = GPU
 
     public static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int) {
@@ -461,6 +462,18 @@ public struct GPUEngine: EngineType {
     
     public static func tanh<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         GPU.function(named: "vTanh_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), values.values.memory, result.values.memory)
+    }
+    
+    public static func band<N>(buffer: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, belowDiagonal: Int?, aboveDiagonal: Int?) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func scatter<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func gather<N>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
     }
 }
 

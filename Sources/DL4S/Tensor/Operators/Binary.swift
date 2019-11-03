@@ -25,6 +25,8 @@
 
 import Foundation
 
+//MARK: Broadcasting Operators
+
 public extension Tensor {
     
     /// Element-wise broadcast adds the given tensors
@@ -32,6 +34,8 @@ public extension Tensor {
     /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
     /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
     /// tensor with the result shape [42, 3, 8].
+    ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
     ///
     /// - Parameters:
     ///   - lhs: First tensor
@@ -91,6 +95,8 @@ public extension Tensor {
     /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
     /// tensor with the result shape [42, 3, 8].
     ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
+    ///
     /// - Parameters:
     ///   - lhs: First tensor
     ///   - rhs: Second tensor
@@ -145,6 +151,8 @@ public extension Tensor {
     /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
     /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
     /// tensor with the result shape [42, 3, 8].
+    ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
     ///
     /// - Parameters:
     ///   - lhs: First tensor
@@ -218,6 +226,8 @@ public extension Tensor {
     /// Shapes are matched from the right. For example, the shapes [42, 3, 1] and [3, 8] can be broadcasted and will give a
     /// tensor with the result shape [42, 3, 8].
     ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
+    ///
     /// - Parameters:
     ///   - lhs: First tensor
     ///   - rhs: Second tensor
@@ -288,7 +298,8 @@ public extension Tensor {
     }
     
     
-    /// Negates every element of the given tensor
+    /// Negates every element of the given tensor.
+    ///
     /// - Parameter value: Tensor to negate
     /// - Returns: Negated tensor
     static prefix func - (value: Self) -> Self {
@@ -307,7 +318,11 @@ public extension Tensor {
         )
     }
     
-    /// In-place broadcast adds the given tensors
+    /// In-place broadcast adds the given tensors.
+    /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
+    ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
+    ///
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to add to lhs
@@ -323,7 +338,11 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place addition has modified shape.")
     }
     
-    /// In-place broadcast subtracts the given tensors
+    /// In-place broadcast subtracts the given tensors.
+    /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
+    ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
+    ///
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to subtract from lhs
@@ -339,7 +358,11 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place subtraction has modified shape.")
     }
     
-    /// In-place broadcast multiplies the given tensors
+    /// In-place broadcast multiplies the given tensors.
+    /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
+    ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
+    ///
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to multiply with lhs
@@ -355,7 +378,11 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place multiplication has modified shape.")
     }
     
-    /// In-place broadcast divides the given tensors
+    /// In-place broadcast divides the given tensors.
+    /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
+    ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
+    ///
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to divide lhs with
@@ -371,7 +398,10 @@ public extension Tensor {
         assert(originalShape == lhs.shape, "In-place division has modified shape.")
     }
     
-    /// Broadcast exponentiates the tensor with the given exponent
+    /// Performs a broadcasted exponentiation between self (base) and power (exponent).
+    ///
+    /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
+    ///
     /// - Parameters:
     ///   - power: Exponent
     /// - Returns: self broadcast exponentiated by power

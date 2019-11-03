@@ -1,10 +1,24 @@
-# DL4S
-[![license](https://img.shields.io/github/license/palle-k/DL4S.svg)](https://github.com/palle-k/DL4S/blob/master/License)
-[![tag](https://img.shields.io/github/v/tag/palle-k/DL4S)](https://github.com/palle-k/DL4S/releases)
+<p align="center">
+<img src="https://github.com/palle-k/DL4S/blob/develop/.github/logo.png?raw=true" alt="DL4S" width="300" />
+</p>
 
-This framework provides reverse mode automatic differentiation,
-vectorized implementations of common matrix and vector operators and high level neural network operations,
-such as convolution, recurrent units, and more.
+<p align="center">
+<a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
+<a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
+<a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
+<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS-green.svg" alt="Supports Linux, macOS, iOS and tvOS" /></a>
+<a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
+</p>
+
+DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
+It furthermore has automatic differentiation builtin, which allows you to create and train neural networks without needing to manually
+implement backpropagation.
+
+Features include implementations for many basic binary and unary operators,
+matrix operations, convolutional and recurrent neural networks, 
+commonly used optimizers, second derivatives and much more.
+
+[Read the full documentation](https://palle-k.github.io/DL4S/)
 
 ## Overview
 1. [Installation](#installation)
@@ -24,7 +38,7 @@ such as convolution, recurrent units, and more.
 
 1. In Xcode, select "File" > "Swift Packages" > "Add Package Dependency"
 2. Enter `https://github.com/palle-k/DL4S.git` into the Package URL field and click "Next".
-3. Select "Version", "Up to Next Major", 1.0.0 and click "Next".
+3. Select "Branch", "master" and click "Next".
 4. Enable the Package Product DL4S, your app in the "Add to Target" column and click "Next". 
 
 **Note**: Installation via CocoaPods is no longer supported for newer versions.
@@ -42,42 +56,27 @@ Then add `DL4S` as a dependency to your target:
 .target(name: "MyPackage", dependencies: ["DL4S"])
 ```
 
-#### MKL / IPP Support
+#### MKL / IPP / OpenMP Support
 
-DL4S can be accelerated with Intel's Math Kernel Library and Integrated Performance Primitives ([Installation Instructions](https://software.intel.com/en-us/get-started-with-mkl-for-linux)). 
+DL4S can be accelerated with Intel's Math Kernel Library, Integrated Performance Primitives and OpenMP ([Installation Instructions](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo)).
+
 On Apple devices, DL4S uses vectorized functions provided by the builtin Accelerate framework by default.
+If no acceleration library is available, a fallback implementation is used.
 
-Compiling for Linux:
+Compiling with MKL/IPP:
 ```bash
-export MKLROOT=/opt/intel/mkl  # change depending on your system configuration
+# After adding the APT repository as described in the installation instructions
+sudo apt-get install intel-mkl-64bit-2019.5-075 intel-ipp-64bit-2019.5-075 libiomp-dev
+
+export MKLROOT=/opt/intel/mkl
 export IPPROOT=/opt/intel/ipp
+export LD_LIBRARY_PATH=${MKLROOT}/lib/intel64:${IPPROOT}/lib/intel64:${LD_LIBRARY_PATH}
 
 swift build -c release \
-    -Xlinker -L${MKLROOT}/lib/intel64 -Xlinker -L${IPPROOT}/lib/intel64 \
-    -Xlinker -lmkl_intel_lp64 \
-    -Xlinker -lmkl_sequential \
-    -Xlinker -lmkl_core \
-    -Xlinker -lpthread \
-    -Xlinker -lippcore \
-    -Xlinker -lippvm \
-    -Xlinker -lipps \                
-    -Xlinker -lm \
-    -Xlinker -ldl \
-    -Xcc -m64 -Xcc -DMKL_ENABLE \
-    -Xcc -I${MKLROOT}/include -Xcc -I${IPPROOT}/include
-
+    -Xswiftc -DMKL_ENABLE \
+    -Xlinker -L${MKLROOT}/lib/intel64 \
+    -Xlinker -L${IPPROOT}/lib/intel64
 ```
-
-```bash
-swift build -Xcc -I/opt/intel/mkl/include -Xlinker -L/opt/intel/mkl/lib/intel64
-```
-
-To run, LD_LIBRARY_PATH needs to be set:
-
-```bash
-export LD_LIBRARY_PATH=/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
-```
-
 
 ## Features
 
@@ -88,6 +87,7 @@ Layers
 <p>
 
 - [x] Convolution
+- [x] Transposed Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
@@ -95,6 +95,8 @@ Layers
 - [x] Bidirectional RNNs
 - [x] Max Pooling
 - [x] Average Pooling
+- [x] Adaptive Max Pooling
+- [x] Adaptive Average Pooling
 - [x] Relu
 - [x] Tanh
 - [x] Sigmoid
@@ -102,9 +104,9 @@ Layers
 - [x] Embedding
 - [x] Batch Norm
 - [x] Layer Norm
-- [x] Lambda 
-- [x] Sequential
 - [x] Dropout
+- [x] Sequential
+- [x] Lambda 
 
 </p>
 </details>
@@ -145,6 +147,8 @@ Tensor Operations
 </summary>
 <p>
 
+Behavior of broadcast operations is consistent with numpy rules.
+
 - [x] broadcast-add
 - [x] broadcast-sub
 - [x] broadcast-mul 
@@ -159,15 +163,16 @@ Tensor Operations
 - [x] cos
 - [x] tan
 - [x] tanh
-- [x] l1 norm
-- [x] l2 norm
 - [x] sum
 - [x] max
 - [x] relu
 - [x] leaky relu
 - [x] reduce sum
 - [x] reduce max
+- [x] scatter
+- [x] gather
 - [x] conv2d
+- [x] transposed conv2d
 - [x] max pool
 - [x] avg pool
 - [x] subscript

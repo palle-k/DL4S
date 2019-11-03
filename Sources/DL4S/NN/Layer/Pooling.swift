@@ -26,14 +26,25 @@
 import Foundation
 
 
+/// A 2D max pooling layer
 public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Pooling window size
     public let windowSize: Int
+    
+    /// Pooling window stride
     public let stride: Int
+    
+    /// Padding applied around the edges of the input of the layer.
     public let padding: Int?
     
+    /// Creates a 2D max pooling layer.
+    /// - Parameters:
+    ///   - windowSize: Size of the window
+    ///   - stride: Stride, with which the window moves over the input tensor >= 1.
+    ///   - padding: Padding applied around the edges of the input of the layer.
     public init(windowSize: Int = 2, stride: Int = 2, padding: Int? = nil) {
         self.windowSize = windowSize
         self.stride = stride
@@ -41,20 +52,29 @@ public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
     }
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "MaxPool2D") {
-            inputs.maxPooled2d(windowSize: windowSize, padding: padding, stride: stride)
-        }
+        inputs.maxPooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
 }
 
+/// A 2D average pooling layer
 public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Pooling window size
     public let windowSize: Int
+    
+    /// Pooling window stride
     public let stride: Int
+    
+    /// Padding applied around the edges of the input of the layer.
     public let padding: Int?
     
+    /// Creates a 2D average pooling layer.
+    /// - Parameters:
+    ///   - windowSize: Size of the window
+    ///   - stride: Stride, with which the window moves over the input tensor >= 1.
+    ///   - padding: Padding applied around the edges of the input of the layer.
     public init(windowSize: Int = 2, stride: Int = 2, padding: Int? = nil) {
         self.windowSize = windowSize
         self.stride = stride
@@ -62,18 +82,20 @@ public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
     }
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "AvgPool2D") {
-            inputs.averagePooled2d(windowSize: windowSize, padding: padding, stride: stride)
-        }
+        inputs.averagePooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
 }
 
+/// A 2D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
 public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
     
+    /// Width and height of the output tensor
     public let targetSize: Int
     
+    /// A 2D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+    /// - Parameter targetSize: Width and height of the output tensor
     public init(targetSize: Int) {
         self.targetSize = targetSize
     }
@@ -85,12 +107,16 @@ public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Layer
     }
 }
 
+/// A 2D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
 public struct AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+
+    /// Width and height of the output tensor
     public let targetSize: Int
     
+    /// A 2D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+    /// - Parameter targetSize: Width and height of the output tensor
     public init(targetSize: Int) {
         self.targetSize = targetSize
     }

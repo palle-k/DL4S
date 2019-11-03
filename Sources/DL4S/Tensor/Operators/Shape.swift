@@ -25,7 +25,18 @@
 
 import Foundation
 
+//MARK: Tensor Shape Modifiers
+
 public extension Tensor {
+    
+    /// Reshapes the tensor to the given shape.
+    ///
+    /// The shape must be compatible with the source shape, i.e. the number of elements must be the same.
+    ///
+    /// The shape may contain a -1. The size of the result tensor along that axis is then computed as needed.
+    ///
+    /// - Parameter shape: Shape to view the tensor in.
+    /// - Returns: Tensor with given shape, where occurrences of -1 have been replaced.
     func view(as shape: [Int]) -> Tensor<Element, Device> {
         precondition(shape.count(where: {$0 == -1}) <= 1, "The size of at most one dimension can be unknown (-1).")
         precondition(shape.allSatisfy {$0 >= -1}, "All dimensions must be greater than or equal to -1.")
@@ -55,16 +66,30 @@ public extension Tensor {
         )
     }
     
+    /// Reshapes the tensor to the given shape.
+    ///
+    /// The shape must be compatible with the source shape, i.e. the number of elements must be the same.
+    ///
+    /// The shape may contain a -1. The size of the result tensor along that axis is then computed as needed.
+    ///
+    /// - Parameter shape: Shape to view the tensor in.
+    /// - Returns: Tensor with given shape, where occurrences of -1 have been replaced.
     func view(as shape: Int...) -> Self {
         view(as: shape)
     }
     
+    /// Adds an axis to the shape of the tensor.
+    /// The axis will have a size of 1.
+    /// - Parameter axis: Axis to expand at.
     func unsqueezed(at axis: Int) -> Self {
         var shape = self.shape
         shape.insert(1, at: axis)
         return view(as: shape)
     }
     
+    /// Removes an axis from the tensor if the axis has a size of 1.
+    /// Otherwise, the original tensor is returned.
+    /// - Parameter axis: Axis to remove if possible.
     func squeezed(at axis: Int) -> Self {
         var shape = self.shape
         if shape[axis] == 1 {
@@ -73,16 +98,26 @@ public extension Tensor {
         return view(as: shape)
     }
     
+    /// Removes all axes from the tensor that have a size of 1.
     func squeezed() -> Self {
         view(as: shape.filter {$0 != 1})
     }
     
+    /// Flattens the tensor into a tensor of shape [count]
     func flattened() -> Self {
         view(as: [-1])
     }
 }
 
 public extension Tensor {
+    
+    /// Swaps the axes of the tensor.
+    ///
+    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    ///
+    /// With axis arangement of [1, 0], this operation is equivalent to `tensor.transposed()`
+    ///
+    /// - Parameter axisArangement: Arangement of axes in the resulting tensor.
     func permuted(to axisArangement: [Int]) -> Self {
         precondition(axisArangement.count == dim, "Axis arangement must have dimensionality of source tensor")
         precondition(Set(axisArangement).count == dim, "Axis arangement must not contain duplicate axes")
@@ -119,6 +154,13 @@ public extension Tensor {
         )
     }
     
+    /// Permutes the other tensor along the given axes and adds it to the current tensor in place.
+    ///
+    /// The permutation must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    ///
+    /// - Parameters:
+    ///   - other: Tensor to add permuted to the current tensor
+    ///   - permutation: Desired arangement of axes of the summand.
     mutating func addingPermuted(_ other: Self, permutation: [Int]) {
         precondition(permutation.count == dim, "Axis arangement must have dimensionality of source tensor")
         precondition(Set(permutation).count == dim, "Axis arangement must not contain duplicate axes")
@@ -159,14 +201,26 @@ public extension Tensor {
         }
     }
     
+    
+    /// Swaps the axes of the tensor.
+    /// 
+    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    ///
+    /// With axis arangement of [1, 0], this operation is equivalent to `tensor.transposed()`
+    ///
+    /// - Parameter axisArangement: Arangement of axes in the resulting tensor.
     func permuted(to axisArangement: Int...) -> Self {
         permuted(to: axisArangement)
     }
     
+    /// Transposes the given tensor.
+    /// The tensor must have a dimensionality of 2.
     func transposed() -> Self {
         permuted(to: [1, 0])
     }
     
+    /// Transposes the given tensor.
+    /// The tensor must have a dimensionality of 2.
     var T: Self {
         transposed()
     }

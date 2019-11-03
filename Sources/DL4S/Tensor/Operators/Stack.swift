@@ -25,10 +25,19 @@
 
 import Foundation
 
+//MARK: Tensor Stacking
 
 public extension Tensor {
-    func unstacked(along axis: Int, withSourceLengths sourceLengths: [Int]) -> [Self] {
-        let sourceShapes = sourceLengths.map { length -> [Int] in
+    /// Inverts stacking of tensors.
+    ///
+    /// This operation returns a list of tensors that have equal shapes except along the unstacking axis.
+    /// The number of elements of the source tensor along the unstacking axis must be equal to the sum of `lengths`.
+    ///
+    /// - Parameters:
+    ///   - axis: Axis to unstack along.
+    ///   - lengths: Number of elements along the unstacking axis of the resulting tensors
+    func unstacked(along axis: Int, withLengths lengths: [Int]) -> [Self] {
+        let sourceShapes = lengths.map { length -> [Int] in
             var shape = self.shape
             shape[axis] = length
             return shape
@@ -45,9 +54,9 @@ public extension Tensor {
                     tag: "unstack",
                     sources: [self],
                     backpropagate: [{ resultGradient -> Tensor<Element, Device> in
-                        let sourceOffsets = sourceLengths.reduce(into: [0], {$0.append($0.last! + $1)})
+                        let sourceOffsets = lengths.reduce(into: [0], {$0.append($0.last! + $1)})
                         let idx = Array(repeating: nil, count: axis) +
-                            [sourceOffsets[i] ..< sourceOffsets[i] + sourceLengths[i]]
+                            [sourceOffsets[i] ..< sourceOffsets[i] + lengths[i]]
                         
                         var target = Tensor<Element, Device>(repeating: 0, shape: self.shape)
                         target[idx] = resultGradient
@@ -58,6 +67,13 @@ public extension Tensor {
         }
     }
     
+    /// Stacks the given tensors into a new tensor.
+    ///
+    /// The tensors must have equal shapes except along the stacking axis.
+    ///
+    /// - Parameters:
+    ///   - tensors: Tensors to stack
+    ///   - axis: Axis to stack the tensors along.
     init(stacking tensors: [Self], along axis: Int = 0) {
         precondition(0 ..< tensors[0].dim ~= axis, "Dimensionality of tensors must be in dimensionality range of source tensors")
         
@@ -85,13 +101,20 @@ public extension Tensor {
                 tag: "stack",
                 sources: tensors,
                 backpropagate: tensors.indices.map { i in { resultGradient in
-                    resultGradient.unstacked(along: axis, withSourceLengths: resultStackDimSize)[i]
+                    resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)[i]
                 }}
             ) : nil
         )
     }
 }
 
+/// Stacks the given tensors into a new tensor.
+///
+/// The tensors must have equal shapes except along the stacking axis.
+///
+/// - Parameters:
+///   - tensors: Tensors to stack
+///   - axis: Axis to stack the tensors along.
 public func stack<Element, Device>(_ tensors: [Tensor<Element, Device>], along axis: Int = 0) -> Tensor<Element, Device> {
     Tensor(stacking: tensors, along: axis)
 }

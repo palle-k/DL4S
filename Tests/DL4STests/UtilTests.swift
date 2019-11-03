@@ -28,7 +28,7 @@ import XCTest
 
 class UtilTests: XCTestCase {
     func testFileReader() {
-        let f = File(url: URL(fileURLWithPath: "/Users/Palle/Developer/DL4S/Package.swift"))
+        let f = File(url: URL(fileURLWithPath: "./Package.swift"))
         
         for line in f {
             print("### \(line)")

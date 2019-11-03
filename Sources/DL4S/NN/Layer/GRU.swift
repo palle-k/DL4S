@@ -47,9 +47,12 @@ public struct GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     public var br: Tensor<Element, Device>
     public var bh: Tensor<Element, Device>
     
+    /// Size of inputs of the layer
     public var inputSize: Int {
         return Wz.shape[0]
     }
+    
+    /// Size of outputs of the layer
     public var hiddenSize: Int {
         return Wz.shape[1]
     }
@@ -58,6 +61,14 @@ public struct GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
         get {[Wz, Wr, Wh, Uz, Ur, Uh, bz, br, bh]}
     }
     
+    /// Creates a Gated Recurrent Unit layer.
+    ///
+    /// The RNN expects inputs to have a shape of [sequence length, batch size, input size].
+    /// 
+    /// - Parameters:
+    ///   - inputSize: Number of elements at each timestep of the input
+    ///   - hiddenSize: Number of elements at each timestep in the output
+    ///   - direction: Direction, in which the RNN consumes the input sequence.
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {
         self.direction = direction
         

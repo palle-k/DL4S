@@ -24,7 +24,6 @@
 //  SOFTWARE.
 
 import Foundation
-import DL4SLib
 
 
 public struct CPU: DeviceType {
@@ -118,17 +117,17 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     
     public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, CPU>, count: Int) {
         // destination.memory.bindMemory(to: Element.self).assign(from: source, count: count)
-        avxcpy(destination.memory.baseAddress!, source.baseAddress!, count * MemoryLayout<Element>.stride)
+        memcpy(destination.memory.baseAddress!, source.baseAddress!, count * MemoryLayout<Element>.stride)
     }
     
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: Buffer<Element, CPU>, count: Int) {
         // destination.memory.bindMemory(to: Element.self).assign(from: source.memory.bindMemory(to: Element.self).immutable, count: count)
-        avxcpy(destination.memory.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
+        memcpy(destination.memory.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
     }
     
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: UnsafeMutableBufferPointer<Element>, count: Int) {
         // destination.assign(from: source.memory.bindMemory(to: Element.self).immutable, count: count)
-        avxcpy(destination.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
+        memcpy(destination.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
     }
     
     @inline(__always)

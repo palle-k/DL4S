@@ -48,10 +48,16 @@ class ConvTests: XCTestCase {
         let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
         print(d)
-        
-        let result = Tensor<Float, CPU>(repeating: 0, shape: 9, 64)
-        CPU.Engine.img2col(values: d.values, result: result.values, kernelWidth: 3, kernelHeight: 3, padding: 1, stride: 1)
+        let result = d.img2col(kernelWidth: 3, kernelHeight: 3, padding: 0, stride: 1)
         print(result.permuted(to: 1, 0))
+    }
+    
+    func testIm2colPerformance() {
+        let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32, 128, 128])
+        
+        measure {
+            _ = a.img2col(kernelWidth: 3, kernelHeight: 3, padding: 0, stride: 1)
+        }
     }
     
     func testConv1() {
@@ -87,13 +93,13 @@ class ConvTests: XCTestCase {
         
         print(filters.shape)
         
-        let ((images, _), _) = MNISTTests.loadMNIST(from: "/Users/Palle/Developer/DL4S/", type: Float.self, device: CPU.self)
+        let ((images, _), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
         let batch = images[0 ..< 64]
         
         let filtered = batch.convolved2d(filters: filters)
         
-        #if canImport(AppKit)
+        #if canImport(AppKit) && false
         for i in 0 ..< batch.shape[0] {
             let src = batch[i]
             let dst = filtered[i]
@@ -104,6 +110,41 @@ class ConvTests: XCTestCase {
             for j in 0 ..< dst.shape[0] {
                 let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
                 try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j)a.png")
+            }
+        }
+        #endif
+    }
+    
+    func testTransposedConv() {
+        let filters = Tensor<Float, CPU>([
+            [
+                [[1, 2, 1],
+                 [2, 4, 2],
+                 [1, 2, 1]]
+            ],
+            [
+                [[-1, 0, 1],
+                [-2, 0, 2],
+                [-1, 0, 1]]
+            ]
+        ]) / Tensor<Float, CPU>([4, 1]).view(as: -1, 1, 1, 1)
+        
+        let ((images, _), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let batch = images[0 ..< 64]
+        
+        let filtered = batch.transposedConvolved2d(filters: filters, stride: 2)
+        
+        #if canImport(AppKit) && false
+        for i in 0 ..< batch.shape[0] {
+            let src = batch[i]
+            let dst = filtered[i]
+            
+            let srcImg = NSImage(src.view(as: [28, 28]).permuted(to: 1, 0).unsqueezed(at: 0))
+            try? srcImg?.save(to: "/Users/Palle/Desktop/conv/\(i)_src.png")
+            
+            for j in 0 ..< dst.shape[0] {
+                let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
+                try? dstImg?.save(to: "/Users/Palle/Desktop/conv/\(i)_\(j)_t.png")
             }
         }
         #endif

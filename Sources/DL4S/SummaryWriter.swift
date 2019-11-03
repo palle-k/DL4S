@@ -26,9 +26,15 @@
 import Foundation
 
 
+/// Writes a summary of a training procedure to a CSV file.
 public class SummaryWriter {
     private let eventsFile: FileHandle
     
+    /// Writes a summary of a training procedure to a CSV file.
+    /// The CSV file will be stored in a folder named `runName` relative to the given destination URL.
+    /// - Parameters:
+    ///   - destination: Destination URL to store the run directory in
+    ///   - runName: Name of the run directory.
     public init(destination: URL, runName: String) throws {
         let dir = destination.appendingPathComponent(runName, isDirectory: true)
         let eventsFile = dir.appendingPathComponent("summary.csv")
@@ -43,6 +49,11 @@ public class SummaryWriter {
         self.eventsFile = try FileHandle(forWritingTo: eventsFile)
     }
     
+    /// Writes a scalar with the given name into the summary
+    /// - Parameters:
+    ///   - scalar: Scalar value
+    ///   - name: Name of the scalar
+    ///   - iteration: Training iteration, at which the scalar was captured.
     public func write<Scalar: NumericType>(_ scalar: Scalar, named name: String, at iteration: Int) {
         let milliseconds = Int(Date().timeIntervalSince1970 * 1000)
         self.eventsFile.seekToEndOfFile()
