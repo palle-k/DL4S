@@ -67,6 +67,16 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     ///
     /// All tensors derived from gradient requiring tensors will also require a gradient.
     ///
+    /// To compute a gradient, use the `gradients(of:)` function.
+    /// Example:
+    /// ```
+    /// let a = Tensor<Float, CPU>([1,2,3,4,5], requiresGradient: true)
+    /// let result = a * a * a // [1, 8, 27, 64, 125]
+    ///
+    /// let grads = result.gradients(of: [a])
+    /// let ∇a = grads[0] // [3, 12, 27, 48, 75]
+    /// ```
+    ///
     /// To detach a tensor from the compute graph, use `tensor.detached()`.
     public var requiresGradient: Bool
     
@@ -88,7 +98,6 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     public var dim: Int {
         shape.count
     }
-    
     
     /// Creates a tensor with the given shape and fills it with `value`
     /// - Parameters:
@@ -196,21 +205,49 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     }
     
     
-    /// Performs backpropagation and returns the gradients for the given tensors
+    /// Performs backpropagation and returns the gradients for the given tensors.
+    ///
+    /// Tensors for which it is desired to compute gradients must have `requiresGradient` set to `true`.
+    /// If the result is not differentiable with respect to an input tensor, a tensor of zeros will be returned.
+    ///
+    /// Example:
+    /// ```
+    /// let a = Tensor<Float, CPU>([1,2,3,4,5], requiresGradient: true)
+    /// let result = a * a * a // [1, 8, 27, 64, 125]
+    ///
+    /// let grads = result.gradients(of: [a])
+    /// let ∇a = grads[0] // [3, 12, 27, 48, 75]
+    /// ```
+    ///
+    /// To detach a tensor from the compute graph, use `tensor.detached()`.
+    ///
+    /// If it is desired to compute second, third, etc. derivatives, the `retainBackwardsGraph` flag must be set to true.
+    /// This will record the compute graph for the backpropagation operation. A second derivative can then be computed as the gradient of a gradient.
+    /// If the flag is not set, the compute graph of the backwards operation will not be captured and the result is not differentiable to any variable.
+    ///
+    ///
     /// - Parameters:
     ///   - tensors: Tensors to differentiate for
     ///   - retainGraph: Whether to store the graph for the backwards pass. If enabled, higher order gradients can be computed.
     public func gradients(of tensors: [Self], retainBackwardsGraph retainGraph: Bool = false) -> [Self] {
         OperationGroup.push("Backpropagate")
         
+        // self is the result of a function, which is differentiated with respect to the given tensors.
         let result = self
+        
+        // Build the gradient tape. Each operation is represented on the tape by its result.
+        // It is not possible to just recursively walk through the compute graph, as the graph is not a tree.
+        // Therefore, some variables may be included in multiple operations. Backpropagating through each path
+        // could therefore lead to a combinatorial explosion.
         let operationOrder = Tensor.operationOrder(from: result)
         
+        // The derivative of the function wrt. itself is 1.
         var grads: [UInt64: Tensor<Element, Device>] = [
             result.backpropID: Tensor(repeating: 1, shape: result.shape)
         ]
         grads.reserveCapacity(operationOrder.count)
         
+        // Perform the actual backpropagation.
         for tensor in operationOrder.reversed() {
             guard let grad = grads[tensor.backpropID] else {
                 continue
@@ -218,17 +255,14 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
             guard let ctx = tensor.context else {
                 continue
             }
+            // Add gradients of all tensors that directly influenced the values
+            // of the current tensor to their respective accumulators
             for (src, fn) in zip(ctx.sources, ctx.backpropagate) {
                 guard src.requiresGradient else {
                     continue
                 }
                 
-                let srcGrad: Tensor<Element, Device>
-                if let existingGrad = grads[src.backpropID] {
-                    srcGrad = fn(grad, existingGrad)
-                } else {
-                    srcGrad = fn(grad, nil)
-                }
+                let srcGrad = fn(grad, grads[src.backpropID])
                 #if DEBUG
                 assert(srcGrad.shape == src.shape)
                 #endif

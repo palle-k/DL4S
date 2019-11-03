@@ -30,11 +30,13 @@ public protocol Optimizer {
     /// Type of the layer that is optimized
     associatedtype Layer: LayerType
     
-    /// Model that is updated by the optimizer
+    /// Model to optimize
+    ///
+    /// Note, that models are value types, so only `optimizer.model` is changed.
     var model: Layer { get }
     
     /// Updates the model along its gradient.
-    /// The provided gradients must match the order of parameters in the network.
-    /// - Parameter gradients: Gradients of the model.
+    /// The provided gradients must match the count and order of parameters in the network.
+    /// - Parameter gradients: Gradient tangent vector of the model.
     mutating func update(along gradients: [Tensor<Layer.Parameter, Layer.Device>])
 }
