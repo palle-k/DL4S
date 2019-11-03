@@ -85,27 +85,27 @@ Layers
 </summary>
 <p>
 
-<input type="checkbox" name="check" id="Convolution" value="1" disabled>
-<input type="checkbox" name="check" id="Transposed Convolution" value="1" disabled>
-<input type="checkbox" name="check" id="Dense/Linear/Fully Connected" value="1" disabled>
-<input type="checkbox" name="check" id="LSTM" value="1" disabled>
-<input type="checkbox" name="check" id="Gated Recurrent Unit (GRU)" value="1" disabled>
-<input type="checkbox" name="check" id="Vanilla RNN" value="1" disabled>
-<input type="checkbox" name="check" id="Bidirectional RNNs" value="1" disabled>
-<input type="checkbox" name="check" id="Max Pooling" value="1" disabled>
-<input type="checkbox" name="check" id="Average Pooling" value="1" disabled>
-<input type="checkbox" name="check" id="Adaptive Max Pooling" value="1" disabled>
-<input type="checkbox" name="check" id="Adaptive Average Pooling" value="1" disabled>
-<input type="checkbox" name="check" id="Relu" value="1" disabled>
-<input type="checkbox" name="check" id="Tanh" value="1" disabled>
-<input type="checkbox" name="check" id="Sigmoid" value="1" disabled>
-<input type="checkbox" name="check" id="Softmax" value="1" disabled>
-<input type="checkbox" name="check" id="Embedding" value="1" disabled>
-<input type="checkbox" name="check" id="Batch Norm" value="1" disabled>
-<input type="checkbox" name="check" id="Layer Norm" value="1" disabled>
-<input type="checkbox" name="check" id="Dropout" value="1" disabled>
-<input type="checkbox" name="check" id="Sequential" value="1" disabled>
-<input type="checkbox" name="check" id="Lambda " value="1" disabled>
+- [x] Convolution
+- [x] Transposed Convolution
+- [x] Dense/Linear/Fully Connected
+- [x] LSTM
+- [x] Gated Recurrent Unit (GRU)
+- [x] Vanilla RNN
+- [x] Bidirectional RNNs
+- [x] Max Pooling
+- [x] Average Pooling
+- [x] Adaptive Max Pooling
+- [x] Adaptive Average Pooling
+- [x] Relu
+- [x] Tanh
+- [x] Sigmoid
+- [x] Softmax
+- [x] Embedding
+- [x] Batch Norm
+- [x] Layer Norm
+- [x] Dropout
+- [x] Sequential
+- [x] Lambda 
 
 </p>
 </details>
@@ -116,12 +116,12 @@ Optimizers
 </summary>
 <p>
 
-<input type="checkbox" name="check" id="SGD" value="1" disabled>
-<input type="checkbox" name="check" id="Momentum" value="1" disabled>
-<input type="checkbox" name="check" id="Adam" value="1" disabled>
-<input type="checkbox" name="check" id="AdaGrad" value="1" disabled>
-<input type="checkbox" name="check" id="AdaDelta" value="1" disabled>
-<input type="checkbox" name="check" id="RMSProp" value="1" disabled>
+- [x] SGD
+- [x] Momentum
+- [x] Adam
+- [x] AdaGrad
+- [x] AdaDelta
+- [x] RMSProp
 
 </p>
 </details>
@@ -132,10 +132,10 @@ Losses
 </summary>
 <p>
 
-<input type="checkbox" name="check" id="Binary Cross-Entropy" value="1" disabled>
-<input type="checkbox" name="check" id="Categorical Cross-Entropy" value="1" disabled>
-<input type="checkbox" name="check" id="MSE" value="1" disabled>
-<input type="checkbox" name="check" id="L1 & L2 regularization" value="1" disabled>
+- [x] Binary Cross-Entropy
+- [x] Categorical Cross-Entropy
+- [x] MSE
+- [x] L1 & L2 regularization
 
 </p>
 </details>
@@ -148,40 +148,40 @@ Tensor Operations
 
 Behavior of broadcast operations is consistent with numpy rules.
 
-<input type="checkbox" name="check" id="broadcast-add" value="1" disabled>
-<input type="checkbox" name="check" id="broadcast-sub" value="1" disabled>
-<input type="checkbox" name="check" id="broadcast-mul " value="1" disabled>
-<input type="checkbox" name="check" id="broadcast-div" value="1" disabled>
-<input type="checkbox" name="check" id="matmul" value="1" disabled>
-<input type="checkbox" name="check" id="neg" value="1" disabled>
-<input type="checkbox" name="check" id="exp" value="1" disabled>
-<input type="checkbox" name="check" id="pow" value="1" disabled>
-<input type="checkbox" name="check" id="log" value="1" disabled>
-<input type="checkbox" name="check" id="sqrt" value="1" disabled>
-<input type="checkbox" name="check" id="sin" value="1" disabled>
-<input type="checkbox" name="check" id="cos" value="1" disabled>
-<input type="checkbox" name="check" id="tan" value="1" disabled>
-<input type="checkbox" name="check" id="tanh" value="1" disabled>
-<input type="checkbox" name="check" id="sum" value="1" disabled>
-<input type="checkbox" name="check" id="max" value="1" disabled>
-<input type="checkbox" name="check" id="relu" value="1" disabled>
-<input type="checkbox" name="check" id="leaky relu" value="1" disabled>
-<input type="checkbox" name="check" id="reduce sum" value="1" disabled>
-<input type="checkbox" name="check" id="reduce max" value="1" disabled>
-<input type="checkbox" name="check" id="scatter" value="1" disabled>
-<input type="checkbox" name="check" id="gather" value="1" disabled>
-<input type="checkbox" name="check" id="conv2d" value="1" disabled>
-<input type="checkbox" name="check" id="transposed conv2d" value="1" disabled>
-<input type="checkbox" name="check" id="max pool" value="1" disabled>
-<input type="checkbox" name="check" id="avg pool" value="1" disabled>
-<input type="checkbox" name="check" id="subscript" value="1" disabled>
-<input type="checkbox" name="check" id="subscript range" value="1" disabled>
-<input type="checkbox" name="check" id="transpose" value="1" disabled>
-<input type="checkbox" name="check" id="axis permute" value="1" disabled>
-<input type="checkbox" name="check" id="reverse" value="1" disabled>
-<input type="checkbox" name="check" id="im2col" value="1" disabled>
-<input type="checkbox" name="check" id="col2im" value="1" disabled>
-<input type="checkbox" name="check" id="stack / concat" value="1" disabled>
+- [x] broadcast-add
+- [x] broadcast-sub
+- [x] broadcast-mul 
+- [x] broadcast-div
+- [x] matmul
+- [x] neg
+- [x] exp
+- [x] pow
+- [x] log
+- [x] sqrt
+- [x] sin
+- [x] cos
+- [x] tan
+- [x] tanh
+- [x] sum
+- [x] max
+- [x] relu
+- [x] leaky relu
+- [x] reduce sum
+- [x] reduce max
+- [x] scatter
+- [x] gather
+- [x] conv2d
+- [x] transposed conv2d
+- [x] max pool
+- [x] avg pool
+- [x] subscript
+- [x] subscript range
+- [x] transpose
+- [x] axis permute
+- [x] reverse
+- [x] im2col
+- [x] col2im
+- [x] stack / concat
 
 </p>
 </details>
@@ -192,9 +192,9 @@ Engines
 </summary>
 <p>
 
-<input type="checkbox" name="check" id="CPU (Accelerate framework for Apple Devices)" value="1" disabled>
-<input type="checkbox" name="check" id="CPU (Intel Math Kernel Library and Integrated Performance Primitives)" value="1" disabled>
-<input type="checkbox" name="check" id="CPU (Generic)" value="1" disabled>
+- [x] CPU (Accelerate framework for Apple Devices)
+- [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
+- [x] CPU (Generic)
 - [ ] GPU (Metal)
 
 For an experimental, early stage Metal implementation, check out `feature/metal`.
@@ -210,9 +210,9 @@ Architectures
 
 Default implementations are provided for the following architectures:
 
-<input type="checkbox" name="check" id="ResNet18" value="1" disabled>
-<input type="checkbox" name="check" id="VGG (11, 13, 16, 19)" value="1" disabled>
-<input type="checkbox" name="check" id="AlexNet" value="1" disabled>
+- [x] ResNet18
+- [x] VGG (11, 13, 16, 19)
+- [x] AlexNet
 
 </p>
 </details>
