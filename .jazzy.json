@@ -44,11 +44,11 @@
     }, {
         "name": "Loss Functions",
         "children": [
-            "binaryCrossEntropy",
-            "categoricalCrossEntropy",
-            "meanSquaredError",
-            "l1loss",
-            "l2loss"
+            "binaryCrossEntropy(expected:actual:)",
+            "categoricalCrossEntropy(expected:actual:)",
+            "meanSquaredError(expected:actual:)",
+            "l1loss(_:loss:)",
+            "l2loss(_:loss:)"
         ]
     }, {
         "name": "Optimizers",

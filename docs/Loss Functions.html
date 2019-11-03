@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Optimizers  Reference</title>
+    <title>Loss Functions  Reference</title>
     <link rel="stylesheet" type="text/css" href="css/jazzy.css" />
     <link rel="stylesheet" type="text/css" href="css/highlight.css" />
     <meta charset="utf-8">
@@ -14,9 +14,9 @@
   </head>
   <body>
 
-    <a name="//apple_ref/swift/Section/Optimizers" class="dashAnchor"></a>
+    <a name="//apple_ref/swift/Section/Loss Functions" class="dashAnchor"></a>
 
-    <a title="Optimizers  Reference"></a>
+    <a title="Loss Functions  Reference"></a>
 
     <header class="header">
       <p class="header-col header-col--primary">
@@ -44,7 +44,7 @@
     <p class="breadcrumbs">
       <a class="breadcrumb" href="index.html">DL4S Reference</a>
       <img class="carat" src="img/carat.png" />
-      Optimizers  Reference
+      Loss Functions  Reference
     </p>
 
     <div class="content-wrapper">
@@ -438,7 +438,7 @@
 
         <section class="section">
           <div class="section-content">
-            <h1>Optimizers</h1>
+            <h1>Loss Functions</h1>
             
           </div>
         </section>
@@ -446,13 +446,20 @@
         <section class="section">
           <div class="section-content">
             <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Losses"></a>
+                <a name="//apple_ref/swift/Section/Losses" class="dashAnchor"></a>
+                <a href="#/Losses">
+                  <h3 class="section-name">Losses</h3>
+                </a>
+              </div>
               <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S3SGDV"></a>
-                    <a name="//apple_ref/swift/Struct/SGD" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3SGDV">SGD</a>
+                    <a name="/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF"></a>
+                    <a name="//apple_ref/swift/Function/binaryCrossEntropy(expected:actual:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -460,17 +467,57 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>&lsquo;Vanilla&rsquo; stochastic gradient descent optimizer</p>
+                        <p>Computes the (element-wise) binary cross entropy loss on the given and expected probabilities and
+uses the mean as a reduction.
+expected and predicted are assumed to be in the interval (0, 1).</p>
 
-                        <a href="Structs/SGD.html" class="slightly-smaller">See more</a>
+<p>The binary cross entropy loss is defined as</p>
+<pre class="highlight swift"><code><span class="o">-</span><span class="n">expected</span> <span class="o">*</span> <span class="nf">log</span><span class="p">(</span><span class="n">predicted</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">expected</span><span class="p">)</span> <span class="o">*</span> <span class="nf">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">predicted</span><span class="p">)</span>
+</code></pre>
+
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">SGD</span><span class="o">&lt;</span><span class="kt">Layer</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/Optimizer.html">Optimizer</a></span> <span class="k">where</span> <span class="kt">Layer</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">binaryCrossEntropy</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>expected</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Expected values</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>actual</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Predicted values</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>Loss, scalar value</p>
                       </div>
                     </section>
                   </div>
@@ -478,9 +525,9 @@
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S8MomentumV"></a>
-                    <a name="//apple_ref/swift/Struct/Momentum" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S8MomentumV">Momentum</a>
+                    <a name="/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF"></a>
+                    <a name="//apple_ref/swift/Function/categoricalCrossEntropy(expected:actual:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF">categoricalCrossEntropy(expected:actual:)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -488,31 +535,67 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Gradient descent optimizer with momentum</p>
+                        <p>Computes the categorical cross entropy loss on the given expected probabilities and the expected labels and
+uses the mean as a reduction.
+predicted values are assumed to be in the interval (0, 1)</p>
 
-                        <a href="Structs/Momentum.html" class="slightly-smaller">See more</a>
+<p>The categorical cross entropy loss is defined as</p>
+<pre class="highlight swift"><code><span class="o">-</span><span class="nf">log</span><span class="p">(</span><span class="n">predicted</span><span class="p">[</span><span class="n">expected</span><span class="p">])</span>
+</code></pre>
+
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Momentum</span><span class="o">&lt;</span><span class="kt">Layer</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/Optimizer.html">Optimizer</a></span> <span class="k">where</span> <span class="kt">Layer</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">categoricalCrossEntropy</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>expected</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Expected labels</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>actual</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Predicted values</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>Loss, scalar value</p>
                       </div>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S4AdamV"></a>
-                    <a name="//apple_ref/swift/Struct/Adam" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4AdamV">Adam</a>
+                    <a name="/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF"></a>
+                    <a name="//apple_ref/swift/Function/meanSquaredError(expected:actual:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -520,33 +603,57 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Adam optimizer (Adaptive moment estimation)</p>
+                        <p>Computes the element-wise mean squared error between the given predicted and expected values</p>
 
-<p>Follows <a href="https://arxiv.org/pdf/1412.6980.pdf">Kingma et al. - Adam: A method for stochastic optimization</a></p>
-
-                        <a href="Structs/Adam.html" class="slightly-smaller">See more</a>
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Adam</span><span class="o">&lt;</span><span class="kt">Layer</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/Optimizer.html">Optimizer</a></span> <span class="k">where</span> <span class="kt">Layer</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">meanSquaredError</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>expected</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Expected values</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>actual</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Predicted values</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S8AdadeltaV"></a>
-                    <a name="//apple_ref/swift/Struct/Adadelta" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S8AdadeltaV">Adadelta</a>
+                    <a name="/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
+                    <a name="//apple_ref/swift/Function/l1loss(_:loss:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -554,33 +661,57 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Adadelta Optimizer</p>
+                        <p>Computes the L1 loss of the given tensor.</p>
 
-<p>Follows <a href="https://arxiv.org/pdf/1212.5701.pdf">Matthew D. Zeiler - Adadelta: An adaptive learning rate method</a></p>
-
-                        <a href="Structs/Adadelta.html" class="slightly-smaller">See more</a>
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Adadelta</span><span class="o">&lt;</span><span class="kt">Layer</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/Optimizer.html">Optimizer</a></span> <span class="k">where</span> <span class="kt">Layer</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">l1loss</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">vector</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">loss</span><span class="p">:</span> <span class="kt">Element</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>vector</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Tensor to apply weight decay on</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>loss</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Weight decay importance scaling factor</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S7AdagradV"></a>
-                    <a name="//apple_ref/swift/Struct/Adagrad" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7AdagradV">Adagrad</a>
+                    <a name="/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
+                    <a name="//apple_ref/swift/Function/l2loss(_:loss:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -588,53 +719,47 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Adagrad optimizer</p>
+                        <p>Computes the L2 loss of the given tensor.</p>
 
-<p>Follows <a href="http://jmlr.org/papers/volume12/duchi11a/duchi11a.pdf">Duchi et al - Adaptive Subgradient Methods for Online Learning and Stochastic Optimization</a></p>
-
-                        <a href="Structs/Adagrad.html" class="slightly-smaller">See more</a>
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Adagrad</span><span class="o">&lt;</span><span class="kt">Layer</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/Optimizer.html">Optimizer</a></span> <span class="k">where</span> <span class="kt">Layer</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">l2loss</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">vector</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">loss</span><span class="p">:</span> <span class="kt">Element</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
 
                         </div>
                       </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S7RMSPropV"></a>
-                    <a name="//apple_ref/swift/Struct/RMSProp" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7RMSPropV">RMSProp</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Root mean square optimizer</p>
-
-<p>Unpublished, proposed by <a href="https://www.cs.toronto.edu/%7Etijmen/csc321/slides/lecture_slides_lec6.pdf">Geoffrey Hinton - Neural Networks for Machine Learning</a></p>
-
-                        <a href="Structs/RMSProp.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">RMSProp</span><span class="o">&lt;</span><span class="kt">Layer</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/Optimizer.html">Optimizer</a></span> <span class="k">where</span> <span class="kt">Layer</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span></code></pre>
-
-                        </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>vector</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Tensor to apply weight decay on</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>loss</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Weight decay importance scaling factor</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </section>
                   </div>

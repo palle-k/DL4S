@@ -26,19 +26,34 @@
 import Foundation
 
 /// Root mean square optimizer
+///
+/// Unpublished, proposed by [Geoffrey Hinton - Neural Networks for Machine Learning](https://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf)
 public struct RMSProp<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     
     public private(set) var model: Layer
     
+    /// Learning rate scaling factor
     public var learningRate: ParamTensor
+    
+    /// Exponential decay rate for gradient history
     public var gamma: ParamTensor
+    
+    /// Normalization scalar added to divisors
     public var epsilon: ParamTensor
     
     private var gradientSums: [ParamTensor]
     
     private var paths: [WritableKeyPath<Layer, ParamTensor>]
-    
+
+    /// Root mean square optimizer
+    ///
+    /// Unpublished, proposed by [Geoffrey Hinton - Neural Networks for Machine Learning](https://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf)
+    /// - Parameters:
+    ///   - model: Model to optimize
+    ///   - learningRate: Learning rate scaling factor
+    ///   - gamma: Exponential decay rate for gradient history
+    ///   - epsilon: Normalization scalar added to divisors
     public init(model: Layer, learningRate: ParamTensor = 0.001, gamma: ParamTensor = 0.9, epsilon: ParamTensor = 1e-8) {
         self.model = model
         self.learningRate = learningRate
@@ -51,6 +66,7 @@ public struct RMSProp<Layer: LayerType>: Optimizer {
         self.paths = model.parameterPaths
     }
     
+    /// Resets the state of the optimizer
     public mutating func reset() {
         self.gradientSums = model.parameters.map {
             Tensor(repeating: 0, shape: $0.shape)
@@ -71,5 +87,36 @@ public struct RMSProp<Layer: LayerType>: Optimizer {
             model[keyPath: path] -= delta
             model[keyPath: path].discardContext()
         }
+    }
+}
+
+extension RMSProp: Codable where Layer: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.model = try container.decode(Layer.self, forKey: .model)
+        self.learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
+        self.gamma = try container.decode(ParamTensor.self, forKey: .gamma)
+        self.epsilon = try container.decode(ParamTensor.self, forKey: .epsilon)
+        self.gradientSums = try container.decode([ParamTensor].self, forKey: .gradientSums)
+        self.paths = self.model.parameterPaths
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(model, forKey: .model)
+        try container.encode(learningRate, forKey: .learningRate)
+        try container.encode(gamma, forKey: .gamma)
+        try container.encode(epsilon, forKey: .epsilon)
+        try container.encode(gradientSums, forKey: .gradientSums)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case model
+        case learningRate
+        case gamma
+        case epsilon
+        case gradientSums
     }
 }

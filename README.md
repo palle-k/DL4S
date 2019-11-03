@@ -5,7 +5,8 @@
 <p align="center">
 <a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
-<a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a>
+<a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
+<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS-green.svg" alt="Supports Linux, macOS, iOS and tvOS" /></a>
 <a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
 </p>
 
@@ -37,7 +38,7 @@ commonly used optimizers, second derivatives and much more.
 
 1. In Xcode, select "File" > "Swift Packages" > "Add Package Dependency"
 2. Enter `https://github.com/palle-k/DL4S.git` into the Package URL field and click "Next".
-3. Select "Version", "Up to Next Major", 1.0.0 and click "Next".
+3. Select "Branch", "master" and click "Next".
 4. Enable the Package Product DL4S, your app in the "Add to Target" column and click "Next". 
 
 **Note**: Installation via CocoaPods is no longer supported for newer versions.
@@ -55,7 +56,7 @@ Then add `DL4S` as a dependency to your target:
 .target(name: "MyPackage", dependencies: ["DL4S"])
 ```
 
-#### MKL / IPP Support
+#### MKL / IPP / OpenMP Support
 
 DL4S can be accelerated with Intel's Math Kernel Library, Integrated Performance Primitives and OpenMP ([Installation Instructions](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo)).
 
@@ -71,7 +72,6 @@ export MKLROOT=/opt/intel/mkl
 export IPPROOT=/opt/intel/ipp
 export LD_LIBRARY_PATH=${MKLROOT}/lib/intel64:${IPPROOT}/lib/intel64:${LD_LIBRARY_PATH}
 
-# -c release is optional but recommended.
 swift build -c release \
     -Xswiftc -DMKL_ENABLE \
     -Xlinker -L${MKLROOT}/lib/intel64 \

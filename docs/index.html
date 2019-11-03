@@ -22,7 +22,7 @@
         <a class="header-link" href="index.html">
           DL4S Docs
         </a>
-         (61% documented)
+         (64% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -146,6 +146,26 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/AnyLayer.html">AnyLayer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Loss%20Functions.html">Loss Functions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF">categoricalCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
               </li>
             </ul>
           </li>
@@ -274,12 +294,6 @@
             <a class="nav-group-name-link" href="Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S23categoricalCrossEntropy8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceJ0R_r0_lF">categoricalCrossEntropy(expected:actual:)</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -287,12 +301,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">heaviside(_:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">leakyRelu(_:leakage:)</a>
@@ -311,9 +319,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">relu(_:)</a>
@@ -434,20 +439,21 @@
           <div class="section-content">
             
             <p align="center">
-<img src="https://github.com/palle-k/DL4S/blob/develop/.github/logo.png?raw=true" alt="DL4S" width="350" />
+<img src="https://github.com/palle-k/DL4S/blob/develop/.github/logo.png?raw=true" alt="DL4S" width="300" />
 </p>
 
 <p align="center">
 <a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
-<a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a>
+<a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
+<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS-green.svg" alt="Supports Linux, macOS, iOS and tvOS" /></a>
 </p>
 
 <p>DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
 It furthermore has automatic differentiation builtin, which allows you to create and train neural networks without needing to manually
 implement backpropagation.</p>
 
-<p>Features include accelerated implementations for many basic binary and unary operators,
+<p>Features include implementations for many basic binary and unary operators,
 matrix operations, convolutional and recurrent neural networks, 
 commonly used optimizers, second derivatives and much more.</p>
 
@@ -474,7 +480,7 @@ commonly used optimizers, second derivatives and much more.</p>
 <ol>
 <li>In Xcode, select <q>File</q> &gt; <q>Swift Packages</q> &gt; <q>Add Package Dependency</q></li>
 <li>Enter <code>https://github.com/palle-k/DL4S.git</code> into the Package URL field and click <q>Next</q>.</li>
-<li>Select <q>Version</q>, <q>Up to Next Major</q>, 1.0.0 and click <q>Next</q>.</li>
+<li>Select <q>Branch</q>, <q>master</q> and click <q>Next</q>.</li>
 <li>Enable the Package Product DL4S, your app in the <q>Add to Target</q> column and click <q>Next</q>.</li>
 </ol>
 
@@ -488,7 +494,7 @@ commonly used optimizers, second derivatives and much more.</p>
 <p>Then add <code>DL4S</code> as a dependency to your target:</p>
 <pre class="highlight swift"><code><span class="o">.</span><span class="nf">target</span><span class="p">(</span><span class="nv">name</span><span class="p">:</span> <span class="s">"MyPackage"</span><span class="p">,</span> <span class="nv">dependencies</span><span class="p">:</span> <span class="p">[</span><span class="s">"DL4S"</span><span class="p">])</span>
 </code></pre>
-<h4 id='mkl-ipp-support' class='heading'>MKL / IPP Support</h4>
+<h4 id='mkl-ipp-openmp-support' class='heading'>MKL / IPP / OpenMP Support</h4>
 
 <p>DL4S can be accelerated with Intel&rsquo;s Math Kernel Library, Integrated Performance Primitives and OpenMP (<a href="https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo">Installation Instructions</a>).</p>
 
@@ -503,7 +509,6 @@ If no acceleration library is available, a fallback implementation is used.</p>
 <span class="nb">export </span><span class="nv">IPPROOT</span><span class="o">=</span>/opt/intel/ipp
 <span class="nb">export </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">MKLROOT</span><span class="k">}</span>/lib/intel64:<span class="k">${</span><span class="nv">IPPROOT</span><span class="k">}</span>/lib/intel64:<span class="k">${</span><span class="nv">LD_LIBRARY_PATH</span><span class="k">}</span>
 
-<span class="c"># -c release is optional but recommended.</span>
 swift build <span class="nt">-c</span> release <span class="se">\</span>
     <span class="nt">-Xswiftc</span> <span class="nt">-DMKL_ENABLE</span> <span class="se">\</span>
     <span class="nt">-Xlinker</span> <span class="nt">-L</span><span class="k">${</span><span class="nv">MKLROOT</span><span class="k">}</span>/lib/intel64 <span class="se">\</span>
@@ -511,141 +516,101 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 </code></pre>
 <h2 id='features' class='heading'>Features</h2>
 
-<details>
-<summary>
-Layers
-</summary>
-<p>
+<h3 id='layers' class='heading'>Layers</h3>
+<input type="checkbox" checked disabled/> Convolution<br/>
+<input type="checkbox" checked disabled/> Transposed Convolution<br/>
+<input type="checkbox" checked disabled/> Dense/Linear/Fully Connected<br/>
+<input type="checkbox" checked disabled/> LSTM<br/>
+<input type="checkbox" checked disabled/> Gated Recurrent Unit (GRU)<br/>
+<input type="checkbox" checked disabled/> Vanilla RNN<br/>
+<input type="checkbox" checked disabled/> Bidirectional RNNs<br/>
+<input type="checkbox" checked disabled/> Max Pooling<br/>
+<input type="checkbox" checked disabled/> Average Pooling<br/>
+<input type="checkbox" checked disabled/> Adaptive Max Pooling<br/>
+<input type="checkbox" checked disabled/> Adaptive Average Pooling<br/>
+<input type="checkbox" checked disabled/> Relu<br/>
+<input type="checkbox" checked disabled/> Tanh<br/>
+<input type="checkbox" checked disabled/> Sigmoid<br/>
+<input type="checkbox" checked disabled/> Softmax<br/>
+<input type="checkbox" checked disabled/> Embedding<br/>
+<input type="checkbox" checked disabled/> Batch Norm<br/>
+<input type="checkbox" checked disabled/> Layer Norm<br/>
+<input type="checkbox" checked disabled/> Dropout<br/>
+<input type="checkbox" checked disabled/> Sequential<br/>
+<input type="checkbox" checked disabled/> Lambda<br/>
 
-- [x] Convolution
-- [x] Transposed Convolution
-- [x] Dense/Linear/Fully Connected
-- [x] LSTM
-- [x] Gated Recurrent Unit (GRU)
-- [x] Vanilla RNN
-- [x] Bidirectional RNNs
-- [x] Max Pooling
-- [x] Average Pooling
-- [x] Relu
-- [x] Tanh
-- [x] Sigmoid
-- [x] Softmax
-- [x] Embedding
-- [x] Batch Norm
-- [x] Layer Norm
-- [x] Sequential
-- [x] Dropout
-- [x] Lambda 
+<h3 id='optimizers' class='heading'>Optimizers</h3>
 
-</p>
-</details>
+<input type="checkbox" checked disabled/> SGD<br/>
+<input type="checkbox" checked disabled/> Momentum<br/>
+<input type="checkbox" checked disabled/> Adam<br/>
+<input type="checkbox" checked disabled/> AdaGrad<br/>
+<input type="checkbox" checked disabled/> AdaDelta<br/>
+<input type="checkbox" checked disabled/> RMSProp<br/>
 
-<details>
-<summary>
-Optimizers
-</summary>
-<p>
+<h3 id='losses' class='heading'>Losses</h3>
 
-- [x] SGD
-- [x] Momentum
-- [x] Adam
-- [x] AdaGrad
-- [x] AdaDelta
-- [x] RMSProp
 
-</p>
-</details>
+<input type="checkbox" checked disabled/> Binary Cross-Entropy<br/>
+<input type="checkbox" checked disabled/> Categorical Cross-Entropy<br/>
+<input type="checkbox" checked disabled/> MSE<br/>
+<input type="checkbox" checked disabled/> L1 &amp; L2 regularization<br/>
 
-<details>
-<summary>
-Losses
-</summary>
-<p>
+<h3 id='tensor-operations' class='heading'>Tensor Operations</h3>
 
-- [x] Binary Cross-Entropy
-- [x] Categorical Cross-Entropy
-- [x] MSE
-- [x] L1 & L2 regularization
+<p>Behavior of broadcast operations is consistent with numpy rules.</p>
 
-</p>
-</details>
+<input type="checkbox" checked disabled/> broadcast-add<br/>
+<input type="checkbox" checked disabled/> broadcast-sub<br/>
+<input type="checkbox" checked disabled/> broadcast-mul<br/>
+<input type="checkbox" checked disabled/> broadcast-div<br/>
+<input type="checkbox" checked disabled/> matmul<br/>
+<input type="checkbox" checked disabled/> neg<br/>
+<input type="checkbox" checked disabled/> exp<br/>
+<input type="checkbox" checked disabled/> pow<br/>
+<input type="checkbox" checked disabled/> log<br/>
+<input type="checkbox" checked disabled/> sqrt<br/>
+<input type="checkbox" checked disabled/> sin<br/>
+<input type="checkbox" checked disabled/> cos<br/>
+<input type="checkbox" checked disabled/> tan<br/>
+<input type="checkbox" checked disabled/> tanh<br/>
+<input type="checkbox" checked disabled/> sum<br/>
+<input type="checkbox" checked disabled/> max<br/>
+<input type="checkbox" checked disabled/> relu<br/>
+<input type="checkbox" checked disabled/> leaky relu<br/>
+<input type="checkbox" checked disabled/> reduce sum<br/>
+<input type="checkbox" checked disabled/> reduce max<br/>
+<input type="checkbox" checked disabled/> scatter<br/>
+<input type="checkbox" checked disabled/> gather<br/>
+<input type="checkbox" checked disabled/> conv2d<br/>
+<input type="checkbox" checked disabled/> transposed conv2d<br/>
+<input type="checkbox" checked disabled/> max pool<br/>
+<input type="checkbox" checked disabled/> avg pool<br/>
+<input type="checkbox" checked disabled/> subscript<br/>
+<input type="checkbox" checked disabled/> subscript range<br/>
+<input type="checkbox" checked disabled/> transpose<br/>
+<input type="checkbox" checked disabled/> axis permute<br/>
+<input type="checkbox" checked disabled/> reverse<br/>
+<input type="checkbox" checked disabled/> im2col<br/>
+<input type="checkbox" checked disabled/> col2im<br/>
+<input type="checkbox" checked disabled/> stack / concat<br/>
 
-<details>
-<summary>
-Tensor Operations
-</summary>
-<p>
+<h3 id='engines' class='heading'>Engines</h3>
 
-Behavior of broadcast operations is consistent with numpy rules.
+<input type="checkbox" checked disabled/> CPU (Accelerate framework for Apple Devices)<br/>
+<input type="checkbox" checked disabled/> CPU (Intel Math Kernel Library and Integrated Performance Primitives)<br/>
+<input type="checkbox" checked disabled/> CPU (Generic)<br/>
+<input type="checkbox" disabled/> GPU (Metal)<br/>
 
-- [x] broadcast-add
-- [x] broadcast-sub
-- [x] broadcast-mul 
-- [x] broadcast-div
-- [x] matmul
-- [x] neg
-- [x] exp
-- [x] pow
-- [x] log
-- [x] sqrt
-- [x] sin
-- [x] cos
-- [x] tan
-- [x] tanh
-- [x] sum
-- [x] max
-- [x] relu
-- [x] leaky relu
-- [x] reduce sum
-- [x] reduce max
-- [x] scatter
-- [x] gather
-- [x] conv2d
-- [x] transposed conv2d
-- [x] max pool
-- [x] avg pool
-- [x] subscript
-- [x] subscript range
-- [x] transpose
-- [x] axis permute
-- [x] reverse
-- [x] im2col
-- [x] col2im
-- [x] stack / concat
+<p>For an experimental, early stage Metal implementation, check out <code>feature/metal</code>.</p>
+<h3 id='architectures' class='heading'>Architectures</h3>
 
-</p>
-</details>
+<p>Default implementations are provided for the following architectures:</p>
 
-<details>
-<summary>
-Engines
-</summary>
-<p>
+<input type="checkbox" checked disabled/> ResNet18<br/>
+<input type="checkbox" checked disabled/> VGG (11, 13, 16,/ 19)<br/>
+<input type="checkbox" checked disabled/> AlexNet<br/>
 
-- [x] CPU (Accelerate framework for Apple Devices)
-- [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
-- [x] CPU (Generic)
-- [ ] GPU (Metal)
-
-For an experimental, early stage Metal implementation, check out `feature/metal`.
-
-</p>
-</details>
-
-<details>
-<summary>
-Architectures
-</summary>
-<p>
-
-Default implementations are provided for the following architectures:
-
-- [x] ResNet18
-- [x] VGG (11, 13, 16, 19)
-- [x] AlexNet
-
-</p>
-</details>
 <h2 id='examples' class='heading'>Examples</h2>
 
 <p>Some high level examples have been implemented in other repositories:</p>
@@ -767,7 +732,7 @@ Therefore, second derivatives can be computed by computing the gradient of the g
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-02)</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-03)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

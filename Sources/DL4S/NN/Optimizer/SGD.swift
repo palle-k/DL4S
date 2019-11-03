@@ -33,9 +33,14 @@ public struct SGD<Layer: LayerType>: Optimizer {
     public var learningRate: ParamTensor
     private var paths: [WritableKeyPath<Layer, ParamTensor>]
     
+    /// 'Vanilla' stochastic gradient descent optimizer
+    /// - Parameters:
+    ///   - model: Model to optimize
+    ///   - learningRate: Learning rate with which to move along the gradient
     public init(model: Layer, learningRate: ParamTensor) {
         self.model = model
         self.learningRate = learningRate
+        // paths are only queried once, as creating keypaths is a major performance bottleneck
         self.paths = model.parameterPaths
     }
     
@@ -54,10 +59,18 @@ public struct Momentum<Layer: LayerType>: Optimizer {
     public private(set) var model: Layer
     private var velocities: [ParamTensor]
     
+    /// Learning rate with which to move along the gradient
     public var learningRate: ParamTensor
+    
+    /// Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
     public var momentum: ParamTensor
     private var paths: [WritableKeyPath<Layer, ParamTensor>]
     
+    /// Gradient descent optimizer with momentum
+    /// - Parameters:
+    ///   - model: Model to optimize
+    ///   - learningRate: Learning rate with which to move along the gradient
+    ///   - momentum: Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
     public init(model: Layer, learningRate: ParamTensor, momentum: ParamTensor = 0.8) {
         self.model = model
         self.learningRate = learningRate
@@ -67,6 +80,13 @@ public struct Momentum<Layer: LayerType>: Optimizer {
             Tensor(repeating: 0, shape: $0.shape)
         }
         self.paths = model.parameterPaths
+    }
+    
+    /// Resets the state of the optimizer
+    public mutating func reset() {
+        self.velocities = model.parameters.map {
+            Tensor(repeating: 0, shape: $0.shape)
+        }
     }
     
     public mutating func update(along gradients: [ParamTensor]) {
