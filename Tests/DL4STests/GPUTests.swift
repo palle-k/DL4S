@@ -24,6 +24,8 @@
 //  SOFTWARE.
 
 import XCTest
+import Metal
+import MetalPerformanceShaders
 @testable import DL4S
 
 class GPUTests: XCTestCase {

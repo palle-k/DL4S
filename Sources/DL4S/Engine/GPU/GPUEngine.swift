@@ -31,7 +31,6 @@ import MetalPerformanceShaders
 
 
 public struct GPUEngine: EngineType {
-    
     public typealias Device = GPU
 
     public static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int) {
@@ -69,10 +68,6 @@ public struct GPUEngine: EngineType {
     
     public static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
         GPU.function(named: "vMul_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), lhs.memory, rhs.memory, result.memory)
-    }
-    
-    public static func vMA<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, add: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
-        GPU.function(named: "vMA_\(N.gpuTypeIdentifier)").execute(workSize: (result.count, 1, 1), lhs.memory, rhs.memory, add.memory, result.memory)
     }
     
     public static func vsMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: N, result: Buffer<N, Device>, count: Int) {
@@ -315,6 +310,13 @@ public struct GPUEngine: EngineType {
         )
     }
     
+    public static func scatter<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func gather<N>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
     public static func sum<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
@@ -468,13 +470,6 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func scatter<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func gather<N>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
 }
 
 
