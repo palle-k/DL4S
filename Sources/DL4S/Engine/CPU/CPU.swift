@@ -180,18 +180,17 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         
         let padded = slice + [Range<Int>?](repeating: nil, count: shape.count - slice.count)
         
-        let resultShape = zip(padded, shape).enumerated().map { idx, el -> Int? in
+        let resultShape = zip(padded, shape).enumerated().map { idx, el -> Int in
             let (index, dimSize) = el
             return index.map {$0.count} ?? dimSize
         }
-        let flattenedResultShape = resultShape.compactMap {$0}
         
-        let resultCount = flattenedResultShape.reduce(1, *)
+        let resultCount = resultShape.reduce(1, *)
         let resultBuffer = allocateBuffer(withCapacity: resultCount, type: Element.self)
         
         recursiveRead(source: buffer.memory.bindMemory(to: Element.self).immutable, destination: resultBuffer.memory.bindMemory(to: Element.self), srcIndex: padded, srcStrides: strides, srcShape: shape)
         
-        return (resultBuffer, true, flattenedResultShape)
+        return (resultBuffer, true, resultShape)
     }
     
     public static func set<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {

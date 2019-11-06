@@ -173,9 +173,9 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
         let count = sDim * sStride
         destination.assign(from: source, count: count)
     } else {
-        let dstShape = zip(srcIndex, srcStrides)
-            .filter {$0.0 == nil}
-            .map {$1}
+        let dstShape = zip(srcShape, srcIndex).map {
+            $1?.count ?? $0
+        }
         let dstStrides = MemoryOps.strides(from: dstShape)
         let dStride = dstStrides[0]
         
@@ -328,9 +328,10 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
         let count = dDim * dStride
         destination.assign(from: source, count: count)
     } else {
-        let srcShape = zip(dstIndex, dstStrides)
-            .filter {$0.0 == nil}
-            .map {$1}
+        let srcShape = zip(dstIndex, dstShape).map {
+            $0?.count ?? $1
+        }
+        
         let srcStrides = MemoryOps.strides(from: srcShape)
         let sStride = srcStrides[0]
         

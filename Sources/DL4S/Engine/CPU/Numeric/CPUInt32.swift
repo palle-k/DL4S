@@ -102,7 +102,7 @@ extension Int32: CPUNumeric {
         vDSP_vsaddi(src, 1, [rhs], dst, 1, UInt(count))
         #else
         for i in 0 ..< count {
-            dst[i] = lhs[i] + rhs;
+            dst[i] = lhs[i] &+ rhs;
         }
         #endif
     }
@@ -111,7 +111,7 @@ extension Int32: CPUNumeric {
         let src = lhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
         for i in 0 ..< count {
-            dst[i] = src[i] * rhs;
+            dst[i] = src[i] &* rhs;
         }
     }
     
@@ -131,7 +131,7 @@ extension Int32: CPUNumeric {
         vDSP_vaddi(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
         for i in 0 ..< count {
-            dst[i] = lhs[i] + rhs[i]
+            dst[i] = lhs[i] &+ rhs[i]
         }
         #endif
     }
@@ -141,7 +141,7 @@ extension Int32: CPUNumeric {
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
         for i in 0 ..< count {
-            dst[i] = lhs[i] - rhs[i]
+            dst[i] = lhs[i] &- rhs[i]
         }
     }
     
@@ -150,7 +150,7 @@ extension Int32: CPUNumeric {
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
         for i in 0 ..< count {
-            dst[i] = lhs[i] * rhs[i]
+            dst[i] = lhs[i] &* rhs[i]
         }
     }
     
@@ -172,7 +172,7 @@ extension Int32: CPUNumeric {
         let src = val.pointer(capacity: count)
         var dst: Int32 = 0
         for i in 0 ..< count {
-            dst += src[i]
+            dst &+= src[i]
         }
         return dst
     }
@@ -181,7 +181,7 @@ extension Int32: CPUNumeric {
         let src = val.pointer(capacity: count * stride)
         var dst: Int32 = 0
         for i in 0 ..< count {
-            dst += src[i &* stride]
+            dst &+= src[i &* stride]
         }
         return dst
     }
@@ -295,7 +295,7 @@ extension Int32: CPUNumeric {
         ippsVectorSlope_32s(dst, Int32(count), Double(start), Double(increment))
         #else
         for i in 0 ..< count {
-            dst[i] = start + Int32(i) * increment
+            dst[i] = start &+ Int32(i) &* increment
         }
         #endif
     }
