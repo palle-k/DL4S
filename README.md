@@ -225,6 +225,7 @@ Some high level examples have been implemented in other repositories:
 
 - [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S) based on seq2seq with Attention
 - [Generative Adversarial Networks](https://github.com/palle-k/DL4S-WGAN-GP) - Wasserstein GAN with Gradient Penalty (WGAN-GP)
+- [Reinforcement Learning](https://github.com/palle-k/REINFORCE-DL4S) - Trains an agent to find the exit in a 2D grid world.
 
 ### Arithmetic & Differentiation
 
