@@ -66,6 +66,12 @@ func iterativeRead<Element>(
     }
 }
 
+@_specialize(where Element == Float, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Int32, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Double, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Float, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Int32, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Double, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
 func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -134,6 +140,9 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
     }
 }
 
+@_specialize(where Element == Float)
+@_specialize(where Element == Int32)
+@_specialize(where Element == Double)
 func iterativeWrite<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -164,6 +173,12 @@ func iterativeWrite<Element>(
     }
 }
 
+@_specialize(where Element == Float, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Int32, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Double, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Float, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Int32, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Double, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
 func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
