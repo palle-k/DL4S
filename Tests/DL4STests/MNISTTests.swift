@@ -91,9 +91,6 @@ class MNISTTests: XCTestCase {
             
             optimizer.update(along: gradients)
             
-//            if epoch.isMultiple(of: 100) {
-//                print("[\(epoch)/\(epochs)] loss: \(loss)")
-//            }
             bar.next(userInfo: loss.item)
         }
         bar.complete()
@@ -147,9 +144,6 @@ class MNISTTests: XCTestCase {
             let gradients = loss.gradients(of: optimizer.model.parameters)
             optimizer.update(along: gradients)
             
-//            if epoch.isMultiple(of: 100) {
-//                print("[\(epoch)/\(epochs)] loss: \(loss)")
-//            }
             bar.next(userInfo: loss.item)
         }
         
