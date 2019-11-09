@@ -31,6 +31,8 @@ extension EngineV2Tests {
         ("testReduceSum3", testReduceSum3),
         ("testScatter1", testScatter1),
         ("testScatter2", testScatter2),
+        ("testSubscriptSlice", testSubscriptSlice),
+        ("testSubscriptSliceWrite", testSubscriptSliceWrite),
     ]
 }
 
@@ -81,6 +83,7 @@ extension UtilTests {
     // to regenerate.
     static let __allTests__UtilTests = [
         ("testFileReader", testFileReader),
+        ("testThreadLocal", testThreadLocal),
     ]
 }
 
