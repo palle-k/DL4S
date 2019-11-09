@@ -26,6 +26,6 @@
 #ifndef mkl_h
 #define mkl_h
 
-void foo();
+// void foo();
 
 #endif /* mkl_h */

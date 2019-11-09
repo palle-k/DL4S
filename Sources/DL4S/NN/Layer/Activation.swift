@@ -116,3 +116,21 @@ public struct Lambda<Inputs, Outputs, Element: NumericType, Device: DeviceType>:
         transform(inputs)
     }
 }
+
+/// Element-wise gaussian error linear unit activation layer.
+public struct Gelu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+    public var leakage: Element
+    
+    /// Element-wise leaky rectified linear unit activation layer.
+    public init(leakage: Element) {
+        self.leakage = leakage
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        OperationGroup.capture(named: "GeLU") {
+            inputs.gaussianErrorLinear()
+        }
+    }
+}

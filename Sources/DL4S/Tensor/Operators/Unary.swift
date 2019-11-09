@@ -213,6 +213,21 @@ public extension Tensor {
         }
         return result
     }
+    
+    
+    /// Computes the element-wise GeLU activation
+    ///
+    /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
+    func gaussianErrorLinear() -> Self {
+        OperationGroup.capture(named: "gelu") {
+            self * (self * 1.702).sigmoid()
+        }
+    }
+}
+
+/// Computes the element-wise GeLU activation
+public func gelu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.gaussianErrorLinear()
 }
 
 /// Element-wise exponentiates the tensor.

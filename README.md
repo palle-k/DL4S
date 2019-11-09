@@ -98,6 +98,8 @@ Layers
 - [x] Adaptive Max Pooling
 - [x] Adaptive Average Pooling
 - [x] Relu
+- [x] LeakyRelu
+- [x] Gelu
 - [x] Tanh
 - [x] Sigmoid
 - [x] Softmax
@@ -106,7 +108,9 @@ Layers
 - [x] Layer Norm
 - [x] Dropout
 - [x] Sequential
-- [x] Lambda 
+- [x] Lambda
+- [x] Multi-head Attention
+- [x] Transformer Block
 
 </p>
 </details>
@@ -167,6 +171,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] max
 - [x] relu
 - [x] leaky relu
+- [x] gelu
 - [x] reduce sum
 - [x] reduce max
 - [x] scatter
