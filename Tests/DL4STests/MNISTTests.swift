@@ -227,4 +227,60 @@ class MNISTTests: XCTestCase {
         print("accuracy: \(accuracy * 100)%")
         XCTAssertGreaterThan(accuracy, 0.7)
     }
+    
+    func testLevenberg() {
+        var model = Sequential {
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            Relu<Float, CPU>()
+            
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            Relu<Float, CPU>()
+
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, CPU>()
+        }
+        
+        model.tag = "Classifier"
+        var optimizer = LevenbergMarquardt(model: model)
+        optimizer.lambda = 2.5
+        
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        
+        let epochs = 100
+        let batchSize = 256
+        
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        
+        for _ in 1 ... epochs {
+            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
+            
+            let predicted = optimizer.model(input.view(as: [batchSize, 28 * 28]))
+            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
+            
+            let gradients = loss.gradients(of: optimizer.model.parameters, retainBackwardsGraph: true)
+            optimizer.update(along: gradients)
+            
+            bar.next(userInfo: loss.item)
+        }
+        
+        bar.complete()
+        
+        var correctCount = 0
+        
+        for i in 0 ..< imagesVal.shape[0] {
+            let x = imagesVal[i].view(as: [1, 28 * 28])
+            let y = optimizer.model(x).squeezed()
+            let pred = y.argmax()
+            
+            let actual = Int(labelsVal[i].item)
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
+        
+        print("accuracy: \(accuracy * 100)%")
+        XCTAssertGreaterThan(accuracy, 0.7)
+    }
 }
