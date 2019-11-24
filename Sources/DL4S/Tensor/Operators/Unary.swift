@@ -213,6 +213,39 @@ public extension Tensor {
         }
         return result
     }
+    
+    /// Computes the element-wise GeLU activation
+    ///
+    /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
+    func gaussianErrorLinear() -> Self {
+        OperationGroup.capture(named: "gelu") {
+            self * (self * 1.702).sigmoid()
+        }
+    }
+    
+    
+    /// Computes the element-wise Swish activation
+    ///
+    /// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
+    func swishActivated(beta: Self = 1) -> Self {
+        self * DL4S.sigmoid(beta * self)
+    }
+    
+    
+    /// Computes the element-wise Mish activation
+    ///
+    /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
+    func mishActivated() -> Self {
+        self * DL4S.tanh(DL4S.log(1 + DL4S.exp(self)))
+    }
+    
+    
+    /// Computes the element-wise LiSHT activation
+    ///
+    /// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
+    func lishtActivated() -> Self {
+        self * DL4S.tanh(self)
+    }
 }
 
 /// Element-wise exponentiates the tensor.

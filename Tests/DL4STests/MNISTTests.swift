@@ -113,61 +113,6 @@ class MNISTTests: XCTestCase {
         XCTAssertGreaterThan(accuracy, 0.7)
     }
     
-    func testFCN() {
-        var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            Relu<Float, CPU>()
-            
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            Relu<Float, CPU>()
-
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
-        }
-        
-        model.tag = "Classifier"
-        var optimizer = Adam(model: model, learningRate: 0.001)
-        
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
-        
-        let epochs = 100
-        let batchSize = 256
-        
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
-        
-        for _ in 1 ... epochs {
-            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
-            
-            let predicted = optimizer.model(input.view(as: [batchSize, 28 * 28]))
-            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
-            
-            let gradients = loss.gradients(of: optimizer.model.parameters)
-            optimizer.update(along: gradients)
-            
-            bar.next(userInfo: loss.item)
-        }
-        
-        bar.complete()
-        
-        var correctCount = 0
-        
-        for i in 0 ..< imagesVal.shape[0] {
-            let x = imagesVal[i].view(as: [1, 28 * 28])
-            let y = optimizer.model(x).squeezed()
-            let pred = y.argmax()
-            
-            let actual = Int(labelsVal[i].item)
-            if pred == actual {
-                correctCount += 1
-            }
-        }
-        
-        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
-        
-        print("accuracy: \(accuracy * 100)%")
-        XCTAssertGreaterThan(accuracy, 0.7)
-    }
-    
     func testGRU() {
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
@@ -226,5 +171,127 @@ class MNISTTests: XCTestCase {
         
         print("accuracy: \(accuracy * 100)%")
         XCTAssertGreaterThan(accuracy, 0.7)
+    }
+    
+    func performAccuracyTest<L: LayerType>(_ model: L) where L.Inputs == Tensor<Float, CPU>, L.Outputs == L.Inputs, L.Parameter == Float, L.Device == CPU {
+        var optimizer = Adam(model: model, learningRate: 0.001)
+        
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        
+        let epochs = 100
+        let batchSize = 256
+        
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        
+        for _ in 1 ... epochs {
+            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
+            
+            let predicted = optimizer.model.callAsFunction(input.view(as: [batchSize, 28 * 28]))
+            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
+            
+            let gradients = loss.gradients(of: optimizer.model.parameters)
+            optimizer.update(along: gradients)
+            
+            bar.next(userInfo: loss.item)
+        }
+        
+        bar.complete()
+        
+        var correctCount = 0
+        
+        for i in 0 ..< imagesVal.shape[0] {
+            let x = imagesVal[i].view(as: [1, 28 * 28])
+            let y = optimizer.model.callAsFunction(x).squeezed()
+            let pred = y.argmax()
+            
+            let actual = Int(labelsVal[i].item)
+            if pred == actual {
+                correctCount += 1
+            }
+        }
+        
+        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
+        
+        print("accuracy: \(accuracy * 100)%")
+        XCTAssertGreaterThan(accuracy, 0.7)
+    }
+    
+    func testReluActivation() {
+        var model = Sequential {
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            Relu<Float, CPU>()
+            
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            Relu<Float, CPU>()
+
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, CPU>()
+        }
+        
+        model.tag = "Classifier"
+        performAccuracyTest(model)
+    }
+    
+    func testSwishActivation() {
+        var model = Sequential {
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            Swish<Float, CPU>(trainableWithChannels: 500)
+            
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            Swish<Float, CPU>(trainableWithChannels: 300)
+
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, CPU>()
+        }
+        model.tag = "Classifier"
+        performAccuracyTest(model)
+    }
+    
+    func testMishActivation() {
+        var model = Sequential {
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            Mish<Float, CPU>()
+            
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            Mish<Float, CPU>()
+
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, CPU>()
+        }
+        
+        model.tag = "Classifier"
+        performAccuracyTest(model)
+    }
+    
+    func testGeluActivation() {
+        var model = Sequential {
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            Gelu<Float, CPU>()
+            
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            Gelu<Float, CPU>()
+
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, CPU>()
+        }
+        
+        model.tag = "Classifier"
+        performAccuracyTest(model)
+    }
+    
+    func testLiSHTActivation() {
+        var model = Sequential {
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            LiSHT<Float, CPU>()
+            
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            LiSHT<Float, CPU>()
+
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, CPU>()
+        }
+        
+        model.tag = "Classifier"
+        performAccuracyTest(model)
     }
 }

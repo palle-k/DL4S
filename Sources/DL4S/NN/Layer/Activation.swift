@@ -52,6 +52,7 @@ public struct Sigmoid<Element: NumericType, Device: DeviceType>: LayerType, Coda
         }
     }
 }
+
 /// Element-wise rectified linear unit activation layer.
 public struct Relu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
@@ -95,6 +96,71 @@ public struct Softmax<Element: NumericType, Device: DeviceType>: LayerType, Coda
         OperationGroup.capture(named: "Softmax") {
             inputs.softmax()
         }
+    }
+}
+
+/// Element-wise gaussian error linear unit activation layer.
+public struct Gelu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+
+    /// Element-wise Gaussian error linear unit activation layer.
+    public init() {}
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        inputs.gaussianErrorLinear()
+    }
+}
+
+/// Element-wise Swish activation layer.
+public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+        beta.requiresGradient ? [\.beta] : []
+    }
+    public var parameters: [Tensor<Element, Device>] {
+        beta.requiresGradient ? [beta] : []
+    }
+    
+    public var beta: Tensor<Element, Device>
+
+    /// Element-wise Swish activation layer with learnable beta parameter
+    public init(trainableWithChannels channels: Int) {
+        beta = Tensor(repeating: 1, shape: [channels], requiresGradient: true)
+    }
+    
+    /// Element-wise Swish activation layer with fixed beta parameter
+    public init(fixedWithBeta beta: Element = 1) {
+        self.beta = Tensor(beta)
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        inputs.swishActivated(beta: beta)
+    }
+}
+
+/// Element-wise Mish activation layer.
+public struct Mish<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+
+    /// Element-wise Mish activation layer.
+    public init() {}
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        inputs.mishActivated()
+    }
+}
+
+/// Element-wise LiSHT activation layer.
+public struct LiSHT<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+
+    /// Element-wise LiSHT activation layer.
+    public init() {}
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        inputs.lishtActivated()
     }
 }
 

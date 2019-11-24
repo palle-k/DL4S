@@ -86,27 +86,45 @@ Layers
 </summary>
 <p>
 
+Core:
+
 - [x] Convolution
 - [x] Transposed Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
 - [x] Vanilla RNN
-- [x] Bidirectional RNNs
+- [x] Embedding
+
+Pooling:
+
 - [x] Max Pooling
 - [x] Average Pooling
 - [x] Adaptive Max Pooling
 - [x] Adaptive Average Pooling
+
+Norm:
+
+- [x] Batch Norm
+- [x] Layer Norm
+
+Utility:
+
+- [x] Bidirectional RNNs
+- [x] Sequential
+- [x] Lambda
+
+Activation:
+
 - [x] Relu
 - [x] Tanh
 - [x] Sigmoid
 - [x] Softmax
-- [x] Embedding
-- [x] Batch Norm
-- [x] Layer Norm
 - [x] Dropout
-- [x] Sequential
-- [x] Lambda 
+- [x] Gelu
+- [x] Swish
+- [x] Mish
+- [x] LiSHT
 
 </p>
 </details>

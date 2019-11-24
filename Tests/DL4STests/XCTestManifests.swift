@@ -54,8 +54,12 @@ extension MNISTTests {
     // to regenerate.
     static let __allTests__MNISTTests = [
         ("testConvNet", testConvNet),
-        ("testFCN", testFCN),
+        ("testGeluActivation", testGeluActivation),
         ("testGRU", testGRU),
+        ("testLiSHTActivation", testLiSHTActivation),
+        ("testMishActivation", testMishActivation),
+        ("testReluActivation", testReluActivation),
+        ("testSwishActivation", testSwishActivation),
     ]
 }
 
