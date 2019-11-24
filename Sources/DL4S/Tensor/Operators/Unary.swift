@@ -218,9 +218,7 @@ public extension Tensor {
     ///
     /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
     func gaussianErrorLinear() -> Self {
-        OperationGroup.capture(named: "gelu") {
-            self * (self * 1.702).sigmoid()
-        }
+        self * (self * 1.702).sigmoid()
     }
     
     
@@ -308,4 +306,35 @@ public func heaviside<Element, Device>(_ tensor: Tensor<Element, Device>) -> Ten
 /// If no axis is provided, the softmax is computed along axis 1.
 public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
     tensor.softmax(axis: axis)
+}
+
+/// Computes the element-wise GeLU activation
+///
+/// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
+func gelu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.gaussianErrorLinear()
+}
+
+
+/// Computes the element-wise Swish activation
+///
+/// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
+func swishActivated<Element, Device>(_ tensor: Tensor<Element, Device>, beta: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
+    tensor.swishActivated(beta: beta)
+}
+
+
+/// Computes the element-wise Mish activation
+///
+/// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
+func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.mishActivated()
+}
+
+
+/// Computes the element-wise LiSHT activation
+///
+/// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
+func lishtActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.lishtActivated()
 }

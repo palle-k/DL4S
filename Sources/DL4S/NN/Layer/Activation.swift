@@ -108,7 +108,9 @@ public struct Gelu<Element: NumericType, Device: DeviceType>: LayerType, Codable
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        inputs.gaussianErrorLinear()
+        OperationGroup.capture(named: "gelu") {
+            inputs.gaussianErrorLinear()
+        }
     }
 }
 
@@ -134,7 +136,9 @@ public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codabl
     }
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        inputs.swishActivated(beta: beta)
+        OperationGroup.capture(named: "swish") {
+            inputs.swishActivated(beta: beta)
+        }
     }
 }
 
@@ -147,7 +151,9 @@ public struct Mish<Element: NumericType, Device: DeviceType>: LayerType, Codable
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        inputs.mishActivated()
+        OperationGroup.capture(named: "mish") {
+            inputs.mishActivated()
+        }
     }
 }
 
@@ -160,7 +166,9 @@ public struct LiSHT<Element: NumericType, Device: DeviceType>: LayerType, Codabl
     public init() {}
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        inputs.lishtActivated()
+        OperationGroup.capture(named: "lisht") {
+            inputs.lishtActivated()
+        }
     }
 }
 
