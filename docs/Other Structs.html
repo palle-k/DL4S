@@ -148,6 +148,18 @@
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/AnyLayer.html">AnyLayer</a>
               </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Gelu.html">Gelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Swish.html">Swish</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Mish.html">Mish</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LiSHT.html">LiSHT</a>
+              </li>
             </ul>
           </li>
           <li class="nav-group-name">
@@ -416,15 +428,6 @@
                 <a class="nav-group-task-link" href="Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/Gelu.html">Gelu</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/LiSHT.html">LiSHT</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/Mish.html">Mish</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -432,9 +435,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ShapedBuffer.html">ShapedBuffer</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Structs/Swish.html">Swish</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/VRAMAllocator.html">VRAMAllocator</a>
@@ -718,122 +718,6 @@
                         <div class="language">
                           <p class="aside-title">Swift</p>
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">GPUEngine</span> <span class="p">:</span> <span class="kt"><a href="Protocols/EngineType.html">EngineType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S4GeluV"></a>
-                    <a name="//apple_ref/swift/Struct/Gelu" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4GeluV">Gelu</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Element-wise gaussian error linear unit activation layer.</p>
-
-                        <a href="Structs/Gelu.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Gelu</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S5SwishV"></a>
-                    <a name="//apple_ref/swift/Struct/Swish" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S5SwishV">Swish</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Element-wise Swish activation layer.</p>
-
-                        <a href="Structs/Swish.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Swish</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S4MishV"></a>
-                    <a name="//apple_ref/swift/Struct/Mish" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4MishV">Mish</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Element-wise Mish activation layer.</p>
-
-                        <a href="Structs/Mish.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Mish</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S5LiSHTV"></a>
-                    <a name="//apple_ref/swift/Struct/LiSHT" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S5LiSHTV">LiSHT</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Element-wise LiSHT activation layer.</p>
-
-                        <a href="Structs/LiSHT.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">LiSHT</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
 
                         </div>
                       </div>
