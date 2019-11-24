@@ -23,7 +23,7 @@
         <a class="header-link" href="index.html">
           DL4S Docs
         </a>
-         (64% documented)
+         (66% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -173,6 +173,9 @@
           <li class="nav-group-name">
             <a class="nav-group-name-link" href="Optimizers.html">Optimizers</a>
             <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/Optimizer.html">Optimizer</a>
+              </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/SGD.html">SGD</a>
               </li>
@@ -381,9 +384,6 @@
                 <a class="nav-group-task-link" href="Protocols/NumericType.html">NumericType</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Protocols/Optimizer.html">Optimizer</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Protocols/RandomizableType.html">RandomizableType</a>
               </li>
               <li class="nav-group-task">
@@ -416,6 +416,15 @@
                 <a class="nav-group-task-link" href="Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Gelu.html">Gelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LiSHT.html">LiSHT</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Mish.html">Mish</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -423,6 +432,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ShapedBuffer.html">ShapedBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Swish.html">Swish</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/VRAMAllocator.html">VRAMAllocator</a>
@@ -632,38 +644,6 @@
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S9OptimizerP"></a>
-                    <a name="//apple_ref/swift/Protocol/Optimizer" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S9OptimizerP">Optimizer</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Optimizer that updates a neural network along its gradients</p>
-
-                        <a href="Protocols/Optimizer.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">Optimizer</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
                     <a name="/s:4DL4S12ZeroableTypeP"></a>
                     <a name="//apple_ref/swift/Protocol/ZeroableType" class="dashAnchor"></a>
                     <a class="token" href="#/s:4DL4S12ZeroableTypeP">ZeroableType</a>
@@ -674,7 +654,12 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>A type conforming to the ZeroableType protocol is required to have a zero value, which fulfills the following requirements for any other value x:</p>
+
+<ul>
+<li>x * .zero = .zero</li>
+<li>x + .zero = x</li>
+</ul>
 
                         <a href="Protocols/ZeroableType.html" class="slightly-smaller">See more</a>
                       </div>
@@ -702,7 +687,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Undocumented</p>
+                        <p>A type that can be used as a number in a Tensor.</p>
 
                         <a href="Protocols/NumericType.html" class="slightly-smaller">See more</a>
                       </div>
@@ -757,8 +742,8 @@
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-03)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

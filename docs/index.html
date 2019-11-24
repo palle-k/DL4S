@@ -22,7 +22,7 @@
         <a class="header-link" href="index.html">
           DL4S Docs
         </a>
-         (64% documented)
+         (66% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -172,6 +172,9 @@
           <li class="nav-group-name">
             <a class="nav-group-name-link" href="Optimizers.html">Optimizers</a>
             <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/Optimizer.html">Optimizer</a>
+              </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/SGD.html">SGD</a>
               </li>
@@ -380,9 +383,6 @@
                 <a class="nav-group-task-link" href="Protocols/NumericType.html">NumericType</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Protocols/Optimizer.html">Optimizer</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Protocols/RandomizableType.html">RandomizableType</a>
               </li>
               <li class="nav-group-task">
@@ -415,6 +415,15 @@
                 <a class="nav-group-task-link" href="Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Gelu.html">Gelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LiSHT.html">LiSHT</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Mish.html">Mish</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -422,6 +431,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ShapedBuffer.html">ShapedBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Swish.html">Swish</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/VRAMAllocator.html">VRAMAllocator</a>
@@ -446,7 +458,8 @@
 <a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
 <a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
-<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS-green.svg" alt="Supports Linux, macOS, iOS and tvOS" /></a>
+<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS%20|%20watchOS-green.svg" alt="Supports Linux, macOS, iOS, tvOS and watchOS" /></a>
+<a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
 </p>
 
 <p>DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
@@ -517,27 +530,41 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 <h2 id='features' class='heading'>Features</h2>
 
 <h3 id='layers' class='heading'>Layers</h3>
+<br/>
+<p>Core:</p>
 <input type="checkbox" checked disabled/> Convolution<br/>
 <input type="checkbox" checked disabled/> Transposed Convolution<br/>
 <input type="checkbox" checked disabled/> Dense/Linear/Fully Connected<br/>
 <input type="checkbox" checked disabled/> LSTM<br/>
 <input type="checkbox" checked disabled/> Gated Recurrent Unit (GRU)<br/>
 <input type="checkbox" checked disabled/> Vanilla RNN<br/>
-<input type="checkbox" checked disabled/> Bidirectional RNNs<br/>
+<input type="checkbox" checked disabled/> Embedding<br/>
+<br/>
+<p>Pooling:</p>
 <input type="checkbox" checked disabled/> Max Pooling<br/>
 <input type="checkbox" checked disabled/> Average Pooling<br/>
 <input type="checkbox" checked disabled/> Adaptive Max Pooling<br/>
 <input type="checkbox" checked disabled/> Adaptive Average Pooling<br/>
+<br/>
+<p>Norm:</p>
+<input type="checkbox" checked disabled/> Batch Norm<br/>
+<input type="checkbox" checked disabled/> Layer Norm<br/>
+<br/>
+<p>Utility:</p>
+<input type="checkbox" checked disabled/> Sequential<br/>
+<input type="checkbox" checked disabled/> Bidirectional RNNs<br/>
+<input type="checkbox" checked disabled/> Dropout<br/>
+<input type="checkbox" checked disabled/> Lambda<br/>
+<br/>
+<p>Activation:</p>
 <input type="checkbox" checked disabled/> Relu<br/>
 <input type="checkbox" checked disabled/> Tanh<br/>
 <input type="checkbox" checked disabled/> Sigmoid<br/>
 <input type="checkbox" checked disabled/> Softmax<br/>
-<input type="checkbox" checked disabled/> Embedding<br/>
-<input type="checkbox" checked disabled/> Batch Norm<br/>
-<input type="checkbox" checked disabled/> Layer Norm<br/>
-<input type="checkbox" checked disabled/> Dropout<br/>
-<input type="checkbox" checked disabled/> Sequential<br/>
-<input type="checkbox" checked disabled/> Lambda<br/>
+<input type="checkbox" checked disabled/> Gelu<br/>
+<input type="checkbox" checked disabled/> Swish<br/>
+<input type="checkbox" checked disabled/> Mish<br/>
+<input type="checkbox" checked disabled/> LiSHT<br/>
 
 <h3 id='optimizers' class='heading'>Optimizers</h3>
 
@@ -594,6 +621,10 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 <input type="checkbox" checked disabled/> im2col<br/>
 <input type="checkbox" checked disabled/> col2im<br/>
 <input type="checkbox" checked disabled/> stack / concat<br/>
+<input type="checkbox" checked disabled/> gelu activation<br/>
+<input type="checkbox" checked disabled/> swish activation<br/>
+<input type="checkbox" checked disabled/> mish activation<br/>
+<input type="checkbox" checked disabled/> lisht activation<br/>
 
 <h3 id='engines' class='heading'>Engines</h3>
 
@@ -618,6 +649,7 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 <ul>
 <li><a href="https://github.com/palle-k/Seq2Seq-DL4S">Neural Machine Translation</a> based on seq2seq with Attention</li>
 <li><a href="https://github.com/palle-k/DL4S-WGAN-GP">Generative Adversarial Networks</a> - Wasserstein GAN with Gradient Penalty (WGAN-GP)</li>
+<li><a href="https://github.com/palle-k/REINFORCE-DL4S">Reinforcement Learning</a> - Trains an agent to find the exit in a 2D grid world.</li>
 </ul>
 <h3 id='arithmetic-amp-differentiation' class='heading'>Arithmetic &amp; Differentiation</h3>
 
@@ -732,8 +764,8 @@ Therefore, second derivatives can be computed by computing the gradient of the g
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-03)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

@@ -201,6 +201,10 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] im2col
 - [x] col2im
 - [x] stack / concat
+- [x] gelu activation
+- [x] swish activation
+- [x] mish activation
+- [x] lisht activation
 
 </p>
 </details>

@@ -22,7 +22,7 @@
         <a class="header-link" href="index.html">
           DL4S Docs
         </a>
-         (64% documented)
+         (66% documented)
       </p>
     
       <p class="header-col--secondary">
@@ -172,6 +172,9 @@
           <li class="nav-group-name">
             <a class="nav-group-name-link" href="Optimizers.html">Optimizers</a>
             <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/Optimizer.html">Optimizer</a>
+              </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/SGD.html">SGD</a>
               </li>
@@ -380,9 +383,6 @@
                 <a class="nav-group-task-link" href="Protocols/NumericType.html">NumericType</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="Protocols/Optimizer.html">Optimizer</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Protocols/RandomizableType.html">RandomizableType</a>
               </li>
               <li class="nav-group-task">
@@ -415,6 +415,15 @@
                 <a class="nav-group-task-link" href="Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Gelu.html">Gelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LiSHT.html">LiSHT</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Mish.html">Mish</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -422,6 +431,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/ShapedBuffer.html">ShapedBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Swish.html">Swish</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/VRAMAllocator.html">VRAMAllocator</a>
@@ -446,7 +458,8 @@
 <a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
 <a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
-<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS-green.svg" alt="Supports Linux, macOS, iOS and tvOS" /></a>
+<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS%20|%20watchOS-green.svg" alt="Supports Linux, macOS, iOS, tvOS and watchOS" /></a>
+<a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
 </p>
 
 <p>DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
@@ -515,108 +528,162 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
     <span class="nt">-Xlinker</span> <span class="nt">-L</span><span class="k">${</span><span class="nv">IPPROOT</span><span class="k">}</span>/lib/intel64
 </code></pre>
 <h2 id='features' class='heading'>Features</h2>
-<h3 id='layers' class='heading'>Layers</h3>
 
-<ul>
-<li>[x] Convolution</li>
-<li>[x] Transposed Convolution</li>
-<li>[x] Dense/Linear/Fully Connected</li>
-<li>[x] LSTM</li>
-<li>[x] Gated Recurrent Unit (GRU)</li>
-<li>[x] Vanilla RNN</li>
-<li>[x] Bidirectional RNNs</li>
-<li>[x] Max Pooling</li>
-<li>[x] Average Pooling</li>
-<li>[x] Adaptive Max Pooling</li>
-<li>[x] Adaptive Average Pooling</li>
-<li>[x] Relu</li>
-<li>[x] Tanh</li>
-<li>[x] Sigmoid</li>
-<li>[x] Softmax</li>
-<li>[x] Embedding</li>
-<li>[x] Batch Norm</li>
-<li>[x] Layer Norm</li>
-<li>[x] Dropout</li>
-<li>[x] Sequential</li>
-<li>[x] Lambda</li>
-</ul>
-<h3 id='optimizers' class='heading'>Optimizers</h3>
+<details>
+<summary>
+Layers
+</summary>
+<p>
 
-<ul>
-<li>[x] SGD</li>
-<li>[x] Momentum</li>
-<li>[x] Adam</li>
-<li>[x] AdaGrad</li>
-<li>[x] AdaDelta</li>
-<li>[x] RMSProp</li>
-</ul>
-<h3 id='losses' class='heading'>Losses</h3>
+Core:
 
-<ul>
-<li>[x] Binary Cross-Entropy</li>
-<li>[x] Categorical Cross-Entropy</li>
-<li>[x] MSE</li>
-<li>[x] L1 &amp; L2 regularization</li>
-</ul>
-<h3 id='tensor-operations' class='heading'>Tensor Operations</h3>
+- [x] Convolution
+- [x] Transposed Convolution
+- [x] Dense/Linear/Fully Connected
+- [x] LSTM
+- [x] Gated Recurrent Unit (GRU)
+- [x] Vanilla RNN
+- [x] Embedding
 
-<p>Behavior of broadcast operations is consistent with numpy rules.</p>
+Pooling:
 
-<ul>
-<li>[x] broadcast-add</li>
-<li>[x] broadcast-sub</li>
-<li>[x] broadcast-mul</li>
-<li>[x] broadcast-div</li>
-<li>[x] matmul</li>
-<li>[x] neg</li>
-<li>[x] exp</li>
-<li>[x] pow</li>
-<li>[x] log</li>
-<li>[x] sqrt</li>
-<li>[x] sin</li>
-<li>[x] cos</li>
-<li>[x] tan</li>
-<li>[x] tanh</li>
-<li>[x] sum</li>
-<li>[x] max</li>
-<li>[x] relu</li>
-<li>[x] leaky relu</li>
-<li>[x] reduce sum</li>
-<li>[x] reduce max</li>
-<li>[x] scatter</li>
-<li>[x] gather</li>
-<li>[x] conv2d</li>
-<li>[x] transposed conv2d</li>
-<li>[x] max pool</li>
-<li>[x] avg pool</li>
-<li>[x] subscript</li>
-<li>[x] subscript range</li>
-<li>[x] transpose</li>
-<li>[x] axis permute</li>
-<li>[x] reverse</li>
-<li>[x] im2col</li>
-<li>[x] col2im</li>
-<li>[x] stack / concat</li>
-</ul>
-<h3 id='engines' class='heading'>Engines</h3>
+- [x] Max Pooling
+- [x] Average Pooling
+- [x] Adaptive Max Pooling
+- [x] Adaptive Average Pooling
 
-<ul>
-<li>[x] CPU (Accelerate framework for Apple Devices)</li>
-<li>[x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)</li>
-<li>[x] CPU (Generic)</li>
-<li>[ ] GPU (Metal)</li>
-</ul>
+Norm:
 
-<p>For an experimental, early stage Metal implementation, check out <code>feature/metal</code>.</p>
-<h3 id='architectures' class='heading'>Architectures</h3>
+- [x] Batch Norm
+- [x] Layer Norm
 
-<p>Default implementations are provided for the following architectures:</p>
+Utility:
 
-<ul>
-<li>[x] ResNet18</li>
-<li>[x] VGG (11, 13, 16, 19)</li>
-<li>[x] AlexNet</li>
-</ul>
+- [x] Bidirectional RNNs
+- [x] Sequential
+- [x] Lambda
+
+Activation:
+
+- [x] Relu
+- [x] Tanh
+- [x] Sigmoid
+- [x] Softmax
+- [x] Dropout
+- [x] Gelu
+- [x] Swish
+- [x] Mish
+- [x] LiSHT
+
+</p>
+</details>
+
+<details>
+<summary>
+Optimizers
+</summary>
+<p>
+
+- [x] SGD
+- [x] Momentum
+- [x] Adam
+- [x] AdaGrad
+- [x] AdaDelta
+- [x] RMSProp
+
+</p>
+</details>
+
+<details>
+<summary>
+Losses
+</summary>
+<p>
+
+- [x] Binary Cross-Entropy
+- [x] Categorical Cross-Entropy
+- [x] MSE
+- [x] L1 & L2 regularization
+
+</p>
+</details>
+
+<details>
+<summary>
+Tensor Operations
+</summary>
+<p>
+
+Behavior of broadcast operations is consistent with numpy rules.
+
+- [x] broadcast-add
+- [x] broadcast-sub
+- [x] broadcast-mul 
+- [x] broadcast-div
+- [x] matmul
+- [x] neg
+- [x] exp
+- [x] pow
+- [x] log
+- [x] sqrt
+- [x] sin
+- [x] cos
+- [x] tan
+- [x] tanh
+- [x] sum
+- [x] max
+- [x] relu
+- [x] leaky relu
+- [x] reduce sum
+- [x] reduce max
+- [x] scatter
+- [x] gather
+- [x] conv2d
+- [x] transposed conv2d
+- [x] max pool
+- [x] avg pool
+- [x] subscript
+- [x] subscript range
+- [x] transpose
+- [x] axis permute
+- [x] reverse
+- [x] im2col
+- [x] col2im
+- [x] stack / concat
+
+</p>
+</details>
+
+<details>
+<summary>
+Engines
+</summary>
+<p>
+
+- [x] CPU (Accelerate framework for Apple Devices)
+- [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
+- [x] CPU (Generic)
+- [ ] GPU (Metal)
+
+For an experimental, early stage Metal implementation, check out `feature/metal`.
+
+</p>
+</details>
+
+<details>
+<summary>
+Architectures
+</summary>
+<p>
+
+Default implementations are provided for the following architectures:
+
+- [x] ResNet18
+- [x] VGG (11, 13, 16, 19)
+- [x] AlexNet
+
+</p>
+</details>
 <h2 id='examples' class='heading'>Examples</h2>
 
 <p>Some high level examples have been implemented in other repositories:</p>
@@ -624,6 +691,7 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 <ul>
 <li><a href="https://github.com/palle-k/Seq2Seq-DL4S">Neural Machine Translation</a> based on seq2seq with Attention</li>
 <li><a href="https://github.com/palle-k/DL4S-WGAN-GP">Generative Adversarial Networks</a> - Wasserstein GAN with Gradient Penalty (WGAN-GP)</li>
+<li><a href="https://github.com/palle-k/REINFORCE-DL4S">Reinforcement Learning</a> - Trains an agent to find the exit in a 2D grid world.</li>
 </ul>
 <h3 id='arithmetic-amp-differentiation' class='heading'>Arithmetic &amp; Differentiation</h3>
 
@@ -738,8 +806,8 @@ Therefore, second derivatives can be computed by computing the gradient of the g
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-03)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.11.2</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>
