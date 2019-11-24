@@ -39,7 +39,11 @@
             "Flatten",
             "Reshape",
             "Concat",
-            "AnyLayer"
+            "AnyLayer",
+			"Gelu",
+			"Swish",
+			"Mish",
+			"LiSHT"
         ]
     }, {
         "name": "Loss Functions",

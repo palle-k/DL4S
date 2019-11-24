@@ -86,31 +86,50 @@ Layers
 </summary>
 <p>
 
+Core:
+
 - [x] Convolution
 - [x] Transposed Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
 - [x] Vanilla RNN
-- [x] Bidirectional RNNs
+- [x] Embedding
+- [x] Multi-head Attention
+- [x] Transformer Block
+
+Pooling:
+
 - [x] Max Pooling
 - [x] Average Pooling
 - [x] Adaptive Max Pooling
 - [x] Adaptive Average Pooling
+
+Norm:
+
+- [x] Batch Norm
+- [x] Layer Norm
+
+Utility:
+
+- [x] Bidirectional RNNs
+- [x] Sequential
+- [x] Lambda
+- [x] Dropout
+- [x] Lambda
+
+Activation:
+
 - [x] Relu
 - [x] LeakyRelu
 - [x] Gelu
 - [x] Tanh
 - [x] Sigmoid
 - [x] Softmax
-- [x] Embedding
-- [x] Batch Norm
-- [x] Layer Norm
-- [x] Dropout
-- [x] Sequential
-- [x] Lambda
-- [x] Multi-head Attention
-- [x] Transformer Block
+- [x] Gelu
+- [x] Swish
+- [x] Mish
+- [x] LiSHT
 
 </p>
 </details>
@@ -188,6 +207,10 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] im2col
 - [x] col2im
 - [x] stack / concat
+- [x] gelu activation
+- [x] swish activation
+- [x] mish activation
+- [x] lisht activation
 
 </p>
 </details>

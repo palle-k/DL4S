@@ -416,3 +416,23 @@ struct File: Sequence {
         return LineIterator(handle: try? FileHandle(forReadingFrom: self.url))
     }
 }
+
+@propertyWrapper
+struct ThreadLocal<Value> {
+    private var initialValue: Value
+    private var key: UInt64
+    
+    var wrappedValue: Value {
+        get {
+            return (Thread.current.threadDictionary[key] as? Value) ?? initialValue
+        }
+        set {
+            Thread.current.threadDictionary[key] = newValue
+        }
+    }
+    
+    init(wrappedValue: Value) {
+        self.initialValue = wrappedValue
+        self.key = UInt64.random(in: 0 ... UInt64.max)
+    }
+}
