@@ -81,7 +81,7 @@ public extension Tensor {
                 tag: "tanh",
                 sources: [self],
                 backpropagate: [{ resultGradient in
-                    (1 - resultCopy * resultCopy) * resultGradient
+                    (TensorCache.value(1) - resultCopy * resultCopy) * resultGradient
                 }]
             )
             result.requiresGradient = true
@@ -101,7 +101,7 @@ public extension Tensor {
                 tag: "sqrt",
                 sources: [self],
                 backpropagate: [{ resultGradient in
-                    0.5 / resultCopy * resultGradient
+                    TensorCache.value(0.5) / resultCopy * resultGradient
                 }]
             )
             result.requiresGradient = true
@@ -167,7 +167,8 @@ public extension Tensor {
     
     /// Computes the element-wise sigmoid function.
     func sigmoid() -> Self {
-        0.5 * (self * 0.5).tanh() + 0.5
+        let half: Self = TensorCache.value(0.5)
+        return half * (self * half).tanh() + half
     }
     
     /// Computes the softmax function along the given axis.
@@ -212,6 +213,37 @@ public extension Tensor {
             result.requiresGradient = true
         }
         return result
+    }
+    
+    /// Computes the element-wise GeLU activation
+    ///
+    /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
+    func gaussianErrorLinear() -> Self {
+        self * (self * TensorCache.value(1.702)).sigmoid()
+    }
+    
+    
+    /// Computes the element-wise Swish activation
+    ///
+    /// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
+    func swishActivated(beta: Self = TensorCache.value(1)) -> Self {
+        self * DL4S.sigmoid(beta * self)
+    }
+    
+    
+    /// Computes the element-wise Mish activation
+    ///
+    /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
+    func mishActivated() -> Self {
+        self * DL4S.tanh(DL4S.log(TensorCache.value(1) + DL4S.exp(self)))
+    }
+    
+    
+    /// Computes the element-wise LiSHT activation
+    ///
+    /// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
+    func lishtActivated() -> Self {
+        self * DL4S.tanh(self)
     }
 }
 
@@ -275,4 +307,35 @@ public func heaviside<Element, Device>(_ tensor: Tensor<Element, Device>) -> Ten
 /// If no axis is provided, the softmax is computed along axis 1.
 public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
     tensor.softmax(axis: axis)
+}
+
+/// Computes the element-wise GeLU activation
+///
+/// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
+func gelu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.gaussianErrorLinear()
+}
+
+
+/// Computes the element-wise Swish activation
+///
+/// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
+func swishActivated<Element, Device>(_ tensor: Tensor<Element, Device>, beta: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
+    tensor.swishActivated(beta: beta)
+}
+
+
+/// Computes the element-wise Mish activation
+///
+/// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
+func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.mishActivated()
+}
+
+
+/// Computes the element-wise LiSHT activation
+///
+/// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
+func lishtActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.lishtActivated()
 }

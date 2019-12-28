@@ -6,7 +6,7 @@
 <a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
 <a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
-<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS%20|%20watchOS-green.svg" alt="Supports Linux, macOS, iOS and tvOS" /></a>
+<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS%20|%20watchOS-green.svg" alt="Supports Linux, macOS, iOS, tvOS and watchOS" /></a>
 <a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
 </p>
 
@@ -86,27 +86,45 @@ Layers
 </summary>
 <p>
 
+Core:
+
 - [x] Convolution
 - [x] Transposed Convolution
 - [x] Dense/Linear/Fully Connected
 - [x] LSTM
 - [x] Gated Recurrent Unit (GRU)
 - [x] Vanilla RNN
-- [x] Bidirectional RNNs
+- [x] Embedding
+
+Pooling:
+
 - [x] Max Pooling
 - [x] Average Pooling
 - [x] Adaptive Max Pooling
 - [x] Adaptive Average Pooling
+
+Norm:
+
+- [x] Batch Norm
+- [x] Layer Norm
+
+Utility:
+
+- [x] Bidirectional RNNs
+- [x] Sequential
+- [x] Lambda
+
+Activation:
+
 - [x] Relu
 - [x] Tanh
 - [x] Sigmoid
 - [x] Softmax
-- [x] Embedding
-- [x] Batch Norm
-- [x] Layer Norm
 - [x] Dropout
-- [x] Sequential
-- [x] Lambda 
+- [x] Gelu
+- [x] Swish
+- [x] Mish
+- [x] LiSHT
 
 </p>
 </details>
@@ -183,6 +201,10 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] im2col
 - [x] col2im
 - [x] stack / concat
+- [x] gelu activation
+- [x] swish activation
+- [x] mish activation
+- [x] lisht activation
 
 </p>
 </details>
@@ -225,6 +247,7 @@ Some high level examples have been implemented in other repositories:
 
 - [Neural Machine Translation](https://github.com/palle-k/Seq2Seq-DL4S) based on seq2seq with Attention
 - [Generative Adversarial Networks](https://github.com/palle-k/DL4S-WGAN-GP) - Wasserstein GAN with Gradient Penalty (WGAN-GP)
+- [Reinforcement Learning](https://github.com/palle-k/REINFORCE-DL4S) - Trains an agent to find the exit in a 2D grid world.
 
 ### Arithmetic & Differentiation
 

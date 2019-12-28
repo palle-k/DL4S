@@ -26,61 +26,6 @@
 import Foundation
 
 
-func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
-    source: UnsafeBufferPointer<Element>,
-    destination: UnsafeMutableBufferPointer<Element>,
-    srcIndex: C1,
-    srcStrides: C2,
-    srcShape: C2
-) where C1.Element == Int?, C2.Element == Int, C1.Index == Int, C2.Index == Int {
-    guard !srcIndex.isEmpty else {
-        destination.pointee = source.pointee
-        return
-    }
-    
-    let sIdx = srcIndex[srcIndex.startIndex]
-    let sStride = srcStrides[srcStrides.startIndex]
-    let sDim = srcShape[srcShape.startIndex]
-    
-    if let sIdx = sIdx {
-        let offset = sIdx * sStride
-        
-        let srcStart = source.advanced(by: offset)
-        
-        recursiveRead(
-            source: srcStart,
-            destination: destination,
-            srcIndex: srcIndex.dropFirst(),
-            srcStrides: srcStrides.dropFirst(),
-            srcShape: srcShape.dropFirst()
-        )
-    } else if srcIndex.allSatisfy({$0 == nil}) {
-        let count = sDim * sStride
-        destination.assign(from: source, count: count)
-    } else {
-        let dstShape = zip(srcIndex, srcStrides)
-            .filter {$0.0 == nil}
-            .map {$1}
-        let dstStrides = MemoryOps.strides(from: dstShape)
-        let dStride = dstStrides[0]
-        
-        for i in 0 ..< sDim {
-            let srcOffset = i * sStride
-            let srcStart = source.advanced(by: srcOffset)
-            let dstOffset = i * dStride
-            let dstStart = destination.advanced(by: dstOffset)
-            
-            recursiveRead(
-                source: srcStart,
-                destination: dstStart,
-                srcIndex: srcIndex.dropFirst(),
-                srcStrides: srcStrides.dropFirst(),
-                srcShape: srcShape.dropFirst()
-            )
-        }
-    }
-}
-
 @_specialize(where Element == Float)
 @_specialize(where Element == Int32)
 @_specialize(where Element == Double)
@@ -95,7 +40,7 @@ func iterativeRead<Element>(
     let srcIndex = srcIndex.dropLast(while: {$0 == nil})
     
     if srcIndex.count == 0 {
-        let count = srcShape[0] * srcStrides[0]
+        let count = srcShape[0] &* srcStrides[0]
         destination.assign(from: source, count: count)
         return
     }
@@ -105,22 +50,15 @@ func iterativeRead<Element>(
     let iterShape = zip(srcIndex, srcShape).map { idx, dim in
         idx == nil ? dim : 1
     }
-    
-//    for (i, index) in iterate(iterShape).enumerated() {
-//        let index = zip(srcIndex, index).map {$0 ?? $1}
-//        let baseIndex = zip(index, srcStrides).map(*).reduce(0, +)
-//        let dstIndex = i * copyCount
-//        destination.advanced(by: dstIndex)
-//            .assign(from: source.advanced(by: baseIndex), count: copyCount)
-//    }
+
     let indices = iterate(iterShape)
     
     for i in 0 ..< indices.count {
         let index = indices[i]
         var baseIndex = 0
-        let dstIndex = i * copyCount
+        let dstIndex = i &* copyCount
         for j in 0 ..< index.count {
-            baseIndex += (srcIndex[j] ?? index[j]) * srcStrides[j]
+            baseIndex &+= (srcIndex[j] ?? index[j]) &* srcStrides[j]
         }
         destination
             .advanced(by: dstIndex)
@@ -128,6 +66,12 @@ func iterativeRead<Element>(
     }
 }
 
+@_specialize(where Element == Float, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Int32, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Double, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Float, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Int32, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Double, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
 func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -145,9 +89,9 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
     
     if let sIdx = sIdx {
         if srcIndex.dropFirst().allSatisfy({$0 == nil}) {
-            let offset = sIdx.lowerBound * sStride
+            let offset = sIdx.lowerBound &* sStride
             let srcStart = source.advanced(by: offset)
-            let count = sIdx.count * sStride
+            let count = sIdx.count &* sStride
             destination.assign(from: srcStart, count: count)
         } else {
             let dstShape = zip(srcIndex, srcStrides)
@@ -157,8 +101,8 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
             let dStride = dstStrides[0]
             
             for i in sIdx {
-                let offset = i * sStride
-                let dstOffset = i * dStride
+                let offset = i &* sStride
+                let dstOffset = i &* dStride
                 
                 recursiveRead(
                     source: source.advanced(by: offset),
@@ -170,19 +114,19 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
             }
         }
     } else if srcIndex.allSatisfy({$0 == nil}) {
-        let count = sDim * sStride
+        let count = sDim &* sStride
         destination.assign(from: source, count: count)
     } else {
-        let dstShape = zip(srcIndex, srcStrides)
-            .filter {$0.0 == nil}
-            .map {$1}
+        let dstShape = zip(srcShape, srcIndex).map {
+            $1?.count ?? $0
+        }
         let dstStrides = MemoryOps.strides(from: dstShape)
         let dStride = dstStrides[0]
         
         for i in 0 ..< sDim {
-            let srcOffset = i * sStride
+            let srcOffset = i &* sStride
             let srcStart = source.advanced(by: srcOffset)
-            let dstOffset = i * dStride
+            let dstOffset = i &* dStride
             let dstStart = destination.advanced(by: dstOffset)
             
             recursiveRead(
@@ -196,60 +140,9 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
     }
 }
 
-func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
-    source: UnsafeBufferPointer<Element>,
-    destination: UnsafeMutableBufferPointer<Element>,
-    dstIndex: C1,
-    dstStrides: C2,
-    dstShape: C2
-) where C1.Element == Int?, C2.Element == Int {
-    guard
-        let dIdx = dstIndex.first,
-        let dStride = dstStrides.first,
-        let dDim = dstShape.first
-    else {
-        destination.pointee = source.pointee
-        return
-    }
-    
-    if let dIdx = dIdx {
-        let offset = dIdx * dStride
-        let dstStart = destination.advanced(by: offset)
-        
-        recursiveWrite(
-            source: source,
-            destination: dstStart,
-            dstIndex: dstIndex.dropFirst(),
-            dstStrides: dstStrides.dropFirst(),
-            dstShape: dstShape.dropFirst()
-        )
-    } else if dstIndex.allSatisfy({$0 == nil}) {
-        let count = dDim * dStride
-        destination.assign(from: source, count: count)
-    } else {
-        let srcShape = zip(dstIndex, dstStrides)
-            .filter {$0.0 == nil}
-            .map {$1}
-        let srcStrides = MemoryOps.strides(from: srcShape)
-        let sStride = srcStrides[0]
-        
-        for i in 0 ..< dDim {
-            let srcOffset = i * sStride
-            let srcStart = source.advanced(by: srcOffset)
-            let dstOffset = i * dStride
-            let dstStart = destination.advanced(by: dstOffset)
-            
-            recursiveWrite(
-                source: srcStart,
-                destination: dstStart,
-                dstIndex: dstIndex.dropFirst(),
-                dstStrides: dstStrides.dropFirst(),
-                dstShape: dstShape.dropFirst()
-            )
-        }
-    }
-}
-
+@_specialize(where Element == Float)
+@_specialize(where Element == Int32)
+@_specialize(where Element == Double)
 func iterativeWrite<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -257,11 +150,10 @@ func iterativeWrite<Element>(
     dstStrides: [Int],
     dstShape: [Int]
     ) {
-    // print("Using iterativeWrite")
     let dstIndex = dstIndex.reversed().drop(while: {$0 == nil}).reversed()
     
     if dstIndex.count == 0 {
-        let count = dstShape[0] * dstStrides[0]
+        let count = dstShape[0] &* dstStrides[0]
         destination.assign(from: source, count: count)
         return
     }
@@ -274,13 +166,19 @@ func iterativeWrite<Element>(
     
     for (i, index) in iterate(iterShape).enumerated() {
         let index = zip(dstIndex, index).map {$0 ?? $1}
-        let baseIndex = zip(index, dstStrides).map(*).reduce(0, +)
-        let srcIndex = i * copyCount
+        let baseIndex = zip(index, dstStrides).map(&*).reduce(0, &+)
+        let srcIndex = i &* copyCount
         destination.advanced(by: baseIndex)
             .assign(from: source.advanced(by: srcIndex), count: copyCount)
     }
 }
 
+@_specialize(where Element == Float, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Int32, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Double, C1 == [Range<Int>?], C2 == [Int])
+@_specialize(where Element == Float, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Int32, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
+@_specialize(where Element == Double, C1 == ArraySlice<Range<Int>?>, C2 == ArraySlice<Int>)
 func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollection>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -299,9 +197,9 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
     
     if let dIdx = dIdx {
         if dstIndex.dropFirst().allSatisfy({$0 == nil}) {
-            let offset = dIdx.lowerBound * dStride
+            let offset = dIdx.lowerBound &* dStride
             let dstStart = destination.advanced(by: offset)
-            let count = dIdx.count * dStride
+            let count = dIdx.count &* dStride
             dstStart.assign(from: source, count: count)
         } else {
             let srcShape = zip(dstIndex, dstStrides)
@@ -310,9 +208,9 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
             let sStride = srcStrides[0]
             
             for i in dIdx {
-                let offset = i * dStride
+                let offset = i &* dStride
                 let dstStart = destination.advanced(by: offset)
-                let srcOffset = i * sStride
+                let srcOffset = i &* sStride
                 let srcStart = source.advanced(by: srcOffset)
                 
                 recursiveWrite(
@@ -325,19 +223,20 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
             }
         }
     } else if dstIndex.allSatisfy({$0 == nil}) {
-        let count = dDim * dStride
+        let count = dDim &* dStride
         destination.assign(from: source, count: count)
     } else {
-        let srcShape = zip(dstIndex, dstStrides)
-            .filter {$0.0 == nil}
-            .map {$1}
+        let srcShape = zip(dstIndex, dstShape).map {
+            $0?.count ?? $1
+        }
+        
         let srcStrides = MemoryOps.strides(from: srcShape)
         let sStride = srcStrides[0]
         
         for i in 0 ..< dDim {
-            let srcOffset = i * sStride
+            let srcOffset = i &* sStride
             let srcStart = source.advanced(by: srcOffset)
-            let dstOffset = i * dStride
+            let dstOffset = i &* dStride
             let dstStart = destination.advanced(by: dstOffset)
             
             recursiveWrite(
@@ -362,14 +261,14 @@ enum MemoryOps {
         
         var str = [Int](repeating: 1, count: dim)
         for i in (0 ..< dim - 1).reversed() {
-            str[i] = str[i + 1] * shape[i + 1]
+            str[i] = str[i &+ 1] &* shape[i &+ 1]
         }
         return str
     }
     
     static func linearIndex(from index: [Int], shape: [Int]) -> Int {
         let strides = MemoryOps.strides(from: shape)
-        return zip(index, strides).map(*).reduce(0, +)
+        return zip(index, strides).map(&*).reduce(0, &+)
     }
     
     static func index(from linearIndex: Int, shape: [Int]) -> [Int] {

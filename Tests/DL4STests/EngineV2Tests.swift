@@ -231,4 +231,58 @@ class EngineV2Tests: XCTestCase {
         print(ref2Grads[0], ref2Grads[1], separator: "\n", terminator: "\n\n")
         
     }
+    
+    func testSubscriptSlice() {
+        let a = Tensor<Int32, CPU>([
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8]
+        ])
+        
+        let expected1 = Tensor<Int32, CPU>([
+            [0, 1],
+            [3, 4],
+            [6, 7]
+        ])
+        let expected2 = Tensor<Int32, CPU>([
+            [1, 2],
+            [4, 5],
+            [7, 8]
+        ])
+        let expected3 = Tensor<Int32, CPU>([
+            [0, 1, 2],
+            [3, 4, 5]
+        ])
+        let expected4 = Tensor<Int32, CPU>([
+            [3, 4, 5],
+            [6, 7, 8]
+        ])
+        
+        XCTAssertEqual(a[nil, 0 ..< 2], expected1)
+        XCTAssertEqual(a[nil, 1 ..< 3], expected2)
+        XCTAssertEqual(a[0 ..< 2], expected3)
+        XCTAssertEqual(a[1 ..< 3], expected4)
+    }
+    
+    func testSubscriptSliceWrite() {
+        var result = Tensor<Int32, CPU>(repeating: 0, shape: [3, 3])
+        let src1 = Tensor<Int32, CPU>([[0, 1], [3, 4], [6, 7]])
+        
+        result[nil, 0 ..< 2] = src1
+        let expected1 = Tensor<Int32, CPU>([
+            [0, 1, 0],
+            [3, 4, 0],
+            [6, 7, 0]
+        ])
+        XCTAssertEqual(result, expected1)
+        
+        result = Tensor<Int32, CPU>(repeating: 0, shape: [3, 3])
+        let expected2 = Tensor<Int32, CPU>([
+            [0, 0, 1],
+            [0, 3, 4],
+            [0, 6, 7]
+        ])
+        result[nil, 1 ..< 3] = src1
+        XCTAssertEqual(result, expected2)
+    }
 }

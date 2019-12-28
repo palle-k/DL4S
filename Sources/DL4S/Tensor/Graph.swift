@@ -132,7 +132,7 @@ extension Digraph: CustomStringConvertible {
 /// It has no effect on the way that computations are performed. When optimization is enabled,
 /// operation groups are not captured.
 public enum OperationGroup {
-    static private(set) var operationStack: [(id: UInt64, name: String)] = []
+    @ThreadLocal static private(set) var operationStack: [(id: UInt64, name: String)] = []
     
     @inline(__always)
     static func push(_ name: @autoclosure () -> String) {

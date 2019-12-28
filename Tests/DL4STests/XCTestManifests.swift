@@ -31,6 +31,8 @@ extension EngineV2Tests {
         ("testReduceSum3", testReduceSum3),
         ("testScatter1", testScatter1),
         ("testScatter2", testScatter2),
+        ("testSubscriptSlice", testSubscriptSlice),
+        ("testSubscriptSliceWrite", testSubscriptSliceWrite),
     ]
 }
 
@@ -52,8 +54,12 @@ extension MNISTTests {
     // to regenerate.
     static let __allTests__MNISTTests = [
         ("testConvNet", testConvNet),
-        ("testFCN", testFCN),
+        ("testGeluActivation", testGeluActivation),
         ("testGRU", testGRU),
+        ("testLiSHTActivation", testLiSHTActivation),
+        ("testMishActivation", testMishActivation),
+        ("testReluActivation", testReluActivation),
+        ("testSwishActivation", testSwishActivation),
     ]
 }
 
@@ -81,6 +87,7 @@ extension UtilTests {
     // to regenerate.
     static let __allTests__UtilTests = [
         ("testFileReader", testFileReader),
+        ("testThreadLocal", testThreadLocal),
     ]
 }
 
