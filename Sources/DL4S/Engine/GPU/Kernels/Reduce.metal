@@ -324,3 +324,46 @@ kernel void vMin_Reduce_Float32(
     
     dst_vals[pos] = minVal;
 }
+
+kernel void vScatter_Float32(
+    const device float* src_vals [[buffer(0)]],
+    device float* dst_vals [[buffer(3)]],
+    constant int &dst_dim [[buffer(4)]],
+    const device int* dst_shape [[buffer(5)]],
+    const device int* dst_strides [[buffer(6)]],
+    constant int &scatter_axis [[buffer(7)]],
+    const device int* indices [[buffer(8)]],
+    uint pos [[thread_position_in_grid]]
+) {
+    uint posBefore = pos / dst_strides[scatter_axis];
+    uint posAfter = pos % dst_strides[scatter_axis];
+    
+    uint offset = posAfter + (scatter_axis != 0 ? posBefore * dst_strides[scatter_axis - 1] : 0);
+    uint stride = dst_strides[scatter_axis];
+    
+    auto i = indices[pos];
+    dst_vals[i * stride + offset] = src_vals[pos];
+}
+
+
+kernel void vGather_Float32(
+    const device float* src_vals [[buffer(0)]],
+    constant int &src_dim [[buffer(1)]],
+    const device int* src_shape [[buffer(2)]],
+    const device int* src_strides [[buffer(3)]],
+    device float* dst_vals [[buffer(4)]],
+    constant int &dst_dim [[buffer(5)]],
+    const device int* dst_shape [[buffer(6)]],
+    constant int &reduced_axis [[buffer(7)]],
+    const device int* indices [[buffer(8)]],
+    uint pos [[thread_position_in_grid]]
+) {
+    uint posBefore = pos / src_strides[reduced_axis];
+    uint posAfter = pos % src_strides[reduced_axis];
+    
+    uint offset = posAfter + (reduced_axis != 0 ? posBefore * src_strides[reduced_axis - 1] : 0);
+    uint stride = src_strides[reduced_axis];
+    
+    auto i = indices[pos];
+    dst_vals[pos] = src_vals[i * stride + offset];
+}
