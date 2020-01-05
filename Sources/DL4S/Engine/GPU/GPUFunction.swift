@@ -70,13 +70,14 @@ extension MTLComputeCommandEncoder {
             }
         }
         
-        let threadGroups = MTLSize(
-            width:  (maxSize.width  + size.width  - 1) / size.width,
-            height: (maxSize.height + size.height - 1) / size.height,
-            depth:  (maxSize.depth  + size.depth  - 1) / size.depth
-        )
+//        let threadGroups = MTLSize(
+//            width:  (maxSize.width  + size.width  - 1) / size.width,
+//            height: (maxSize.height + size.height - 1) / size.height,
+//            depth:  (maxSize.depth  + size.depth  - 1) / size.depth
+//        )
+        let threadgroupsPerGrid = MTLSize(width: size.width, height: size.height, depth: size.depth)
         
-        self.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: size)
+        self.dispatchThreadgroups(threadgroupsPerGrid, threadsPerThreadgroup: size)
     }
     
 }

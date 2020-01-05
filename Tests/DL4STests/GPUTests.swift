@@ -95,7 +95,7 @@ class GPUTests: XCTestCase {
         
         let model = Sequential {
             Dense<Float, GPU>(inputSize: 2, outputSize: 6)
-            Tanh<Float, GPU>()
+            Swish<Float, GPU>()
             Dense<Float, GPU>(inputSize: 6, outputSize: 1)
             Sigmoid<Float, GPU>()
         }
@@ -152,5 +152,47 @@ class GPUTests: XCTestCase {
         let b = Tensor<Float, GPU>([[7, 8, 9]])
         
         print(Tensor(stacking: [a, b]))
+    }
+    
+    func testGather() {
+        let a = Tensor<Float, GPU>([
+            [1,2,3],
+            [4,5,6],
+            [7,8,9]
+        ])
+        let i = Tensor<Int32, GPU>([2, 1, 1])
+        
+        print(a.gather(using: i, alongAxis: 1))
+    }
+    
+    func testScatter() {
+        let a = Tensor<Float, GPU>([3,5,8])
+        let i = Tensor<Int32, GPU>([2, 1, 1])
+        
+        print(a.scatter(using: i, alongAxis: 0, withSize: 3))
+    }
+    
+    func testCrossEntropy() {
+        let a = Tensor<Float, GPU>([
+            [1,2,3],
+            [4,5,6],
+            [7,8,9]
+        ], requiresGradient: true)
+        let i = Tensor<Int32, GPU>([2, 1, 1])
+        
+        let s = a.softmax(axis: 1)
+        let loss = categoricalCrossEntropy(expected: i, actual: s)
+        print(loss.item)
+        
+        let grads = loss.gradients(of: [a])
+        print(grads[0])
+    }
+    
+    func testLoadMNIST() {
+        let ((train_images, train_labels), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: GPU.self)
+        GPU.synchronize()
+        let (batch_images, batch_labels) = Random.minibatch(from: train_images, labels: train_labels, count: 8)
+        print(batch_images[0].view(as: [28, 28]))
+        print(batch_labels[0])
     }
 }

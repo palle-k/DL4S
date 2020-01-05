@@ -44,6 +44,8 @@ extension ShapedBuffer: GPUArgument where Device == GPU {
         encoder.setBuffer(valueBuffer, offset: 0, index: index)
         encoder.setBytes([Int32(dim)], length: MemoryLayout<Int32>.size, index: index + 1)
         encoder.setBytes(shape.map(Int32.init), length: shape.count * MemoryLayout<Int32>.stride, index: index + 2)
+        
+        encoder.useResources([valueBuffer], usage: [.read, .write])
     }
 }
 
@@ -57,6 +59,8 @@ extension Buffer: GPUArgument where Device == GPU {
         
         encoder.setBuffer(valueBuffer, offset: 0, index: index)
         encoder.setBytes([Int32(count)], length: MemoryLayout<Int32>.size, index: index + 1)
+        
+        encoder.useResources([valueBuffer], usage: [.read, .write])
     }
 }
 
@@ -107,6 +111,7 @@ extension VRAMBuffer: GPUArgument {
     
     func add(to encoder: MTLComputeCommandEncoder, from index: Int) {
         encoder.setBuffer(buffer, offset: self.offset, index: index)
+        encoder.useResource(buffer, usage: [.read, .write])
     }
 }
 

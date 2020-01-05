@@ -29,16 +29,24 @@ import Foundation
 
 extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
-        values.description
+        if Device.self == GPU.self {
+            return self.copied(to: CPU.self).description
+        } else {
+            return values.description
+        }
     }
     
     public var debugDescription: String {
-        return """
-        Tensor<\(Element.self), \(Device.self)>(
-            \(values.description.replacingOccurrences(of: "\n", with: "\n    ")),
-            context: \(self.context as Any? ?? "nil" as Any)
-        )
-        """
+        if Device.self == GPU.self {
+            return self.copied(to: CPU.self).debugDescription
+        } else {
+            return """
+            Tensor<\(Element.self), \(Device.self)>(
+                \(values.description.replacingOccurrences(of: "\n", with: "\n    ")),
+                context: \(self.context as Any? ?? "nil" as Any)
+            )
+            """
+        }
     }
 }
 

@@ -322,7 +322,7 @@ public struct GPUEngine: EngineType {
     }
     
     public static func gather<N>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) where N : NumericType {
-        GPU.function(named: "vGather\(N.gpuTypeIdentifier)").execute(
+        GPU.function(named: "vGather_\(N.gpuTypeIdentifier)").execute(
             workSize: (result.count, 1, 1),
             expanded,
             CPU.Memory.strides(from: expanded.shape).valueArg,
