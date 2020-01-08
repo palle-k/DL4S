@@ -178,8 +178,8 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: D.self)
         
-        let epochs = 1
-        let batchSize = 32
+        let epochs = 100
+        let batchSize = 256
         
         var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
         
@@ -234,14 +234,14 @@ class MNISTTests: XCTestCase {
     
     func testSwishActivation() {
         var model = Sequential {
-            Dense<Float, GPU>(inputSize: 28 * 28, outputSize: 500)
-            Swish<Float, GPU>(trainableWithChannels: 500)
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            Swish<Float, CPU>(trainableWithChannels: 500)
             
-            Dense<Float, GPU>(inputSize: 500, outputSize: 300)
-            Swish<Float, GPU>(trainableWithChannels: 300)
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            Swish<Float, CPU>(trainableWithChannels: 300)
 
-            Dense<Float, GPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, GPU>()
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            Softmax<Float, CPU>()
         }
         model.tag = "Classifier"
         performAccuracyTest(model)
