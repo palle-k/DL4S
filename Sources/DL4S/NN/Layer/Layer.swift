@@ -27,7 +27,9 @@ import Foundation
 
 /// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
 /// The layer may have parameters, which influence, how the outputs are generated.
+#if swift(<5.2)
 @dynamicCallable
+#endif
 public protocol LayerType {
     /// Inputs of the layer
     associatedtype Inputs
@@ -56,6 +58,7 @@ public protocol LayerType {
     func callAsFunction(_ inputs: Inputs) -> Outputs
 }
 
+#if swift(<5.2)
 public extension LayerType {
     /// Dynamic callable extension, as static callable is not yet available
     /// - Parameter arguments: Inputs of the layer.
@@ -63,6 +66,7 @@ public extension LayerType {
         return callAsFunction(arguments[0])
     }
 }
+#endif
 
 
 /// Type erased layer
