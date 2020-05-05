@@ -68,6 +68,9 @@
                 <a class="nav-group-task-link" href="Protocols/LayerType.html">LayerType</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Sequential.html">Sequential</a>
               </li>
               <li class="nav-group-task">
@@ -310,6 +313,9 @@
             <a class="nav-group-name-link" href="Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -428,6 +434,9 @@
                 <a class="nav-group-task-link" href="Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -449,7 +458,7 @@
       <article class="main-content">
 
         <section class="section">
-          <div class="section-content">
+          <div class="section-content top-matter">
             <h1>Other Functions</h1>
             <p>The following functions are available globally.</p>
 
@@ -460,11 +469,96 @@
           <div class="section-content">
             <div class="task-group">
               <div class="task-name-container">
+                <a name="/Losses"></a>
+                <a name="//apple_ref/swift/Section/Losses" class="dashAnchor"></a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Losses"></a>
+                  <h3 class="section-name"><p>Losses</p>
+</h3>
+                </div>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF"></a>
+                    <a name="//apple_ref/swift/Function/categoricalNegativeLogLikelihood(expected:actual:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF">categoricalNegativeLogLikelihood(expected:<wbr>actual:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Computes the categorical negative log likelihood (NLL) loss on the given expected probabilities and the expected labels and
+uses the mean as a reduction.
+Predicted values are assumed to be in the interval (-infinity, 0).</p>
+
+<p>NLL loss should be used in conjunction with logSoftmax.</p>
+
+<p>The categorical NLL  loss is defined as</p>
+<pre class="highlight swift"><code><span class="o">-</span><span class="n">predicted</span><span class="p">[</span><span class="n">expected</span><span class="p">]</span>
+</code></pre>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">categoricalNegativeLogLikelihood</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>expected</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Expected labels</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>actual</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Predicted values</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>Loss, scalar value</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
                 <a name="/Matrix%20Multiplication"></a>
                 <a name="//apple_ref/swift/Section/Matrix Multiplication" class="dashAnchor"></a>
-                <a href="#/Matrix%20Multiplication">
-                  <h3 class="section-name">Matrix Multiplication</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Matrix%20Multiplication"></a>
+                  <h3 class="section-name"><p>Matrix Multiplication</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -472,7 +566,7 @@
                     <code>
                     <a name="/s:4DL4S6matMulyAA6TensorVyxq_GAE_AEtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/matMul(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6matMulyAA6TensorVyxq_GAE_AEtAA11NumericTypeRzAA06DeviceF0R_r0_lF">matMul(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6matMulyAA6TensorVyxq_GAE_AEtAA11NumericTypeRzAA06DeviceF0R_r0_lF">matMul(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -531,9 +625,11 @@
               <div class="task-name-container">
                 <a name="/Summation"></a>
                 <a name="//apple_ref/swift/Section/Summation" class="dashAnchor"></a>
-                <a href="#/Summation">
-                  <h3 class="section-name">Summation</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Summation"></a>
+                  <h3 class="section-name"><p>Summation</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -541,7 +637,7 @@
                     <code>
                     <a name="/s:4DL4S3sumyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/sum(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3sumyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sum(_:)</a>
+                    <a class="token" href="#/s:4DL4S3sumyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sum(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -591,7 +687,7 @@
                     <code>
                     <a name="/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/sum(_:axes:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+                    <a class="token" href="#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:<wbr>axes:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -653,7 +749,7 @@
                     <code>
                     <a name="/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/sum(_:axes:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+                    <a class="token" href="#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:<wbr>axes:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -715,7 +811,7 @@
                     <code>
                     <a name="/s:4DL4S4meanyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/mean(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4meanyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">mean(_:)</a>
+                    <a class="token" href="#/s:4DL4S4meanyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">mean(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -765,7 +861,7 @@
                     <code>
                     <a name="/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/mean(_:axes:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+                    <a class="token" href="#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:<wbr>axes:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -827,7 +923,7 @@
                     <code>
                     <a name="/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/mean(_:axes:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+                    <a class="token" href="#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:<wbr>axes:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -889,7 +985,7 @@
                     <code>
                     <a name="/s:4DL4S8varianceyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/variance(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S8varianceyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">variance(_:)</a>
+                    <a class="token" href="#/s:4DL4S8varianceyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">variance(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -939,7 +1035,7 @@
                     <code>
                     <a name="/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/variance(_:axes:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+                    <a class="token" href="#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:<wbr>axes:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1001,7 +1097,7 @@
                     <code>
                     <a name="/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/variance(_:axes:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+                    <a class="token" href="#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:<wbr>axes:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1064,9 +1160,11 @@
               <div class="task-name-container">
                 <a name="/Tensor%20Stacking"></a>
                 <a name="//apple_ref/swift/Section/Tensor Stacking" class="dashAnchor"></a>
-                <a href="#/Tensor%20Stacking">
-                  <h3 class="section-name">Tensor Stacking</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Tensor%20Stacking"></a>
+                  <h3 class="section-name"><p>Tensor Stacking</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -1074,7 +1172,7 @@
                     <code>
                     <a name="/s:4DL4S5stack_5alongAA6TensorVyxq_GSayAFG_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/stack(_:along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S5stack_5alongAA6TensorVyxq_GSayAFG_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">stack(_:along:)</a>
+                    <a class="token" href="#/s:4DL4S5stack_5alongAA6TensorVyxq_GSayAFG_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">stack(_:<wbr>along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1135,9 +1233,11 @@
               <div class="task-name-container">
                 <a name="/Element-wise%20operations"></a>
                 <a name="//apple_ref/swift/Section/Element-wise operations" class="dashAnchor"></a>
-                <a href="#/Element-wise%20operations">
-                  <h3 class="section-name">Element-wise operations</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Element-wise%20operations"></a>
+                  <h3 class="section-name"><p>Element-wise operations</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -1145,7 +1245,7 @@
                     <code>
                     <a name="/s:4DL4S3expyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/exp(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3expyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">exp(_:)</a>
+                    <a class="token" href="#/s:4DL4S3expyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">exp(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1172,7 +1272,7 @@
                     <code>
                     <a name="/s:4DL4S3logyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/log(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3logyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">log(_:)</a>
+                    <a class="token" href="#/s:4DL4S3logyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">log(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1199,7 +1299,7 @@
                     <code>
                     <a name="/s:4DL4S4sqrtyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/sqrt(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4sqrtyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sqrt(_:)</a>
+                    <a class="token" href="#/s:4DL4S4sqrtyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sqrt(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1226,7 +1326,7 @@
                     <code>
                     <a name="/s:4DL4S4tanhyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/tanh(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4tanhyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">tanh(_:)</a>
+                    <a class="token" href="#/s:4DL4S4tanhyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">tanh(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1253,7 +1353,7 @@
                     <code>
                     <a name="/s:4DL4S7sigmoidyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/sigmoid(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7sigmoidyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sigmoid(_:)</a>
+                    <a class="token" href="#/s:4DL4S7sigmoidyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sigmoid(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1280,7 +1380,7 @@
                     <code>
                     <a name="/s:4DL4S3sinyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/sin(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3sinyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sin(_:)</a>
+                    <a class="token" href="#/s:4DL4S3sinyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sin(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1307,7 +1407,7 @@
                     <code>
                     <a name="/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/cos(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
+                    <a class="token" href="#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1334,7 +1434,7 @@
                     <code>
                     <a name="/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/relu(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">relu(_:)</a>
+                    <a class="token" href="#/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">relu(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1363,7 +1463,7 @@
                     <code>
                     <a name="/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/leakyRelu(_:leakage:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">leakyRelu(_:leakage:)</a>
+                    <a class="token" href="#/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">leakyRelu(_:<wbr>leakage:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1392,7 +1492,7 @@
                     <code>
                     <a name="/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/heaviside(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">heaviside(_:)</a>
+                    <a class="token" href="#/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">heaviside(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1421,7 +1521,7 @@
                     <code>
                     <a name="/s:4DL4S7softmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF"></a>
                     <a name="//apple_ref/swift/Function/softmax(_:axis:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7softmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">softmax(_:axis:)</a>
+                    <a class="token" href="#/s:4DL4S7softmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">softmax(_:<wbr>axis:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1452,8 +1552,8 @@ If no axis is provided, the softmax is computed along axis 1.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

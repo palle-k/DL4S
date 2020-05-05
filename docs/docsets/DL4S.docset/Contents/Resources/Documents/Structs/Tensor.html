@@ -68,6 +68,9 @@
                 <a class="nav-group-task-link" href="../Protocols/LayerType.html">LayerType</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Sequential.html">Sequential</a>
               </li>
               <li class="nav-group-task">
@@ -310,6 +313,9 @@
             <a class="nav-group-name-link" href="../Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -428,6 +434,9 @@
                 <a class="nav-group-task-link" href="../Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -449,11 +458,16 @@
       <article class="main-content">
 
         <section class="section">
-          <div class="section-content">
+          <div class="section-content top-matter">
             <h1>Tensor</h1>
               <div class="declaration">
                 <div class="language">
                   <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/DeviceType.html">DeviceType</a></span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Tensor</span><span class="p">:</span> <span class="kt">CustomStringConvertible</span><span class="p">,</span> <span class="kt">CustomDebugStringConvertible</span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Tensor</span><span class="p">:</span> <span class="kt">ExpressibleByFloatLiteral</span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Tensor</span><span class="p">:</span> <span class="kt">ExpressibleByIntegerLiteral</span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Tensor</span><span class="p">:</span> <span class="kt">Equatable</span> <span class="k">where</span> <span class="kt">Element</span><span class="p">:</span> <span class="kt">Equatable</span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Tensor</span><span class="p">:</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span><span class="p">:</span> <span class="kt">Codable</span></code></pre>
 
                 </div>
               </div>
@@ -625,7 +639,7 @@ Example:</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9repeating5shape16requiresGradientACyxq_Gx_SidSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(repeating:shape:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9repeating5shape16requiresGradientACyxq_Gx_SidSbtcfc">init(repeating:shape:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9repeating5shape16requiresGradientACyxq_Gx_SidSbtcfc">init(repeating:<wbr>shape:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -695,7 +709,7 @@ Example:</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9repeating5shape16requiresGradientACyxq_Gx_SaySiGSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(repeating:shape:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9repeating5shape16requiresGradientACyxq_Gx_SaySiGSbtcfc">init(repeating:shape:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9repeating5shape16requiresGradientACyxq_Gx_SaySiGSbtcfc">init(repeating:<wbr>shape:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -765,7 +779,7 @@ Example:</p>
                     <code>
                     <a name="/s:4DL4S6TensorV_16requiresGradientACyxq_GSayxG_Sbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSayxG_Sbtcfc">init(_:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSayxG_Sbtcfc">init(_:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -823,7 +837,7 @@ Example:</p>
                     <code>
                     <a name="/s:4DL4S6TensorV_5shape16requiresGradientACyxq_GSayxG_SaySiGSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:shape:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_5shape16requiresGradientACyxq_GSayxG_SaySiGSbtcfc">init(_:shape:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV_5shape16requiresGradientACyxq_GSayxG_SaySiGSbtcfc">init(_:<wbr>shape:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -893,7 +907,7 @@ Example:</p>
                     <code>
                     <a name="/s:4DL4S6TensorV_5shape16requiresGradientACyxq_GSayxG_SidSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:shape:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_5shape16requiresGradientACyxq_GSayxG_SidSbtcfc">init(_:shape:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV_5shape16requiresGradientACyxq_GSayxG_SidSbtcfc">init(_:<wbr>shape:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -963,7 +977,7 @@ Example:</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9gradients2of20retainBackwardsGraphSayACyxq_GGAH_SbtF"></a>
                     <a name="//apple_ref/swift/Method/gradients(of:retainBackwardsGraph:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9gradients2of20retainBackwardsGraphSayACyxq_GGAH_SbtF">gradients(of:retainBackwardsGraph:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9gradients2of20retainBackwardsGraphSayACyxq_GGAH_SbtF">gradients(of:<wbr>retainBackwardsGraph:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1093,9 +1107,11 @@ If the flag is not set, the compute graph of the backwards operation will not be
               <div class="task-name-container">
                 <a name="/Compute%20Graph%20Debugging"></a>
                 <a name="//apple_ref/swift/Section/Compute Graph Debugging" class="dashAnchor"></a>
-                <a href="#/Compute%20Graph%20Debugging">
-                  <h3 class="section-name">Compute Graph Debugging</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Compute%20Graph%20Debugging"></a>
+                  <h3 class="section-name"><p>Compute Graph Debugging</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -1136,9 +1152,11 @@ To obtain a detailed compute graph, compile in debug mode.</p>
               <div class="task-name-container">
                 <a name="/Broadcasting%20Operators"></a>
                 <a name="//apple_ref/swift/Section/Broadcasting Operators" class="dashAnchor"></a>
-                <a href="#/Broadcasting%20Operators">
-                  <h3 class="section-name">Broadcasting Operators</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Broadcasting%20Operators"></a>
+                  <h3 class="section-name"><p>Broadcasting Operators</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -1146,7 +1164,7 @@ To obtain a detailed compute graph, compile in debug mode.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV1poiyACyxq_GAE_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method/+(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV1poiyACyxq_GAE_AEtFZ">+(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV1poiyACyxq_GAE_AEtFZ">+(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1214,7 +1232,7 @@ tensor with the result shape [42, 3, 8].</p>
                     <code>
                     <a name="/s:4DL4S6TensorV1moiyACyxq_GAE_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method/*(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV1moiyACyxq_GAE_AEtFZ">*(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV1moiyACyxq_GAE_AEtFZ">*(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1282,7 +1300,7 @@ tensor with the result shape [42, 3, 8].</p>
                     <code>
                     <a name="/s:4DL4S6TensorV1soiyACyxq_GAE_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method/-(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV1soiyACyxq_GAE_AEtFZ">-(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV1soiyACyxq_GAE_AEtFZ">-(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1350,7 +1368,7 @@ tensor with the result shape [42, 3, 8].</p>
                     <code>
                     <a name="/s:4DL4S6TensorV1doiyACyxq_GAE_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method//(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV1doiyACyxq_GAE_AEtFZ">/(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV1doiyACyxq_GAE_AEtFZ">/(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1418,7 +1436,7 @@ tensor with the result shape [42, 3, 8].</p>
                     <code>
                     <a name="/s:4DL4S6TensorV1sopyACyxq_GAEFZ"></a>
                     <a name="//apple_ref/swift/Method/-(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV1sopyACyxq_GAEFZ">-(_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV1sopyACyxq_GAEFZ">-(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1468,7 +1486,7 @@ tensor with the result shape [42, 3, 8].</p>
                     <code>
                     <a name="/s:4DL4S6TensorV2peoiyyACyxq_Gz_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method/+=(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV2peoiyyACyxq_Gz_AEtFZ">+=(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV2peoiyyACyxq_Gz_AEtFZ">+=(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1529,7 +1547,7 @@ This operation requires the resulting broadcast shape to be equivalent to the sh
                     <code>
                     <a name="/s:4DL4S6TensorV2seoiyyACyxq_Gz_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method/-=(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV2seoiyyACyxq_Gz_AEtFZ">-=(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV2seoiyyACyxq_Gz_AEtFZ">-=(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1590,7 +1608,7 @@ This operation requires the resulting broadcast shape to be equivalent to the sh
                     <code>
                     <a name="/s:4DL4S6TensorV2meoiyyACyxq_Gz_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method/*=(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV2meoiyyACyxq_Gz_AEtFZ">*=(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV2meoiyyACyxq_Gz_AEtFZ">*=(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1651,7 +1669,7 @@ This operation requires the resulting broadcast shape to be equivalent to the sh
                     <code>
                     <a name="/s:4DL4S6TensorV2deoiyyACyxq_Gz_AEtFZ"></a>
                     <a name="//apple_ref/swift/Method//=(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV2deoiyyACyxq_Gz_AEtFZ">/=(_:_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV2deoiyyACyxq_Gz_AEtFZ">/=(_:<wbr>_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1712,7 +1730,7 @@ This operation requires the resulting broadcast shape to be equivalent to the sh
                     <code>
                     <a name="/s:4DL4S6TensorV6raised9toPowerOfACyxq_GAF_tF"></a>
                     <a name="//apple_ref/swift/Method/raised(toPowerOf:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV6raised9toPowerOfACyxq_GAF_tF">raised(toPowerOf:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV6raised9toPowerOfACyxq_GAF_tF">raised(toPowerOf:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1765,9 +1783,11 @@ This operation requires the resulting broadcast shape to be equivalent to the sh
               <div class="task-name-container">
                 <a name="/Img2col"></a>
                 <a name="//apple_ref/swift/Section/Img2col" class="dashAnchor"></a>
-                <a href="#/Img2col">
-                  <h3 class="section-name">Img2col</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Img2col"></a>
+                  <h3 class="section-name"><p>Img2col</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -1775,7 +1795,7 @@ This operation requires the resulting broadcast shape to be equivalent to the sh
                     <code>
                     <a name="/s:4DL4S6TensorV7img2col11kernelWidth0D6Height7padding6strideACyxq_GSi_S3itF"></a>
                     <a name="//apple_ref/swift/Method/img2col(kernelWidth:kernelHeight:padding:stride:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV7img2col11kernelWidth0D6Height7padding6strideACyxq_GSi_S3itF">img2col(kernelWidth:kernelHeight:padding:stride:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV7img2col11kernelWidth0D6Height7padding6strideACyxq_GSi_S3itF">img2col(kernelWidth:<wbr>kernelHeight:<wbr>padding:<wbr>stride:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1865,7 +1885,7 @@ The window count is the number of windows that fit into the source tensor when u
                     <code>
                     <a name="/s:4DL4S6TensorV7col2img11kernelWidth0D6Height7padding6stride11resultShapeACyxq_GSi_S3iSaySiGtF"></a>
                     <a name="//apple_ref/swift/Method/col2img(kernelWidth:kernelHeight:padding:stride:resultShape:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV7col2img11kernelWidth0D6Height7padding6stride11resultShapeACyxq_GSi_S3iSaySiGtF">col2img(kernelWidth:kernelHeight:padding:stride:resultShape:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV7col2img11kernelWidth0D6Height7padding6stride11resultShapeACyxq_GSi_S3iSaySiGtF">col2img(kernelWidth:<wbr>kernelHeight:<wbr>padding:<wbr>stride:<wbr>resultShape:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -1963,9 +1983,11 @@ The result tensor will have the given result shape, which is expected to be 4-di
               <div class="task-name-container">
                 <a name="/Convolution"></a>
                 <a name="//apple_ref/swift/Section/Convolution" class="dashAnchor"></a>
-                <a href="#/Convolution">
-                  <h3 class="section-name">Convolution</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Convolution"></a>
+                  <h3 class="section-name"><p>Convolution</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -1973,7 +1995,7 @@ The result tensor will have the given result shape, which is expected to be 4-di
                     <code>
                     <a name="/s:4DL4S6TensorV11convolved2d7filters7padding6strideACyxq_GAH_SiSgSitF"></a>
                     <a name="//apple_ref/swift/Method/convolved2d(filters:padding:stride:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV11convolved2d7filters7padding6strideACyxq_GAH_SiSgSitF">convolved2d(filters:padding:stride:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV11convolved2d7filters7padding6strideACyxq_GAH_SiSgSitF">convolved2d(filters:<wbr>padding:<wbr>stride:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2050,7 +2072,7 @@ the filters tensor is expected to have a shape of [outputChannels, inputChannels
                     <code>
                     <a name="/s:4DL4S6TensorV21transposedConvolved2d7filters5inset6strideACyxq_GAH_SiSgSitF"></a>
                     <a name="//apple_ref/swift/Method/transposedConvolved2d(filters:inset:stride:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV21transposedConvolved2d7filters5inset6strideACyxq_GAH_SiSgSitF">transposedConvolved2d(filters:inset:stride:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV21transposedConvolved2d7filters5inset6strideACyxq_GAH_SiSgSitF">transposedConvolved2d(filters:<wbr>inset:<wbr>stride:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2128,9 +2150,11 @@ the filters tensor is expected to have a shape of [outputChannels, inputChannels
               <div class="task-name-container">
                 <a name="/Pooling"></a>
                 <a name="//apple_ref/swift/Section/Pooling" class="dashAnchor"></a>
-                <a href="#/Pooling">
-                  <h3 class="section-name">Pooling</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Pooling"></a>
+                  <h3 class="section-name"><p>Pooling</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -2138,7 +2162,7 @@ the filters tensor is expected to have a shape of [outputChannels, inputChannels
                     <code>
                     <a name="/s:4DL4S6TensorV11maxPooled2d10windowSize7padding6strideACyxq_GSi_SiSgAItF"></a>
                     <a name="//apple_ref/swift/Method/maxPooled2d(windowSize:padding:stride:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV11maxPooled2d10windowSize7padding6strideACyxq_GSi_SiSgAItF">maxPooled2d(windowSize:padding:stride:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV11maxPooled2d10windowSize7padding6strideACyxq_GSi_SiSgAItF">maxPooled2d(windowSize:<wbr>padding:<wbr>stride:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2214,7 +2238,7 @@ the filters tensor is expected to have a shape of [outputChannels, inputChannels
                     <code>
                     <a name="/s:4DL4S6TensorV15averagePooled2d10windowSize7padding6strideACyxq_GSi_SiSgAItF"></a>
                     <a name="//apple_ref/swift/Method/averagePooled2d(windowSize:padding:stride:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV15averagePooled2d10windowSize7padding6strideACyxq_GSi_SiSgAItF">averagePooled2d(windowSize:padding:stride:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV15averagePooled2d10windowSize7padding6strideACyxq_GSi_SiSgAItF">averagePooled2d(windowSize:<wbr>padding:<wbr>stride:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2291,9 +2315,11 @@ the filters tensor is expected to have a shape of [outputChannels, inputChannels
               <div class="task-name-container">
                 <a name="/Matrix%20Multiplication"></a>
                 <a name="//apple_ref/swift/Section/Matrix Multiplication" class="dashAnchor"></a>
-                <a href="#/Matrix%20Multiplication">
-                  <h3 class="section-name">Matrix Multiplication</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Matrix%20Multiplication"></a>
+                  <h3 class="section-name"><p>Matrix Multiplication</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -2301,7 +2327,7 @@ the filters tensor is expected to have a shape of [outputChannels, inputChannels
                     <code>
                     <a name="/s:4DL4S6TensorV16matrixMultiplied4withACyxq_GAF_tF"></a>
                     <a name="//apple_ref/swift/Method/matrixMultiplied(with:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV16matrixMultiplied4withACyxq_GAF_tF">matrixMultiplied(with:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV16matrixMultiplied4withACyxq_GAF_tF">matrixMultiplied(with:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2347,7 +2373,7 @@ the filters tensor is expected to have a shape of [outputChannels, inputChannels
                     <code>
                     <a name="/s:4DL4S6TensorV25broadcastMatrixMultiplied4with13transposeSelf0G5OtherACyxq_GAH_S2btF"></a>
                     <a name="//apple_ref/swift/Method/broadcastMatrixMultiplied(with:transposeSelf:transposeOther:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV25broadcastMatrixMultiplied4with13transposeSelf0G5OtherACyxq_GAH_S2btF">broadcastMatrixMultiplied(with:transposeSelf:transposeOther:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV25broadcastMatrixMultiplied4with13transposeSelf0G5OtherACyxq_GAH_S2btF">broadcastMatrixMultiplied(with:<wbr>transposeSelf:<wbr>transposeOther:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2421,9 +2447,11 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
               <div class="task-name-container">
                 <a name="/Summation"></a>
                 <a name="//apple_ref/swift/Section/Summation" class="dashAnchor"></a>
-                <a href="#/Summation">
-                  <h3 class="section-name">Summation</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Summation"></a>
+                  <h3 class="section-name"><p>Summation</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -2431,7 +2459,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9reduceSum5alongACyxq_GSaySiG_tF"></a>
                     <a name="//apple_ref/swift/Method/reduceSum(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9reduceSum5alongACyxq_GSaySiG_tF">reduceSum(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9reduceSum5alongACyxq_GSaySiG_tF">reduceSum(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2481,7 +2509,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9reduceSum5alongACyxq_GSid_tF"></a>
                     <a name="//apple_ref/swift/Method/reduceSum(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9reduceSum5alongACyxq_GSid_tF">reduceSum(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9reduceSum5alongACyxq_GSid_tF">reduceSum(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2563,7 +2591,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV10reduceMean5alongACyxq_GSaySiG_tF"></a>
                     <a name="//apple_ref/swift/Method/reduceMean(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV10reduceMean5alongACyxq_GSaySiG_tF">reduceMean(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV10reduceMean5alongACyxq_GSaySiG_tF">reduceMean(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2613,7 +2641,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV10reduceMean5alongACyxq_GSid_tF"></a>
                     <a name="//apple_ref/swift/Method/reduceMean(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV10reduceMean5alongACyxq_GSid_tF">reduceMean(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV10reduceMean5alongACyxq_GSid_tF">reduceMean(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2690,7 +2718,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV8variance5alongACyxq_GSaySiG_tF"></a>
                     <a name="//apple_ref/swift/Method/variance(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8variance5alongACyxq_GSaySiG_tF">variance(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV8variance5alongACyxq_GSaySiG_tF">variance(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2740,7 +2768,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV8variance5alongACyxq_GSid_tF"></a>
                     <a name="//apple_ref/swift/Method/variance(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8variance5alongACyxq_GSid_tF">variance(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV8variance5alongACyxq_GSid_tF">variance(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2849,9 +2877,11 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
               <div class="task-name-container">
                 <a name="/Min/Max"></a>
                 <a name="//apple_ref/swift/Section/Min/Max" class="dashAnchor"></a>
-                <a href="#/Min/Max">
-                  <h3 class="section-name">Min/Max</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Min/Max"></a>
+                  <h3 class="section-name"><p>Min/Max</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -2859,7 +2889,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9reduceMax5alongACyxq_GSaySiG_tF"></a>
                     <a name="//apple_ref/swift/Method/reduceMax(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9reduceMax5alongACyxq_GSaySiG_tF">reduceMax(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9reduceMax5alongACyxq_GSaySiG_tF">reduceMax(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2909,7 +2939,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9reduceMax5alongACyxq_GSid_tF"></a>
                     <a name="//apple_ref/swift/Method/reduceMax(along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9reduceMax5alongACyxq_GSid_tF">reduceMax(along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9reduceMax5alongACyxq_GSid_tF">reduceMax(along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -2991,9 +3021,11 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
               <div class="task-name-container">
                 <a name="/Indexing"></a>
                 <a name="//apple_ref/swift/Section/Indexing" class="dashAnchor"></a>
-                <a href="#/Indexing">
-                  <h3 class="section-name">Indexing</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Indexing"></a>
+                  <h3 class="section-name"><p>Indexing</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -3001,7 +3033,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV6gather5using9alongAxisACyxq_GACys5Int32Vq_G_SitF"></a>
                     <a name="//apple_ref/swift/Method/gather(using:alongAxis:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV6gather5using9alongAxisACyxq_GACys5Int32Vq_G_SitF">gather(using:alongAxis:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV6gather5using9alongAxisACyxq_GACys5Int32Vq_G_SitF">gather(using:<wbr>alongAxis:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3066,7 +3098,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV7scatter5using9alongAxis8withSizeACyxq_GACys5Int32Vq_G_S2itF"></a>
                     <a name="//apple_ref/swift/Method/scatter(using:alongAxis:withSize:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV7scatter5using9alongAxis8withSizeACyxq_GACys5Int32Vq_G_S2itF">scatter(using:alongAxis:withSize:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV7scatter5using9alongAxis8withSizeACyxq_GACys5Int32Vq_G_S2itF">scatter(using:<wbr>alongAxis:<wbr>withSize:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3144,9 +3176,11 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
               <div class="task-name-container">
                 <a name="/Tensor%20Shape%20Modifiers"></a>
                 <a name="//apple_ref/swift/Section/Tensor Shape Modifiers" class="dashAnchor"></a>
-                <a href="#/Tensor%20Shape%20Modifiers">
-                  <h3 class="section-name">Tensor Shape Modifiers</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Tensor%20Shape%20Modifiers"></a>
+                  <h3 class="section-name"><p>Tensor Shape Modifiers</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -3154,7 +3188,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV4view2asACyxq_GSaySiG_tF"></a>
                     <a name="//apple_ref/swift/Method/view(as:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV4view2asACyxq_GSaySiG_tF">view(as:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV4view2asACyxq_GSaySiG_tF">view(as:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3208,7 +3242,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV4view2asACyxq_GSid_tF"></a>
                     <a name="//apple_ref/swift/Method/view(as:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV4view2asACyxq_GSid_tF">view(as:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV4view2asACyxq_GSid_tF">view(as:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3262,7 +3296,7 @@ Operands are expected to have a dimensionality of 2 or higher.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV10unsqueezed2atACyxq_GSi_tF"></a>
                     <a name="//apple_ref/swift/Method/unsqueezed(at:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV10unsqueezed2atACyxq_GSi_tF">unsqueezed(at:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV10unsqueezed2atACyxq_GSi_tF">unsqueezed(at:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3309,7 +3343,7 @@ The axis will have a size of 1.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV8squeezed2atACyxq_GSi_tF"></a>
                     <a name="//apple_ref/swift/Method/squeezed(at:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8squeezed2atACyxq_GSi_tF">squeezed(at:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV8squeezed2atACyxq_GSi_tF">squeezed(at:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3405,23 +3439,12 @@ Otherwise, the original tensor is returned.</p>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20Shape%20Modifiers2"></a>
-                <a name="//apple_ref/swift/Section/Tensor Shape Modifiers" class="dashAnchor"></a>
-                <a href="#/Tensor%20Shape%20Modifiers2">
-                  <h3 class="section-name">Tensor Shape Modifiers</h3>
-                </a>
-              </div>
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
                     <a name="/s:4DL4S6TensorV8permuted2toACyxq_GSaySiG_tF"></a>
                     <a name="//apple_ref/swift/Method/permuted(to:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8permuted2toACyxq_GSaySiG_tF">permuted(to:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV8permuted2toACyxq_GSaySiG_tF">permuted(to:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3471,7 +3494,7 @@ Otherwise, the original tensor is returned.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV14addingPermuted_11permutationyACyxq_G_SaySiGtF"></a>
                     <a name="//apple_ref/swift/Method/addingPermuted(_:permutation:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV14addingPermuted_11permutationyACyxq_G_SaySiGtF">addingPermuted(_:permutation:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV14addingPermuted_11permutationyACyxq_G_SaySiGtF">addingPermuted(_:<wbr>permutation:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3531,7 +3554,7 @@ Otherwise, the original tensor is returned.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV8permuted2toACyxq_GSid_tF"></a>
                     <a name="//apple_ref/swift/Method/permuted(to:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8permuted2toACyxq_GSid_tF">permuted(to:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV8permuted2toACyxq_GSid_tF">permuted(to:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3638,9 +3661,11 @@ The tensor must have a dimensionality of 2.</p>
               <div class="task-name-container">
                 <a name="/Tensor%20Stacking"></a>
                 <a name="//apple_ref/swift/Section/Tensor Stacking" class="dashAnchor"></a>
-                <a href="#/Tensor%20Stacking">
-                  <h3 class="section-name">Tensor Stacking</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Tensor%20Stacking"></a>
+                  <h3 class="section-name"><p>Tensor Stacking</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -3648,7 +3673,7 @@ The tensor must have a dimensionality of 2.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV9unstacked5along11withLengthsSayACyxq_GGSi_SaySiGtF"></a>
                     <a name="//apple_ref/swift/Method/unstacked(along:withLengths:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV9unstacked5along11withLengthsSayACyxq_GGSi_SaySiGtF">unstacked(along:withLengths:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV9unstacked5along11withLengthsSayACyxq_GGSi_SaySiGtF">unstacked(along:<wbr>withLengths:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3709,7 +3734,7 @@ The number of elements of the source tensor along the unstacking axis must be eq
                     <code>
                     <a name="/s:4DL4S6TensorV8stacking5alongACyxq_GSayAFG_Sitcfc"></a>
                     <a name="//apple_ref/swift/Method/init(stacking:along:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8stacking5alongACyxq_GSayAFG_Sitcfc">init(stacking:along:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV8stacking5alongACyxq_GSayAFG_Sitcfc">init(stacking:<wbr>along:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3770,9 +3795,11 @@ The number of elements of the source tensor along the unstacking axis must be eq
               <div class="task-name-container">
                 <a name="/Subscripting"></a>
                 <a name="//apple_ref/swift/Section/Subscripting" class="dashAnchor"></a>
-                <a href="#/Subscripting">
-                  <h3 class="section-name">Subscripting</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Subscripting"></a>
+                  <h3 class="section-name"><p>Subscripting</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -3780,7 +3807,7 @@ The number of elements of the source tensor along the unstacking axis must be eq
                     <code>
                     <a name="/s:4DL4S6TensorVyACyxq_GSaySiSgGcip"></a>
                     <a name="//apple_ref/swift/Method/subscript(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSaySiSgGcip">subscript(_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSaySiSgGcip">subscript(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3816,7 +3843,7 @@ The number of elements of the source tensor along the unstacking axis must be eq
                     <code>
                     <a name="/s:4DL4S6TensorVyACyxq_GSiSgd_tcip"></a>
                     <a name="//apple_ref/swift/Method/subscript(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSiSgd_tcip">subscript(_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSiSgd_tcip">subscript(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3852,7 +3879,7 @@ The number of elements of the source tensor along the unstacking axis must be eq
                     <code>
                     <a name="/s:4DL4S6TensorVyACyxq_GSaySnySiGSgGcip"></a>
                     <a name="//apple_ref/swift/Method/subscript(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSaySnySiGSgGcip">subscript(_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSaySnySiGSgGcip">subscript(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3887,7 +3914,7 @@ The number of elements of the source tensor along the unstacking axis must be eq
                     <code>
                     <a name="/s:4DL4S6TensorVyACyxq_GSnySiGSgd_tcip"></a>
                     <a name="//apple_ref/swift/Method/subscript(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSnySiGSgd_tcip">subscript(_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_GSnySiGSgd_tcip">subscript(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -3923,9 +3950,11 @@ The number of elements of the source tensor along the unstacking axis must be eq
               <div class="task-name-container">
                 <a name="/Element-wise%20operations"></a>
                 <a name="//apple_ref/swift/Section/Element-wise operations" class="dashAnchor"></a>
-                <a href="#/Element-wise%20operations">
-                  <h3 class="section-name">Element-wise operations</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Element-wise%20operations"></a>
+                  <h3 class="section-name"><p>Element-wise operations</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -4099,7 +4128,7 @@ The number of elements of the source tensor along the unstacking axis must be eq
                     <code>
                     <a name="/s:4DL4S6TensorV20leakyRectifiedLinear7leakageACyxq_GAF_tF"></a>
                     <a name="//apple_ref/swift/Method/leakyRectifiedLinear(leakage:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV20leakyRectifiedLinear7leakageACyxq_GAF_tF">leakyRectifiedLinear(leakage:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV20leakyRectifiedLinear7leakageACyxq_GAF_tF">leakyRectifiedLinear(leakage:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4155,7 +4184,7 @@ The number of elements of the source tensor along the unstacking axis must be eq
                     <code>
                     <a name="/s:4DL4S6TensorV7softmax4axisACyxq_GSi_tF"></a>
                     <a name="//apple_ref/swift/Method/softmax(axis:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV7softmax4axisACyxq_GSi_tF">softmax(axis:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV7softmax4axisACyxq_GSi_tF">softmax(axis:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4172,6 +4201,34 @@ If no axis is provided, the softmax is computed along axis 1.</p>
                         <div class="language">
                           <p class="aside-title">Swift</p>
                           <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">softmax</span><span class="p">(</span><span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorV10logSoftmax4axisACyxq_GSi_tF"></a>
+                    <a name="//apple_ref/swift/Method/logSoftmax(axis:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorV10logSoftmax4axisACyxq_GSi_tF">logSoftmax(axis:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Computes the logarithm of the softmax function along the given axis.
+If no axis is provided, the softmax is computed along axis 1.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">logSoftmax</span><span class="p">(</span><span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -4266,7 +4323,7 @@ If no axis is provided, the softmax is computed along axis 1.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV14swishActivated4betaACyxq_GAF_tF"></a>
                     <a name="//apple_ref/swift/Method/swishActivated(beta:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV14swishActivated4betaACyxq_GAF_tF">swishActivated(beta:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV14swishActivated4betaACyxq_GAF_tF">swishActivated(beta:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4354,78 +4411,11 @@ If no axis is provided, the softmax is computed along axis 1.</p>
               <div class="task-name-container">
                 <a name="/Utility%20operations"></a>
                 <a name="//apple_ref/swift/Section/Utility operations" class="dashAnchor"></a>
-                <a href="#/Utility%20operations">
-                  <h3 class="section-name">Utility operations</h3>
-                </a>
-              </div>
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6TensorVAAs5Int32VRszrlE13oneHotEncoded3dim4typeACyqd__q_GSi_qd__mtAA11NumericTypeRd__lF"></a>
-                    <a name="//apple_ref/swift/Method/oneHotEncoded(dim:type:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVAAs5Int32VRszrlE13oneHotEncoded3dim4typeACyqd__q_GSi_qd__mtAA11NumericTypeRd__lF">oneHotEncoded(dim:type:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>One-hot encodes a tensor of indices</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="n">oneHotEncoded</span><span class="o">&lt;</span><span class="kt">Target</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">dim</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">type</span><span class="p">:</span> <span class="kt">Target</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">Target</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Target</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Target</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>dim</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Size of encoding axis. <code>max(tensor)</code> must be less than <code><a href="../Structs/Tensor.html#/s:4DL4S6TensorV3dimSivp">dim</a></code>.</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>type</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Data type of the result.</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Utility%20operations2"></a>
-                <a name="//apple_ref/swift/Section/Utility operations" class="dashAnchor"></a>
-                <a href="#/Utility%20operations2">
-                  <h3 class="section-name">Utility operations</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Utility%20operations"></a>
+                  <h3 class="section-name"><p>Utility operations</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -4433,7 +4423,7 @@ If no axis is provided, the softmax is computed along axis 1.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV24linearRampWithLowerBound05upperG02byACyxq_Gx_xxtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(linearRampWithLowerBound:upperBound:by:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV24linearRampWithLowerBound05upperG02byACyxq_Gx_xxtcfc">init(linearRampWithLowerBound:upperBound:by:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV24linearRampWithLowerBound05upperG02byACyxq_Gx_xxtcfc">init(linearRampWithLowerBound:<wbr>upperBound:<wbr>by:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4503,7 +4493,7 @@ If no axis is provided, the softmax is computed along axis 1.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV8repeatedyACyxq_GSiF"></a>
                     <a name="//apple_ref/swift/Method/repeated(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8repeatedyACyxq_GSiF">repeated(_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV8repeatedyACyxq_GSiF">repeated(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4549,7 +4539,7 @@ If no axis is provided, the softmax is computed along axis 1.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV6padded4with7paddingACyxq_Gx_SaySi_SitGtF"></a>
                     <a name="//apple_ref/swift/Method/padded(with:padding:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV6padded4with7paddingACyxq_Gx_SaySi_SitGtF">padded(with:padding:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV6padded4with7paddingACyxq_Gx_SaySi_SitGtF">padded(with:<wbr>padding:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4607,7 +4597,7 @@ If no axis is provided, the softmax is computed along axis 1.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV6padded4with7paddingACyxq_Gx_SaySiGtF"></a>
                     <a name="//apple_ref/swift/Method/padded(with:padding:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV6padded4with7paddingACyxq_Gx_SaySiGtF">padded(with:padding:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV6padded4with7paddingACyxq_Gx_SaySiGtF">padded(with:<wbr>padding:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4692,7 +4682,7 @@ If no axis is provided, the softmax is computed along axis 1.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV10bandMatrix13belowDiagonal05aboveF0ACyxq_GSiSg_AHtF"></a>
                     <a name="//apple_ref/swift/Method/bandMatrix(belowDiagonal:aboveDiagonal:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV10bandMatrix13belowDiagonal05aboveF0ACyxq_GSiSg_AHtF">bandMatrix(belowDiagonal:aboveDiagonal:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV10bandMatrix13belowDiagonal05aboveF0ACyxq_GSiSg_AHtF">bandMatrix(belowDiagonal:<wbr>aboveDiagonal:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4752,9 +4742,11 @@ Remaining elements are filled with zeros.</p>
               <div class="task-name-container">
                 <a name="/Tensor%20extensions"></a>
                 <a name="//apple_ref/swift/Section/Tensor extensions" class="dashAnchor"></a>
-                <a href="#/Tensor%20extensions">
-                  <h3 class="section-name">Tensor extensions</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Tensor%20extensions"></a>
+                  <h3 class="section-name"><p>Tensor extensions</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -4809,60 +4801,12 @@ Remaining elements are filled with zeros.</p>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20extensions2"></a>
-                <a name="//apple_ref/swift/Section/Tensor extensions" class="dashAnchor"></a>
-                <a href="#/Tensor%20extensions2">
-                  <h3 class="section-name">Tensor extensions</h3>
-                </a>
-              </div>
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:SQ2eeoiySbx_xtFZ"></a>
-                    <a name="//apple_ref/swift/Method/==(_:_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:SQ2eeoiySbx_xtFZ">==(_:_:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span> <span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="p">`</span><span class="nv">Self</span><span class="p">`,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="p">`</span><span class="nv">Self</span><span class="p">`)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20extensions3"></a>
-                <a name="//apple_ref/swift/Section/Tensor extensions" class="dashAnchor"></a>
-                <a href="#/Tensor%20extensions3">
-                  <h3 class="section-name">Tensor extensions</h3>
-                </a>
-              </div>
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
                     <a name="/s:s25ExpressibleByFloatLiteralP05floatD0x0cD4TypeQz_tcfc"></a>
                     <a name="//apple_ref/swift/Method/init(floatLiteral:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:s25ExpressibleByFloatLiteralP05floatD0x0cD4TypeQz_tcfc">init(floatLiteral:)</a>
+                    <a class="token" href="#/s:s25ExpressibleByFloatLiteralP05floatD0x0cD4TypeQz_tcfc">init(floatLiteral:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4883,23 +4827,12 @@ Remaining elements are filled with zeros.</p>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20extensions4"></a>
-                <a name="//apple_ref/swift/Section/Tensor extensions" class="dashAnchor"></a>
-                <a href="#/Tensor%20extensions4">
-                  <h3 class="section-name">Tensor extensions</h3>
-                </a>
-              </div>
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
                     <a name="/s:s27ExpressibleByIntegerLiteralP07integerD0x0cD4TypeQz_tcfc"></a>
                     <a name="//apple_ref/swift/Method/init(integerLiteral:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:s27ExpressibleByIntegerLiteralP07integerD0x0cD4TypeQz_tcfc">init(integerLiteral:)</a>
+                    <a class="token" href="#/s:s27ExpressibleByIntegerLiteralP07integerD0x0cD4TypeQz_tcfc">init(integerLiteral:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4920,23 +4853,12 @@ Remaining elements are filled with zeros.</p>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20extensions5"></a>
-                <a name="//apple_ref/swift/Section/Tensor extensions" class="dashAnchor"></a>
-                <a href="#/Tensor%20extensions5">
-                  <h3 class="section-name">Tensor extensions</h3>
-                </a>
-              </div>
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
                     <a name="/s:4DL4S6TensorVyACyxq_Gxcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_Gxcfc">init(_:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVyACyxq_Gxcfc">init(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -4977,17 +4899,6 @@ Remaining elements are filled with zeros.</p>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20extensions6"></a>
-                <a name="//apple_ref/swift/Section/Tensor extensions" class="dashAnchor"></a>
-                <a href="#/Tensor%20extensions6">
-                  <h3 class="section-name">Tensor extensions</h3>
-                </a>
-              </div>
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -5021,9 +4932,11 @@ Remaining elements are filled with zeros.</p>
               <div class="task-name-container">
                 <a name="/Tensor%20-%20array%20conversion"></a>
                 <a name="//apple_ref/swift/Section/Tensor - array conversion" class="dashAnchor"></a>
-                <a href="#/Tensor%20-%20array%20conversion">
-                  <h3 class="section-name">Tensor - array conversion</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Tensor%20-%20array%20conversion"></a>
+                  <h3 class="section-name"><p>Tensor - array conversion</p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -5031,7 +4944,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySayxGG_Sbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySayxGG_Sbtcfc">init(_:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySayxGG_Sbtcfc">init(_:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5089,7 +5002,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySayxGGG_Sbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySayxGGG_Sbtcfc">init(_:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySayxGGG_Sbtcfc">init(_:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5147,7 +5060,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySaySayxGGGG_Sbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySaySayxGGGG_Sbtcfc">init(_:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySaySayxGGGG_Sbtcfc">init(_:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5205,7 +5118,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySaySaySayxGGGGG_Sbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySaySaySayxGGGGG_Sbtcfc">init(_:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorV_16requiresGradientACyxq_GSaySaySaySaySayxGGGGG_Sbtcfc">init(_:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5264,9 +5177,371 @@ Remaining elements are filled with zeros.</p>
               <div class="task-name-container">
                 <a name="/Tensor%20initialization"></a>
                 <a name="//apple_ref/swift/Section/Tensor initialization" class="dashAnchor"></a>
-                <a href="#/Tensor%20initialization">
-                  <h3 class="section-name">Tensor initialization</h3>
-                </a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Tensor%20initialization"></a>
+                  <h3 class="section-name"><p>Tensor initialization</p>
+</h3>
+                </div>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSaySiG_SfSbtcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(bernoulliDistributedWithShape:probability:requiresGradient:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSaySiG_SfSbtcfc">init(bernoulliDistributedWithShape:<wbr>probability:<wbr>requiresGradient:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">(</span><span class="n">bernoulliDistributedWithShape</span> <span class="nv">shape</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="nv">probability</span><span class="p">:</span> <span class="kt">Float</span><span class="p">,</span> <span class="nv">requiresGradient</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">false</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSid_SfSbtcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(bernoulliDistributedWithShape:probability:requiresGradient:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSid_SfSbtcfc">init(bernoulliDistributedWithShape:<wbr>probability:<wbr>requiresGradient:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">(</span><span class="n">bernoulliDistributedWithShape</span> <span class="nv">shape</span><span class="p">:</span> <span class="kt">Int</span><span class="o">...</span><span class="p">,</span> <span class="nv">probability</span><span class="p">:</span> <span class="kt">Float</span><span class="p">,</span> <span class="nv">requiresGradient</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">false</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorV8elementsSayxGvp"></a>
+                    <a name="//apple_ref/swift/Property/elements" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorV8elementsSayxGvp">elements</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">elements</span><span class="p">:</span> <span class="p">[</span><span class="kt">Element</span><span class="p">]</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Tensor%20-%20Image%20conversion"></a>
+                <a name="//apple_ref/swift/Section/Tensor - Image conversion" class="dashAnchor"></a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Tensor%20-%20Image%20conversion"></a>
+                  <h3 class="section-name"><p>Tensor - Image conversion</p>
+</h3>
+                </div>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo10CGImageRefa_SNyxGtcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(_:normalizedTo:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo10CGImageRefa_SNyxGtcfc">init(_:<wbr>normalizedTo:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a tensor from the given CGImage</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">?(</span><span class="n">_</span> <span class="nv">image</span><span class="p">:</span> <span class="kt">CGImage</span><span class="p">,</span> <span class="n">normalizedTo</span> <span class="nv">range</span><span class="p">:</span> <span class="kt">ClosedRange</span><span class="o">&lt;</span><span class="kt">Element</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">1</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>image</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Image</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>range</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Range to normalize pixel values to</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorV7cgImage13normalizeFromSo10CGImageRefaSgSNyxG_tF"></a>
+                    <a name="//apple_ref/swift/Method/cgImage(normalizeFrom:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorV7cgImage13normalizeFromSo10CGImageRefaSgSNyxG_tF">cgImage(normalizeFrom:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">cgImage</span><span class="p">(</span><span class="n">normalizeFrom</span> <span class="nv">tensorRange</span><span class="p">:</span> <span class="kt">ClosedRange</span><span class="o">&lt;</span><span class="kt">Element</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">CGImage</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo7NSImageC_SNyxGtcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(_:normalizedTo:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo7NSImageC_SNyxGtcfc">init(_:<wbr>normalizedTo:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a tensor from the given NSImage</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">?(</span><span class="n">_</span> <span class="nv">image</span><span class="p">:</span> <span class="kt">NSImage</span><span class="p">,</span> <span class="n">normalizedTo</span> <span class="nv">range</span><span class="p">:</span> <span class="kt">ClosedRange</span><span class="o">&lt;</span><span class="kt">Element</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">1</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>image</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Image</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>range</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Range to normalize pixel values to</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Available%20where%20%60Element%60%20==%20%60Int32%60"></a>
+                <a name="//apple_ref/swift/Section/Available where `Element` == `Int32`" class="dashAnchor"></a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Available%20where%20%60Element%60%20==%20%60Int32%60"></a>
+                  <h3 class="section-name"><p>Available where <code>Element</code> == <code>Int32</code></p>
+</h3>
+                </div>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6TensorVAAs5Int32VRszrlE13oneHotEncoded3dim4typeACyqd__q_GSi_qd__mtAA11NumericTypeRd__lF"></a>
+                    <a name="//apple_ref/swift/Method/oneHotEncoded(dim:type:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6TensorVAAs5Int32VRszrlE13oneHotEncoded3dim4typeACyqd__q_GSi_qd__mtAA11NumericTypeRd__lF">oneHotEncoded(dim:<wbr>type:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>One-hot encodes a tensor of indices</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="n">oneHotEncoded</span><span class="o">&lt;</span><span class="kt">Target</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">dim</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">type</span><span class="p">:</span> <span class="kt">Target</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">Target</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Target</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="k">where</span> <span class="kt">Target</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/NumericType.html">NumericType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>dim</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Size of encoding axis. <code>max(tensor)</code> must be less than <code><a href="../Structs/Tensor.html#/s:4DL4S6TensorV3dimSivp">dim</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>type</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Data type of the result.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Available%20where%20%60Element%60:%20%60Equatable%60"></a>
+                <a name="//apple_ref/swift/Section/Available where `Element`: `Equatable`" class="dashAnchor"></a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Available%20where%20%60Element%60:%20%60Equatable%60"></a>
+                  <h3 class="section-name"><p>Available where <code>Element</code>: <code>Equatable</code></p>
+</h3>
+                </div>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:SQ2eeoiySbx_xtFZ"></a>
+                    <a name="//apple_ref/swift/Method/==(_:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:SQ2eeoiySbx_xtFZ">==(_:<wbr>_:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span> <span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="p">`</span><span class="nv">Self</span><span class="p">`,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="p">`</span><span class="nv">Self</span><span class="p">`)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/Available%20where%20%60Element%60:%20%60RandomizableType%60"></a>
+                <a name="//apple_ref/swift/Section/Available where `Element`: `RandomizableType`" class="dashAnchor"></a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Available%20where%20%60Element%60:%20%60RandomizableType%60"></a>
+                  <h3 class="section-name"><p>Available where <code>Element</code>: <code><a href="../Protocols/RandomizableType.html">RandomizableType</a></code></p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -5274,7 +5549,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE21xavierNormalWithShape16requiresGradientACyxq_GSaySiG_Sbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(xavierNormalWithShape:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE21xavierNormalWithShape16requiresGradientACyxq_GSaySiG_Sbtcfc">init(xavierNormalWithShape:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE21xavierNormalWithShape16requiresGradientACyxq_GSaySiG_Sbtcfc">init(xavierNormalWithShape:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5332,7 +5607,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE21xavierNormalWithShape16requiresGradientACyxq_GSid_Sbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(xavierNormalWithShape:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE21xavierNormalWithShape16requiresGradientACyxq_GSid_Sbtcfc">init(xavierNormalWithShape:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE21xavierNormalWithShape16requiresGradientACyxq_GSid_Sbtcfc">init(xavierNormalWithShape:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5390,7 +5665,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE26normalDistributedWithShape4mean5stdev16requiresGradientACyxq_GSaySiG_xxSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(normalDistributedWithShape:mean:stdev:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE26normalDistributedWithShape4mean5stdev16requiresGradientACyxq_GSaySiG_xxSbtcfc">init(normalDistributedWithShape:mean:stdev:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE26normalDistributedWithShape4mean5stdev16requiresGradientACyxq_GSaySiG_xxSbtcfc">init(normalDistributedWithShape:<wbr>mean:<wbr>stdev:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5472,7 +5747,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE26normalDistributedWithShape4mean5stdev16requiresGradientACyxq_GSid_xxSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(normalDistributedWithShape:mean:stdev:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE26normalDistributedWithShape4mean5stdev16requiresGradientACyxq_GSid_xxSbtcfc">init(normalDistributedWithShape:mean:stdev:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE26normalDistributedWithShape4mean5stdev16requiresGradientACyxq_GSid_xxSbtcfc">init(normalDistributedWithShape:<wbr>mean:<wbr>stdev:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5554,7 +5829,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE29uniformlyDistributedWithShape3min3max16requiresGradientACyxq_GSaySiG_xxSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(uniformlyDistributedWithShape:min:max:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE29uniformlyDistributedWithShape3min3max16requiresGradientACyxq_GSaySiG_xxSbtcfc">init(uniformlyDistributedWithShape:min:max:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE29uniformlyDistributedWithShape3min3max16requiresGradientACyxq_GSaySiG_xxSbtcfc">init(uniformlyDistributedWithShape:<wbr>min:<wbr>max:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5636,7 +5911,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE29uniformlyDistributedWithShape3min3max16requiresGradientACyxq_GSid_xxSbtcfc"></a>
                     <a name="//apple_ref/swift/Method/init(uniformlyDistributedWithShape:min:max:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE29uniformlyDistributedWithShape3min3max16requiresGradientACyxq_GSid_xxSbtcfc">init(uniformlyDistributedWithShape:min:max:requiresGradient:)</a>
+                    <a class="token" href="#/s:4DL4S6TensorVA2A16RandomizableTypeRzrlE29uniformlyDistributedWithShape3min3max16requiresGradientACyxq_GSid_xxSbtcfc">init(uniformlyDistributedWithShape:<wbr>min:<wbr>max:<wbr>requiresGradient:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5717,76 +5992,13 @@ Remaining elements are filled with zeros.</p>
             </div>
             <div class="task-group">
               <div class="task-name-container">
-                <a name="/Tensor%20initialization2"></a>
-                <a name="//apple_ref/swift/Section/Tensor initialization" class="dashAnchor"></a>
-                <a href="#/Tensor%20initialization2">
-                  <h3 class="section-name">Tensor initialization</h3>
-                </a>
-              </div>
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSaySiG_SfSbtcfc"></a>
-                    <a name="//apple_ref/swift/Method/init(bernoulliDistributedWithShape:probability:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSaySiG_SfSbtcfc">init(bernoulliDistributedWithShape:probability:requiresGradient:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">(</span><span class="n">bernoulliDistributedWithShape</span> <span class="nv">shape</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="nv">probability</span><span class="p">:</span> <span class="kt">Float</span><span class="p">,</span> <span class="nv">requiresGradient</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">false</span><span class="p">)</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSid_SfSbtcfc"></a>
-                    <a name="//apple_ref/swift/Method/init(bernoulliDistributedWithShape:probability:requiresGradient:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV29bernoulliDistributedWithShape11probability16requiresGradientACyxq_GSid_SfSbtcfc">init(bernoulliDistributedWithShape:probability:requiresGradient:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">(</span><span class="n">bernoulliDistributedWithShape</span> <span class="nv">shape</span><span class="p">:</span> <span class="kt">Int</span><span class="o">...</span><span class="p">,</span> <span class="nv">probability</span><span class="p">:</span> <span class="kt">Float</span><span class="p">,</span> <span class="nv">requiresGradient</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">false</span><span class="p">)</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20initialization3"></a>
-                <a name="//apple_ref/swift/Section/Tensor initialization" class="dashAnchor"></a>
-                <a href="#/Tensor%20initialization3">
-                  <h3 class="section-name">Tensor initialization</h3>
-                </a>
+                <a name="/Available%20where%20%60Element%60:%20%60Codable%60"></a>
+                <a name="//apple_ref/swift/Section/Available where `Element`: `Codable`" class="dashAnchor"></a>
+                <div class="section-name-container">
+                  <a class="section-name-link" href="#/Available%20where%20%60Element%60:%20%60Codable%60"></a>
+                  <h3 class="section-name"><p>Available where <code>Element</code>: <code>Codable</code></p>
+</h3>
+                </div>
               </div>
               <ul class="item-container">
                 <li class="item">
@@ -5794,7 +6006,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:Se4fromxs7Decoder_p_tKcfc"></a>
                     <a name="//apple_ref/swift/Method/init(from:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:Se4fromxs7Decoder_p_tKcfc">init(from:)</a>
+                    <a class="token" href="#/s:Se4fromxs7Decoder_p_tKcfc">init(from:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5820,7 +6032,7 @@ Remaining elements are filled with zeros.</p>
                     <code>
                     <a name="/s:SE6encode2toys7Encoder_p_tKF"></a>
                     <a name="//apple_ref/swift/Method/encode(to:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:SE6encode2toys7Encoder_p_tKF">encode(to:)</a>
+                    <a class="token" href="#/s:SE6encode2toys7Encoder_p_tKF">encode(to:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -5843,217 +6055,14 @@ Remaining elements are filled with zeros.</p>
                 </li>
               </ul>
             </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20initialization4"></a>
-                <a name="//apple_ref/swift/Section/Tensor initialization" class="dashAnchor"></a>
-                <a href="#/Tensor%20initialization4">
-                  <h3 class="section-name">Tensor initialization</h3>
-                </a>
-              </div>
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6TensorV8elementsSayxGvp"></a>
-                    <a name="//apple_ref/swift/Property/elements" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV8elementsSayxGvp">elements</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">elements</span><span class="p">:</span> <span class="p">[</span><span class="kt">Element</span><span class="p">]</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20-%20Image%20conversion"></a>
-                <a name="//apple_ref/swift/Section/Tensor - Image conversion" class="dashAnchor"></a>
-                <a href="#/Tensor%20-%20Image%20conversion">
-                  <h3 class="section-name">Tensor - Image conversion</h3>
-                </a>
-              </div>
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo10CGImageRefa_SNyxGtcfc"></a>
-                    <a name="//apple_ref/swift/Method/init(_:normalizedTo:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo10CGImageRefa_SNyxGtcfc">init(_:normalizedTo:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Creates a tensor from the given CGImage</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">?(</span><span class="n">_</span> <span class="nv">image</span><span class="p">:</span> <span class="kt">CGImage</span><span class="p">,</span> <span class="n">normalizedTo</span> <span class="nv">range</span><span class="p">:</span> <span class="kt">ClosedRange</span><span class="o">&lt;</span><span class="kt">Element</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">1</span><span class="p">)</span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>image</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Image</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>range</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Range to normalize pixel values to</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6TensorV7cgImage13normalizeFromSo10CGImageRefaSgSNyxG_tF"></a>
-                    <a name="//apple_ref/swift/Method/cgImage(normalizeFrom:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV7cgImage13normalizeFromSo10CGImageRefaSgSNyxG_tF">cgImage(normalizeFrom:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Undocumented</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">cgImage</span><span class="p">(</span><span class="n">normalizeFrom</span> <span class="nv">tensorRange</span><span class="p">:</span> <span class="kt">ClosedRange</span><span class="o">&lt;</span><span class="kt">Element</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">CGImage</span><span class="p">?</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <div class="task-name-container">
-                <a name="/Tensor%20-%20Image%20conversion2"></a>
-                <a name="//apple_ref/swift/Section/Tensor - Image conversion" class="dashAnchor"></a>
-                <a href="#/Tensor%20-%20Image%20conversion2">
-                  <h3 class="section-name">Tensor - Image conversion</h3>
-                </a>
-              </div>
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo7NSImageC_SNyxGtcfc"></a>
-                    <a name="//apple_ref/swift/Method/init(_:normalizedTo:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6TensorV_12normalizedToACyxq_GSgSo7NSImageC_SNyxGtcfc">init(_:normalizedTo:)</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Creates a tensor from the given NSImage</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">?(</span><span class="n">_</span> <span class="nv">image</span><span class="p">:</span> <span class="kt">NSImage</span><span class="p">,</span> <span class="n">normalizedTo</span> <span class="nv">range</span><span class="p">:</span> <span class="kt">ClosedRange</span><span class="o">&lt;</span><span class="kt">Element</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span> <span class="o">...</span> <span class="mi">1</span><span class="p">)</span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>image</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Image</p>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>range</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Range to normalize pixel values to</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
           </div>
         </section>
 
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>
