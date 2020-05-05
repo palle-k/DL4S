@@ -73,6 +73,31 @@ public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(ex
     }
 }
 
+/// Computes the categorical negative log likelihood (NLL) loss on the given expected probabilities and the expected labels and
+/// uses the mean as a reduction.
+/// Predicted values are assumed to be in the interval (-infinity, 0).
+///
+/// NLL loss should be used in conjunction with logSoftmax.
+///
+/// The categorical NLL  loss is defined as
+///
+///     -predicted[expected]
+///
+/// - Parameters:
+///   - expected: Expected labels
+///   - actual: Predicted values
+/// - Returns: Loss, scalar value
+public func categoricalNegativeLogLikelihood<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    OperationGroup.capture(named: "NLLLoss") {
+        precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
+        precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
+        
+        let expectedFlat = expected.flattened()
+        let actualFlat = actual.view(as: expectedFlat.count, -1)
+        return -actualFlat.gather(using: expectedFlat, alongAxis: 1).reduceMean()
+    }
+}
+
 
 /// Computes the element-wise mean squared error between the given predicted and expected values
 ///

@@ -84,6 +84,21 @@ public struct LeakyRelu<Element: NumericType, Device: DeviceType>: LayerType, Co
     }
 }
 
+/// Log Softmax activation layer
+public struct LogSoftmax<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+    
+    /// Softmax activation layer
+    public init() {}
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        OperationGroup.capture(named: "LogSoftmax") {
+            inputs.logSoftmax()
+        }
+    }
+}
+
 /// Softmax activation layer
 public struct Softmax<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
