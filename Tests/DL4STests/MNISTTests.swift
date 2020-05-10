@@ -173,7 +173,7 @@ class MNISTTests: XCTestCase {
         XCTAssertGreaterThan(accuracy, 0.7)
     }
     
-    func performAccuracyTest<L: LayerType>(_ model: L) where L.Inputs == Tensor<Float, CPU>, L.Outputs == L.Inputs, L.Parameter == Float, L.Device == CPU {
+    func performAccuracyTest<L: LayerType>(_ model: L, loss: (Tensor<Int32, L.Device>, Tensor<L.Parameter, L.Device>) -> Tensor<L.Parameter, L.Device>) where L.Inputs == Tensor<Float, CPU>, L.Outputs == L.Inputs, L.Parameter == Float, L.Device == CPU {
         var optimizer = Adam(model: model, learningRate: 0.001)
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
@@ -187,7 +187,7 @@ class MNISTTests: XCTestCase {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
             
             let predicted = optimizer.model.callAsFunction(input.view(as: [batchSize, 28 * 28]))
-            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
+            let loss = loss(target, predicted)
             
             let gradients = loss.gradients(of: optimizer.model.parameters)
             optimizer.update(along: gradients)
@@ -229,7 +229,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model)
+        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
     }
     
     func testSwishActivation() {
@@ -244,7 +244,7 @@ class MNISTTests: XCTestCase {
             Softmax<Float, CPU>()
         }
         model.tag = "Classifier"
-        performAccuracyTest(model)
+        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
     }
     
     func testMishActivation() {
@@ -260,7 +260,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model)
+        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
     }
     
     func testGeluActivation() {
@@ -276,7 +276,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model)
+        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
     }
     
     func testLiSHTActivation() {
@@ -292,6 +292,22 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model)
+        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
+    }
+    
+    func testLogSoftmax() {
+        var model = Sequential {
+            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
+            LiSHT<Float, CPU>()
+            
+            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
+            LiSHT<Float, CPU>()
+
+            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
+            LogSoftmax<Float, CPU>()
+        }
+        
+        model.tag = "Classifier"
+        performAccuracyTest(model, loss: categoricalNegativeLogLikelihood(expected:actual:))
     }
 }

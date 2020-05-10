@@ -68,6 +68,9 @@
                 <a class="nav-group-task-link" href="../Protocols/LayerType.html">LayerType</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Sequential.html">Sequential</a>
               </li>
               <li class="nav-group-task">
@@ -310,6 +313,9 @@
             <a class="nav-group-name-link" href="../Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -428,6 +434,9 @@
                 <a class="nav-group-task-link" href="../Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -449,11 +458,12 @@
       <article class="main-content">
 
         <section class="section">
-          <div class="section-content">
+          <div class="section-content top-matter">
             <h1>Sequential</h1>
               <div class="declaration">
                 <div class="language">
                   <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Sequential</span><span class="o">&lt;</span><span class="kt">First</span><span class="p">,</span> <span class="kt">Second</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/LayerType.html">LayerType</a></span> <span class="k">where</span> <span class="kt">First</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Second</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">First</span><span class="o">.</span><span class="kt">Device</span> <span class="o">==</span> <span class="kt">Second</span><span class="o">.</span><span class="kt">Device</span><span class="p">,</span> <span class="kt">First</span><span class="o">.</span><span class="kt">Outputs</span> <span class="o">==</span> <span class="kt">Second</span><span class="o">.</span><span class="kt">Inputs</span><span class="p">,</span> <span class="kt">First</span><span class="o">.</span><span class="kt">Parameter</span> <span class="o">==</span> <span class="kt">Second</span><span class="o">.</span><span class="kt">Parameter</span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Sequential</span><span class="p">:</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">First</span><span class="p">:</span> <span class="kt">Codable</span><span class="p">,</span> <span class="kt">Second</span><span class="p">:</span> <span class="kt">Codable</span></code></pre>
 
                 </div>
               </div>
@@ -591,7 +601,7 @@
                     <code>
                     <a name="/s:4DL4S10SequentialV5first6secondACyxq_Gx_q_tcfc"></a>
                     <a name="//apple_ref/swift/Method/init(first:second:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10SequentialV5first6secondACyxq_Gx_q_tcfc">init(first:second:)</a>
+                    <a class="token" href="#/s:4DL4S10SequentialV5first6secondACyxq_Gx_q_tcfc">init(first:<wbr>second:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -675,7 +685,7 @@
                     <code>
                     <a name="/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF"></a>
                     <a name="//apple_ref/swift/Method/callAsFunction(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF">callAsFunction(_:)</a>
+                    <a class="token" href="#/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF">callAsFunction(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -696,16 +706,12 @@
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
                     <a name="/s:4DL4S10SequentialVyACyxq_GADyXEcfc"></a>
                     <a name="//apple_ref/swift/Method/init(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S10SequentialVyACyxq_GADyXEcfc">init(_:)</a>
+                    <a class="token" href="#/s:4DL4S10SequentialVyACyxq_GADyXEcfc">init(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -729,7 +735,7 @@
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">(</span><span class="kd">@LayerBuilder</span> <span class="n">_</span> <span class="nv">build</span><span class="p">:</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="p">`</span><span class="nv">Self</span><span class="p">`)</span></code></pre>
+                          <pre class="highlight swift"><code><span class="nf">init</span><span class="p">(</span><span class="kd"><a href="../Enums/LayerBuilder.html">@LayerBuilder</a></span> <span class="n">_</span> <span class="nv">build</span><span class="p">:</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="p">`</span><span class="nv">Self</span><span class="p">`)</span></code></pre>
 
                         </div>
                       </div>
@@ -763,8 +769,8 @@
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

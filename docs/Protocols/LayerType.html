@@ -68,6 +68,9 @@
                 <a class="nav-group-task-link" href="../Protocols/LayerType.html">LayerType</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Sequential.html">Sequential</a>
               </li>
               <li class="nav-group-task">
@@ -310,6 +313,9 @@
             <a class="nav-group-name-link" href="../Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -428,6 +434,9 @@
                 <a class="nav-group-task-link" href="../Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -449,17 +458,15 @@
       <article class="main-content">
 
         <section class="section">
-          <div class="section-content">
+          <div class="section-content top-matter">
             <h1>LayerType</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">@dynamicCallable</span>
-<span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">LayerType</span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">LayerType</span></code></pre>
 
                 </div>
               </div>
-            <p>A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
-The layer may have parameters, which influence, how the outputs are generated.</p>
+            <p>Undocumented</p>
 
           </div>
         </section>
@@ -635,7 +642,7 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     <code>
                     <a name="/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF"></a>
                     <a name="//apple_ref/swift/Method/callAsFunction(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF">callAsFunction(_:)</a>
+                    <a class="token" href="#/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF">callAsFunction(_:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -684,67 +691,14 @@ The layer may have parameters, which influence, how the outputs are generated.</
                 </li>
               </ul>
             </div>
-            <div class="task-group">
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S9LayerTypePAAE15dynamicallyCall13withArguments7OutputsQzSay6InputsQzG_tF"></a>
-                    <a name="//apple_ref/swift/Method/dynamicallyCall(withArguments:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S9LayerTypePAAE15dynamicallyCall13withArguments7OutputsQzSay6InputsQzG_tF">dynamicallyCall(withArguments:)</a>
-                    </code>
-                      <span class="declaration-note">
-                        Extension method
-                      </span>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Dynamic callable extension, as static callable is not yet available</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">dynamicallyCall</span><span class="p">(</span><span class="n">withArguments</span> <span class="nv">arguments</span><span class="p">:</span> <span class="p">[</span><span class="kt"><a href="../Protocols/LayerType.html#/s:4DL4S9LayerTypeP6InputsQa">Inputs</a></span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Protocols/LayerType.html#/s:4DL4S9LayerTypeP7OutputsQa">Outputs</a></span></code></pre>
-
-                        </div>
-                      </div>
-                      <div>
-                        <h4>Parameters</h4>
-                        <table class="graybox">
-                          <tbody>
-                            <tr>
-                              <td>
-                                <code>
-                                <em>arguments</em>
-                                </code>
-                              </td>
-                              <td>
-                                <div>
-                                  <p>Inputs of the layer.</p>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
           </div>
         </section>
 
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

@@ -178,6 +178,16 @@ public extension Tensor {
         return exponentiated / exponentiated.reduceSum(along: [axis]).unsqueezed(at: axis)
     }
     
+    /// Computes the logarithm of the softmax function along the given axis.
+    /// If no axis is provided, the softmax is computed along axis 1.
+    func logSoftmax(axis: Int = 1) -> Self {
+        let normalizer = detached().reduceMax(along: [axis]).unsqueezed(at: axis)
+        let norm = self - normalizer
+        let exponentiated = norm.exp()
+        let logSumExp = exponentiated.reduceSum(along: [axis]).log().unsqueezed(at: axis)
+        return norm - logSumExp
+    }
+    
     /// Computes the element-wise sine.
     func sine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)

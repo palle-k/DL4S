@@ -68,6 +68,9 @@
                 <a class="nav-group-task-link" href="../Protocols/LayerType.html">LayerType</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Sequential.html">Sequential</a>
               </li>
               <li class="nav-group-task">
@@ -310,6 +313,9 @@
             <a class="nav-group-name-link" href="../Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -428,6 +434,9 @@
                 <a class="nav-group-task-link" href="../Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -449,7 +458,7 @@
       <article class="main-content">
 
         <section class="section">
-          <div class="section-content">
+          <div class="section-content top-matter">
             <h1>VGGBase</h1>
               <div class="declaration">
                 <div class="language">
@@ -594,7 +603,13 @@
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">associatedtype</span> <span class="kt">Conv5</span> <span class="p">:</span> <span class="kt"><a href="../Protocols/LayerType.html">LayerType</a></span> <span class="k">where</span> <span class="k">Self</span><span class="o">.</span><span class="kt">Conv5</span><span class="o">.</span><span class="kt">Outputs</span> <span class="o">==</span> <span class="kt"><a href="../Structs/Tensor.html">Tensor</a></span><span class="o">&lt;</span><span class="k">Self</span><span class="o">.</span><span class="kt">Parameter</span><span class="p">,</span> <span class="k">Self</span><span class="o">.</span><span class="kt">Device</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">associatedtype</span> <span class="kt">Conv5</span><span class="p">:</span> <span class="kt"><a href="../Protocols/LayerType.html">LayerType</a></span> <span class="k">where</span> <span class="kt">Conv5</span><span class="o">.</span><span class="kt">Parameter</span> <span class="o">==</span> <span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Conv5</span><span class="o">.</span><span class="kt">Device</span> <span class="o">==</span> <span class="kt">Device</span><span class="p">,</span> <span class="kt">Conv5</span><span class="o">.</span><span class="kt">Inputs</span> <span class="o">==</span> <span class="kt"><a href="../Protocols/VGGBase.html#/s:4DL4S7VGGBaseP5Conv4Qa">Conv4</a></span><span class="o">.</span><span class="kt">Outputs</span><span class="p">,</span> <span class="kt">Conv5</span><span class="o">.</span><span class="kt">Outputs</span> <span class="o">==</span> <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span>
+    <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Relu.html">Relu</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dropout.html">Dropout</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;&gt;</span><span class="p">,</span>
+    <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Relu.html">Relu</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Dropout.html">Dropout</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Softmax.html">Softmax</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;&gt;&gt;.</span><span class="kt">Inputs</span></code></pre>
 
                         </div>
                       </div>
@@ -621,7 +636,13 @@
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">typealias</span> <span class="kt">DenseLayer</span> <span class="o">=</span> <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Relu.html">Relu</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dropout.html">Dropout</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Relu.html">Relu</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Dropout.html">Dropout</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Softmax.html">Softmax</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;&gt;&gt;</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">typealias</span> <span class="kt">DenseLayer</span> <span class="o">=</span> <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span>
+    <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Relu.html">Relu</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dropout.html">Dropout</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;&gt;</span><span class="p">,</span>
+    <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Relu.html">Relu</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Dropout.html">Dropout</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+        <span class="kt"><a href="../Structs/Sequential.html">Sequential</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/Dense.html">Dense</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt"><a href="../Structs/Softmax.html">Softmax</a></span><span class="o">&lt;</span><span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;&gt;&gt;&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -790,10 +811,6 @@
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -887,7 +904,7 @@
                     <code>
                     <a name="/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF"></a>
                     <a name="//apple_ref/swift/Method/callAsFunction(_:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF">callAsFunction(_:)</a>
+                    <a class="token" href="#/s:4DL4S9LayerTypeP14callAsFunctiony7OutputsQz6InputsQzF">callAsFunction(_:<wbr>)</a>
                     </code>
                       <span class="declaration-note">
                         Extension method
@@ -916,7 +933,7 @@
                     <code>
                     <a name="/s:4DL4S7VGGBasePAAE9makeDense7classesAA10SequentialVyAGyAGyAA0D0Vy9ParameterQz6DeviceQzGAA4ReluVyAkMGGAGyAA7DropoutVyAkMGANGGAGyAGyAqUGAGyAnA7SoftmaxVyAkMGGGGSi_tFZ"></a>
                     <a name="//apple_ref/swift/Method/makeDense(classes:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7VGGBasePAAE9makeDense7classesAA10SequentialVyAGyAGyAA0D0Vy9ParameterQz6DeviceQzGAA4ReluVyAkMGGAGyAA7DropoutVyAkMGANGGAGyAGyAqUGAGyAnA7SoftmaxVyAkMGGGGSi_tFZ">makeDense(classes:)</a>
+                    <a class="token" href="#/s:4DL4S7VGGBasePAAE9makeDense7classesAA10SequentialVyAGyAGyAA0D0Vy9ParameterQz6DeviceQzGAA4ReluVyAkMGGAGyAA7DropoutVyAkMGANGGAGyAGyAqUGAGyAnA7SoftmaxVyAkMGGGGSi_tFZ">makeDense(classes:<wbr>)</a>
                     </code>
                       <span class="declaration-note">
                         Extension method
@@ -949,8 +966,8 @@
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

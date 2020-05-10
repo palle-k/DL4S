@@ -499,21 +499,21 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUGeneric.swift",
-      "line": 118,
+      "line": 120,
       "symbol": "CPUNumeric.col2img(values:result:batchSize:channels:height:width:kernelHeight:kernelWidth:padding:stride:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUGeneric.swift",
-      "line": 259,
+      "line": 261,
       "symbol": "CPUNumeric.scatter(values:context:result:dst_shape:axis:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUGeneric.swift",
-      "line": 324,
+      "line": 326,
       "symbol": "CPUNumeric.gather(values:context:result:src_shape:axis:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
@@ -1080,7 +1080,7 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Activation.swift",
-      "line": 126,
+      "line": 141,
       "symbol": "Swish.beta",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
@@ -1335,6 +1335,13 @@
       "line": 58,
       "symbol": "LSTM.hiddenSize",
       "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Layer.swift",
+      "line": 33,
+      "symbol": "LayerType",
+      "symbol_kind": "source.lang.swift.decl.protocol",
       "warning": "undocumented"
     },
     {
@@ -2504,20 +2511,6 @@
       "line": 114,
       "symbol": "Random.bernoulli(_:p:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/Graph.swift",
-      "line": 76,
-      "symbol": "Digraph.Node",
-      "symbol_kind": "source.lang.swift.decl.extension",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/Graph.swift",
-      "line": 91,
-      "symbol": "Digraph.Edge",
-      "symbol_kind": "source.lang.swift.decl.extension",
       "warning": "undocumented"
     },
     {

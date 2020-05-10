@@ -126,6 +126,8 @@ Activation:
 - [x] Tanh
 - [x] Sigmoid
 - [x] Softmax
+- [x] Log Softmax
+- [x] Dropout
 - [x] Gelu
 - [x] Swish
 - [x] Mish
@@ -158,6 +160,7 @@ Losses
 
 - [x] Binary Cross-Entropy
 - [x] Categorical Cross-Entropy
+- [x] Negative Log Likelihood (NLL Loss)
 - [x] MSE
 - [x] L1 & L2 regularization
 

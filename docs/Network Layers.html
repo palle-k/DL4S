@@ -68,6 +68,9 @@
                 <a class="nav-group-task-link" href="Protocols/LayerType.html">LayerType</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Sequential.html">Sequential</a>
               </li>
               <li class="nav-group-task">
@@ -310,6 +313,9 @@
             <a class="nav-group-name-link" href="Other%20Functions.html">Other Functions</a>
             <ul class="nav-group-tasks">
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actualAA6TensorVyxq_GAFys5Int32Vq_G_AGtAA11NumericTypeRzAA06DeviceK0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
               </li>
               <li class="nav-group-task">
@@ -428,6 +434,9 @@
                 <a class="nav-group-task-link" href="Structs/GPUEngine.html">GPUEngine</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="Structs/Progress.html">Progress</a>
               </li>
               <li class="nav-group-task">
@@ -449,7 +458,7 @@
       <article class="main-content">
 
         <section class="section">
-          <div class="section-content">
+          <div class="section-content top-matter">
             <h1>Network Layers</h1>
             
           </div>
@@ -472,8 +481,7 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
-The layer may have parameters, which influence, how the outputs are generated.</p>
+                        <p>Undocumented</p>
 
                         <a href="Protocols/LayerType.html" class="slightly-smaller">See more</a>
                       </div>
@@ -481,8 +489,7 @@ The layer may have parameters, which influence, how the outputs are generated.</
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">@dynamicCallable</span>
-<span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">LayerType</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">LayerType</span></code></pre>
 
                         </div>
                       </div>
@@ -492,9 +499,9 @@ The layer may have parameters, which influence, how the outputs are generated.</
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S8AnyLayerV"></a>
-                    <a name="//apple_ref/swift/Struct/AnyLayer" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S8AnyLayerV">AnyLayer</a>
+                    <a name="/"></a>
+                    <a name="//apple_ref/swift/Extension/LayerType" class="dashAnchor"></a>
+                    <a class="token" href="#/">LayerType</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -502,25 +509,12 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Type erased layer</p>
-
-                        <a href="Structs/AnyLayer.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AnyLayer</span><span class="o">&lt;</span><span class="kt">Inputs</span><span class="p">,</span> <span class="kt">Outputs</span><span class="p">,</span> <span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span> <span class="k">where</span> <span class="kt">Parameter</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
+                        
+                        <a href="Extensions/LayerType.html" class="slightly-smaller">See more</a>
                       </div>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -556,16 +550,13 @@ The layer may have parameters, which influence, how the outputs are generated.</
                         <div class="language">
                           <p class="aside-title">Swift</p>
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Sequential</span><span class="o">&lt;</span><span class="kt">First</span><span class="p">,</span> <span class="kt">Second</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span> <span class="k">where</span> <span class="kt">First</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Second</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">First</span><span class="o">.</span><span class="kt">Device</span> <span class="o">==</span> <span class="kt">Second</span><span class="o">.</span><span class="kt">Device</span><span class="p">,</span> <span class="kt">First</span><span class="o">.</span><span class="kt">Outputs</span> <span class="o">==</span> <span class="kt">Second</span><span class="o">.</span><span class="kt">Inputs</span><span class="p">,</span> <span class="kt">First</span><span class="o">.</span><span class="kt">Parameter</span> <span class="o">==</span> <span class="kt">Second</span><span class="o">.</span><span class="kt">Parameter</span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Sequential</span><span class="p">:</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">First</span><span class="p">:</span> <span class="kt">Codable</span><span class="p">,</span> <span class="kt">Second</span><span class="p">:</span> <span class="kt">Codable</span></code></pre>
 
                         </div>
                       </div>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -594,10 +585,6 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -654,10 +641,6 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -770,10 +753,6 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -802,10 +781,6 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -834,10 +809,6 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -866,10 +837,6 @@ The layer may have parameters, which influence, how the outputs are generated.</
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -899,10 +866,6 @@ In each step, the RNN performs the transformation matMul(x_t, W) + matMul(h_t-1,
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -925,16 +888,13 @@ In each step, the RNN performs the transformation matMul(x_t, W) + matMul(h_t-1,
                         <div class="language">
                           <p class="aside-title">Swift</p>
                           <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Bidirectional</span><span class="o">&lt;</span><span class="kt">RNNLayer</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span> <span class="k">where</span> <span class="kt">RNNLayer</span> <span class="p">:</span> <span class="kt"><a href="Protocols/RNN.html">RNN</a></span></code></pre>
+<pre class="highlight swift"><code><span class="kd">extension</span> <span class="kt">Bidirectional</span><span class="p">:</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">RNNLayer</span><span class="p">:</span> <span class="kt">Codable</span></code></pre>
 
                         </div>
                       </div>
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -963,10 +923,6 @@ In each step, the RNN performs the transformation matMul(x_t, W) + matMul(h_t-1,
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -1023,10 +979,6 @@ In each step, the RNN performs the transformation matMul(x_t, W) + matMul(h_t-1,
                     </section>
                   </div>
                 </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
                 <li class="item">
                   <div>
                     <code>
@@ -1198,6 +1150,146 @@ In each step, the RNN performs the transformation matMul(x_t, W) + matMul(h_t-1,
                 <li class="item">
                   <div>
                     <code>
+                    <a name="/s:4DL4S7DropoutV"></a>
+                    <a name="//apple_ref/swift/Struct/Dropout" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S7DropoutV">Dropout</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A dropout layer</p>
+
+                        <a href="Structs/Dropout.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Dropout</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/RandomizableType.html">RandomizableType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S7FlattenV"></a>
+                    <a name="//apple_ref/swift/Struct/Flatten" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S7FlattenV">Flatten</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Layer that flattens its inputs into a tensor of shape [batchSize, -1]</p>
+
+                        <a href="Structs/Flatten.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Flatten</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S7ReshapeV"></a>
+                    <a name="//apple_ref/swift/Struct/Reshape" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S7ReshapeV">Reshape</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Layer that reshapes its inputs to a given target size, except the batch size</p>
+
+                        <a href="Structs/Reshape.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Reshape</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S6ConcatV"></a>
+                    <a name="//apple_ref/swift/Struct/Concat" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S6ConcatV">Concat</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Layer that concatenates a list of input tensors along their second dimension</p>
+
+                        <a href="Structs/Concat.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Concat</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S8AnyLayerV"></a>
+                    <a name="//apple_ref/swift/Struct/AnyLayer" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S8AnyLayerV">AnyLayer</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Type erased layer</p>
+
+                        <a href="Structs/AnyLayer.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AnyLayer</span><span class="o">&lt;</span><span class="kt">Inputs</span><span class="p">,</span> <span class="kt">Outputs</span><span class="p">,</span> <span class="kt">Parameter</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span> <span class="k">where</span> <span class="kt">Parameter</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
                     <a name="/s:4DL4S4GeluV"></a>
                     <a name="//apple_ref/swift/Struct/Gelu" class="dashAnchor"></a>
                     <a class="token" href="#/s:4DL4S4GeluV">Gelu</a>
@@ -1309,134 +1401,14 @@ In each step, the RNN performs the transformation matMul(x_t, W) + matMul(h_t-1,
                 </li>
               </ul>
             </div>
-            <div class="task-group">
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S7DropoutV"></a>
-                    <a name="//apple_ref/swift/Struct/Dropout" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7DropoutV">Dropout</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>A dropout layer</p>
-
-                        <a href="Structs/Dropout.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Dropout</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/RandomizableType.html">RandomizableType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <div class="task-group">
-              <ul class="item-container">
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S7FlattenV"></a>
-                    <a name="//apple_ref/swift/Struct/Flatten" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7FlattenV">Flatten</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Layer that flattens its inputs into a tensor of shape [batchSize, -1]</p>
-
-                        <a href="Structs/Flatten.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Flatten</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S7ReshapeV"></a>
-                    <a name="//apple_ref/swift/Struct/Reshape" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S7ReshapeV">Reshape</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Layer that reshapes its inputs to a given target size, except the batch size</p>
-
-                        <a href="Structs/Reshape.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Reshape</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:4DL4S6ConcatV"></a>
-                    <a name="//apple_ref/swift/Struct/Concat" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S6ConcatV">Concat</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Layer that concatenates a list of input tensors along their second dimension</p>
-
-                        <a href="Structs/Concat.html" class="slightly-smaller">See more</a>
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Concat</span><span class="o">&lt;</span><span class="kt">Element</span><span class="p">,</span> <span class="kt">Device</span><span class="o">&gt;</span> <span class="p">:</span> <span class="kt"><a href="Protocols/LayerType.html">LayerType</a></span><span class="p">,</span> <span class="kt">Codable</span> <span class="k">where</span> <span class="kt">Element</span> <span class="p">:</span> <span class="kt"><a href="Protocols/NumericType.html">NumericType</a></span><span class="p">,</span> <span class="kt">Device</span> <span class="p">:</span> <span class="kt"><a href="Protocols/DeviceType.html">DeviceType</a></span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-              </ul>
-            </div>
           </div>
         </section>
 
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2019 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2019-11-24)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.12.0</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

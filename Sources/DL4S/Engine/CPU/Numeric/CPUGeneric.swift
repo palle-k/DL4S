@@ -104,7 +104,9 @@ public extension CPUNumeric {
                             }
                             #endif
                         } else {
-                            Self.fill(value: 0, result: UnsafeMutableBufferPointer<Self>(start: &dst[dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width], count: output_width), count: output_width)
+                            let ptr = dst.advanced(by: dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width)
+                            let bufferPtr = UnsafeMutableBufferPointer<Self>(start: ptr, count: output_width)
+                            Self.fill(value: 0, result: bufferPtr, count: output_width)
                         }
                     }
                 }
