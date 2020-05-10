@@ -413,6 +413,36 @@ public protocol EngineType {
     ///   - result: Result buffer
     static func tanh<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
+    /// Pairwise maximum
+    /// - Parameters:
+    ///   - lhs: First buffer
+    ///   - rhs: Second buffer
+    ///   - result: Result buffer
+    static func max<N: NumericType>(_ lhs: ShapedBuffer<N, Device>, _ rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    
+    /// Pairwise maximum
+    /// - Parameters:
+    ///   - lhs: First buffer
+    ///   - rhs: Second buffer
+    ///   - result: Result buffer
+    ///   - context: Context buffer
+    static func max<N: NumericType>(_ lhs: ShapedBuffer<N, Device>, _ rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<N, Device>)
+    
+    /// Pairwise maximum
+    /// - Parameters:
+    ///   - lhs: First buffer
+    ///   - rhs: Second buffer
+    ///   - result: Result buffer
+    static func min<N: NumericType>(_ lhs: ShapedBuffer<N, Device>, _ rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
+    
+    /// Pairwise maximum
+    /// - Parameters:
+    ///   - lhs: First buffer
+    ///   - rhs: Second buffer
+    ///   - result: Result buffer
+    ///   - context: Context buffer
+    static func min<N: NumericType>(_ lhs: ShapedBuffer<N, Device>, _ rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<N, Device>)
+    
     //MARK: Shuffling
     
     /// Scatters elements to indices determined by the context along the specified axis.

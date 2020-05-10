@@ -139,6 +139,7 @@ Optimizers
 - [x] SGD
 - [x] Momentum
 - [x] Adam
+- [x] AMSGrad
 - [x] AdaGrad
 - [x] AdaDelta
 - [x] RMSProp
@@ -187,6 +188,8 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] max
 - [x] relu
 - [x] leaky relu
+- [x] elementwise min
+- [x] elementwise max
 - [x] reduce sum
 - [x] reduce max
 - [x] scatter

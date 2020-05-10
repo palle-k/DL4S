@@ -285,4 +285,21 @@ class EngineV2Tests: XCTestCase {
         result[nil, 1 ..< 3] = src1
         XCTAssertEqual(result, expected2)
     }
+    
+    func testElementwiseMinMax() {
+        let x: Tensor<Float, CPU> = Tensor([1,2,3,4,5,6], requiresGradient: true)
+        let y: Tensor<Float, CPU> = Tensor([6,5,4,3,2,1], requiresGradient: true)
+        
+        let result1 = Tensor.max(x, y) * 2
+        let grads1 = result1.gradients(of: [x, y])
+        
+        XCTAssertEqual(grads1[0], Tensor([0, 0, 0, 2, 2, 2]))
+        XCTAssertEqual(grads1[1], Tensor([2, 2, 2, 0, 0, 0]))
+        
+        let result2 = Tensor.min(x, y) * 2
+        let grads2 = result2.gradients(of: [x, y])
+        
+        XCTAssertEqual(grads2[0], Tensor([2, 2, 2, 0, 0, 0]))
+        XCTAssertEqual(grads2[1], Tensor([0, 0, 0, 2, 2, 2]))
+    }
 }

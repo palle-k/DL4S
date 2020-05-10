@@ -408,4 +408,74 @@ public extension Tensor {
     func raised(toPowerOf power: Self) -> Self {
         (self.log() * power).exp()
     }
+    
+    /// Computes the elementwise maxima between the given tensors
+    ///
+    /// - Parameters:
+    ///   - first: First tensor
+    ///   - second: Second tensor
+    /// - Returns: Element wise maxima between first and second value tensors
+    static func max(_ first: Self, _ second: Self) -> Self {
+        precondition(first.shape == second.shape, "Shapes must be equal")
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
+        
+        if first.requiresGradient || second.requiresGradient {
+            let contextBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
+            Device.Engine.max(first.values, second.values, result: resultBuffer, context: contextBuffer)
+            let contextTensor = Tensor(using: contextBuffer, context: nil)
+            
+            let context = TensorContext(
+                tag: "max",
+                sources: [first, second],
+                backpropagate: [
+                    { targetGrad in
+                        targetGrad * (1 - contextTensor)
+                    },
+                    { targetGrad in
+                        targetGrad * contextTensor
+                    }
+                ]
+            )
+            
+            return Tensor(using: resultBuffer, context: context)
+        } else {
+            Device.Engine.max(first.values, second.values, result: resultBuffer)
+            return Tensor(using: resultBuffer, context: nil)
+        }
+    }
+    
+    /// Computes the elementwise minima between the given tensors
+    ///
+    /// - Parameters:
+    ///   - first: First tensor
+    ///   - second: Other tensors
+    /// - Returns: Element wise minima between first and second value tensors
+    static func min(_ first: Self, _ second: Self) -> Self {
+        precondition(first.shape == second.shape, "Shapes must be equal")
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
+        
+        if first.requiresGradient || second.requiresGradient {
+            let contextBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
+            Device.Engine.min(first.values, second.values, result: resultBuffer, context: contextBuffer)
+            let contextTensor = Tensor(using: contextBuffer, context: nil)
+            
+            let context = TensorContext(
+                tag: "max",
+                sources: [first, second],
+                backpropagate: [
+                    { targetGrad in
+                        targetGrad * (1 - contextTensor)
+                    },
+                    { targetGrad in
+                        targetGrad * contextTensor
+                    }
+                ]
+            )
+            
+            return Tensor(using: resultBuffer, context: context)
+        } else {
+            Device.Engine.min(first.values, second.values, result: resultBuffer)
+            return Tensor(using: resultBuffer, context: nil)
+        }
+    }
 }
