@@ -319,6 +319,12 @@ public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: In
     tensor.softmax(axis: axis)
 }
 
+/// Computes the logarithm of the softmax function along the given axis.
+/// If no axis is provided, the log softmax is computed along axis 1.
+public func logSoftmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
+    tensor.logSoftmax(axis: axis)
+}
+
 /// Computes the element-wise GeLU activation
 ///
 /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)

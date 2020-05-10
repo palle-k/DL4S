@@ -52,7 +52,7 @@ public struct TransformerFeedForwardBlock<Element: RandomizableType, Device: Dev
     }
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "Feed Forward Block") {
+        OperationGroup.capture(named: "TransformerFeedForward") {
             // inputs: [batchSize, timeSteps, size]
             let tmp1 = dense1(inputs.view(as: -1, inputs.shape[2]))
             let tmp2 = gelu(tmp1)
