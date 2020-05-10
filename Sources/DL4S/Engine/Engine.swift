@@ -413,14 +413,14 @@ public protocol EngineType {
     ///   - result: Result buffer
     static func tanh<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    /// Pairwise maximum
+    /// Element-wise maximum
     /// - Parameters:
     ///   - lhs: First buffer
     ///   - rhs: Second buffer
     ///   - result: Result buffer
     static func max<N: NumericType>(_ lhs: ShapedBuffer<N, Device>, _ rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    /// Pairwise maximum
+    /// Element-wise maximum
     /// - Parameters:
     ///   - lhs: First buffer
     ///   - rhs: Second buffer
@@ -428,14 +428,14 @@ public protocol EngineType {
     ///   - context: Context buffer
     static func max<N: NumericType>(_ lhs: ShapedBuffer<N, Device>, _ rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, context: ShapedBuffer<N, Device>)
     
-    /// Pairwise maximum
+    /// Element-wise minimum
     /// - Parameters:
     ///   - lhs: First buffer
     ///   - rhs: Second buffer
     ///   - result: Result buffer
     static func min<N: NumericType>(_ lhs: ShapedBuffer<N, Device>, _ rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>)
     
-    /// Pairwise maximum
+    /// Element-wise minimum
     /// - Parameters:
     ///   - lhs: First buffer
     ///   - rhs: Second buffer
