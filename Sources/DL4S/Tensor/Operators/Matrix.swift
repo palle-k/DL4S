@@ -97,64 +97,21 @@ public extension Tensor {
         let broadcastResultShape = shapeForBroadcastedOperands(lhs.shape.dropLast(2), rhs.shape.dropLast(2))
         let matMulResultShape = [Array(lhs.shape.suffix(2))[transposeSelf ? 1 : 0], Array(rhs.shape.suffix(2))[transposeOther ? 0 : 1]]
         
-        let resultBuffer = Device.Memory.allocateBuffer(
-            withShape: broadcastResultShape + matMulResultShape,
-            type: Element.self
-        )
-        Device.Engine.broadcastGemm(
-            lhs: lhs.values,
-            rhs: rhs.values,
-            result: resultBuffer,
-            alpha: 1,
-            beta: 0,
-            transposeFirst: transposeSelf,
-            transposeSecond: transposeOther
-        )
+        var results: [Self] = []
+        var lhsIdx = Array(repeating: 0, count: broadcastResultShape.count)
+        var rhsIdx = Array(repeating: 0, count: broadcastResultShape.count)
         
-        return Tensor(
-            using: resultBuffer,
-            context: (lhs.requiresGradient || rhs.requiresGradient) ? TensorContext(
-                tag: "bmmul",
-                sources: [lhs, rhs],
-                backpropagate: [
-                    { (resultGradient: Self) in
-                        let lhsReducedAxes = zip(lhs.shape, resultGradient.shape)
-                            .dropLast(2)
-                            .enumerated()
-                            .filter {$1.0 != $1.1 && $1.0 == 1}
-                            .map {$0.0}
-                        let res = resultGradient.broadcastMatrixMultiplied(with: other, transposeSelf: false, transposeOther: !transposeOther)
-                        if transposeSelf {
-                            return res
-                                .permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
-                                .reduceSum(along: lhsReducedAxes)
-                                .view(as: lhs.shape)
-                        } else {
-                            return res
-                                .reduceSum(along: lhsReducedAxes)
-                                .view(as: lhs.shape)
-                        }
-                    }, { resultGradient in
-                        let rhsReducedAxes = zip(rhs.shape, resultGradient.shape)
-                            .dropLast(2)
-                            .enumerated()
-                            .filter {$1.0 != $1.1 && $1.0 == 1}
-                            .map {$0.0}
-                        let res = self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
-                        if transposeOther {
-                            return res
-                                .permuted(to: Array(0 ..< (rhs.dim - 2)) + [rhs.dim - 1, rhs.dim - 2])
-                                .reduceSum(along: rhsReducedAxes)
-                                .view(as: rhs.shape)
-                        } else {
-                            return res
-                                .reduceSum(along: rhsReducedAxes)
-                                .view(as: rhs.shape)
-                        }
-                    }
-                ]
-            ) : nil
-        )
+        for idx in iterate(broadcastResultShape) {
+            for i in idx.indices {
+                lhsIdx[i] = Swift.min(idx[i], lhs.shape[i] - 1)
+                rhsIdx[i] = Swift.min(idx[i], rhs.shape[i] - 1)
+            }
+            let lhsOp = lhs[lhsIdx]
+            let rhsOp = rhs[rhsIdx]
+            results.append(lhsOp._matMul(rhsOp, transposeSelf: transposeSelf, transposeOther: transposeOther))
+        }
+        
+        return Tensor(stacking: results).view(as: broadcastResultShape + matMulResultShape)
     }
     
     private func _matMul(_ other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {

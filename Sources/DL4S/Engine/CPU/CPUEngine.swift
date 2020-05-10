@@ -506,51 +506,6 @@ public struct CPUEngine: EngineType {
         )
     }
     
-    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
-        let lhsMem = lhs.values.memory.bindMemory(to: N.self).immutable
-        let rhsMem = rhs.values.memory.bindMemory(to: N.self).immutable
-        let resultMem = result.values.memory.bindMemory(to: N.self)
-        
-        let lhsStrides = CPU.Memory.strides(from: lhs.shape)
-        let rhsStrides = CPU.Memory.strides(from: rhs.shape)
-        let resultStrides = CPU.Memory.strides(from: result.shape)
-        
-        let lhsGemmShape = Array(lhs.shape.suffix(2))
-        let rhsGemmShape = Array(rhs.shape.suffix(2))
-        let resultGemmShape = Array(result.shape.suffix(2))
-        
-        for index in iterate(result.shape.dropLast(2)) {
-            let lhsIndex = zip(index, lhs.shape).map { idx, dim in
-                dim == 1 ? 0 : idx
-            }
-            let rhsIndex = zip(index, rhs.shape).map { idx, dim in
-                dim == 1 ? 0 : idx
-            }
-            var lhsBaseIdx = 0
-            var rhsBaseIdx = 0
-            var resultBaseIdx = 0
-            
-            for i in 0 ..< index.count {
-                lhsBaseIdx += lhsStrides[i] * lhsIndex[i]
-                rhsBaseIdx += rhsStrides[i] * rhsIndex[i]
-                resultBaseIdx += resultStrides[i] * index[i]
-            }
-            
-            N.gemm(
-                lhs: lhsMem.advanced(by: lhsBaseIdx),
-                rhs: rhsMem.advanced(by: rhsBaseIdx),
-                result: resultMem.advanced(by: resultBaseIdx),
-                lhsShape: (lhsGemmShape[0], lhsGemmShape[1]),
-                rhsShape: (rhsGemmShape[0], rhsGemmShape[1]),
-                resultShape: (resultGemmShape[0], resultGemmShape[1]),
-                alpha: alpha,
-                beta: beta,
-                transposeFirst: transposeFirst,
-                transposeSecond: transposeSecond
-            )
-        }
-    }
-    
     @_specialize(where N == Float)
     public static func broadcastAdd<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         broadcast(

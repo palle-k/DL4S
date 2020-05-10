@@ -204,17 +204,6 @@ public protocol EngineType {
     ///   - transposeSecond: Whether to transpose the second matrix
     static func gemm<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
     
-    /// Broadcast matrix multiply add in-place
-    /// - Parameters:
-    ///   - lhs: Left-hand side matrix
-    ///   - rhs: Right-hand side matrix
-    ///   - result: Summand and result buffer
-    ///   - alpha: Matrix multiplication scale
-    ///   - beta: Add scale
-    ///   - transposeFirst: Whether to transpose the first matrix
-    ///   - transposeSecond: Whether to transpose the second matrix
-    static func broadcastGemm<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
-    
     /// Band matrix extraction
     /// - Parameters:
     ///   - buffer: Source matrix
