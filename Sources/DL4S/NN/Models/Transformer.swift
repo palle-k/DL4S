@@ -25,14 +25,19 @@
 
 import Foundation
 
+/// A feed forward block for a transformer.
+///
+/// The block sequences a dense layer, gelu activation, dropout and another dense layer.
+///
 public struct TransformerFeedForwardBlock<Element: RandomizableType, Device: DeviceType>: LayerType {
-    var dense1: Dense<Element, Device>
-    var dense2: Dense<Element, Device>
-    var dropout: Dropout<Element, Device>
+    public var dense1: Dense<Element, Device>
+    public var dense2: Dense<Element, Device>
+    public var dropout: Dropout<Element, Device>
     
     public var parameters: [Tensor<Element, Device>] {
         Array([dense1.parameters, dense2.parameters].joined())
     }
+    
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
         Array([
             dense1.parameterPaths.map((\Self.dense1).appending(path:)),
@@ -40,17 +45,29 @@ public struct TransformerFeedForwardBlock<Element: RandomizableType, Device: Dev
         ].joined())
     }
     
+    /// Determines and controls, whether dropout is applied between the activation and the second dense layer.
     public var isDropoutActive: Bool {
         get {dropout.isActive}
         set {dropout.isActive = newValue}
     }
     
+    
+    /// Creates a feed forward block to be used in a transformer.
+    /// The block sequences a dense layer, gelu activation, dropout and another dense layer.
+    ///
+    /// - Parameters:
+    ///   - size: Size of last dimension of inputs and outputs of the block
+    ///   - hiddenSize: Hidden size between dense layers of the block
+    ///   - dropoutRate: Rate, with which dropout is applied between activation and the second dense layer. Can be enabled and disabled using `isDropoutActive`.
     public init(size: Int, hiddenSize: Int, dropoutRate: Float) {
         dense1 = Dense(inputSize: size, outputSize: hiddenSize)
         dense2 = Dense(inputSize: hiddenSize, outputSize: size)
         dropout = Dropout(rate: dropoutRate)
     }
     
+    /// Applies the feed forward block to the provided inputs
+    /// - Parameter inputs: tensor of shape [batch size, sequence length, size]
+    /// - Returns: tensor of shape [batch size, sequence length, size]
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "TransformerFeedForward") {
             // inputs: [batchSize, timeSteps, size]
@@ -63,27 +80,41 @@ public struct TransformerFeedForwardBlock<Element: RandomizableType, Device: Dev
     }
 }
 
+
+/// Input to a scaled dot product attention layer
 public struct ScaledDotProductAttentionInput<Element: NumericType, Device: DeviceType> {
     var key: Tensor<Element, Device>
     var value: Tensor<Element, Device>
     var query: Tensor<Element, Device>
 }
 
+
+/// Scaled dot product attention layer
 public struct ScaledDotProductAttention<Element: RandomizableType, Device: DeviceType>: LayerType {
     public var parameters: [Tensor<Element, Device>] {[]}
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     
-    var dropout: Dropout<Element, Device>
-    var scale: Tensor<Element, Device>
-    let isCausal: Bool
+    /// Dropout applied before value retreival
+    public var dropout: Dropout<Element, Device>
+    /// Scale applied after key * query
+    public let scale: Tensor<Element, Device>
+    /// Determines, whether attention can only span preceding timesteps
+    public let isCausal: Bool
     
+    /// Determines and controls, whether dropout is applied before value retreival
     public var isDropoutActive: Bool {
         get {dropout.isActive}
         set {dropout.isActive = newValue}
     }
     
+    
+    /// Creates a scaled dot product attention layer
+    /// - Parameters:
+    ///   - size: Size of key, value and query vector
+    ///   - dropoutRate: Rate of dropout applied before value retreival
+    ///   - isCausal: whether attention can only span preceding timesteps
     public init(size: Int, dropoutRate: Float, isCausal: Bool) {
-        scale = Tensor(repeating: Element(size).sqrt(), shape: [])
+        scale = Tensor(repeating: 1 / Element(size).sqrt(), shape: [])
         dropout = Dropout(rate: dropoutRate)
         self.isCausal = isCausal
     }
@@ -91,7 +122,7 @@ public struct ScaledDotProductAttention<Element: RandomizableType, Device: Devic
     public func callAsFunction(_ inputs: ScaledDotProductAttentionInput<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "ScaledDotProductAttention") {
             // inputs: [batchSize, timeSteps, size]
-            let tmp1 = inputs.query.broadcastMatrixMultiplied(with: inputs.key, transposeOther: true) / scale
+            let tmp1 = inputs.query.broadcastMatrixMultiplied(with: inputs.key, transposeOther: true) * scale
             
             let tmp2: Tensor<Element, Device>
             if isCausal {
@@ -113,6 +144,7 @@ public struct ScaledDotProductAttention<Element: RandomizableType, Device: Devic
     }
 }
 
+/// Attention with multiple heads
 public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>: LayerType {
     public var parameters: [Tensor<Element, Device>] {
         Array([attention.parameters, inputTransform.parameters, outputTransform.parameters].joined())
@@ -129,13 +161,21 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     var inputTransform: Dense<Element, Device>
     var outputTransform: Dense<Element, Device>
     
+    /// Number of attention heads
     public let headCount: Int
     
+    /// Determines and controls, whether dropout is applied before value retreival
     public var isDropoutActive: Bool {
         get {attention.isDropoutActive}
         set {attention.isDropoutActive = newValue}
     }
     
+    /// Creates a multi-head attention layer
+    /// - Parameters:
+    ///   - size: Size of input and output vectors
+    ///   - headCount: Number of attention heads
+    ///   - dropoutRate: Rate of dropout applied before value retreival
+    ///   - isCausal: Determines, whether attention can only span preceding timesteps
     public init(size: Int, headCount: Int, dropoutRate: Float, isCausal: Bool) {
         self.attention = ScaledDotProductAttention(size: size, dropoutRate: dropoutRate, isCausal: isCausal)
         self.inputTransform = Dense(inputSize: size, outputSize: size * 3)
