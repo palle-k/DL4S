@@ -534,6 +534,33 @@
                 <li class="item">
                   <div>
                     <code>
+                    <a name="/s:4DL4S4AdamV10useAMSGradSbvp"></a>
+                    <a name="//apple_ref/swift/Property/useAMSGrad" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S4AdamV10useAMSGradSbvp">useAMSGrad</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">useAMSGrad</span><span class="p">:</span> <span class="kt">Bool</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
                     <a name="/s:4DL4S4AdamV12learningRateAA6TensorVy9ParameterQz6DeviceQzGvp"></a>
                     <a name="//apple_ref/swift/Property/learningRate" class="dashAnchor"></a>
                     <a class="token" href="#/s:4DL4S4AdamV12learningRateAA6TensorVy9ParameterQz6DeviceQzGvp">learningRate</a>
@@ -642,9 +669,9 @@
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:4DL4S4AdamV5model12learningRate5beta15beta27epsilonACyxGx_AA6TensorVy9ParameterQz6DeviceQzGA3Ptcfc"></a>
-                    <a name="//apple_ref/swift/Method/init(model:learningRate:beta1:beta2:epsilon:)" class="dashAnchor"></a>
-                    <a class="token" href="#/s:4DL4S4AdamV5model12learningRate5beta15beta27epsilonACyxGx_AA6TensorVy9ParameterQz6DeviceQzGA3Ptcfc">init(model:<wbr>learningRate:<wbr>beta1:<wbr>beta2:<wbr>epsilon:<wbr>)</a>
+                    <a name="/s:4DL4S4AdamV5model12learningRate10useAMSGrad5beta15beta27epsilonACyxGx_AA6TensorVy9ParameterQz6DeviceQzGSbA3Qtcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(model:learningRate:useAMSGrad:beta1:beta2:epsilon:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S4AdamV5model12learningRate10useAMSGrad5beta15beta27epsilonACyxGx_AA6TensorVy9ParameterQz6DeviceQzGSbA3Qtcfc">init(model:<wbr>learningRate:<wbr>useAMSGrad:<wbr>beta1:<wbr>beta2:<wbr>epsilon:<wbr>)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -661,7 +688,7 @@
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">model</span><span class="p">:</span> <span class="kt">Layer</span><span class="p">,</span> <span class="nv">learningRate</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span><span class="p">,</span> <span class="nv">beta1</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span> <span class="nv">beta2</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span> <span class="o">=</span> <span class="mf">0.999</span><span class="p">,</span> <span class="nv">epsilon</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">)</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">model</span><span class="p">:</span> <span class="kt">Layer</span><span class="p">,</span> <span class="nv">learningRate</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span><span class="p">,</span> <span class="nv">useAMSGrad</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">beta1</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span> <span class="nv">beta2</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span> <span class="o">=</span> <span class="mf">0.999</span><span class="p">,</span> <span class="nv">epsilon</span><span class="p">:</span> <span class="kt"><a href="../Structs/Adam.html#/s:4DL4S4AdamV11ParamTensora">ParamTensor</a></span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -861,7 +888,7 @@
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-11)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

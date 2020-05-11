@@ -348,6 +348,26 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func max<N>(_ lhs: ShapedBuffer<N, GPU>, _ rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func max<N>(_ lhs: ShapedBuffer<N, GPU>, _ rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func min<N>(_ lhs: ShapedBuffer<N, GPU>, _ rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func min<N>(_ lhs: ShapedBuffer<N, GPU>, _ rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, context: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func distribute<N>(source: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func band<N>(buffer: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, belowDiagonal: Int?, aboveDiagonal: Int?) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }

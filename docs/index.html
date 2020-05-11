@@ -581,6 +581,7 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 <input type="checkbox" checked disabled/> SGD<br/>
 <input type="checkbox" checked disabled/> Momentum<br/>
 <input type="checkbox" checked disabled/> Adam<br/>
+<input type="checkbox" checked disabled/> AMSGrad<br/>
 <input type="checkbox" checked disabled/> AdaGrad<br/>
 <input type="checkbox" checked disabled/> AdaDelta<br/>
 <input type="checkbox" checked disabled/> RMSProp<br/>
@@ -616,6 +617,8 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 <input type="checkbox" checked disabled/> max<br/>
 <input type="checkbox" checked disabled/> relu<br/>
 <input type="checkbox" checked disabled/> leaky relu<br/>
+<input type="checkbox" checked disabled/> elementwise max<br/>
+<input type="checkbox" checked disabled/> elementwise min<br/>
 <input type="checkbox" checked disabled/> reduce sum<br/>
 <input type="checkbox" checked disabled/> reduce max<br/>
 <input type="checkbox" checked disabled/> scatter<br/>
@@ -650,7 +653,7 @@ swift build <span class="nt">-c</span> release <span class="se">\</span>
 <p>Default implementations are provided for the following architectures:</p>
 
 <input type="checkbox" checked disabled/> ResNet18<br/>
-<input type="checkbox" checked disabled/> VGG (11, 13, 16,/ 19)<br/>
+<input type="checkbox" checked disabled/> VGG (11, 13, 16, 19)<br/>
 <input type="checkbox" checked disabled/> AlexNet<br/>
 
 <h2 id='examples' class='heading'>Examples</h2>
@@ -709,7 +712,7 @@ Therefore, second derivatives can be computed by computing the gradient of the g
 <h3 id='convolutional-networks' class='heading'>Convolutional Networks</h3>
 
 <p>Example for MNIST classification</p>
-<pre class="highlight swift"><code><span class="c1">// Input must be 1x28x28</span>
+<pre class="highlight swift"><code><span class="c1">// Input must be batchSizex1x28x28</span>
 <span class="k">var</span> <span class="nv">model</span> <span class="o">=</span> <span class="kt">Sequential</span> <span class="p">{</span>
    <span class="kt">Convolution2D</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputChannels</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nv">outputChannels</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="nv">kernelSize</span><span class="p">:</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
    <span class="kt">Relu</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
@@ -725,18 +728,18 @@ Therefore, second derivatives can be computed by computing the gradient of the g
    <span class="kt">Relu</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
 
    <span class="kt">Dense</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputSize</span><span class="p">:</span> <span class="mi">120</span><span class="p">,</span> <span class="nv">outputSize</span><span class="p">:</span> <span class="mi">10</span><span class="p">)</span>
-   <span class="kt">Softmax</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+   <span class="kt">LogSoftmax</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
 <span class="p">}</span>
 
 <span class="k">var</span> <span class="nv">optimizer</span> <span class="o">=</span> <span class="kt">Adam</span><span class="p">(</span><span class="nv">model</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span> <span class="nv">learningRate</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">)</span>
 
 <span class="c1">// Single iteration of minibatch gradient descent</span>
-<span class="k">let</span> <span class="nv">batch</span><span class="p">:</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// shape: [batchSize, 28, 28]</span>
+<span class="k">let</span> <span class="nv">batch</span><span class="p">:</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// shape: [batchSize, 1, 28, 28]</span>
 <span class="k">let</span> <span class="nv">y_true</span><span class="p">:</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// shape: [batchSize]</span>
 
 <span class="c1">// use optimizer.model, not model</span>
 <span class="k">let</span> <span class="nv">pred</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="nf">model</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">loss</span> <span class="o">=</span> <span class="nf">categoricalCrossEntropy</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="n">y_true</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="n">pred</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">loss</span> <span class="o">=</span> <span class="nf">categoricalNegativeLogLikelihood</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="n">y_true</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="n">pred</span><span class="p">)</span>
 
 <span class="k">let</span> <span class="nv">gradients</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
 <span class="n">optimizer</span><span class="o">.</span><span class="nf">update</span><span class="p">(</span><span class="nv">along</span><span class="p">:</span> <span class="n">gradients</span><span class="p">)</span>
@@ -752,7 +755,7 @@ Therefore, second derivatives can be computed by computing the gradient of the g
         <span class="n">inputs</span><span class="o">.</span><span class="mi">0</span>
     <span class="p">}</span>
     <span class="kt">Dense</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputSize</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span> <span class="nv">outputSize</span><span class="p">:</span> <span class="mi">10</span><span class="p">)</span>
-    <span class="kt">Softmax</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+    <span class="kt">LogSoftmax</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
 <span class="p">}</span>
 
 <span class="k">var</span> <span class="nv">optimizer</span> <span class="o">=</span> <span class="kt">Adam</span><span class="p">(</span><span class="nv">model</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span> <span class="nv">learningRate</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">)</span>
@@ -762,7 +765,7 @@ Therefore, second derivatives can be computed by computing the gradient of the g
 
 <span class="k">let</span> <span class="nv">x</span> <span class="o">=</span> <span class="n">batch</span><span class="o">.</span><span class="nf">permuted</span><span class="p">(</span><span class="nv">to</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="c1">// Swap first and second axis</span>
 <span class="k">let</span> <span class="nv">pred</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="nf">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">loss</span> <span class="o">=</span> <span class="nf">categoricalCrossEntropy</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="n">y_true</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="n">pred</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">loss</span> <span class="o">=</span> <span class="nf">categoricalNegativeLogLikelihood</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="n">y_true</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="n">pred</span><span class="p">)</span>
 
 <span class="k">let</span> <span class="nv">gradients</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
 <span class="n">optimizer</span><span class="o">.</span><span class="nf">update</span><span class="p">(</span><span class="nv">along</span><span class="p">:</span> <span class="n">gradients</span><span class="p">)</span>
@@ -775,7 +778,7 @@ Therefore, second derivatives can be computed by computing the gradient of the g
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-11)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

@@ -830,6 +830,36 @@ public struct CPUEngine: EngineType {
         N.tanh(val: values.immutable, result: result.pointer, count: result.count)
     }
     
+    public static func max<N>(_ lhs: ShapedBuffer<N, CPU>, _ rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(lhs.shape == rhs.shape, "Shapes of lhs and rhs must match")
+        precondition(lhs.shape == result.shape, "Shapes of inputs and result must match")
+        
+        N.max(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, count: result.count)
+    }
+    
+    public static func max<N>(_ lhs: ShapedBuffer<N, CPU>, _ rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(lhs.shape == rhs.shape, "Shapes of lhs and rhs must match")
+        precondition(lhs.shape == result.shape, "Shapes of inputs and result must match")
+        precondition(context.shape == result.shape, "Shapes of context and result must match")
+        
+        N.max(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, context: context.pointer, count: result.count)
+    }
+    
+    public static func min<N>(_ lhs: ShapedBuffer<N, CPU>, _ rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(lhs.shape == rhs.shape, "Shapes of lhs and rhs must match")
+        precondition(lhs.shape == result.shape, "Shapes of inputs and result must match")
+        
+        N.min(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, count: result.count)
+    }
+    
+    public static func min<N>(_ lhs: ShapedBuffer<N, CPU>, _ rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, context: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(lhs.shape == rhs.shape, "Shapes of lhs and rhs must match")
+        precondition(lhs.shape == result.shape, "Shapes of inputs and result must match")
+        precondition(context.shape == result.shape, "Shapes of context and result must match")
+        
+        N.min(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, context: context.pointer, count: result.count)
+    }
+    
     public static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) {
         let dim = values.dim
         

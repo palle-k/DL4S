@@ -33,6 +33,8 @@ public struct Adam<Layer: LayerType>: Optimizer {
     
     public private(set) var model: Layer
     
+    public let useAMSGrad: Bool
+    
     /// Learning rate scaling factor
     public var learningRate: ParamTensor
     
@@ -50,6 +52,7 @@ public struct Adam<Layer: LayerType>: Optimizer {
     
     private var firstMoments: [ParamTensor]
     private var secondMoments: [ParamTensor]
+    private var secondMomentMax: [ParamTensor]?
     
     private var paths: [WritableKeyPath<Layer, ParamTensor>]
 
@@ -62,8 +65,10 @@ public struct Adam<Layer: LayerType>: Optimizer {
     ///   - beta1: Exponential decay rate for first moment
     ///   - beta2: Exponential decay rate for second moment
     ///   - epsilon: Normalization scalar added to divisors
-    public init(model: Layer, learningRate: ParamTensor, beta1: ParamTensor = 0.9, beta2: ParamTensor = 0.999, epsilon: ParamTensor = 1e-8) {
+    public init(model: Layer, learningRate: ParamTensor, useAMSGrad: Bool = false, beta1: ParamTensor = 0.9, beta2: ParamTensor = 0.999, epsilon: ParamTensor = 1e-8) {
         self.model = model
+        
+        self.useAMSGrad = useAMSGrad
         
         self.learningRate = learningRate
         self.beta1 = beta1
@@ -81,6 +86,12 @@ public struct Adam<Layer: LayerType>: Optimizer {
             Tensor(repeating: 0, shape: $0.shape)
         }
         self.paths = model.parameterPaths
+        
+        if useAMSGrad {
+            self.secondMomentMax = model.parameters.map {
+                Tensor(repeating: 0, shape: $0.shape)
+            }
+        }
     }
     
     /// Resets the state of the optimizer
@@ -107,8 +118,16 @@ public struct Adam<Layer: LayerType>: Optimizer {
             let addedToSecondMoment = (grad * grad) * (1 - beta2)
             secondMoments[i] = secondMoments[i] * beta2 + addedToSecondMoment
             
+            let v_t_norm: ParamTensor
+            if useAMSGrad, let secondMomentMax = self.secondMomentMax {
+                let v_t_max = secondMomentMax[i]
+                v_t_norm = Tensor.max(v_t_max, secondMoments[i])
+            } else {
+                v_t_norm = secondMoments[i]
+            }
+            
             let m_car_t = firstMoments[i] / (1 - beta1t)
-            let v_car_t = secondMoments[i] / (1 - beta2t)
+            let v_car_t = v_t_norm / (1 - beta2t)
             
             let delta = learningRate / (v_car_t.sqrt() + epsilon) * m_car_t
             model[keyPath: path] -= delta
@@ -134,6 +153,13 @@ extension Adam: Codable where Layer: Codable {
         epsilon = try container.decode(ParamTensor.self, forKey: .epsilon)
         firstMoments = try container.decode([ParamTensor].self, forKey: .firstMoments)
         secondMoments = try container.decode([ParamTensor].self, forKey: .secondMoments)
+        if container.contains(.useAMSGrad) {
+            useAMSGrad = try container.decode(Bool.self, forKey: .useAMSGrad)
+            secondMomentMax = try container.decode([ParamTensor].self, forKey: .secondMomentMax)
+        } else {
+            useAMSGrad = false
+            secondMomentMax = nil
+        }
         
         paths = model.parameterPaths
     }
@@ -150,12 +176,16 @@ extension Adam: Codable where Layer: Codable {
         try container.encode(epsilon, forKey: .epsilon)
         try container.encode(firstMoments, forKey: .firstMoments)
         try container.encode(secondMoments, forKey: .secondMoments)
+        try container.encode(useAMSGrad, forKey: .useAMSGrad)
+        try container.encode(secondMomentMax, forKey: .secondMomentMax)
     }
     
     private enum CodingKeys: String, CodingKey {
         case model
         case firstMoments
         case secondMoments
+        case useAMSGrad
+        case secondMomentMax
         case learningRate
         case beta1
         case beta2

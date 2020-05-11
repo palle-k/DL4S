@@ -81,6 +81,15 @@ public extension Tensor {
 
 //MARK: Tensor - array conversion
 public extension Tensor {
+    
+    /// Creates a tensor value holding the provided scalar. The tensor will have an empty shape.
+    /// - Parameters:
+    ///   - e: Element
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
+    init(_ e: Element, requiresGradient: Bool = false) {
+        self.init([e], shape: [], requiresGradient: requiresGradient)
+    }
+    
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Values to fill tensor with

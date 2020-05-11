@@ -139,6 +139,7 @@ Optimizers
 - [x] SGD
 - [x] Momentum
 - [x] Adam
+- [x] AMSGrad
 - [x] AdaGrad
 - [x] AdaDelta
 - [x] RMSProp
@@ -187,6 +188,8 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] max
 - [x] relu
 - [x] leaky relu
+- [x] elementwise min
+- [x] elementwise max
 - [x] reduce sum
 - [x] reduce max
 - [x] scatter
@@ -307,7 +310,7 @@ print(thirdGrad) // [6, 6, 6, 6]
 Example for MNIST classification
 
 ```swift
-// Input must be 1x28x28
+// Input must be batchSizex1x28x28
 var model = Sequential {
    Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5))
    Relu<Float, CPU>()
@@ -323,18 +326,18 @@ var model = Sequential {
    Relu<Float, CPU>()
    
    Dense<Float, CPU>(inputSize: 120, outputSize: 10)
-   Softmax<Float, CPU>()
+   LogSoftmax<Float, CPU>()
 }
 
 var optimizer = Adam(model: model, learningRate: 0.001)
 
 // Single iteration of minibatch gradient descent
-let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
+let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 1, 28, 28]
 let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
 
 // use optimizer.model, not model
 let pred = optimizer.model(batch)
-let loss = categoricalCrossEntropy(expected: y_true, actual: pred)
+let loss = categoricalNegativeLogLikelihood(expected: y_true, actual: pred)
 
 let gradients = loss.gradients(of: optimizer.model.parameters)
 optimizer.update(along: gradients)
@@ -353,7 +356,7 @@ let model = Sequential {
         inputs.0
     }
     Dense<Float, CPU>(inputSize: 128, outputSize: 10)
-    Softmax<Float, CPU>()
+    LogSoftmax<Float, CPU>()
 }
 
 var optimizer = Adam(model: model, learningRate: 0.001)
@@ -363,7 +366,7 @@ let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
 
 let x = batch.permuted(to: 1, 0, 2) // Swap first and second axis
 let pred = optimizer.model(x)
-let loss = categoricalCrossEntropy(expected: y_true, actual: pred)
+let loss = categoricalNegativeLogLikelihood(expected: y_true, actual: pred)
 
 let gradients = loss.gradients(of: optimizer.model.parameters)
 optimizer.update(along: gradients)
