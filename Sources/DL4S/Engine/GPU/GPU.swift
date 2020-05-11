@@ -46,7 +46,10 @@ public struct GPU: DeviceType {
     
     static let library: MTLLibrary = {
         do {
-            return try GPU.device.makeDefaultLibrary(bundle: Bundle(for: BundleIdentifyingClass.self))
+            var options = MTLCompileOptions()
+            options.fastMathEnabled = true
+            options.languageVersion = .version2_2
+            return try GPU.device.makeLibrary(source: SHADER_SOURCE, options: options)
         } catch let error {
             fatalError("Cannot get metal library (\(error))")
         }

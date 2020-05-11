@@ -132,6 +132,7 @@ class GPUTests: XCTestCase {
     func testTranspose() {
         let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
         print(a.transposed())
+        XCTAssertEqual(a.copied(to: CPU.self).transposed(), a.transposed().copied(to: CPU.self))
     }
     
     func testReduce() {
