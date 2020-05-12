@@ -186,6 +186,7 @@ public extension Tensor {
                     { resultGradient, acc in
                         let res: Self
                         if let acc = acc {
+                            let acc = transposeSelf ? acc.transposed() : acc
                             res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther, inplaceAdd: !acc.requiresGradient)
                         } else {
                              res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
@@ -200,6 +201,7 @@ public extension Tensor {
                         let res: Self
                         
                         if let acc = acc {
+                            let acc = transposeOther ? acc.transposed() : acc
                             res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false, inplaceAdd: !acc.requiresGradient)
                         } else {
                             res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
