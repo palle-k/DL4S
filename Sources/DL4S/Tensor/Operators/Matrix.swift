@@ -30,7 +30,9 @@ public extension Tensor {
     
     /// Computes the matrix-matrix product, the vector-matrix product, the matrix-vector product or the vector-vector product of the tensor with the given other tensor
     /// - Parameter other: Tensor to multiply with self.
-    func matrixMultiplied(with other: Self) -> Self {
+    //  - Parameter transposeSelf: Whether to transpose the left hand side matrix before multiplying. Ignored when self.dim == 1.
+    //  - Parameter transposeOther: Whether to transpose the right hand side matrix before multiplying. Ignored when other.dim == 1.
+    func matrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         let lhs = self
         let rhs = other
         
@@ -62,7 +64,7 @@ public extension Tensor {
             resultViewShape = [lhs.shape[0], rhs.shape[1]]
         }
         
-        return lhsView._matMul(rhsView).view(as: resultViewShape)
+        return lhsView._matMul(rhsView, transposeSelf: transposeSelf && lhs.dim == 2, transposeOther: transposeOther && rhs.dim == 2).view(as: resultViewShape)
     }
     
     /// Broadcast matrix multiplies self with the given other operand.
