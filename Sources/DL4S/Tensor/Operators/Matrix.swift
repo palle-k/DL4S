@@ -53,15 +53,15 @@ public extension Tensor {
         case (1, 2):
             lhsView = lhs.view(as: [1, -1])
             rhsView = rhs
-            resultViewShape = [rhs.shape[1]]
+            resultViewShape = [rhs.shape[transposeOther ? 0 : 1]]
         case (2, 1):
             lhsView = lhs
             rhsView = rhs.view(as: [-1, 1])
-            resultViewShape = [lhs.shape[0]]
+            resultViewShape = [lhs.shape[transposeSelf ? 1 : 0]]
         case (_, _):
             lhsView = lhs
             rhsView = rhs
-            resultViewShape = [lhs.shape[0], rhs.shape[1]]
+            resultViewShape = [lhs.shape[transposeSelf ? 1 : 0], rhs.shape[transposeOther ? 0 : 1]]
         }
         
         return lhsView._matMul(rhsView, transposeSelf: transposeSelf && lhs.dim == 2, transposeOther: transposeOther && rhs.dim == 2).view(as: resultViewShape)
