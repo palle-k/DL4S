@@ -38,7 +38,7 @@ public extension Tensor {
         
         precondition(1 ... 2 ~= lhs.dim && 1 ... 2 ~= rhs.dim, "Matrix multiplication operands must both be one or two dimensional.")
         // lhs.dim == 2 and rhs.dim == 2 implies matching shapes
-        precondition(!(lhs.dim == 2 && rhs.dim == 2) || lhs.shape[1] == rhs.shape[0], "Matrix multiplication operands must have matching shapes.")
+        precondition(!(lhs.dim == 2 && rhs.dim == 2) || lhs.shape[transposeSelf ? 0 : 1] == rhs.shape[transposeOther ? 1 : 0], "Matrix multiplication operands must have matching shapes.")
         
         let resultViewShape: [Int]
         
