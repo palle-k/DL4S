@@ -462,7 +462,7 @@
             <h1>CPUNumeric</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">CPUNumeric</span> <span class="p">:</span> <span class="kt">Numeric</span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">CPUNumeric</span> <span class="p">:</span> <span class="kt">Comparable</span><span class="p">,</span> <span class="kt">Numeric</span></code></pre>
 
                 </div>
               </div>
@@ -1153,6 +1153,76 @@
                 <li class="item">
                   <div>
                     <code>
+                    <a name="/s:4DL4S10CPUNumericP3max3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/max(lhs:rhs:result:context:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3max3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ">max(lhs:<wbr>rhs:<wbr>result:<wbr>context:<wbr>count:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">max</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3min3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/min(lhs:rhs:result:context:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3min3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ">min(lhs:<wbr>rhs:<wbr>result:<wbr>context:<wbr>count:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">min</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
                     <a name="/s:4DL4S10CPUNumericP4copy6values9srcStride6result03dstF05countySRyxG_SiSryxGS2itFZ"></a>
                     <a name="//apple_ref/swift/Method/copy(values:srcStride:result:dstStride:count:)" class="dashAnchor"></a>
                     <a class="token" href="#/s:4DL4S10CPUNumericP4copy6values9srcStride6result03dstF05countySRyxG_SiSryxGS2itFZ">copy(values:<wbr>srcStride:<wbr>result:<wbr>dstStride:<wbr>count:<wbr>)</a>
@@ -1433,7 +1503,7 @@
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-05)</p>
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-05-11)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>

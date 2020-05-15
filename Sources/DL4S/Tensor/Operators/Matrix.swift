@@ -30,13 +30,15 @@ public extension Tensor {
     
     /// Computes the matrix-matrix product, the vector-matrix product, the matrix-vector product or the vector-vector product of the tensor with the given other tensor
     /// - Parameter other: Tensor to multiply with self.
-    func matrixMultiplied(with other: Self) -> Self {
+    //  - Parameter transposeSelf: Whether to transpose the left hand side matrix before multiplying. Ignored when self.dim == 1.
+    //  - Parameter transposeOther: Whether to transpose the right hand side matrix before multiplying. Ignored when other.dim == 1.
+    func matrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         let lhs = self
         let rhs = other
         
         precondition(1 ... 2 ~= lhs.dim && 1 ... 2 ~= rhs.dim, "Matrix multiplication operands must both be one or two dimensional.")
         // lhs.dim == 2 and rhs.dim == 2 implies matching shapes
-        precondition(!(lhs.dim == 2 && rhs.dim == 2) || lhs.shape[1] == rhs.shape[0], "Matrix multiplication operands must have matching shapes.")
+        precondition(!(lhs.dim == 2 && rhs.dim == 2) || lhs.shape[transposeSelf ? 0 : 1] == rhs.shape[transposeOther ? 1 : 0], "Matrix multiplication operands must have matching shapes.")
         
         let resultViewShape: [Int]
         
@@ -51,18 +53,18 @@ public extension Tensor {
         case (1, 2):
             lhsView = lhs.view(as: [1, -1])
             rhsView = rhs
-            resultViewShape = [rhs.shape[1]]
+            resultViewShape = [rhs.shape[transposeOther ? 0 : 1]]
         case (2, 1):
             lhsView = lhs
             rhsView = rhs.view(as: [-1, 1])
-            resultViewShape = [lhs.shape[0]]
+            resultViewShape = [lhs.shape[transposeSelf ? 1 : 0]]
         case (_, _):
             lhsView = lhs
             rhsView = rhs
-            resultViewShape = [lhs.shape[0], rhs.shape[1]]
+            resultViewShape = [lhs.shape[transposeSelf ? 1 : 0], rhs.shape[transposeOther ? 0 : 1]]
         }
         
-        return lhsView._matMul(rhsView).view(as: resultViewShape)
+        return lhsView._matMul(rhsView, transposeSelf: transposeSelf && lhs.dim == 2, transposeOther: transposeOther && rhs.dim == 2).view(as: resultViewShape)
     }
     
     /// Broadcast matrix multiplies self with the given other operand.
@@ -141,6 +143,7 @@ public extension Tensor {
                     { resultGradient, acc in
                         let res: Self
                         if let acc = acc {
+                            let acc = transposeSelf ? acc.transposed() : acc
                             res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther, inplaceAdd: !acc.requiresGradient)
                         } else {
                              res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
@@ -155,6 +158,7 @@ public extension Tensor {
                         let res: Self
                         
                         if let acc = acc {
+                            let acc = transposeOther ? acc.transposed() : acc
                             res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false, inplaceAdd: !acc.requiresGradient)
                         } else {
                             res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)

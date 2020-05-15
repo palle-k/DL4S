@@ -368,4 +368,54 @@ public extension CPUNumeric {
             target[dst_idx] = src[src_idx]
         }
     }
+    
+    @_specialize(where Self == Int32)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    static func max(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, context: UnsafeMutableBufferPointer<Self>, count: Int) {
+        let lhsPtr = lhs.baseAddress!
+        let rhsPtr = rhs.baseAddress!
+        let resultPtr = result.baseAddress!
+        let contextPtr = context.baseAddress!
+        
+        var i = 0
+        while i < count {
+            let l = lhsPtr[i]
+            let r = rhsPtr[i]
+            if l >= r {
+                resultPtr[i] = l
+                contextPtr[i] = 0
+            } else {
+                resultPtr[i] = r
+                contextPtr[i] = 1
+            }
+            
+            i &+= 1
+        }
+    }
+    
+    @_specialize(where Self == Int32)
+    @_specialize(where Self == Float)
+    @_specialize(where Self == Double)
+    static func min(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, context: UnsafeMutableBufferPointer<Self>, count: Int) {
+        let lhsPtr = lhs.baseAddress!
+        let rhsPtr = rhs.baseAddress!
+        let resultPtr = result.baseAddress!
+        let contextPtr = context.baseAddress!
+        
+        var i = 0
+        while i < count {
+            let l = lhsPtr[i]
+            let r = rhsPtr[i]
+            if l <= r {
+                resultPtr[i] = l
+                contextPtr[i] = 0
+            } else {
+                resultPtr[i] = r
+                contextPtr[i] = 1
+            }
+            
+            i &+= 1
+        }
+    }
 }

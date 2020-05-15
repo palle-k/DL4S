@@ -25,7 +25,7 @@
 
 import Foundation
 
-public protocol CPUNumeric: Numeric {
+public protocol CPUNumeric: Numeric, Comparable {
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
     
@@ -61,6 +61,9 @@ public protocol CPUNumeric: Numeric {
     
     static func max(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func min(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    
+    static func max(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, context: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func min(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, context: UnsafeMutableBufferPointer<Self>, count: Int)
     
     static func copy(values: UnsafeBufferPointer<Self>, srcStride: Int, result: UnsafeMutableBufferPointer<Self>, dstStride: Int, count: Int)
     static func arange(start: Self, end: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)

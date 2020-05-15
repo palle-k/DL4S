@@ -519,6 +519,20 @@
       "warning": "undocumented"
     },
     {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUGeneric.swift",
+      "line": 375,
+      "symbol": "CPUNumeric.max(lhs:rhs:result:context:count:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUGeneric.swift",
+      "line": 400,
+      "symbol": "CPUNumeric.min(lhs:rhs:result:context:count:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.static",
+      "warning": "undocumented"
+    },
+    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUInt32.swift",
       "line": 39,
       "symbol": "Int32.fill(value:result:stride:count:)",
@@ -927,62 +941,76 @@
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 65,
-      "symbol": "CPUNumeric.copy(values:srcStride:result:dstStride:count:)",
+      "symbol": "CPUNumeric.max(lhs:rhs:result:context:count:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 66,
-      "symbol": "CPUNumeric.arange(start:end:result:count:)",
+      "symbol": "CPUNumeric.min(lhs:rhs:result:context:count:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 68,
-      "symbol": "CPUNumeric.sin(values:result:count:)",
+      "symbol": "CPUNumeric.copy(values:srcStride:result:dstStride:count:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 69,
-      "symbol": "CPUNumeric.cos(values:result:count:)",
+      "symbol": "CPUNumeric.arange(start:end:result:count:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
-      "line": 70,
-      "symbol": "CPUNumeric.tan(values:result:count:)",
+      "line": 71,
+      "symbol": "CPUNumeric.sin(values:result:count:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 72,
-      "symbol": "CPUNumeric.img2col(values:result:batchSize:channels:height:width:kernelHeight:kernelWidth:padding:stride:)",
+      "symbol": "CPUNumeric.cos(values:result:count:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 73,
-      "symbol": "CPUNumeric.col2img(values:result:batchSize:channels:height:width:kernelHeight:kernelWidth:padding:stride:)",
+      "symbol": "CPUNumeric.tan(values:result:count:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 75,
-      "symbol": "CPUNumeric.scatter(values:context:result:dst_shape:axis:)",
+      "symbol": "CPUNumeric.img2col(values:result:batchSize:channels:height:width:kernelHeight:kernelWidth:padding:stride:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
       "line": 76,
+      "symbol": "CPUNumeric.col2img(values:result:batchSize:channels:height:width:kernelHeight:kernelWidth:padding:stride:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
+      "line": 78,
+      "symbol": "CPUNumeric.scatter(values:context:result:dst_shape:axis:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/Numeric/CPUNumeric.swift",
+      "line": 79,
       "symbol": "CPUNumeric.gather(values:context:result:src_shape:axis:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
@@ -1068,6 +1096,13 @@
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
       "line": 247,
       "symbol": "GPUEngine.square(values:result:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.static",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
+      "line": 367,
+      "symbol": "GPUEngine.distribute(source:context:lhs:rhs:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
@@ -1877,6 +1912,13 @@
       "warning": "undocumented"
     },
     {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Adam.swift",
+      "line": 36,
+      "symbol": "Adam.useAMSGrad",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
       "line": 32,
       "symbol": "RMSProp.ParamTensor",
@@ -2515,28 +2557,28 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 204,
+      "line": 213,
       "symbol": "Tensor.init(bernoulliDistributedWithShape:probability:requiresGradient:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 209,
+      "line": 218,
       "symbol": "Tensor.init(bernoulliDistributedWithShape:probability:requiresGradient:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 247,
+      "line": 256,
       "symbol": "Tensor.elements",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 321,
+      "line": 330,
       "symbol": "Tensor.cgImage(normalizeFrom:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"

@@ -39,7 +39,7 @@ public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
 }
 
 /// A type that can be used as a number in a Tensor.
-public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, Comparable, CPUNumeric {
+public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, CPUNumeric {
     
     /// Formats the number with the given amount of decimal places
     /// - Parameter maxDecimals: Maximum amount of decimal places
