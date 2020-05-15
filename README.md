@@ -15,8 +15,10 @@ It furthermore has automatic differentiation builtin, which allows you to create
 implement backpropagation.
 
 Features include implementations for many basic binary and unary operators,
-matrix operations, convolutional and recurrent neural networks, 
+broadcasting, matrix operations, convolutional and recurrent neural networks, 
 commonly used optimizers, second derivatives and much more.
+
+While its primary purpose is deep learning and optimization, DL4S can be used as a library for vectorized mathematical operations like numpy.
 
 [Read the full documentation](https://palle-k.github.io/DL4S/)
 
