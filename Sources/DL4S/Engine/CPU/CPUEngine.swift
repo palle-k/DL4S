@@ -1059,8 +1059,8 @@ public struct CPUEngine: EngineType {
         let dst = result.values.memory.bindMemory(to: N.self).pointer(capacity: rows * cols)
         
         for i in 0 ..< rows {
-            let start = Swift.max(0, i - belowDiagonal)
-            let end = Swift.min(cols, i + aboveDiagonal)
+            let start = Swift.min(Swift.max(0, i - belowDiagonal), cols - 1)
+            let end = Swift.max(Swift.min(cols, i + aboveDiagonal + 1), start)
             
             memcpy(
                 UnsafeMutableRawPointer(dst.advanced(by: i * cols + start)),
