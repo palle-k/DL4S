@@ -1060,7 +1060,7 @@ public struct CPUEngine: EngineType {
         
         for i in 0 ..< rows {
             let start = Swift.max(0, i - belowDiagonal)
-            let end = Swift.max(cols, i + aboveDiagonal)
+            let end = Swift.min(cols, i + aboveDiagonal)
             
             memcpy(
                 UnsafeMutableRawPointer(dst.advanced(by: i * cols + start)),
