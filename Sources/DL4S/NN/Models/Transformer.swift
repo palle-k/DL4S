@@ -29,7 +29,7 @@ import Foundation
 ///
 /// The block sequences a dense layer, gelu activation, dropout and another dense layer.
 ///
-public struct TransformerFeedForwardBlock<Element: RandomizableType, Device: DeviceType>: LayerType {
+public struct TransformerFeedForwardBlock<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var dense1: Dense<Element, Device>
     public var dense2: Dense<Element, Device>
     public var dropout: Dropout<Element, Device>
@@ -90,7 +90,7 @@ public struct ScaledDotProductAttentionInput<Element: NumericType, Device: Devic
 
 
 /// Scaled dot product attention layer
-public struct ScaledDotProductAttention<Element: RandomizableType, Device: DeviceType>: LayerType {
+public struct ScaledDotProductAttention<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameters: [Tensor<Element, Device>] {[]}
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     
@@ -145,7 +145,7 @@ public struct ScaledDotProductAttention<Element: RandomizableType, Device: Devic
 }
 
 /// Attention with multiple heads
-public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>: LayerType {
+public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameters: [Tensor<Element, Device>] {
         Array([attention.parameters, inputTransform.parameters, outputTransform.parameters].joined())
     }
@@ -224,7 +224,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     }
 }
 
-public struct TransformerLayer<Element: RandomizableType, Device: DeviceType> {
+public struct TransformerLayer<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameters: [Tensor<Element, Device>] {
         Array([
             selfAttention.parameters,
