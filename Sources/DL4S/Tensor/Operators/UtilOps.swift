@@ -61,7 +61,7 @@ public extension Tensor {
     /// Repeats the tensor `times` times and stacks the result along the 0th axis.
     /// - Parameter times: Number of repetitions
     func repeated(_ times: Int) -> Self {
-        return Tensor(stacking: Array(repeating: self, count: count))
+        return Tensor(stacking: Array(repeating: self, count: times))
     }
     
     /// Pads the tensor with the given leading and trailing padding for each axis.
