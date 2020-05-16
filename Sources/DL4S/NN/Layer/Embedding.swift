@@ -48,6 +48,9 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
         embeddingMatrix.shape[1]
     }
     
+    /// Index for padding that is ignored in inputs to the layer
+    public let ignoreIndex: Int
+    
     /// Creates an embedding layer that has an input vocabulary of size `inputFeatures` and returns embeddings with the size `outputSize`.
     ///
     /// The layer expects categorial inputs with a shape of [batch size] and returns embeddings with a shape of [batch size, outputSize]
@@ -55,11 +58,13 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
     /// - Parameters:
     ///   - inputFeatures: Vocabulary size.
     ///   - outputSize: Embedding dimensionality.
-    public init(inputFeatures: Int, outputSize: Int) {
+    ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
+    public init(inputFeatures: Int, outputSize: Int, ignoreIndex: Int = -1) {
         self.embeddingMatrix = Tensor<Element, Device>(xavierNormalWithShape: [inputFeatures, outputSize], requiresGradient: true)
         #if DEBUG
         self.embeddingMatrix.tag = "W"
         #endif
+        self.ignoreIndex = ignoreIndex
     }
     
     /// Loads pretrained word embeddings from the space / tab separated values file at the given path
@@ -77,7 +82,8 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
     ///   - words: Provided word order.
     ///   - embeddingsURL: Path to pretrained embeddings
     ///   - verbose: If set to true, print out loading progress
-    public init?(words: [String], embeddingsURL: URL, verbose: Bool = false) {
+    ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
+    public init?(words: [String], embeddingsURL: URL, verbose: Bool = false, ignoreIndex: Int = -1) {
         let wordToIndex = Dictionary(uniqueKeysWithValues: words.enumerated().map{($1, $0)})
         
         var tensors: [Tensor<Element, Device>?] = Array(repeating: nil, count: words.count)
@@ -140,12 +146,18 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
         #if DEBUG
         self.embeddingMatrix.tag = "W"
         #endif
+        self.ignoreIndex = ignoreIndex
     }
     
     public func callAsFunction(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Embedding") {
-            let embedded = (0 ..< inputs.shape[0]).map { i in
-                embeddingMatrix[Int(inputs[i].item)].unsqueezed(at: 0)
+            let embedded = (0 ..< inputs.shape[0]).map { i -> Tensor<Element, Device> in
+                let idx = Int(inputs[i].item)
+                if idx == ignoreIndex {
+                    return Tensor(repeating: 0, shape: 1, outputSize)
+                } else {
+                    return embeddingMatrix[idx].unsqueezed(at: 0)
+                }
             }
             
             return Tensor(stacking: embedded, along: 0)
