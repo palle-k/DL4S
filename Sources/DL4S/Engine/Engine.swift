@@ -440,7 +440,7 @@ public protocol EngineType {
     ///   - context: Index vector
     ///   - result: Buffer to scatter to
     ///   - axis: Axis to scatter along
-    static func scatter<N: NumericType>(reduced: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    static func scatter<N: NumericType>(reduced: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int, ignoreIndex: Int32)
     
     /// Gathers elements from indices determined by the context along the specified axis
     /// - Parameters:
@@ -448,7 +448,7 @@ public protocol EngineType {
     ///   - context: Index vector
     ///   - result: Result buffer
     ///   - axis: Axis to gather along
-    static func gather<N: NumericType>(expanded: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    static func gather<N: NumericType>(expanded: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int, ignoreIndex: Int32)
     
     /// Performs an axis permutation / transpose oepration
     /// - Parameters:
