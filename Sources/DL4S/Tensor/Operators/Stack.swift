@@ -95,13 +95,21 @@ public extension Tensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.stack(buffers: tensors.map {$0.values}, result: resultBuffer, axis: axis)
         
+        var gradientCache: [UInt64: [Self]] = [:]
+        
         self.init(
             using: resultBuffer,
             context: requiresGradient ? TensorContext(
                 tag: "stack",
                 sources: tensors,
                 backpropagate: tensors.indices.map { i in { resultGradient in
-                    resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)[i]
+                    if let cache = gradientCache[resultGradient.backpropID] {
+                        return cache[i]
+                    } else {
+                        let v = resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)
+                        gradientCache[resultGradient.backpropID] = v
+                        return v[i]
+                    }
                 }}
             ) : nil
         )
