@@ -227,13 +227,31 @@ public struct CPUEngine: EngineType {
         let axisSize = values.shape[axis]
         let dstStrides = CPU.Memory.strides(from: result.shape)
         
-        for idx in iterate(result.shape) {
-            let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
-            let suffixOffset = zip(srcStrides.suffix(from: axis+1), idx.suffix(from: axis)).map(*).reduce(0, +)
+        let indices = flatIterate(result.shape)
+        let dim = result.dim
+        let count = indices.count / dim
+        
+        for k in 0 ..< count {
+            let base = k * dim
+            var prefixOffset = 0
+            var suffixOffset = 0
+            var linearIndex = 0
+            for i in 0 ..< axis {
+                prefixOffset += srcStrides[i] * indices[base + i]
+            }
+            for i in Swift.min(axis + 1, dim) ..< dim {
+                suffixOffset += srcStrides[i] * indices[base + i]
+            }
+            for i in 0 ..< dim {
+                linearIndex += indices[base + i] * dstStrides[i]
+            }
+            
+            // let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
+            // let suffixOffset = zip(srcStrides.suffix(from: axis+1), idx.suffix(from: axis)).map(*).reduce(0, +)
             let totalOffset = prefixOffset + suffixOffset
             
             let reduced = reduceOperator(values.immutable.advanced(by: totalOffset), reductionStride, axisSize)
-            let linearIndex = zip(idx, dstStrides).map(*).reduce(0,+)
+            // let linearIndex = zip(idx, dstStrides).map(*).reduce(0,+)
             result.values[linearIndex] = reduced
         }
     }
@@ -856,7 +874,6 @@ public struct CPUEngine: EngineType {
     }
     
     public static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) {
-        let dim = values.dim
         let sourceMem = values.immutable
         let addMem = add.immutable
         let dstMem = result.pointer
