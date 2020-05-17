@@ -838,13 +838,17 @@ public struct CPUEngine: EngineType {
 
         let srcStrides = CPU.Memory.strides(from: shape)
         let dstStrides = CPU.Memory.strides(from: dstShape)
-
-        for index in iterate(iterShape) {
+        
+        let indexDim = iterShape.count
+        let indices = flatIterate(iterShape)
+        let indexCount = indices.count / indexDim
+        for j in 0 ..< indexCount {
+            let offset = indexDim * j
             var srcIdx = 0
             var dstIdx = 0
-            for i in 0 ..< index.count {
-                srcIdx += index[i] * srcStrides[i]
-                dstIdx += index[i] * dstStrides[arangement[i]]
+            for i in 0 ..< indexDim {
+                srcIdx += indices[offset + i] * srcStrides[i]
+                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
             }
             
             dstMem.advanced(by: dstIdx).assign(from: sourceMem.advanced(by: srcIdx), count: copyCount)
@@ -852,6 +856,7 @@ public struct CPUEngine: EngineType {
     }
     
     public static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, arangement: [Int]) {
+        let dim = values.dim
         let sourceMem = values.immutable
         let addMem = add.immutable
         let dstMem = result.pointer
@@ -867,12 +872,16 @@ public struct CPUEngine: EngineType {
         let srcStrides = CPU.Memory.strides(from: shape)
         let dstStrides = CPU.Memory.strides(from: dstShape)
         
-        for index in iterate(iterShape) {
+        let indexDim = iterShape.count
+        let indices = flatIterate(iterShape)
+        let indexCount = indices.count / indexDim
+        for j in 0 ..< indexCount {
+            let offset = indexDim * j
             var srcIdx = 0
             var dstIdx = 0
-            for i in 0 ..< index.count {
-                srcIdx += index[i] * srcStrides[i]
-                dstIdx += index[i] * dstStrides[arangement[i]]
+            for i in 0 ..< indexDim {
+                srcIdx += indices[offset + i] * srcStrides[i]
+                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
             }
             
             N.vAdd(lhs: sourceMem.advanced(by: srcIdx), rhs: addMem.advanced(by: dstIdx), result: dstMem.advanced(by: dstIdx), count: copyCount)
@@ -1059,7 +1068,7 @@ public struct CPUEngine: EngineType {
         let dst = result.values.memory.bindMemory(to: N.self).pointer(capacity: rows * cols)
         
         for i in 0 ..< rows {
-            let start = Swift.min(Swift.max(0, i - belowDiagonal), cols - 1)
+            let start = Swift.min(Swift.max(0, i - belowDiagonal), cols)
             let end = Swift.max(Swift.min(cols, i + aboveDiagonal + 1), start)
             
             memcpy(
