@@ -209,7 +209,7 @@ public extension Tensor {
     /// Computes the element-wise cosine.
     func cosine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
-        Device.Engine.sin(values: values, result: resultBuffer)
+        Device.Engine.cos(values: values, result: resultBuffer)
         var result = Tensor(using: resultBuffer, context: nil)
         if requiresGradient {
             result.context = TensorContext(
