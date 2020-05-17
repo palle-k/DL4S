@@ -180,15 +180,20 @@ public struct CPUEngine: EngineType {
         let rhsStrides = CPU.Memory.strides(from: rhs.shape)
         let dstStrides = CPU.Memory.strides(from: result.shape)
         
-        for resultIdx in iterate(iterShape) {
+        let resultIndices = flatIterate(iterShape)
+        let resultDim = iterShape.count
+        let indexCount = resultIndices.count / Swift.max(resultDim, 1)
+        
+        for k in 0 ..< Swift.max(indexCount, 1) {
+            let base = resultDim * k
             var lhsIdx = 0
             var rhsIdx = 0
             var dstIdx = 0
             
-            for i in 0 ..< resultIdx.count {
-                lhsIdx += lhsStrides[i] * Swift.min(lhs.shape[i] - 1, resultIdx[i])
-                rhsIdx += rhsStrides[i] * Swift.min(rhs.shape[i] - 1, resultIdx[i])
-                dstIdx += dstStrides[i] * resultIdx[i]
+            for i in 0 ..< resultDim {
+                lhsIdx += lhsStrides[i] * Swift.min(lhs.shape[i] - 1, resultIndices[base + i])
+                rhsIdx += rhsStrides[i] * Swift.min(rhs.shape[i] - 1, resultIndices[base + i])
+                dstIdx += dstStrides[i] * resultIndices[base + i]
             }
             
             let lhsSlice = lhs.immutable.advanced(by: lhsIdx)
