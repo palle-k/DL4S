@@ -323,24 +323,4 @@ class EngineV2Tests: XCTestCase {
         let result3 = x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true) + x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true)
         _ = result3.gradients(of: [x, y])
     }
-    
-    // func testPermutePerformance() {
-    //     let source = Tensor<Float, CPU>(uniformlyDistributedWithShape: 100, 100, 100, 100)
-    // 
-    //     measure {
-    //         for _ in 0 ..< 20 {
-    //             _ = source.permuted(to: 0, 2, 1, 3)
-    //         }
-    //     }
-    // }
-    // 
-    // func testReducePerformance() {
-    //     let source = Tensor<Float, CPU>(uniformlyDistributedWithShape: 100, 100, 100, 100)
-    // 
-    //     measure {
-    //         for _ in 0 ..< 1 {
-    //             _ = source.reduceMax(along: 3)
-    //         }
-    //     }
-    // }
 }
