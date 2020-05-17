@@ -323,4 +323,10 @@ class EngineV2Tests: XCTestCase {
         let result3 = x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true) + x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true)
         _ = result3.gradients(of: [x, y])
     }
+    
+    func testRandomPerformance() {
+        measure {
+            _ = Tensor<Float, CPU>(uniformlyDistributedWithShape: 30, 50, 50, 50)
+        }
+    }
 }
