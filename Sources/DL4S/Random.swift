@@ -142,11 +142,14 @@ public enum Random {
         return (randomSamples, randomLabels)
     }
     
+    @_specialize(where Element == Float, Device == CPU)
+    @_specialize(where Element == Int32, Device == CPU)
+    @_specialize(where Element == Double, Device == CPU)
     public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
         let count = values.shape.reduce(1, *)
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
         for i in 0 ..< count {
-            buffer[i] = Float.random(in: 0 ... 1) <= p ? 1 : 0
+            buffer[i] = Float.random(in: 0 ... 1, using: &WyHash.shared) <= p ? 1 : 0
         }
         
         Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)
