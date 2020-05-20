@@ -70,10 +70,9 @@ public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>:
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
     
     /// Creates a positional encoding matrix
-    /// - Parameter inputs: Sequence lengths of the current minibatch
+    /// - Parameter maxLen: Maximum sequence length in the current minibatch
     /// - Returns: Tensor of shape [max(inputs), hiddenSize]
-    public func callAsFunction(_ inputs: [Int]) -> Tensor<Element, Device> {
-        let maxLen = inputs.reduce(0, max)
+    public func callAsFunction(_ maxLen: Int) -> Tensor<Element, Device> {
         let inputRange = Tensor<Element, Device>((0 ..< maxLen).map(Element.init))
         
         let hiddenRange = Tensor<Element, Device>((0 ..< hiddenSize / 2).map(Element.init))
@@ -462,6 +461,10 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     }
 }
 
+/// Transformer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+///
+/// The transformer model shares an embedding matrix between the encoder and decoder and reuses the embedding weights to compute the decoder output distribution.
+/// Outputs of the transformer are normalized using log softmax.
 public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public typealias Outputs = Tensor<Element, Device> // disambiguates callAsFunction protocol requirement
     
@@ -488,6 +491,17 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         [\Self.outputBias]
     ].joined())}
     
+    /// Creates a new transformer, which follows [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// - Parameters:
+    ///   - encoderLayers: Number of encoder layers
+    ///   - decoderLayers: Number of decoder layers
+    ///   - vocabSize: Number of tokens in the vocabulary of the transformer
+    ///   - hiddenDim: Size of transformer layer outputs
+    ///   - heads: Number of attention heads in multi-head attention layers
+    ///   - keyDim: Size of key vectors in multi-head attention layers
+    ///   - valueDim: Size of value vectors in muti-head attention layers
+    ///   - forwardDim: Size of activations in poitnwise feed forward layers
+    ///   - dropout: Dropout rate
     public init(encoderLayers: Int, decoderLayers: Int, vocabSize: Int, hiddenDim: Int, heads: Int, keyDim: Int, valueDim: Int, forwardDim: Int, dropout: Float = 0.1) {
         embedding = Embedding(inputFeatures: vocabSize, outputSize: hiddenDim, ignoreIndex: -1)
         self.dropout = Dropout(rate: dropout)
@@ -501,15 +515,21 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         #endif
     }
     
-    private func prepareInputs(_ inputs: [[Int32]]) -> Tensor<Element, Device> {
-        let embedded = embedding(Tensor(inputs).flattened())
+    private func prepareInputs(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
+        let embedded = embedding(inputs.flattened())
             .view(as: inputs.count, inputs[0].count, -1) // [batchSize, maxLen, embedDim]
-        let encoderPositions = positionalEncoding.callAsFunction(inputs.map {$0.count}) // [maxLen, embedDim]
+        let encoderPositions = positionalEncoding(inputs.shape[1]) // [maxLen, embedDim]
         
         return dropout(embedded * Tensor(Element(embedded.shape[2]).sqrt()) + encoderPositions) // [batchSize, maxLen, embedDim]
     }
     
-    public func callAsFunction(_ inputs: (encoderInput: [[Int32]], decoderInput: [[Int32]], encoderInputLengths: [Int], decoderInputLengths: [Int])) -> Tensor<Element, Device> {
+    /// Computes the outputs of the decoder given the inputs for the encoder and decoder.
+    /// - Parameter inputs: Tuple containing:
+    ///         - Padded encoder inputs using -1 as a padding token.
+    ///         - Padded decoder inputs using -1 as padding token.
+    ///
+    /// - Returns: Batch of sequences of log-softmax normalized distributions over the vocabulary of the transformer with shape [batchSize, seqlen, vocabDim]
+    public func callAsFunction(_ inputs: (encoderInput: Tensor<Int32, Device>, decoderInput: Tensor<Int32, Device>, encoderInputLengths: [Int], decoderInputLengths: [Int])) -> Tensor<Element, Device> {
         let (encoderInput, decoderInput, encInLens, decInLens) = inputs
         
         let embeddedEncoderInput = prepareInputs(encoderInput)
@@ -524,14 +544,21 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         return logSoftmax(deembedded, axis: 2)
     }
     
+    /// Greedily decodes the most probable sequence of output symbols given a sequence of input tokens
+    /// - Parameters:
+    ///   - inputSequence: Input tokens
+    ///   - startToken: First token to feed into the decoder. Subsequent tokens are generated autoregressively.
+    ///   - endToken: Token, which ends decoding (end of sequence marker)
+    ///   - maxLength: Maximum length of the decoded sequence. If no endToken occurs after maxLength tokens, decoding is aborted.
+    /// - Returns: Most probable output sequence determined by greedy decoding.
     public func callAsFunction(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
-        let encIn = prepareInputs([inputSequence])
+        let encIn = prepareInputs(Tensor([inputSequence]))
         let encoded = encoder((encIn, [inputSequence.count]))
         
         var tokens: [Int32] = []
         for _ in 0 ..< maxLength {
             let tokenInput = [[startToken] + tokens]
-            let decIn = prepareInputs(tokenInput)
+            let decIn = prepareInputs(Tensor(tokenInput))
             let output = decoder((decIn, encoded, [inputSequence.count], [tokenInput[0].count]))
             let deembedded = output.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true)
             

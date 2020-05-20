@@ -17,6 +17,7 @@ implement backpropagation.
 Features include implementations for many basic binary and unary operators,
 broadcasting, matrix operations, convolutional and recurrent neural networks, 
 commonly used optimizers, second derivatives and much more.
+DL4S provides implementations for common network architectures, such as VGG, AlexNet, ResNet and Transformers.
 
 While its primary purpose is deep learning and optimization, DL4S can be used as a library for vectorized mathematical operations like numpy.
 
@@ -135,6 +136,15 @@ Activation:
 - [x] Mish
 - [x] LiSHT
 
+Transformer:
+
+- [x] Positional Encoding
+- [x] Scaled Dot Product Attention
+- [x] Multihead Attention
+- [x] Pointwise Feed Forward
+- [x] Transformer Encoder Block
+- [x] Positional Decoder Block
+
 </p>
 </details>
 
@@ -250,6 +260,7 @@ Default implementations are provided for the following architectures:
 - [x] ResNet18
 - [x] VGG (11, 13, 16, 19)
 - [x] AlexNet
+- [x] Transformer
 
 </p>
 </details>
