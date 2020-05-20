@@ -51,7 +51,7 @@ class TransformerTests: XCTestCase {
                 [0] + $0.dropLast()
             }
             
-            let prediction = optim.model((encoderInput: input, decoderInput: decoderInput, encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
+            let prediction = optim.model((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
             let loss = categoricalNegativeLogLikelihood(expected: Tensor(expected), actual: prediction)
             let grads = loss.gradients(of: optim.model.parameters)
             optim.update(along: grads)
