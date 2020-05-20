@@ -524,20 +524,20 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         return logSoftmax(deembedded, axis: 2)
     }
     
-    public func callAsFunction(_ inputs: (inputSequence: [Int32], maxLength: Int)) -> [Int32] {
-        let encIn = prepareInputs([inputs.inputSequence])
-        let encoded = encoder((encIn, [inputs.inputSequence.count]))
+    public func callAsFunction(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
+        let encIn = prepareInputs([inputSequence])
+        let encoded = encoder((encIn, [inputSequence.count]))
         
         var tokens: [Int32] = []
-        for _ in 0 ..< inputs.maxLength {
-            let tokenInput = [[Int32(Language.startOfSentence)] + tokens]
+        for _ in 0 ..< maxLength {
+            let tokenInput = [[startToken] + tokens]
             let decIn = prepareInputs(tokenInput)
-            let output = decoder((decIn, encoded, [inputs.inputSequence.count], [tokenInput[0].count]))
+            let output = decoder((decIn, encoded, [inputSequence.count], [tokenInput[0].count]))
             let deembedded = output.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true)
             
             let nextToken = deembedded[0, -1].argmax()
             tokens.append(Int32(nextToken))
-            if nextToken == Language.endOfSentence {
+            if nextToken == endToken {
                 break
             }
         }
