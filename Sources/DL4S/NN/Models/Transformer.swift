@@ -517,7 +517,7 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
     
     private func prepareInputs(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         let embedded = embedding(inputs.flattened())
-            .view(as: inputs.count, inputs[0].count, -1) // [batchSize, maxLen, embedDim]
+            .view(as: inputs.shape[0], inputs.shape[1], -1) // [batchSize, maxLen, embedDim]
         let encoderPositions = positionalEncoding(inputs.shape[1]) // [maxLen, embedDim]
         
         return dropout(embedded * Tensor(Element(embedded.shape[2]).sqrt()) + encoderPositions) // [batchSize, maxLen, embedDim]
