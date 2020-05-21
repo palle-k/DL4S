@@ -258,7 +258,7 @@ public extension CPUNumeric {
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
-    static func scatter(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, dst_shape: [Int], axis: Int) {
+    static func scatter(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, dst_shape: [Int], axis: Int, ignoreIndex: Int32) {
         let src = values.baseAddress!
         let target = result.baseAddress!
         let context = context.baseAddress!
@@ -310,7 +310,11 @@ public extension CPUNumeric {
         
         for i in 0 ..< count {
             let src_idx = i
-            var dst_idx = Int(context[i]) &* dst_strides[axis]
+            let c = context[i]
+            if c == ignoreIndex {
+                continue
+            }
+            var dst_idx = Int(c) &* dst_strides[axis]
             
             for a in 0 ..< dst_dim - 1 {
                 let src_dim_idx = (i / src_strides[a]) % src_shape[a]
@@ -323,7 +327,7 @@ public extension CPUNumeric {
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
-    static func gather(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, src_shape: [Int], axis: Int) {
+    static func gather(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, src_shape: [Int], axis: Int, ignoreIndex: Int32) {
         let src_dim = src_shape.count
         
         let src = values.baseAddress!
@@ -359,7 +363,13 @@ public extension CPUNumeric {
         
         for i in 0 ..< count {
             let dst_idx = i
-            var src_idx = Int(context[i]) &* src_strides[axis]
+            let c = context[i]
+            if c == ignoreIndex {
+                target[dst_idx] = 0
+                continue
+            }
+            
+            var src_idx = Int(c) &* src_strides[axis]
             
             for a in 0 ..< src_dim - 1 {
                 let dst_dim_idx = (i / dst_strides[a]) % dst_shape[a]

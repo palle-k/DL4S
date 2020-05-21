@@ -30,13 +30,15 @@ public extension Tensor {
     
     /// Computes the matrix-matrix product, the vector-matrix product, the matrix-vector product or the vector-vector product of the tensor with the given other tensor
     /// - Parameter other: Tensor to multiply with self.
-    func matrixMultiplied(with other: Self) -> Self {
+    //  - Parameter transposeSelf: Whether to transpose the left hand side matrix before multiplying. Ignored when self.dim == 1.
+    //  - Parameter transposeOther: Whether to transpose the right hand side matrix before multiplying. Ignored when other.dim == 1.
+    func matrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         let lhs = self
         let rhs = other
         
         precondition(1 ... 2 ~= lhs.dim && 1 ... 2 ~= rhs.dim, "Matrix multiplication operands must both be one or two dimensional.")
         // lhs.dim == 2 and rhs.dim == 2 implies matching shapes
-        precondition(!(lhs.dim == 2 && rhs.dim == 2) || lhs.shape[1] == rhs.shape[0], "Matrix multiplication operands must have matching shapes.")
+        precondition(!(lhs.dim == 2 && rhs.dim == 2) || lhs.shape[transposeSelf ? 0 : 1] == rhs.shape[transposeOther ? 1 : 0], "Matrix multiplication operands must have matching shapes.")
         
         let resultViewShape: [Int]
         
@@ -51,18 +53,18 @@ public extension Tensor {
         case (1, 2):
             lhsView = lhs.view(as: [1, -1])
             rhsView = rhs
-            resultViewShape = [rhs.shape[1]]
+            resultViewShape = [rhs.shape[transposeOther ? 0 : 1]]
         case (2, 1):
             lhsView = lhs
             rhsView = rhs.view(as: [-1, 1])
-            resultViewShape = [lhs.shape[0]]
+            resultViewShape = [lhs.shape[transposeSelf ? 1 : 0]]
         case (_, _):
             lhsView = lhs
             rhsView = rhs
-            resultViewShape = [lhs.shape[0], rhs.shape[1]]
+            resultViewShape = [lhs.shape[transposeSelf ? 1 : 0], rhs.shape[transposeOther ? 0 : 1]]
         }
         
-        return lhsView._matMul(rhsView).view(as: resultViewShape)
+        return lhsView._matMul(rhsView, transposeSelf: transposeSelf && lhs.dim == 2, transposeOther: transposeOther && rhs.dim == 2).view(as: resultViewShape)
     }
     
     /// Broadcast matrix multiplies self with the given other operand.
@@ -97,64 +99,21 @@ public extension Tensor {
         let broadcastResultShape = shapeForBroadcastedOperands(lhs.shape.dropLast(2), rhs.shape.dropLast(2))
         let matMulResultShape = [Array(lhs.shape.suffix(2))[transposeSelf ? 1 : 0], Array(rhs.shape.suffix(2))[transposeOther ? 0 : 1]]
         
-        let resultBuffer = Device.Memory.allocateBuffer(
-            withShape: broadcastResultShape + matMulResultShape,
-            type: Element.self
-        )
-        Device.Engine.broadcastGemm(
-            lhs: lhs.values,
-            rhs: rhs.values,
-            result: resultBuffer,
-            alpha: 1,
-            beta: 0,
-            transposeFirst: transposeSelf,
-            transposeSecond: transposeOther
-        )
+        var results: [Self] = []
+        var lhsIdx = Array(repeating: 0, count: broadcastResultShape.count)
+        var rhsIdx = Array(repeating: 0, count: broadcastResultShape.count)
         
-        return Tensor(
-            using: resultBuffer,
-            context: (lhs.requiresGradient || rhs.requiresGradient) ? TensorContext(
-                tag: "bmmul",
-                sources: [lhs, rhs],
-                backpropagate: [
-                    { (resultGradient: Self) in
-                        let lhsReducedAxes = zip(lhs.shape, resultGradient.shape)
-                            .dropLast(2)
-                            .enumerated()
-                            .filter {$1.0 != $1.1 && $1.0 == 1}
-                            .map {$0.0}
-                        let res = resultGradient.broadcastMatrixMultiplied(with: other, transposeSelf: false, transposeOther: !transposeOther)
-                        if transposeSelf {
-                            return res
-                                .permuted(to: Array(0 ..< (lhs.dim - 2)) + [lhs.dim - 1, lhs.dim - 2])
-                                .reduceSum(along: lhsReducedAxes)
-                                .view(as: lhs.shape)
-                        } else {
-                            return res
-                                .reduceSum(along: lhsReducedAxes)
-                                .view(as: lhs.shape)
-                        }
-                    }, { resultGradient in
-                        let rhsReducedAxes = zip(rhs.shape, resultGradient.shape)
-                            .dropLast(2)
-                            .enumerated()
-                            .filter {$1.0 != $1.1 && $1.0 == 1}
-                            .map {$0.0}
-                        let res = self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
-                        if transposeOther {
-                            return res
-                                .permuted(to: Array(0 ..< (rhs.dim - 2)) + [rhs.dim - 1, rhs.dim - 2])
-                                .reduceSum(along: rhsReducedAxes)
-                                .view(as: rhs.shape)
-                        } else {
-                            return res
-                                .reduceSum(along: rhsReducedAxes)
-                                .view(as: rhs.shape)
-                        }
-                    }
-                ]
-            ) : nil
-        )
+        for idx in iterate(broadcastResultShape) {
+            for i in idx.indices {
+                lhsIdx[i] = Swift.min(idx[i], lhs.shape[i] - 1)
+                rhsIdx[i] = Swift.min(idx[i], rhs.shape[i] - 1)
+            }
+            let lhsOp = lhs[lhsIdx]
+            let rhsOp = rhs[rhsIdx]
+            results.append(lhsOp._matMul(rhsOp, transposeSelf: transposeSelf, transposeOther: transposeOther))
+        }
+        
+        return Tensor(stacking: results).view(as: broadcastResultShape + matMulResultShape)
     }
     
     private func _matMul(_ other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
@@ -184,6 +143,7 @@ public extension Tensor {
                     { resultGradient, acc in
                         let res: Self
                         if let acc = acc {
+                            let acc = transposeSelf ? acc.transposed() : acc
                             res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther, inplaceAdd: !acc.requiresGradient)
                         } else {
                              res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
@@ -198,6 +158,7 @@ public extension Tensor {
                         let res: Self
                         
                         if let acc = acc {
+                            let acc = transposeOther ? acc.transposed() : acc
                             res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false, inplaceAdd: !acc.requiresGradient)
                         } else {
                             res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)

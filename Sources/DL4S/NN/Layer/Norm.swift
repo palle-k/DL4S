@@ -117,7 +117,7 @@ public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
                 .view(as: mean.shape)
             
             let normalized = (x - mean) / (sqrt(variance) + 1e-5)
-            return normalized // * scale + shift
+            return normalized * scale + shift
         }
     }
 }

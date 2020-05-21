@@ -38,6 +38,7 @@ import Foundation
 /// - Parameters:
 ///   - expected: Expected values
 ///   - actual: Predicted values
+///   - ignoreIndex: Value in expected, which is ignored.
 /// - Returns: Loss, scalar value
 public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     OperationGroup.capture(named: "BinaryCrossEntropy") {
@@ -61,15 +62,16 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
 /// - Parameters:
 ///   - expected: Expected labels
 ///   - actual: Predicted values
+///   - ignoreIndex: Value in expected, which is ignored.
 /// - Returns: Loss, scalar value
-public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
     OperationGroup.capture(named: "CategoricalCrossEntropy") {
         precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
         precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
         
         let expectedFlat = expected.flattened()
         let actualFlat = actual.view(as: expectedFlat.count, -1)
-        return -log(actualFlat.gather(using: expectedFlat, alongAxis: 1)).reduceMean()
+        return -log(actualFlat.gather(using: expectedFlat, alongAxis: 1, ignoreIndex: ignoreIndex)).reduceMean()
     }
 }
 
@@ -87,14 +89,14 @@ public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(ex
 ///   - expected: Expected labels
 ///   - actual: Predicted values
 /// - Returns: Loss, scalar value
-public func categoricalNegativeLogLikelihood<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func categoricalNegativeLogLikelihood<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
     OperationGroup.capture(named: "NLLLoss") {
         precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
         precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
         
         let expectedFlat = expected.flattened()
         let actualFlat = actual.view(as: expectedFlat.count, -1)
-        return -actualFlat.gather(using: expectedFlat, alongAxis: 1).reduceMean()
+        return -actualFlat.gather(using: expectedFlat, alongAxis: 1, ignoreIndex: ignoreIndex).reduceMean()
     }
 }
 

@@ -42,21 +42,21 @@ public extension Tensor {
     /// - Parameters:
     ///   - context: Indices along gathering axis.
     ///   - axis: Axis to gather from
-    func gather(using context: Tensor<Int32, Device>, alongAxis axis: Int) -> Self {
+    func gather(using context: Tensor<Int32, Device>, alongAxis axis: Int, ignoreIndex: Int32 = -1) -> Self {
         var resultShape = shape
         resultShape.remove(at: axis)
         let originalAxisSize = shape[axis]
         
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         
-        Device.Engine.gather(expanded: self.values, context: context.values, result: resultBuffer, axis: axis)
+        Device.Engine.gather(expanded: self.values, context: context.values, result: resultBuffer, axis: axis, ignoreIndex: ignoreIndex)
         return Tensor(
             using: resultBuffer,
             context: requiresGradient ? TensorContext(
                 tag: "gather",
                 sources: [self],
                 backpropagate: [{ resultGradient -> Self in
-                    resultGradient.scatter(using: context, alongAxis: axis, withSize: originalAxisSize)
+                    resultGradient.scatter(using: context, alongAxis: axis, withSize: originalAxisSize, ignoreIndex: ignoreIndex)
                 }]
             ) : nil
         )
@@ -78,18 +78,18 @@ public extension Tensor {
     ///   - context: Indices along scattering axis
     ///   - axis: Axis to scatter along
     ///   - axisSize: Number of elements along the axis in the result tensor. Must be greater than `max(context)`
-    func scatter(using context: Tensor<Int32, Device>, alongAxis axis: Int, withSize axisSize: Int) -> Self {
+    func scatter(using context: Tensor<Int32, Device>, alongAxis axis: Int, withSize axisSize: Int, ignoreIndex: Int32 = -1) -> Self {
         var resultShape = shape
         resultShape.insert(axisSize, at: axis)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        Device.Engine.scatter(reduced: values, context: context.values, result: resultBuffer, axis: axis)
+        Device.Engine.scatter(reduced: values, context: context.values, result: resultBuffer, axis: axis, ignoreIndex: ignoreIndex)
         return Tensor(
             using: resultBuffer,
             context: requiresGradient ? TensorContext(
                 tag: "scatter",
                 sources: [self],
                 backpropagate: [{ resultGradient -> Self in
-                    resultGradient.gather(using: context, alongAxis: axis)
+                    resultGradient.gather(using: context, alongAxis: axis, ignoreIndex: ignoreIndex)
                 }]
             ) : nil
         )

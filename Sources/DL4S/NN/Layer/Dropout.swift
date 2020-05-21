@@ -47,7 +47,7 @@ public struct Dropout<Element: RandomizableType, Device: DeviceType>: LayerType,
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         if isActive {
             return OperationGroup.capture(named: "Dropout") {
-                inputs * Tensor(bernoulliDistributedWithShape: Array(inputs.shape.dropFirst()), probability: (1 - rate))
+                inputs * Tensor(bernoulliDistributedWithShape: inputs.shape, probability: (1 - rate))
             }
         } else {
             return inputs

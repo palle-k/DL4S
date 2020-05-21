@@ -209,7 +209,7 @@ public extension Tensor {
     /// Computes the element-wise cosine.
     func cosine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
-        Device.Engine.sin(values: values, result: resultBuffer)
+        Device.Engine.cos(values: values, result: resultBuffer)
         var result = Tensor(using: resultBuffer, context: nil)
         if requiresGradient {
             result.context = TensorContext(
@@ -254,6 +254,7 @@ public extension Tensor {
     func lishtActivated() -> Self {
         self * DL4S.tanh(self)
     }
+
 }
 
 /// Element-wise exponentiates the tensor.
@@ -316,6 +317,12 @@ public func heaviside<Element, Device>(_ tensor: Tensor<Element, Device>) -> Ten
 /// If no axis is provided, the softmax is computed along axis 1.
 public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
     tensor.softmax(axis: axis)
+}
+
+/// Computes the logarithm of the softmax function along the given axis.
+/// If no axis is provided, the log softmax is computed along axis 1.
+public func logSoftmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
+    tensor.logSoftmax(axis: axis)
 }
 
 /// Computes the element-wise GeLU activation

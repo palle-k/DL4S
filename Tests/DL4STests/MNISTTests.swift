@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
-@testable import DL4S
+import DL4S
 
 let MNIST_PATH = "./Tests/DL4STests/"
 
@@ -229,7 +229,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
+        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
     func testSwishActivation() {
@@ -244,7 +244,7 @@ class MNISTTests: XCTestCase {
             Softmax<Float, CPU>()
         }
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
+        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
     func testMishActivation() {
@@ -260,7 +260,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
+        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
     func testGeluActivation() {
@@ -276,7 +276,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
+        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
     func testLiSHTActivation() {
@@ -292,7 +292,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: categoricalCrossEntropy(expected:actual:))
+        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
     func testLogSoftmax() {
@@ -308,6 +308,6 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: categoricalNegativeLogLikelihood(expected:actual:))
+        performAccuracyTest(model, loss: {categoricalNegativeLogLikelihood(expected:$0, actual: $1)})
     }
 }

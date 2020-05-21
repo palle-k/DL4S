@@ -257,7 +257,10 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
             }
             // Add gradients of all tensors that directly influenced the values
             // of the current tensor to their respective accumulators
-            for (src, fn) in zip(ctx.sources, ctx.backpropagate) {
+            for i in ctx.sources.indices {
+                let src = ctx.sources[i]
+                let fn = ctx.backpropagate[i]
+                
                 guard src.requiresGradient else {
                     continue
                 }

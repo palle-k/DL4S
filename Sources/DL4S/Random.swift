@@ -27,17 +27,41 @@ import Foundation
 
 
 public protocol RandomizableType: NumericType {
-    static func random(in range: ClosedRange<Self>) -> Self
+    static func random<Generator: RandomNumberGenerator>(in range: ClosedRange<Self>, using rng: inout Generator) -> Self
 }
 
 extension Int32: RandomizableType {}
 extension Float: RandomizableType {}
 extension Double: RandomizableType {}
 
+struct WyHash: RandomNumberGenerator {
+    fileprivate static var shared = WyHash(seed: 0)
+    
+    private var state: UInt64
+
+    init(seed: UInt64) {
+        state = seed
+    }
+
+    mutating func next() -> UInt64 {
+        state &+= 0xa0761d6478bd642f
+        let (high, low) = state.multipliedFullWidth(by: state ^ 0xe7037ed1a0b428db)
+        return high ^ low
+    }
+    
+    mutating func next<T>() -> T where T : FixedWidthInteger, T : UnsignedInteger {
+        let n: UInt64 = next()
+        return T(clamping: n)
+    }
+    
+    mutating func next<T>(upperBound: T) -> T where T : FixedWidthInteger, T : UnsignedInteger {
+        return next() % upperBound
+    }
+}
 
 func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
-    let a = T.random(in: 0 ... 1)
-    let b = T.random(in: 0 ... 1)
+    let a = T.random(in: 0 ... 1, using: &WyHash.shared)
+    let b = T.random(in: 0 ... 1, using: &WyHash.shared)
     
     let scale = (-2 * a.log()).sqrt() * stdev
     
@@ -53,15 +77,22 @@ func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
 }
 
 public enum Random {
+    @_specialize(where Element == Float, Device == CPU)
+    @_specialize(where Element == Double, Device == CPU)
+    @_specialize(where Element == Int32, Device == CPU)
     public static func fill<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
+        let range = a ... b
         for i in 0 ..< vector.count {
-            buffer[i] = Element.random(in: a ... b)
+            buffer[i] = Element.random(in: range, using: &WyHash.shared)
         }
         Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
         buffer.deallocate()
     }
     
+    @_specialize(where Element == Float, Device == CPU)
+    @_specialize(where Element == Double, Device == CPU)
+    @_specialize(where Element == Int32, Device == CPU)
     public static func fillNormal<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in stride(from: 0, to: vector.count - 1, by: 2) {
@@ -111,11 +142,14 @@ public enum Random {
         return (randomSamples, randomLabels)
     }
     
+    @_specialize(where Element == Float, Device == CPU)
+    @_specialize(where Element == Int32, Device == CPU)
+    @_specialize(where Element == Double, Device == CPU)
     public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
         let count = values.shape.reduce(1, *)
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
         for i in 0 ..< count {
-            buffer[i] = Float.random(in: 0 ... 1) <= p ? 1 : 0
+            buffer[i] = Float.random(in: 0 ... 1, using: &WyHash.shared) <= p ? 1 : 0
         }
         
         Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)

@@ -180,15 +180,20 @@ public struct CPUEngine: EngineType {
         let rhsStrides = CPU.Memory.strides(from: rhs.shape)
         let dstStrides = CPU.Memory.strides(from: result.shape)
         
-        for resultIdx in iterate(iterShape) {
+        let resultIndices = flatIterate(iterShape)
+        let resultDim = iterShape.count
+        let indexCount = resultIndices.count / Swift.max(resultDim, 1)
+        
+        for k in 0 ..< Swift.max(indexCount, 1) {
+            let base = resultDim * k
             var lhsIdx = 0
             var rhsIdx = 0
             var dstIdx = 0
             
-            for i in 0 ..< resultIdx.count {
-                lhsIdx += lhsStrides[i] * Swift.min(lhs.shape[i] - 1, resultIdx[i])
-                rhsIdx += rhsStrides[i] * Swift.min(rhs.shape[i] - 1, resultIdx[i])
-                dstIdx += dstStrides[i] * resultIdx[i]
+            for i in 0 ..< resultDim {
+                lhsIdx += lhsStrides[i] * Swift.min(lhs.shape[i] - 1, resultIndices[base + i])
+                rhsIdx += rhsStrides[i] * Swift.min(rhs.shape[i] - 1, resultIndices[base + i])
+                dstIdx += dstStrides[i] * resultIndices[base + i]
             }
             
             let lhsSlice = lhs.immutable.advanced(by: lhsIdx)
@@ -227,13 +232,31 @@ public struct CPUEngine: EngineType {
         let axisSize = values.shape[axis]
         let dstStrides = CPU.Memory.strides(from: result.shape)
         
-        for idx in iterate(result.shape) {
-            let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
-            let suffixOffset = zip(srcStrides.suffix(from: axis+1), idx.suffix(from: axis)).map(*).reduce(0, +)
+        let indices = flatIterate(result.shape)
+        let dim = result.dim
+        let count = indices.count / dim
+        
+        for k in 0 ..< count {
+            let base = k * dim
+            var prefixOffset = 0
+            var suffixOffset = 0
+            var linearIndex = 0
+            for i in 0 ..< axis {
+                prefixOffset += srcStrides[i] * indices[base + i]
+            }
+            for i in Swift.min(axis + 1, dim) ..< dim {
+                suffixOffset += srcStrides[i] * indices[base + i]
+            }
+            for i in 0 ..< dim {
+                linearIndex += indices[base + i] * dstStrides[i]
+            }
+            
+            // let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
+            // let suffixOffset = zip(srcStrides.suffix(from: axis+1), idx.suffix(from: axis)).map(*).reduce(0, +)
             let totalOffset = prefixOffset + suffixOffset
             
             let reduced = reduceOperator(values.immutable.advanced(by: totalOffset), reductionStride, axisSize)
-            let linearIndex = zip(idx, dstStrides).map(*).reduce(0,+)
+            // let linearIndex = zip(idx, dstStrides).map(*).reduce(0,+)
             result.values[linearIndex] = reduced
         }
     }
@@ -506,51 +529,6 @@ public struct CPUEngine: EngineType {
         )
     }
     
-    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
-        let lhsMem = lhs.values.memory.bindMemory(to: N.self).immutable
-        let rhsMem = rhs.values.memory.bindMemory(to: N.self).immutable
-        let resultMem = result.values.memory.bindMemory(to: N.self)
-        
-        let lhsStrides = CPU.Memory.strides(from: lhs.shape)
-        let rhsStrides = CPU.Memory.strides(from: rhs.shape)
-        let resultStrides = CPU.Memory.strides(from: result.shape)
-        
-        let lhsGemmShape = Array(lhs.shape.suffix(2))
-        let rhsGemmShape = Array(rhs.shape.suffix(2))
-        let resultGemmShape = Array(result.shape.suffix(2))
-        
-        for index in iterate(result.shape.dropLast(2)) {
-            let lhsIndex = zip(index, lhs.shape).map { idx, dim in
-                dim == 1 ? 0 : idx
-            }
-            let rhsIndex = zip(index, rhs.shape).map { idx, dim in
-                dim == 1 ? 0 : idx
-            }
-            var lhsBaseIdx = 0
-            var rhsBaseIdx = 0
-            var resultBaseIdx = 0
-            
-            for i in 0 ..< index.count {
-                lhsBaseIdx += lhsStrides[i] * lhsIndex[i]
-                rhsBaseIdx += rhsStrides[i] * rhsIndex[i]
-                resultBaseIdx += resultStrides[i] * index[i]
-            }
-            
-            N.gemm(
-                lhs: lhsMem.advanced(by: lhsBaseIdx),
-                rhs: rhsMem.advanced(by: rhsBaseIdx),
-                result: resultMem.advanced(by: resultBaseIdx),
-                lhsShape: (lhsGemmShape[0], lhsGemmShape[1]),
-                rhsShape: (rhsGemmShape[0], rhsGemmShape[1]),
-                resultShape: (resultGemmShape[0], resultGemmShape[1]),
-                alpha: alpha,
-                beta: beta,
-                transposeFirst: transposeFirst,
-                transposeSecond: transposeSecond
-            )
-        }
-    }
-    
     @_specialize(where N == Float)
     public static func broadcastAdd<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>) {
         broadcast(
@@ -742,12 +720,12 @@ public struct CPUEngine: EngineType {
         }
     }
     
-    public static func scatter<N: NumericType>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
-        N.scatter(values: reduced.immutable, context: context.immutable, result: result.pointer, dst_shape: result.shape, axis: axis)
+    public static func scatter<N: NumericType>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int, ignoreIndex: Int32) {
+        N.scatter(values: reduced.immutable, context: context.immutable, result: result.pointer, dst_shape: result.shape, axis: axis, ignoreIndex: ignoreIndex)
     }
     
-    public static func gather<N: NumericType>(expanded: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int) {
-        N.gather(values: expanded.immutable, context: context.immutable, result: result.pointer, src_shape: expanded.shape, axis: axis)
+    public static func gather<N: NumericType>(expanded: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: ShapedBuffer<N, CPU>, axis: Int, ignoreIndex: Int32) {
+        N.gather(values: expanded.immutable, context: context.immutable, result: result.pointer, src_shape: expanded.shape, axis: axis, ignoreIndex: ignoreIndex)
     }
     
     @_specialize(where N == Float)
@@ -883,13 +861,17 @@ public struct CPUEngine: EngineType {
 
         let srcStrides = CPU.Memory.strides(from: shape)
         let dstStrides = CPU.Memory.strides(from: dstShape)
-
-        for index in iterate(iterShape) {
+        
+        let indexDim = iterShape.count
+        let indices = flatIterate(iterShape)
+        let indexCount = indices.count / indexDim
+        for j in 0 ..< indexCount {
+            let offset = indexDim * j
             var srcIdx = 0
             var dstIdx = 0
-            for i in 0 ..< index.count {
-                srcIdx += index[i] * srcStrides[i]
-                dstIdx += index[i] * dstStrides[arangement[i]]
+            for i in 0 ..< indexDim {
+                srcIdx += indices[offset + i] * srcStrides[i]
+                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
             }
             
             dstMem.advanced(by: dstIdx).assign(from: sourceMem.advanced(by: srcIdx), count: copyCount)
@@ -912,12 +894,16 @@ public struct CPUEngine: EngineType {
         let srcStrides = CPU.Memory.strides(from: shape)
         let dstStrides = CPU.Memory.strides(from: dstShape)
         
-        for index in iterate(iterShape) {
+        let indexDim = iterShape.count
+        let indices = flatIterate(iterShape)
+        let indexCount = indices.count / indexDim
+        for j in 0 ..< indexCount {
+            let offset = indexDim * j
             var srcIdx = 0
             var dstIdx = 0
-            for i in 0 ..< index.count {
-                srcIdx += index[i] * srcStrides[i]
-                dstIdx += index[i] * dstStrides[arangement[i]]
+            for i in 0 ..< indexDim {
+                srcIdx += indices[offset + i] * srcStrides[i]
+                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
             }
             
             N.vAdd(lhs: sourceMem.advanced(by: srcIdx), rhs: addMem.advanced(by: dstIdx), result: dstMem.advanced(by: dstIdx), count: copyCount)
@@ -1104,8 +1090,8 @@ public struct CPUEngine: EngineType {
         let dst = result.values.memory.bindMemory(to: N.self).pointer(capacity: rows * cols)
         
         for i in 0 ..< rows {
-            let start = Swift.max(0, i - belowDiagonal)
-            let end = Swift.max(cols, i + aboveDiagonal)
+            let start = Swift.min(Swift.max(0, i - belowDiagonal), cols)
+            let end = Swift.max(Swift.min(cols, i + aboveDiagonal + 1), start)
             
             memcpy(
                 UnsafeMutableRawPointer(dst.advanced(by: i * cols + start)),

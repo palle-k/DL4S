@@ -308,13 +308,13 @@ public extension Tensor {
         
         return Tensor(
             using: resultBuffer,
-            context: TensorContext(
+            context: value.requiresGradient ? TensorContext(
                 tag: "neg",
                 sources: [value],
                 backpropagate: [{ resultGradient in
                     -resultGradient
                 }]
-            )
+            ) : nil
         )
     }
     

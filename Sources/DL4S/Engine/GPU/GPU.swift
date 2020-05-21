@@ -164,10 +164,6 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func broadcastGemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
     public static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N) {
         fatalError("\(#function) not available for GPU")
     }
@@ -220,11 +216,11 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func scatter<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) {
+    public static func scatter<N>(reduced: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int, ignoreIndex: Int32) {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func gather<N>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int) {
+    public static func gather<N>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int, ignoreIndex: Int32) {
         fatalError("\(#function) not available for GPU")
     }
     

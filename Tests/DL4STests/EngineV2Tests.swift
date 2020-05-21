@@ -302,4 +302,31 @@ class EngineV2Tests: XCTestCase {
         XCTAssertEqual(grads2[0], Tensor([2, 2, 2, 0, 0, 0]))
         XCTAssertEqual(grads2[1], Tensor([0, 0, 0, 2, 2, 2]))
     }
+    
+    func testTransposedMatmul() {
+        let x = Tensor<Float, CPU>([
+            [1, 2, 3],
+            [4, 5, 6]
+        ], requiresGradient: true)
+        
+        let y = Tensor<Float, CPU>([
+            [7, 8, 9],
+            [9, 10, 12]
+        ], requiresGradient: true)
+        
+        let result1 = x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false) + x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false)
+        _ = result1.gradients(of: [x, y])
+        
+        let result2 = x.matrixMultiplied(with: y, transposeSelf: false, transposeOther: true) + x.matrixMultiplied(with: y, transposeSelf: false, transposeOther: true)
+        _ = result2.gradients(of: [x, y])
+        
+        let result3 = x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true) + x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true)
+        _ = result3.gradients(of: [x, y])
+    }
+    
+    func testRandomPerformance() {
+        measure {
+            _ = Tensor<Float, CPU>(uniformlyDistributedWithShape: 30, 50, 50, 50)
+        }
+    }
 }

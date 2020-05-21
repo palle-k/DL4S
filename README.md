@@ -15,8 +15,11 @@ It furthermore has automatic differentiation builtin, which allows you to create
 implement backpropagation.
 
 Features include implementations for many basic binary and unary operators,
-matrix operations, convolutional and recurrent neural networks, 
+broadcasting, matrix operations, convolutional and recurrent neural networks, 
 commonly used optimizers, second derivatives and much more.
+DL4S provides implementations for common network architectures, such as VGG, AlexNet, ResNet and Transformers.
+
+While its primary purpose is deep learning and optimization, DL4S can be used as a library for vectorized mathematical operations like numpy.
 
 [Read the full documentation](https://palle-k.github.io/DL4S/)
 
@@ -95,6 +98,8 @@ Core:
 - [x] Gated Recurrent Unit (GRU)
 - [x] Vanilla RNN
 - [x] Embedding
+- [x] Multi-head Attention
+- [x] Transformer Block
 
 Pooling:
 
@@ -113,10 +118,14 @@ Utility:
 - [x] Bidirectional RNNs
 - [x] Sequential
 - [x] Lambda
+- [x] Dropout
+- [x] Lambda
 
 Activation:
 
 - [x] Relu
+- [x] LeakyRelu
+- [x] Gelu
 - [x] Tanh
 - [x] Sigmoid
 - [x] Softmax
@@ -126,6 +135,15 @@ Activation:
 - [x] Swish
 - [x] Mish
 - [x] LiSHT
+
+Transformer:
+
+- [x] Positional Encoding
+- [x] Scaled Dot Product Attention
+- [x] Multihead Attention
+- [x] Pointwise Feed Forward
+- [x] Transformer Encoder Block
+- [x] Positional Decoder Block
 
 </p>
 </details>
@@ -188,6 +206,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] max
 - [x] relu
 - [x] leaky relu
+- [x] gelu
 - [x] elementwise min
 - [x] elementwise max
 - [x] reduce sum
@@ -241,6 +260,7 @@ Default implementations are provided for the following architectures:
 - [x] ResNet18
 - [x] VGG (11, 13, 16, 19)
 - [x] AlexNet
+- [x] Transformer
 
 </p>
 </details>

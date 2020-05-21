@@ -204,17 +204,6 @@ public protocol EngineType {
     ///   - transposeSecond: Whether to transpose the second matrix
     static func gemm<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
     
-    /// Broadcast matrix multiply add in-place
-    /// - Parameters:
-    ///   - lhs: Left-hand side matrix
-    ///   - rhs: Right-hand side matrix
-    ///   - result: Summand and result buffer
-    ///   - alpha: Matrix multiplication scale
-    ///   - beta: Add scale
-    ///   - transposeFirst: Whether to transpose the first matrix
-    ///   - transposeSecond: Whether to transpose the second matrix
-    static func broadcastGemm<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
-    
     /// Band matrix extraction
     /// - Parameters:
     ///   - buffer: Source matrix
@@ -451,7 +440,7 @@ public protocol EngineType {
     ///   - context: Index vector
     ///   - result: Buffer to scatter to
     ///   - axis: Axis to scatter along
-    static func scatter<N: NumericType>(reduced: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    static func scatter<N: NumericType>(reduced: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int, ignoreIndex: Int32)
     
     /// Gathers elements from indices determined by the context along the specified axis
     /// - Parameters:
@@ -459,7 +448,7 @@ public protocol EngineType {
     ///   - context: Index vector
     ///   - result: Result buffer
     ///   - axis: Axis to gather along
-    static func gather<N: NumericType>(expanded: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int)
+    static func gather<N: NumericType>(expanded: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: ShapedBuffer<N, Device>, axis: Int, ignoreIndex: Int32)
     
     /// Performs an axis permutation / transpose oepration
     /// - Parameters:

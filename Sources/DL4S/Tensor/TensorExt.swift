@@ -253,12 +253,27 @@ extension Tensor: Codable where Element: Codable {
 }
 
 public extension Tensor {
+    // Retreives the elements of the tensor as a flattened array.
     var elements: [Element] {
         var array = [Element](repeating: 0, count: count)
         array.withUnsafeMutableBufferPointer { pointer in
             Device.Memory.assign(from: values.values, to: pointer, count: count)
         }
         return array
+    }
+}
+
+public extension Tensor {
+    /// Indicates whether any element of the tensor is not a number.
+    var containsNaN: Bool {
+        elements.contains(where: {$0.isNaN})
+    }
+    
+    
+    /// Indicates whether all elements of the tensor are finite.
+    var isFinite: Bool {
+        let abs = self.detached().rectifiedLinear() + (-self.detached()).rectifiedLinear()
+        return abs.reduceMax().item.isFinite
     }
 }
 

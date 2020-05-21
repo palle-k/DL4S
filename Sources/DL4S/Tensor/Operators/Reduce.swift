@@ -245,7 +245,11 @@ public extension Tensor {
                 )
             )
         } else {
-            Device.Engine.reduceMax(values: values, result: resultBuffer, context: nil, axes: axes)
+            if let axis = axes.first, axes.count == 1 {
+                Device.Engine.reduceMax(values: values, result: resultBuffer, context: nil, axis: axis)
+            } else {
+                Device.Engine.reduceMax(values: values, result: resultBuffer, context: nil, axes: axes)
+            }
             
             return Tensor(using: resultBuffer, context: nil)
         }
