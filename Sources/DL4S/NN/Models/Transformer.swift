@@ -296,7 +296,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
 }
 
 /// Transformer encoder layer consisting of a self-attention and a pointwise feed forward layer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
-public struct EncoderLayer<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var selfAttention: MultiHeadAttention<Element, Device>
     public var pointwiseFeedForward: PointwiseFeedForward<Element, Device>
     
@@ -336,7 +336,7 @@ public struct EncoderLayer<Element: RandomizableType, Device: DeviceType>: Layer
 }
 
 /// Transformer decoder layer consisting of a self attention, encoder attention and a pointwise feed forward layer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
-public struct DecoderLayer<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+public struct TransformerDecoderBlock<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var selfAttention: MultiHeadAttention<Element, Device>
     public var encoderAttention: MultiHeadAttention<Element, Device>
     public var pointwiseFeedForward: PointwiseFeedForward<Element, Device>
@@ -380,7 +380,7 @@ public struct DecoderLayer<Element: RandomizableType, Device: DeviceType>: Layer
 
 /// Transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var encoderLayers: [EncoderLayer<Element, Device>]
+    public var encoderLayers: [TransformerEncoderBlock<Element, Device>]
     
     public var parameters: [Tensor<Element, Device>] {Array([
         encoderLayers.flatMap {$0.parameters},
@@ -404,7 +404,7 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
     ///   - dropout: Rate of dropout applied within pointwise feed forward and multi-head attention layers
     public init(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float) {
         encoderLayers = (0 ..< layerCount).map { i in
-            EncoderLayer(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
+            TransformerEncoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
         }
     }
     
@@ -426,7 +426,7 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
 
 /// Transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var decoderLayers: [DecoderLayer<Element, Device>]
+    public var decoderLayers: [TransformerDecoderBlock<Element, Device>]
     
     public var parameters: [Tensor<Element, Device>] {Array([
         decoderLayers.flatMap {$0.parameters},
@@ -441,7 +441,7 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     /// Creates aransformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     public init(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float) {
         decoderLayers = (0 ..< layerCount).map { _ in
-            DecoderLayer(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
+            TransformerDecoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
         }
     }
     
