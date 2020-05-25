@@ -38,7 +38,7 @@ public protocol DeviceType {
 /// Memory manager for a device
 public protocol MemoryOperatorsType {
     associatedtype Device: DeviceType where Device.Memory == Self
-    associatedtype RawBuffer: Hashable
+    associatedtype RawBuffer
     
     
     /// Allocates a buffer with capacity for the given amount of elements of the given type.
@@ -46,50 +46,50 @@ public protocol MemoryOperatorsType {
     /// - Parameters:
     ///   - withCapacity: Capacity to reserve
     ///   - type: Type of elements in the buffer
-    static func allocateBuffer<Element>(withCapacity: Int, type: Element.Type) -> Buffer<Element, Device>
+    static func allocateBuffer<Element: NumericType>(withCapacity: Int, type: Element.Type) -> Buffer<Element, Device>
     
     /// Allocates a buffer with capacity for the amount of elements in the given shape
     /// - Parameters:
     ///   - shape: Shape of the buffer to allocate
     ///   - type: Type of elements in the buffer
-    static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, Device>
+    static func allocateBuffer<Element: NumericType>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, Device>
     
     /// Releases all resources associated with the given buffer
     /// - Parameter buffer: Buffer to release
-    static func free<Element>(_ buffer: Buffer<Element, Device>)
+    static func free<Element: NumericType>(_ buffer: Buffer<Element, Device>)
     
     /// Releases all resources associated with the given buffer
     /// - Parameter buffer: Buffer to release
-    static func free<Element>(_ buffer: ShapedBuffer<Element, Device>)
+    static func free<Element: NumericType>(_ buffer: ShapedBuffer<Element, Device>)
     
     /// Copies values from the given host buffer to the memory of the device
     /// - Parameters:
     ///   - source: Source buffer
     ///   - destination: Device buffer
     ///   - count: Number of elements to copy
-    static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, Device>, count: Int)
+    static func assign<Element: NumericType>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, Device>, count: Int)
     
     /// Copies values between two device buffers
     /// - Parameters:
     ///   - source: Source device buffer
     ///   - destination: Target device buffer
     ///   - count: Number of elements to copy
-    static func assign<Element>(from source: Buffer<Element, Device>, to destination: Buffer<Element, Device>, count: Int)
+    static func assign<Element: NumericType>(from source: Buffer<Element, Device>, to destination: Buffer<Element, Device>, count: Int)
     
     /// Copies values from the given device buffer to the given host buffer
     /// - Parameters:
     ///   - source: Device buffer
     ///   - destination: Host buffer
     ///   - count: Number of elements to copy
-    static func assign<Element>(from source: Buffer<Element, Device>, to destination: UnsafeMutableBufferPointer<Element>, count: Int)
+    static func assign<Element: NumericType>(from source: Buffer<Element, Device>, to destination: UnsafeMutableBufferPointer<Element>, count: Int)
     
     /// Returns the first value in the buffer
     /// - Parameter source: Buffer to return the first value of
-    static func getValue<Element>(from source: Buffer<Element, Device>) -> Element
+    static func getValue<Element: NumericType>(from source: Buffer<Element, Device>) -> Element
     
     /// Returns the number of elements in the buffer
     /// - Parameter buffer: Number of elements in the buffer
-    static func getSize<Element>(of buffer: Buffer<Element, Device>) -> Int
+    static func getSize<Element: NumericType>(of buffer: Buffer<Element, Device>) -> Int
     
     /// Retrieves a slice of values from the given buffer
     /// - Parameters:
@@ -97,7 +97,7 @@ public protocol MemoryOperatorsType {
     ///   - buffer: Buffer to read from
     ///   - shape: Shape of the buffer
     /// - Returns: The result buffer, a boolean indicating whether the result buffer is a copy (true) or a pointer in the same memory region (false) and the shape of the result.
-    static func get<Element>(slice: [Int?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (Buffer<Element, Device>, Bool, [Int])
+    static func get<Element: NumericType>(slice: [Int?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (Buffer<Element, Device>, Bool, [Int])
     
     /// Retrieves a slice of values from the given buffer
     /// - Parameters:
@@ -105,7 +105,7 @@ public protocol MemoryOperatorsType {
     ///   - buffer: Buffer to read from
     ///   - shape: Shape of the buffer
     /// - Returns: The result buffer, a boolean indicating whether the result buffer is a copy (true) or a pointer in the same memory region (false) and the shape of the result.
-    static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (Buffer<Element, Device>, Bool, [Int])
+    static func get<Element: NumericType>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (Buffer<Element, Device>, Bool, [Int])
     
     /// Writes a slice into a target buffer
     /// - Parameters:
@@ -114,7 +114,7 @@ public protocol MemoryOperatorsType {
     ///   - dstShape: Shape of the destination buffer
     ///   - source: Buffer to read from
     ///   - sourceShape: Shape of the source buffer
-    static func set<Element>(slice: [Int?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
+    static func set<Element: NumericType>(slice: [Int?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
     
     /// Writes a slice into a target buffer
     /// - Parameters:
@@ -123,19 +123,19 @@ public protocol MemoryOperatorsType {
     ///   - dstShape: Shape of the destination buffer
     ///   - source: Buffer to read from
     ///   - sourceShape: Shape of the source buffer
-    static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
+    static func set<Element: NumericType>(slice: [Range<Int>?], of buffer: Buffer<Element, Device>, with dstShape: [Int], from source: Buffer<Element, Device>, with sourceShape: [Int])
     
     /// Sets the first element of the device buffer
     /// - Parameters:
     ///   - buffer: Target buffer
     ///   - newValue: Value to set the first slot of the target to
-    static func setPointee<Element>(of buffer: Buffer<Element, Device>, to newValue: Element)
+    static func setPointee<Element: NumericType>(of buffer: Buffer<Element, Device>, to newValue: Element)
     
     /// Returns a buffer that uses the same region of memory but is advanced by the given number of elements
     /// - Parameters:
     ///   - buffer: Parent buffer
     ///   - advancement: Number of elements to advance the start index by
-    static func advance<Element>(buffer: Buffer<Element, Device>, by advancement: Int) -> Buffer<Element, Device>
+    static func advance<Element: NumericType>(buffer: Buffer<Element, Device>, by advancement: Int) -> Buffer<Element, Device>
 }
 
 //MARK: Engine

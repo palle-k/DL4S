@@ -26,7 +26,7 @@
 import Foundation
 
 
-final class TensorHandle<Element, Device: DeviceType> {
+final class TensorHandle<Element: NumericType, Device: DeviceType> {
     var values: Buffer<Element, Device>
     var parent: TensorHandle<Element, Device>?
     

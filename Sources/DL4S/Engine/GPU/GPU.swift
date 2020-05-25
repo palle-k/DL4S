@@ -44,7 +44,7 @@ public struct VRAMAllocator: MemoryOperatorsType {
     public typealias RawBuffer = VRAMBuffer
     public typealias Device = GPU
     
-    public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> Buffer<Element, GPU> {
+    public static func allocateBuffer<Element: NumericType>(withCapacity capacity: Int, type: Element.Type) -> Buffer<Element, GPU> {
         let stride = MemoryLayout<Element>.stride
         guard let buffer = Device.device.makeBuffer(length: stride * capacity, options: .storageModePrivate) else {
             fatalError("Could not allocate memory")
@@ -53,7 +53,7 @@ public struct VRAMAllocator: MemoryOperatorsType {
         return Buffer<Element, GPU>(memory: VRAMBuffer(buffer: buffer, offset: 0))
     }
     
-    public static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, GPU> {
+    public static func allocateBuffer<Element: NumericType>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, GPU> {
         let count = shape.reduce(1, *)
         return ShapedBuffer(values: allocateBuffer(withCapacity: count, type: Element.self), shape: shape)
     }

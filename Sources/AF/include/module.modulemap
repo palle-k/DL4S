@@ -1,0 +1,11 @@
+module AF [system] {
+    header "AF.hpp"
+    // umbrella "/opt/arrayfire/include/"
+    // exclude header "/opt/arrayfire/include/ComputeCopy.h"
+    // exclude header "/opt/arrayfire/include/forge.h"
+    // exclude header "/opt/arrayfire/include/af/cuda.h"
+    // link "af"
+    // link "afopencl"
+    // header "/opt/arrayfire/include/arrayfire.h"
+    // requires c99
+}

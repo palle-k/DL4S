@@ -38,8 +38,15 @@ public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
     static var zero: Self { get }
 }
 
+#if AF_ENABLE
+public typealias DeviceNumeric = CPUNumeric & AFNumeric
+#else
+public typealias DeviceNumeric = CPUNumeric
+#endif
+
+
 /// A type that can be used as a number in a Tensor.
-public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, CPUNumeric {
+public protocol NumericType: ZeroableType, ExpressibleByFloatLiteral, DeviceNumeric {
     
     /// Formats the number with the given amount of decimal places
     /// - Parameter maxDecimals: Maximum amount of decimal places

@@ -12,7 +12,7 @@ module MKL [system] {
     link "ipps"
     link "m"
     link "dl"
-    link "iomp5"
+    // link "iomp5"
     
     export *
 }

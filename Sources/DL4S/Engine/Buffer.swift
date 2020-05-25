@@ -27,7 +27,7 @@ import Foundation
 
 
 /// A buffer that holds a region of memory with a given length
-public struct Buffer<Element, Device: DeviceType>: Hashable {
+public struct Buffer<Element: NumericType, Device: DeviceType> {
     let memory: Device.Memory.RawBuffer
     
     var count: Int {
@@ -82,7 +82,7 @@ extension Buffer: CustomLeafReflectable {
 }
 
 /// A buffer that holds a region of memory with a given shape
-public struct ShapedBuffer<Element, Device: DeviceType>: Hashable {
+public struct ShapedBuffer<Element: NumericType, Device: DeviceType> {
     var shape: [Int]
     var values: Buffer<Element, Device>
     

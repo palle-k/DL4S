@@ -277,6 +277,23 @@ public extension Tensor {
     }
 }
 
+public extension Tensor {
+    
+    /// Copies the tensor to another device. The copy is detached from the compute graph and does not require a gradient.
+    /// - Parameter device: Target device
+    /// - Returns: Detached tensor with the same elements as the source.
+    func copied<TargetDevice: DeviceType>(to device: TargetDevice.Type) -> Tensor<Element, TargetDevice> {
+        let tmp = UnsafeMutableBufferPointer<Element>.allocate(capacity: self.count)
+        Device.Memory.assign(from: values.values, to: tmp, count: count)
+        
+        let targetBuffer = TargetDevice.Memory.allocateBuffer(withShape: shape, type: Element.self)
+        TargetDevice.Memory.assign(from: tmp.immutable, to: targetBuffer.values, count: count)
+        tmp.deallocate()
+        
+        return Tensor<Element, TargetDevice>(using: targetBuffer, context: nil)
+    }
+}
+
 //MARK: Tensor - Image conversion
 #if canImport(CoreGraphics)
 import CoreGraphics

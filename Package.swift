@@ -14,18 +14,26 @@ let package = Package(
     products: [
         .library(
             name: "DL4S",
-            targets: ["DL4S", "MKL"]),
+            targets: ["DL4S", "MKL", "AF"]),
     ],
     dependencies: [],
     targets: [
         .target(
             name: "MKL",
-            dependencies: []),
+            dependencies: []
+        ),
+        .target(
+            name: "AF",
+            dependencies: []
+        ),
         .target(
             name: "DL4S",
-            dependencies: ["MKL"]),
+            dependencies: ["MKL", "AF"]
+        ),
         .testTarget(
             name: "DL4STests",
-            dependencies: ["DL4S"])
-    ]
+            dependencies: ["DL4S", "AF"]
+        )
+    ],
+    cxxLanguageStandard: .cxx11
 )
