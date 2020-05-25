@@ -143,7 +143,7 @@ Transformer:
 - [x] Multihead Attention
 - [x] Pointwise Feed Forward
 - [x] Transformer Encoder Block
-- [x] Positional Decoder Block
+- [x] Transformer Decoder Block
 
 </p>
 </details>
