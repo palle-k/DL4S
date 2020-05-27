@@ -5,15 +5,17 @@
 #include "af/gfor.h"
 #include <csignal>
 
+#include "arrayfire.h"
+
 extern "C" {
     struct _d4af_array {
         af::array array;
     };
 }
 
-d4af_array d4af_allocate(dim_t count) {
-    af::array array = af::array(count);
-    d4af_array result = (d4af_array) malloc(sizeof(struct _d4af_array));
+d4af_array d4af_allocate(dim_t count, af_dtype type) {
+    af::array array = af::array(count, type);
+    d4af_array result = new struct _d4af_array;
     result->array = array;
     return result;
 }
@@ -66,6 +68,61 @@ void d4af_fill_64f(d4af_array dst, double value) {
 
 void d4af_fill_32s(d4af_array dst, int value) {
     dst->array.operator=(value);
+}
+
+void d4af_subscript(d4af_array dst, const d4af_array src, const int* shape, const int* indices) {
+    af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
+    for (int i = 0; i < 4; i++) {
+        dim_t ii = indices[i];
+        if (ii == -1) {
+            index[i] = af::index(af::span);
+        } else {
+            index[i] = af::index(ii);
+        }
+    }
+    dst->array = af::moddims(src->array, (dim_t) shape[0], (dim_t) shape[1], (dim_t) shape[2], (dim_t) shape[3])(index[0], index[1], index[2], index[3]);
+    dst->array = af::flat(dst->array);
+}
+
+void d4af_subscript_range(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds) {
+    af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
+    for (int i = 0; i < 4; i++) {
+        if (lower_bounds[i] == -1) {
+            index[i] = af::index(af::span);
+        } else {
+            index[i] = af::index(af::seq((double) lower_bounds[i], (double) upper_bounds[i] - 1));
+        }
+    }
+    dst->array = af::moddims(src->array, (dim_t) shape[0], (dim_t) shape[1], (dim_t) shape[2], (dim_t) shape[3])(index[0], index[1], index[2], index[3]);
+    dst->array = af::flat(dst->array);
+}
+
+void d4af_subscript_write(d4af_array dst, const d4af_array src, const int* shape, const int* indices) {
+    af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
+    for (int i = 0; i < 4; i++) {
+        dim_t ii = indices[i];
+        if (ii == -1) {
+            index[i] = af::index(af::span);
+        } else {
+            index[i] = af::index(ii);
+        }
+    }
+    
+    dst->array = af::moddims(src->array, (dim_t) shape[0], (dim_t) shape[1], (dim_t) shape[2], (dim_t) shape[3])(index[0], index[1], index[2], index[3]);
+    dst->array = af::flat(dst->array);
+}
+
+void d4af_subscript_range_write(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds) {
+    af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
+    for (int i = 0; i < 4; i++) {
+        if (lower_bounds[i] == -1) {
+            index[i] = af::index(af::span);
+        } else {
+            index[i] = af::index(af::seq((double) lower_bounds[i], (double) upper_bounds[i] - 1));
+        }
+    }
+    dst->array = af::moddims(src->array, (dim_t) shape[0], (dim_t) shape[1], (dim_t) shape[2], (dim_t) shape[3])(index[0], index[1], index[2], index[3]);
+    dst->array = af::flat(dst->array);
 }
 
 void d4af_neg(d4af_array dst, const d4af_array src) {
@@ -137,20 +194,11 @@ void d4af_gemm(
                dim_t dst_rows,
                dim_t dst_cols
 ) {
-    af::array result;
-    
     af::array lhs_view = af::moddims(lhs->array, lhs_cols, lhs_rows);
     af::array rhs_view = af::moddims(rhs->array, rhs_cols, rhs_rows);
-    
-    if (transposeLhs && transposeRhs) {
-        result = af::matmulTT(lhs_view, rhs_view);
-    } else if (transposeLhs) {
-        result = af::matmulTN(lhs_view, rhs_view);
-    } else if (transposeRhs) {
-        result = af::matmulNT(lhs_view, rhs_view);
-    } else {
-        result = af::matmul(lhs_view, rhs_view);
-    }
+
+    // Apparently, ArrayFire works the other way around
+    af::array result = af::transpose(af::matmul(lhs_view, rhs_view, transposeLhs ? AF_MAT_NONE : AF_MAT_TRANS, transposeRhs ? AF_MAT_NONE : AF_MAT_TRANS));
     
     if (beta == 0) {
         dst->array = alpha * result;
@@ -294,24 +342,36 @@ void d4af_reverse_add(d4af_array dst, const d4af_array src, const d4af_array add
     dst->array = add->array + af::flip(af::flat(src->array), 0);
 }
 
-void d4af_stack(d4af_array dst, const d4af_array* srcs, unsigned int numel, int dim) {
+void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel, const dim_t* shapes, const int dim) {
     if (numel == 0) {
         dst->array = af::array(1);
         return;
     }
-    for (unsigned int i = 0; i < numel; i += 3) {
-        switch (numel - i) {
+    af::array second;
+    af::array third;
+    af::array fourth;
+    
+    dst->array = af::moddims(srcs[0]->array, shapes[00], shapes[1], shapes[2], shapes[3]);
+    
+    for (unsigned int i = 1; i < numel; i += 3) {
+        switch ((numel - i) > 3 ? 3 : (numel - i)) {
             case 0:
                 dst->array = af::array();
                 break;
             case 1:
-                dst->array = af::join(dim, dst->array, srcs[i]->array);
+                second = af::moddims(srcs[i]->array, shapes[i*4], shapes[i*4+1], shapes[i*4+2], shapes[i*4+3]);
+                dst->array = af::join(dim, dst->array, second);
                 break;
             case 2:
-                dst->array = af::join(dim, dst->array, srcs[i]->array, srcs[i+1]->array);
+                second = af::moddims(srcs[i]->array, shapes[i*4], shapes[i*4+1], shapes[i*4+2], shapes[i*4+3]);
+                third = af::moddims(srcs[i]->array, shapes[i*4+4], shapes[i*4+5], shapes[i*4+6], shapes[i*4+7]);
+                dst->array = af::join(dim, dst->array, second, third);
                 break;
             case 3:
-                dst->array = af::join(dim, dst->array, srcs[i]->array, srcs[i+1]->array, srcs[i+2]->array);
+                second = af::moddims(srcs[i]->array, shapes[i*4], shapes[i*4+1], shapes[i*4+2], shapes[i*4+3]);
+                third = af::moddims(srcs[i]->array, shapes[i*4+4], shapes[i*4+5], shapes[i*4+6], shapes[i*4+7]);
+                fourth = af::moddims(srcs[i]->array, shapes[i*4+8], shapes[i*4+9], shapes[i*4+10], shapes[i*4+11]);
+                dst->array = af::join(dim, dst->array, second, third, fourth);
                 break;
             default:
                 break;

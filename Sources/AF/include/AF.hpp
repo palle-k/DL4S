@@ -34,8 +34,9 @@ extern "C" {
 
 struct _d4af_array;
 typedef struct _d4af_array *d4af_array;
+typedef long long dim_t;
 
-d4af_array d4af_allocate(dim_t count);
+d4af_array d4af_allocate(dim_t count, af_dtype type);
 void d4af_free(d4af_array array);
 
 void d4af_assign_d2h(void* target, const d4af_array source);
@@ -47,6 +48,12 @@ double d4af_get_pointee_64f(const d4af_array source);
 int d4af_get_pointee_32s(const d4af_array source);
 
 size_t d4af_get_size(const d4af_array source);
+
+void d4af_subscript(d4af_array dst, const d4af_array src, const int* shape, const int* indices);
+void d4af_subscript_range(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds);
+
+void d4af_subscript_write(d4af_array dst, const d4af_array src, const int* shape, const int* indices);
+void d4af_subscript_write_range(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds);
 
 void d4af_fill_32f(d4af_array dst, float value);
 void d4af_fill_64f(d4af_array dst, double value);
@@ -102,7 +109,7 @@ void d4af_permute_add(d4af_array dst, const d4af_array src, const dim_t dims, co
 void d4af_reverse(d4af_array dst, const d4af_array src);
 void d4af_reverse_add(d4af_array dst, const d4af_array src, const d4af_array add);
 
-void d4af_stack(d4af_array dst, const d4af_array* srcs, unsigned int numel, int dim);
+void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel, const dim_t* shapes, const int dim);
 
 #ifdef __cplusplus
 }

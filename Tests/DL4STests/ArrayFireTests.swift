@@ -10,19 +10,43 @@ import XCTest
 import DL4S
 import AF
 
-typealias GPU = ArrayFire
+fileprivate typealias GPU = ArrayFire
 
 class ArrayFireTests: XCTestCase {
-    func testAF() {
+    func testAF1() {
         GPU.setOpenCL()
         GPU.printInfo()
-        GPU.printMemInfo()
         
-        let a = Tensor<Float, ArrayFire>([0, 1, 2, 3, 4])
-        let b = Tensor<Float, ArrayFire>([[10], [20], [30]])
-        print((a + b).copied(to: CPU.self))
-        
-        GPU.printMemInfo()
+        let a = Tensor<Float, GPU>([0, 1, 2, 3, 4])
+        let b = Tensor<Float, GPU>([[1], [-1], [0.5], [-0.5]])
+        print(sigmoid(a * b))
     }
     
+    func testAFIndex() {
+        let a = Tensor<Float, GPU>((0 ..< 64).map(Float.init)).view(as: [8, 2, 4])
+        print(a[nil, nil, 3])
+    }
+    
+    func testAFMatMul() {
+        GPU.setOpenCL()
+        
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
+        let b = Tensor<Float, GPU>([[1, 2], [3, 4], [5, 6]])
+        print(a.matrixMultiplied(with: b))
+    }
+    
+    func testAFStack() {
+        GPU.setOpenCL()
+        
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
+        let b = Tensor<Float, GPU>([[7, 8, 9], [10, 11, 12]])
+        print(Tensor(stacking: [a, b], along: 0))
+    }
+    
+    func testAFReduce() {
+        GPU.setOpenCL()
+        
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]])
+        print(a.reduceSum(along: 1))
+    }
 }

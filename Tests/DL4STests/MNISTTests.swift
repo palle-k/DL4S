@@ -26,7 +26,8 @@
 import XCTest
 @testable import DL4S
 
-let MNIST_PATH = "./Tests/DL4STests/"
+// let MNIST_PATH = "./Tests/DL4STests/"
+let MNIST_PATH = "/Users/Palle/Developer/DL4S/Tests/DL4STests/"
 
 class MNISTTests: XCTestCase {
     static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
@@ -173,10 +174,10 @@ class MNISTTests: XCTestCase {
         XCTAssertGreaterThan(accuracy, 0.7)
     }
     
-    func performAccuracyTest<L: LayerType>(_ model: L, loss: (Tensor<Int32, L.Device>, Tensor<L.Parameter, L.Device>) -> Tensor<L.Parameter, L.Device>) where L.Inputs == Tensor<Float, CPU>, L.Outputs == L.Inputs, L.Parameter == Float, L.Device == CPU {
+    func performAccuracyTest<L: LayerType>(_ model: L, loss: (Tensor<Int32, L.Device>, Tensor<L.Parameter, L.Device>) -> Tensor<L.Parameter, L.Device>) where L.Inputs == Tensor<Float, L.Device>, L.Outputs == L.Inputs, L.Parameter == Float {
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: L.Device.self)
         
         let epochs = 100
         let batchSize = 256
@@ -217,15 +218,17 @@ class MNISTTests: XCTestCase {
     }
     
     func testReluActivation() {
+        ArrayFire.setOpenCL()
+        ArrayFire.printInfo()
         var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            Relu<Float, CPU>()
+            Dense<Float, ArrayFire>(inputSize: 28 * 28, outputSize: 500)
+            Relu<Float, ArrayFire>()
             
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            Relu<Float, CPU>()
+            Dense<Float, ArrayFire>(inputSize: 500, outputSize: 300)
+            Relu<Float, ArrayFire>()
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
+            Dense<Float, ArrayFire>(inputSize: 300, outputSize: 10)
+            Softmax<Float, ArrayFire>()
         }
         
         model.tag = "Classifier"

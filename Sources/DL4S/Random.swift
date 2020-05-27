@@ -136,7 +136,9 @@ public enum Random {
         
         let indices = (0 ..< count).map {_ in Int.random(in: 0 ..< n)}
         
-        let randomSamples = Tensor(stacking: indices.map {dataset[$0].unsqueezed(at: 0)}, along: 0)
+        let sampleValues = indices.map {dataset[$0].unsqueezed(at: 0)}
+        
+        let randomSamples = Tensor(stacking: sampleValues, along: 0)
         let randomLabels = Tensor(stacking: indices.map {labels[$0].unsqueezed(at: 0)}, along: 0)
         
         return (randomSamples, randomLabels)

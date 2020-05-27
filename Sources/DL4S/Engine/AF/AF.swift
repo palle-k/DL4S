@@ -60,7 +60,7 @@ public struct AFMemoryOps: MemoryOperatorsType {
 
 public extension AFMemoryOps {
     static func allocateBuffer<Element: NumericType>(withCapacity capacity: Int, type: Element.Type) -> Buffer<Element, ArrayFire> {
-        return Buffer(memory: d4af_allocate(dim_t(capacity)))
+        return Buffer(memory: d4af_allocate(dim_t(capacity), type.arrayfireType))
     }
     
     static func allocateBuffer<Element: NumericType>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, ArrayFire> {
@@ -104,11 +104,30 @@ public extension AFMemoryOps {
     }
     
     static func get<Element: NumericType>(slice: [Int?], of buffer: Buffer<Element, ArrayFire>, with shape: [Int]) -> (Buffer<Element, ArrayFire>, Bool, [Int]) {
-        fatalError("\(#function) unavailable")
+        let slice = slice + Array(repeating: nil, count: shape.count - slice.count)
+        var resultShape = shape
+        for (offset, x) in slice.enumerated().reversed() where x != nil {
+            resultShape.remove(at: offset)
+        }
+        let result = allocateBuffer(withShape: resultShape, type: Element.self).values
+        
+        let paddedShape = Array(repeating: 1, count: 4 - shape.count) + shape
+        let paddedIndex = Array(repeating: nil, count: 4 - slice.count) + slice
+        
+        d4af_subscript(result.memory, buffer.memory, paddedShape.map(Int32.init).reversed(), paddedIndex.map {Int32($0 ?? -1)}.reversed())
+        return (result, true, resultShape)
     }
     
     static func get<Element: NumericType>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, ArrayFire>, with shape: [Int]) -> (Buffer<Element, ArrayFire>, Bool, [Int]) {
-        fatalError("\(#function) unavailable")
+        let slice = slice + Array(repeating: nil, count: shape.count - slice.count)
+        let resultShape = zip(shape, slice).map {$1?.count ?? $0}
+        let result = allocateBuffer(withShape: resultShape, type: Element.self).values
+        
+        let paddedSlice = Array(repeating: nil, count: 4 - slice.count) + slice
+        let paddedShape = Array(repeating: 1, count: 4 - shape.count) + shape
+        
+        d4af_subscript_range(result.memory, buffer.memory, paddedShape.map(Int32.init).reversed(), paddedSlice.map {Int32($0?.lowerBound ?? -1)}.reversed(), paddedSlice.map {Int32($0?.upperBound ?? -1)}.reversed())
+        return (result, true, resultShape)
     }
     
     static func set<Element: NumericType>(slice: [Int?], of buffer: Buffer<Element, ArrayFire>, with dstShape: [Int], from source: Buffer<Element, ArrayFire>, with sourceShape: [Int]) {
@@ -125,7 +144,7 @@ public extension AFMemoryOps {
     }
     
     static func advance<Element: NumericType>(buffer: Buffer<Element, ArrayFire>, by advancement: Int) -> Buffer<Element, ArrayFire> {
-        fatalError("\(#function) unavailable")
+        return get(slice: [advancement ..< buffer.count], of: buffer, with: [buffer.count]).0
     }
 }
 
@@ -199,8 +218,8 @@ public struct AFEngine: EngineType {
             lhs.values.memory,
             rhs.values.memory,
             dim_t(result.dim),
-            paddedLhsShape.map(dim_t.init),
-            paddedRhsShape.map(dim_t.init)
+            paddedLhsShape.reversed().map(dim_t.init),
+            paddedRhsShape.reversed().map(dim_t.init)
         )
     }
     
@@ -212,8 +231,8 @@ public struct AFEngine: EngineType {
             lhs.values.memory,
             rhs.values.memory,
             dim_t(result.dim),
-            paddedLhsShape.map(dim_t.init),
-            paddedRhsShape.map(dim_t.init)
+            paddedLhsShape.reversed().map(dim_t.init),
+            paddedRhsShape.reversed().map(dim_t.init)
         )
     }
     
@@ -225,8 +244,8 @@ public struct AFEngine: EngineType {
             lhs.values.memory,
             rhs.values.memory,
             dim_t(result.dim),
-            paddedLhsShape.map(dim_t.init),
-            paddedRhsShape.map(dim_t.init)
+            paddedLhsShape.reversed().map(dim_t.init),
+            paddedRhsShape.reversed().map(dim_t.init)
         )
     }
     
@@ -235,8 +254,8 @@ public struct AFEngine: EngineType {
             result.values.memory,
             values.values.memory,
             dim_t(values.dim),
-            values.shape.map(dim_t.init),
-            dim_t(axis)
+            values.shape.reversed().map(dim_t.init),
+            dim_t(values.dim - axis - 1)
         )
     }
     
@@ -293,7 +312,11 @@ public struct AFEngine: EngineType {
     }
     
     public static func reduceSum<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, axes: [Int]) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        if let firstAxis = axes.first, axes.count == 1 {
+            reduceSum(values: values, result: result, axis: firstAxis)
+        } else {
+            fatalError("\(#function) unavailable")
+        }
     }
     
     public static func reduceMax<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, context: ShapedBuffer<Int32, ArrayFire>?, axes: [Int]) where N : NumericType {
@@ -425,15 +448,23 @@ public struct AFEngine: EngineType {
     }
     
     public static func reverse<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_reverse(result.values.memory, values.values.memory)
     }
     
     public static func reverseAdd<N>(values: ShapedBuffer<N, ArrayFire>, add: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_reverse_add(result.values.memory, values.values.memory, add.values.memory)
     }
     
     public static func stack<N>(buffers: [ShapedBuffer<N, ArrayFire>], result: ShapedBuffer<N, ArrayFire>, axis: Int) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_stack(
+            result.values.memory,
+            buffers.map {$0.values.memory},
+            UInt32(buffers.count),
+            buffers.flatMap { buffer in
+                (Array(repeating: 1, count: 4 - buffer.dim) + buffer.shape.map(dim_t.init)).reversed()
+            },
+            Int32(axis)
+        )
     }
     
     public static func unstackAdd<N>(stacked: ShapedBuffer<N, ArrayFire>, add: [ShapedBuffer<N, ArrayFire>], result: [ShapedBuffer<N, ArrayFire>], axis: Int) where N : NumericType {
