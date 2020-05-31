@@ -56,7 +56,7 @@ class GradientTests: XCTestCase {
         let secondGrad = grad.gradients(of: [t], retainBackwardsGraph: true)[0]
         print(secondGrad)
         
-        XCTAssert(secondGrad.reduceSum() > 0)
+        XCTAssert(secondGrad.reduceSum().item > 0)
     }
     
     func testGradient() {
