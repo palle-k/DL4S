@@ -46,6 +46,19 @@ class GradientTests: XCTestCase {
         print(thirdGrad)
     }
     
+    func testSecondDerivative2() {
+        let t = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
+        let result = exp(t)
+        
+        let grad = result.gradients(of: [t], retainBackwardsGraph: true)[0]
+        print(grad)
+        
+        let secondGrad = grad.gradients(of: [t], retainBackwardsGraph: true)[0]
+        print(secondGrad)
+        
+        XCTAssert(secondGrad.reduceSum() > 0)
+    }
+    
     func testGradient() {
         let t2 = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
         let r2 = 1 / t2

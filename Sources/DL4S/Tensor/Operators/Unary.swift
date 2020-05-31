@@ -41,7 +41,13 @@ public extension Tensor {
                 tag: "exp",
                 sources: [self],
                 backpropagate: [{ resultGradient in
-                    resultGradient * resultCopy
+                    // reusing result would lead to retain cycle
+                    // Using resultCopy when retaining the backwards graph doesn't work, because resultCopy does not have a compute graph attached.
+                    if resultGradient.requiresGradient {
+                        return resultGradient * self.exp()
+                    } else {
+                        return resultGradient * resultCopy
+                    }
                 }]
             )
             result.requiresGradient = true
@@ -81,7 +87,12 @@ public extension Tensor {
                 tag: "tanh",
                 sources: [self],
                 backpropagate: [{ resultGradient in
-                    (1 - resultCopy * resultCopy) * resultGradient
+                    if resultGradient.requiresGradient {
+                        let r = self.tanh()
+                        return (1 - r * r) * resultGradient
+                    } else {
+                        return (1 - resultCopy * resultCopy) * resultGradient
+                    }
                 }]
             )
             result.requiresGradient = true
@@ -101,7 +112,11 @@ public extension Tensor {
                 tag: "sqrt",
                 sources: [self],
                 backpropagate: [{ resultGradient in
-                    0.5 / resultCopy * resultGradient
+                    if resultGradient.requiresGradient {
+                        return 0.5 / self.sqrt() * resultGradient
+                    } else {
+                        return 0.5 / resultCopy * resultGradient
+                    }
                 }]
             )
             result.requiresGradient = true
