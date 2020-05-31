@@ -36,6 +36,7 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
+            let sourceCopy = self
             let resultCopy = result
             result.context = TensorContext(
                 tag: "exp",
@@ -44,7 +45,7 @@ public extension Tensor {
                     // reusing result would lead to retain cycle
                     // Using resultCopy when retaining the backwards graph doesn't work, because resultCopy does not have a compute graph attached.
                     if resultGradient.requiresGradient {
-                        return resultGradient * self.exp()
+                        return resultGradient * sourceCopy.exp()
                     } else {
                         return resultGradient * resultCopy
                     }
@@ -63,11 +64,12 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
+            let sourceCopy = self
             result.context = TensorContext(
                 tag: "log",
                 sources: [self],
                 backpropagate: [{ resultGradient in
-                    resultGradient / self
+                    resultGradient / sourceCopy
                 }]
             )
             result.requiresGradient = true
@@ -82,13 +84,14 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
+            let sourceCopy = self
             let resultCopy = result
             result.context = TensorContext(
                 tag: "tanh",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     if resultGradient.requiresGradient {
-                        let r = self.tanh()
+                        let r = sourceCopy.tanh()
                         return (1 - r * r) * resultGradient
                     } else {
                         return (1 - resultCopy * resultCopy) * resultGradient
@@ -107,13 +110,14 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
+            let sourceCopy = self
             let resultCopy = result
             result.context = TensorContext(
                 tag: "sqrt",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     if resultGradient.requiresGradient {
-                        return 0.5 / self.sqrt() * resultGradient
+                        return 0.5 / sourceCopy.sqrt() * resultGradient
                     } else {
                         return 0.5 / resultCopy * resultGradient
                     }
@@ -251,7 +255,7 @@ public extension Tensor {
     ///
     /// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
     func swishActivated(beta: Self = 1) -> Self {
-        self * DL4S.sigmoid(beta * self)
+        self * (beta * self).sigmoid()
     }
     
     
@@ -259,7 +263,7 @@ public extension Tensor {
     ///
     /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
     func mishActivated() -> Self {
-        self * DL4S.tanh(DL4S.log(1 + DL4S.exp(self)))
+        self * (1 + DL4S.exp(self)).log().tanh()
     }
     
     
@@ -267,7 +271,7 @@ public extension Tensor {
     ///
     /// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
     func lishtActivated() -> Self {
-        self * DL4S.tanh(self)
+        self * self.tanh()
     }
 
 }
