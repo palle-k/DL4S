@@ -47,6 +47,8 @@ public extension Tensor {
         }
         Device.Engine.unstack(stacked: self.values, result: sourceBuffers, axis: axis)
         
+        let selfShape = self.shape
+        
         return sourceBuffers.enumerated().map { (i, buffer) in
             Tensor(
                 using: buffer,
@@ -58,7 +60,7 @@ public extension Tensor {
                         let idx = Array(repeating: nil, count: axis) +
                             [sourceOffsets[i] ..< sourceOffsets[i] + lengths[i]]
                         
-                        var target = Tensor<Element, Device>(repeating: 0, shape: self.shape)
+                        var target = Tensor<Element, Device>(repeating: 0, shape: selfShape)
                         target[idx] = resultGradient
                         return target
                     }]
