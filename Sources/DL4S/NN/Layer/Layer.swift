@@ -68,6 +68,34 @@ public extension LayerType {
 }
 #endif
 
+public extension LayerType {
+    /// Copies the contents of the parameters from the source layer to the target layer.
+    /// Intended for the case when layers should be copied between devices
+    ///
+    /// Example:
+    ///
+    ///     let layer = Dense<Float, CPU>(inputSize: 42, outputSize: 314)
+    ///     var target = Dense<Float, GPU>(inputSize: 42, outputSize: 314)
+    ///     target.copyingParameters(of: layer)
+    ///
+    ///     layer(x) == target(x.copied(to: GPU.self)).copied(to: CPU.self)
+    ///
+    /// Subsequent updates to the source layer will not affect the target layer and vice versa.
+    ///
+    /// - Parameter sourceLayer: Layer to copy parameters from. Must have same number of parameters and same parameter shapes
+    mutating func copyingParameters<SourceLayer: LayerType>(of sourceLayer: SourceLayer) where SourceLayer.Parameter == Self.Parameter {
+        let sourceParams = sourceLayer.parameters
+        let targetParams = parameters
+        precondition(targetParams.count == sourceParams.count, "Source and target layer must have same number of parameters")
+        precondition(!zip(targetParams, sourceParams).map {$0.shape == $1.shape}.contains(false), "Source and target layer must have same parameter shapes")
+        let targetPaths = parameterPaths
+        for (param, path) in zip(sourceParams, targetPaths) {
+            self[keyPath: path] = param.copied(to: Device.self)
+            self[keyPath: path].requiresGradient = param.requiresGradient
+        }
+    }
+}
+
 
 /// Type erased layer
 public struct AnyLayer<Inputs, Outputs, Parameter: NumericType, Device: DeviceType>: LayerType {

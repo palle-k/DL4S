@@ -1,11 +1,12 @@
 // needs to stay
 #include "AF.hpp"
 #include "arrayfire.h"
+#include "af/data.h"
 #include "af/array.h"
 #include "af/gfor.h"
 #include <csignal>
+#include <iostream>
 
-#include "arrayfire.h"
 
 extern "C" {
     struct _d4af_array {
@@ -98,6 +99,7 @@ void d4af_subscript_range(d4af_array dst, const d4af_array src, const int* shape
 }
 
 void d4af_subscript_write(d4af_array dst, const d4af_array src, const int* shape, const int* indices) {
+#warning "Implementation for subscript_write is currently incorrect"
     af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
     for (int i = 0; i < 4; i++) {
         dim_t ii = indices[i];
@@ -113,6 +115,7 @@ void d4af_subscript_write(d4af_array dst, const d4af_array src, const int* shape
 }
 
 void d4af_subscript_range_write(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds) {
+#warning "Implementation for subscript_range_write is currently incorrect"
     af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
     for (int i = 0; i < 4; i++) {
         if (lower_bounds[i] == -1) {
@@ -126,23 +129,23 @@ void d4af_subscript_range_write(d4af_array dst, const d4af_array src, const int*
 }
 
 void d4af_neg(d4af_array dst, const d4af_array src) {
-    dst->array.operator=(-src->array);
+    dst->array = -af::flat(src->array);
 }
 
 void d4af_add(d4af_array dst, const d4af_array lhs, const d4af_array rhs) {
-    dst->array = (lhs->array + rhs->array);
+    dst->array = af::flat(lhs->array) + af::flat(rhs->array);
 }
 
 void d4af_sub(d4af_array dst, const d4af_array lhs, const d4af_array rhs) {
-    dst->array.operator=(lhs->array - rhs->array);
+    dst->array = af::flat(lhs->array) - af::flat(rhs->array);
 }
 
 void d4af_mul(d4af_array dst, const d4af_array lhs, const d4af_array rhs) {
-    dst->array.operator=(lhs->array * rhs->array);
+    dst->array = af::flat(lhs->array) * af::flat(rhs->array);
 }
 
 void d4af_div(d4af_array dst, const d4af_array lhs, const d4af_array rhs) {
-    dst->array.operator=(lhs->array / rhs->array);
+    dst->array = af::flat(lhs->array) / af::flat(rhs->array);
 }
 
 void d4af_band(d4af_array dst, const d4af_array src, int belowDiag, int aboveDiag) {
@@ -377,4 +380,90 @@ void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel
                 break;
         }
     }
+}
+
+void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* src_shape, int dim) {
+    auto index = af::index(ctx->array);
+    auto src_view = af::moddims(src->array, src_shape[0], src_shape[1], src_shape[2], src_shape[3]);
+    
+    switch (dim) {
+        case 0:
+            dst->array = src_view(index, af::span);
+            break;
+        case 1:
+            dst->array = src_view(af::span, index);
+            break;
+        case 2:
+            dst->array = src_view(af::span, af::span, index);
+            break;
+        case 3:
+            dst->array = src_view(af::span, af::span, af::span, index);
+            break;
+        default:
+            break;
+    }
+    // TODO: There may be a better way to do this.
+    dst->array = af::diag(dst->array);
+}
+
+void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim) {
+    auto index = af::index(ctx->array);
+    
+    auto src_view = af::flat(src->array);
+    auto dst_view = af::moddims(dst->array, dst_shape[0], dst_shape[1], dst_shape[2], dst_shape[3]);
+    dst_view = 0;
+    
+    switch (dim) {
+        case 0:
+            dst_view(index, af::span) = af::diag(src_view, 0, false);
+            break;
+        case 1:
+            dst_view(af::span, index) = af::diag(src_view, 0, false);
+            break;
+        case 2:
+            dst_view(af::span, af::span, index) = af::diag(src_view, 0, false);
+            break;
+        case 3:
+            dst_view(af::span, af::span, af::span, index) = af::diag(src_view, 0, false);
+            break;
+        default:
+            break;
+    }
+    dst->array = dst_view;
+}
+
+void d4af_arange_32f(d4af_array dst, float lower_bound, float upper_bound, dim_t count) {
+    dst->array = af::range(af::dim4(count), f32) * (upper_bound - lower_bound) + lower_bound;
+}
+
+void d4af_arange_64f(d4af_array dst, double lower_bound, double upper_bound, dim_t count) {
+    dst->array = af::range(af::dim4(count), f64) * (upper_bound - lower_bound) + lower_bound;
+}
+
+void d4af_arange_32s(d4af_array dst, int lower_bound, int upper_bound, dim_t count) {
+    dst->array = af::range(af::dim4(count), s32) * (upper_bound - lower_bound) + lower_bound;
+}
+
+af::array af_ext_pad(const af::array src, dim_t lx, dim_t rx, dim_t ly, dim_t ry, dim_t lz, dim_t rz, dim_t lw, dim_t rw) {
+    // af::pad/af_pad not available in API_VERSION 36 and lower, API_VERSION 37 not available for macOS.
+    auto dims = src.dims();
+    af::array dst = af::array(dims.dims[0] + lx + rx, dims.dims[1] + ly + ry, dims.dims[2] + lz + rz, dims.dims[3] + lw + rw);
+    dst = 0;
+    dst(af::seq(lx, lx + dims.dims[0] - 1), af::seq(ly, ly + dims.dims[1] - 1), af::seq(lz, lz + dims.dims[2] - 1), af::seq(lw, lw + dims.dims[3] - 1)) = src;
+    return dst;
+}
+
+void d4af_im2col(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad) {
+    auto src_view = af_ext_pad(af::moddims(src->array, columns, rows, channels, batch_size), pad, pad, pad, pad, 0, 0, 0, 0);
+    dst->array = af::unwrap(src_view, window_width, window_height, stride, stride);
+}
+
+void d4af_col2im(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad) {
+    auto dst_view = af::wrap(src->array, columns + 2 * pad, rows + 2 * pad, window_width, window_height, stride, stride);
+    dst->array = dst_view(af::seq(pad, columns - pad - 1), af::seq(pad, rows - pad - 1));
+}
+
+void d4af_api_version() {
+    int api = AF_API_VERSION;
+    std::cout << "API VERSION: " << api << std::endl;
 }

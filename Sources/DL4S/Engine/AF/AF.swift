@@ -152,7 +152,13 @@ public struct AFEngine: EngineType {
     public typealias Device = ArrayFire
     
     public static func fill<N>(value: N, result: Buffer<N, ArrayFire>, count: Int) where N : NumericType {
-        
+        if N.self == Float.self {
+            d4af_fill_32f(result.memory, Float(element: value))
+        } else if N.self == Double.self {
+            d4af_fill_64f(result.memory, Double(element: value))
+        } else if N.self == Int32.self {
+            d4af_fill_32s(result.memory, Int32(element: value))
+        }
     }
     
     public static func vAdd<N>(lhs: Buffer<N, ArrayFire>, rhs: Buffer<N, ArrayFire>, result: Buffer<N, ArrayFire>, count: Int) where N : NumericType {
@@ -266,16 +272,16 @@ public struct AFEngine: EngineType {
                 context.values.memory,
                 values.values.memory,
                 dim_t(values.dim),
-                values.shape.map(dim_t.init),
-                dim_t(axis)
+                values.shape.reversed().map(dim_t.init),
+                dim_t(values.dim - axis - 1)
             )
         } else {
             d4af_reduce_max(
                 result.values.memory,
                 values.values.memory,
                 dim_t(values.dim),
-                values.shape.map(dim_t.init),
-                dim_t(axis)
+                values.shape.reversed().map(dim_t.init),
+                dim_t(values.dim - axis - 1)
             )
         }
     }
@@ -287,16 +293,16 @@ public struct AFEngine: EngineType {
                 context.values.memory,
                 values.values.memory,
                 dim_t(values.dim),
-                values.shape.map(dim_t.init),
-                dim_t(axis)
+                values.shape.reversed().map(dim_t.init),
+                dim_t(values.dim - axis - 1)
             )
         } else {
             d4af_reduce_min(
                 result.values.memory,
                 values.values.memory,
                 dim_t(values.dim),
-                values.shape.map(dim_t.init),
-                dim_t(axis)
+                values.shape.reversed().map(dim_t.init),
+                dim_t(values.dim - axis - 1)
             )
         }
     }
@@ -306,8 +312,8 @@ public struct AFEngine: EngineType {
             result.values.memory,
             values.values.memory,
             dim_t(values.dim),
-            values.shape.map(dim_t.init),
-            dim_t(axis)
+            values.shape.reversed().map(dim_t.init),
+            dim_t(values.dim - axis - 1)
         )
     }
     
@@ -416,11 +422,23 @@ public struct AFEngine: EngineType {
     }
     
     public static func scatter<N>(reduced: ShapedBuffer<N, ArrayFire>, context: ShapedBuffer<Int32, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, axis: Int, ignoreIndex: Int32) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_scatter(
+            result.values.memory,
+            reduced.values.memory,
+            context.values.memory,
+            (Array(repeating: 1, count: 4 - result.dim) + result.shape).map(dim_t.init).reversed(),
+            Int32(result.dim - axis - 1)
+        )
     }
     
     public static func gather<N>(expanded: ShapedBuffer<N, ArrayFire>, context: ShapedBuffer<Int32, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, axis: Int, ignoreIndex: Int32) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_gather(
+            result.values.memory,
+            expanded.values.memory,
+            context.values.memory,
+            (Array(repeating: 1, count: 4 - expanded.dim) + expanded.shape).map(dim_t.init).reversed(),
+            Int32(expanded.dim - axis - 1)
+        )
     }
     
     public static func permuteAxes<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, arangement: [Int]) where N : NumericType {
@@ -432,11 +450,21 @@ public struct AFEngine: EngineType {
     }
     
     public static func subscriptRead<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, index: [Int?]) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_subscript(
+            result.values.memory,
+            values.values.memory,
+            (Array(repeating: 1, count: 4 - values.dim) + values.shape).map(Int32.init).reversed(),
+            (Array(repeating: nil, count: 4 - index.count) + index).map {Int32($0 ?? -1)}.reversed()
+        )
     }
     
     public static func subscriptWrite<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, index: [Int?]) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_subscript_write(
+            result.values.memory,
+            values.values.memory,
+            (Array(repeating: 1, count: 4 - result.dim) + result.shape).map(Int32.init).reversed(),
+            (Array(repeating: nil, count: 4 - index.count) + index).map {Int32($0 ?? -1)}.reversed()
+        )
     }
     
     public static func subscriptReadAdd<N>(values: ShapedBuffer<N, ArrayFire>, add: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, index: [Int?]) where N : NumericType {
@@ -476,15 +504,45 @@ public struct AFEngine: EngineType {
     }
     
     public static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, ArrayFire>) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        if N.self == Float.self {
+            d4af_arange_32f(result.values.memory, lowerBound as! Float, upperBound as! Float, dim_t(result.count))
+        } else if N.self == Double.self {
+            d4af_arange_64f(result.values.memory, lowerBound as! Double, upperBound as! Double, dim_t(result.count))
+        } else if N.self == Int32.self {
+            d4af_arange_32s(result.values.memory, lowerBound as! Int32, upperBound as! Int32, dim_t(result.count))
+        } else {
+            fatalError("\(#function) not available for type \(N.self)")
+        }
     }
     
     public static func img2col<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_im2col(
+            result.values.memory,
+            values.values.memory,
+            dim_t(values.shape[0]),
+            dim_t(values.shape[1]),
+            dim_t(values.shape[2]),
+            dim_t(values.shape[3]),
+            dim_t(kernelWidth),
+            dim_t(kernelHeight),
+            dim_t(stride),
+            dim_t(padding)
+        )
     }
     
     public static func col2img<N>(matrix: ShapedBuffer<N, ArrayFire>, image: ShapedBuffer<N, ArrayFire>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_col2im(
+            image.values.memory,
+            matrix.values.memory,
+            dim_t(image.shape[0]),
+            dim_t(image.shape[1]),
+            dim_t(image.shape[2]),
+            dim_t(image.shape[3]),
+            dim_t(kernelWidth),
+            dim_t(kernelHeight),
+            dim_t(stride),
+            dim_t(padding)
+        )
     }
     
 }
