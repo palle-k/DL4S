@@ -26,7 +26,7 @@
 import XCTest
 import DL4S
 
-let MNIST_PATH = "/Users/Palle/Developer/DL4S/Tests/DL4STests/"
+let MNIST_PATH = "./Tests/DL4STests/"
 
 class MNISTTests: XCTestCase {
     static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
