@@ -105,7 +105,11 @@ public extension Tensor {
                 tag: "stack",
                 sources: tensors,
                 backpropagate: tensors.indices.map { i in { resultGradient in
-                    if let cache = gradientCache[resultGradient.backpropID] {
+                    if resultGradient.requiresGradient {
+                        // caching gradients leads to retain cycles when the backwards pass is retained.
+                        // therefore, caching is disabled in this case as a workaround.
+                        return resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)[i]
+                    } else if let cache = gradientCache[resultGradient.backpropID] {
                         return cache[i]
                     } else {
                         let v = resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)

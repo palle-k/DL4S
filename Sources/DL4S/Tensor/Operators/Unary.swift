@@ -36,7 +36,6 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
-            let sourceCopy = self
             let resultCopy = result
             result.context = TensorContext(
                 tag: "exp",
@@ -45,7 +44,7 @@ public extension Tensor {
                     // reusing result would lead to retain cycle
                     // Using resultCopy when retaining the backwards graph doesn't work, because resultCopy does not have a compute graph attached.
                     if resultGradient.requiresGradient {
-                        return resultGradient * sourceCopy.exp()
+                        return resultGradient * self.exp()
                     } else {
                         return resultGradient * resultCopy
                     }
@@ -64,12 +63,11 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
-            let sourceCopy = self
             result.context = TensorContext(
                 tag: "log",
                 sources: [self],
                 backpropagate: [{ resultGradient in
-                    resultGradient / sourceCopy
+                    resultGradient / self
                 }]
             )
             result.requiresGradient = true
@@ -84,14 +82,13 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
-            let sourceCopy = self
             let resultCopy = result
             result.context = TensorContext(
                 tag: "tanh",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     if resultGradient.requiresGradient {
-                        let r = sourceCopy.tanh()
+                        let r = self.tanh()
                         return (1 - r * r) * resultGradient
                     } else {
                         return (1 - resultCopy * resultCopy) * resultGradient
@@ -110,14 +107,13 @@ public extension Tensor {
         var result = Tensor(using: resultBuffer, context: nil)
         
         if requiresGradient {
-            let sourceCopy = self
             let resultCopy = result
             result.context = TensorContext(
                 tag: "sqrt",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     if resultGradient.requiresGradient {
-                        return 0.5 / sourceCopy.sqrt() * resultGradient
+                        return 0.5 / self.sqrt() * resultGradient
                     } else {
                         return 0.5 / resultCopy * resultGradient
                     }
