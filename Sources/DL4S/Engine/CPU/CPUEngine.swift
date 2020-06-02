@@ -234,7 +234,7 @@ public struct CPUEngine: EngineType {
         
         let indices = flatIterate(result.shape)
         let dim = result.dim
-        let count = indices.count / dim
+        let count = indices.count / Swift.max(dim, 1)
         
         for k in 0 ..< count {
             let base = k * dim
