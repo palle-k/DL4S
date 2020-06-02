@@ -81,6 +81,10 @@ swift build -c release \
     -Xlinker -L${IPPROOT}/lib/intel64
 ```
 
+### TensorBoard Support
+
+[DL4S-Tensorboard](https://github.com/palle-k/DL4S-Tensorboard) provides a summary writer that can write tensorboard compatible logs.
+
 ## Features
 
 <details>
