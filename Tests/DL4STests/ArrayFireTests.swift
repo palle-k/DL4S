@@ -211,8 +211,4 @@ class ArrayFireTests: XCTestCase {
         print()
         print(gb)
     }
-    
-    func testRandomThing() {
-        d4af_api_version()
-    }
 }

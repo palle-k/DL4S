@@ -407,29 +407,32 @@ void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, con
 }
 
 void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim) {
-    auto index = af::index(ctx->array);
+    af::array src_view = af::flat(src->array);
+    af::array indices = ctx->array;
     
-    auto src_view = af::flat(src->array);
-    auto dst_view = af::moddims(dst->array, dst_shape[0], dst_shape[1], dst_shape[2], dst_shape[3]);
-    dst_view = 0;
+    af::array result = af::constant(0.0f, dst->array.elements());
     
-    switch (dim) {
-        case 0:
-            dst_view(index, af::span) = af::diag(src_view, 0, false);
-            break;
-        case 1:
-            dst_view(af::span, index) = af::diag(src_view, 0, false);
-            break;
-        case 2:
-            dst_view(af::span, af::span, index) = af::diag(src_view, 0, false);
-            break;
-        case 3:
-            dst_view(af::span, af::span, af::span, index) = af::diag(src_view, 0, false);
-            break;
-        default:
-            break;
+    dim_t n_cols = dst_shape[0];
+    
+    af::array linear_idx;
+    
+    if (dim == 1) {
+        af::array col_idx = af::iota((float) ctx->array.elements());
+        af::array row_idx = ctx->array;
+        
+        linear_idx = col_idx + row_idx * n_cols;
+    } else if (dim == 0) {
+        af::array row_idx = af::iota((float) ctx->array.elements());
+        af::array col_idx = ctx->array;
+        
+        linear_idx = col_idx + row_idx * n_cols;
+    } else {
+        std::cerr << "Invalid scatter dimension, can only scatter along dim 0 or 1." << std::endl;
+        raise(SIGINT);
+        return;
     }
-    dst->array = dst_view;
+    result(linear_idx) = af::flat(src->array);
+    dst->array = result;
 }
 
 void d4af_arange_32f(d4af_array dst, float lower_bound, float upper_bound, dim_t count) {
