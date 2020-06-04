@@ -251,17 +251,17 @@ void d4af_reduce_min_ctx(d4af_array dst, d4af_array ctx, const d4af_array src, c
 }
 
 int d4af_argmax(d4af_array dst, const d4af_array src) {
-    auto maxIdx = af::array();
+    af::array maxIdx = af::array(1, u32);
     af::max(dst->array, maxIdx, (const af::array) src->array);
     maxIdx.eval();
-    return maxIdx.scalar<int>();
+    return (int) maxIdx.scalar<unsigned>();
 }
 
 int d4af_argmin(d4af_array dst, const d4af_array src) {
-    auto minIdx = af::array();
+    auto minIdx = af::array(1, u32);
     af::min(dst->array, minIdx, (const af::array) src->array);
     minIdx.eval();
-    return minIdx.scalar<int>();
+    return (int) minIdx.scalar<unsigned>();
 }
 
 void d4af_exp(d4af_array dst, const d4af_array src) {

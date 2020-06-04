@@ -179,8 +179,8 @@ class MNISTTests: XCTestCase {
         
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 100_000
-        let batchSize = 256
+        let epochs = 1000
+        let batchSize = 1024
         
         var bar = ProgressBar<Float>(totalUnitCount: epochs / 100, formatUserInfo: {"loss: \($0)"}, label: "training")
         

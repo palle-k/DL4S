@@ -269,4 +269,9 @@ class ArrayFireTests: XCTestCase {
         print(stacked)
         print(b.scatter(using: stacked, alongAxis: 1, withSize: 10))
     }
+    
+    func testArgmax() {
+        let a = Tensor<Float, GPU>([5, 6, 7, 8, 3])
+        print(a.argmax())
+    }
 }
