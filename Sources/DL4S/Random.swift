@@ -35,7 +35,7 @@ extension Float: RandomizableType {}
 extension Double: RandomizableType {}
 
 struct WyHash: RandomNumberGenerator {
-    fileprivate static var shared = WyHash(seed: 0)
+    static var shared = WyHash(seed: 0)
     
     private var state: UInt64
 
@@ -59,56 +59,7 @@ struct WyHash: RandomNumberGenerator {
     }
 }
 
-func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
-    let a = T.random(in: 0 ... 1, using: &WyHash.shared)
-    let b = T.random(in: 0 ... 1, using: &WyHash.shared)
-    
-    let scale = (-2 * a.log()).sqrt() * stdev
-    
-    let twoPiB = 2 * 3.141592653589 * b
-    
-    let (x, y) = (scale * twoPiB.sin() + mean, scale * twoPiB.cos() + mean)
-    
-    if x.isFinite && !x.isNaN && y.isFinite && !y.isNaN {
-        return (x, y)
-    } else {
-        return randNormal(stdev: stdev, mean: mean)
-    }
-}
-
 public enum Random {
-    @_specialize(where Element == Float, Device == CPU)
-    @_specialize(where Element == Double, Device == CPU)
-    @_specialize(where Element == Int32, Device == CPU)
-    public static func fill<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element) {
-        let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
-        let range = a ... b
-        for i in 0 ..< vector.count {
-            buffer[i] = Element.random(in: range, using: &WyHash.shared)
-        }
-        Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
-        buffer.deallocate()
-    }
-    
-    @_specialize(where Element == Float, Device == CPU)
-    @_specialize(where Element == Double, Device == CPU)
-    @_specialize(where Element == Int32, Device == CPU)
-    public static func fillNormal<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1) {
-        let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
-        for i in stride(from: 0, to: vector.count - 1, by: 2) {
-            let (a, b) = randNormal(stdev: stdev, mean: mean)
-            buffer[i] = a
-            buffer[i+1] = b
-        }
-        
-        if vector.count % 2 == 0 {
-            let (a, _) = randNormal(stdev: stdev, mean: mean)
-            buffer[vector.count-1] = a
-        }
-        Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
-        buffer.deallocate()
-    }
-    
     /// Samples a random minibatch of tensors from the given data set with shape [sample count, sample_dim1, ..., sample_dim_n]
     /// - Parameters:
     ///   - dataset: Dataset to sample a batch from
@@ -142,19 +93,5 @@ public enum Random {
         let randomLabels = Tensor(stacking: indices.map {labels[$0].unsqueezed(at: 0)}, along: 0)
         
         return (randomSamples, randomLabels)
-    }
-    
-    @_specialize(where Element == Float, Device == CPU)
-    @_specialize(where Element == Int32, Device == CPU)
-    @_specialize(where Element == Double, Device == CPU)
-    public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
-        let count = values.shape.reduce(1, *)
-        let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
-        for i in 0 ..< count {
-            buffer[i] = Float.random(in: 0 ... 1, using: &WyHash.shared) <= p ? 1 : 0
-        }
-        
-        Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)
-        buffer.deallocate()
     }
 }

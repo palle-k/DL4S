@@ -158,7 +158,37 @@ public struct AFEngine: EngineType {
             d4af_fill_64f(result.memory, Double(element: value))
         } else if N.self == Int32.self {
             d4af_fill_32s(result.memory, Int32(element: value))
+        } else {
+            fatalError("Unsupported type \(N.self)")
         }
+    }
+    
+    public static func fillRandomNormal<N>(result: Buffer<N, ArrayFire>, mean: N, stdev: N, count: Int) where N : RandomizableType {
+        if N.self == Float.self {
+            d4af_randn_32f(result.memory, mean.floatValue, stdev.floatValue, dim_t(count))
+        } else if N.self == Double.self {
+            d4af_randn_64f(result.memory, mean.doubleValue, stdev.doubleValue, dim_t(count))
+        } else if N.self == Int32.self {
+            d4af_randn_32s(result.memory, mean.intValue, stdev.intValue, dim_t(count))
+        } else {
+            fatalError("Unsupported type \(N.self)")
+        }
+    }
+    
+    public static func fillRandomUniform<N>(result: Buffer<N, ArrayFire>, lowerBound: N, upperBound: N, count: Int) where N : RandomizableType {
+        if N.self == Float.self {
+            d4af_randu_32f(result.memory, lowerBound.floatValue, upperBound.floatValue, dim_t(count))
+        } else if N.self == Double.self {
+            d4af_randu_64f(result.memory, lowerBound.doubleValue, upperBound.doubleValue, dim_t(count))
+        } else if N.self == Int32.self {
+            d4af_randu_32s(result.memory, lowerBound.intValue, upperBound.intValue, dim_t(count))
+        } else {
+           fatalError("Unsupported type \(N.self)")
+        }
+    }
+    
+    public static func fillRandomBernoulli<N>(result: Buffer<N, ArrayFire>, prob: Float, count: Int) where N : NumericType {
+        d4af_randb(result.memory, prob, N.arrayfireType, dim_t(count))
     }
     
     public static func vAdd<N>(lhs: Buffer<N, ArrayFire>, rhs: Buffer<N, ArrayFire>, result: Buffer<N, ArrayFire>, count: Int) where N : NumericType {
@@ -442,11 +472,23 @@ public struct AFEngine: EngineType {
     }
     
     public static func permuteAxes<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, arangement: [Int]) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        let paddedShape = Array(repeating: 1, count: 4 - values.shape.count) + values.shape
+        let paddedArangement = (0 ..< (4 - values.shape.count)) + arangement.map {$0 + (4 - values.shape.count)}
+        let invertedArangement = paddedArangement.reversed().map {
+            3 - $0
+        }
+        
+        d4af_permute(result.values.memory, values.values.memory, 4, paddedShape.reversed().map(dim_t.init), invertedArangement.map(dim_t.init))
     }
     
     public static func permuteAxesAdd<N>(values: ShapedBuffer<N, ArrayFire>, add: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, arangement: [Int]) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        let paddedShape = Array(repeating: 1, count: values.shape.count) + values.shape
+        let paddedArangement = arangement + Array(0 ..< 4).dropFirst(arangement.count)
+        let invertedArangement = paddedArangement.reversed().map {
+            3 - $0
+        }
+        
+        d4af_permute_add(result.values.memory, values.values.memory, 4, paddedShape.reversed().map(dim_t.init), invertedArangement.map(dim_t.init), add.values.memory)
     }
     
     public static func subscriptRead<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, index: [Int?]) where N : NumericType {

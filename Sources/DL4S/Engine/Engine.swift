@@ -152,6 +152,32 @@ public protocol EngineType {
     ///   - count: Number of elements to write
     static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int)
     
+    
+    /// Fills the buffer by sampling from a uniform random distribution
+    /// - Parameters:
+    ///   - result: Buffer to fill
+    ///   - lowerBound: Lower bound of the random distribution
+    ///   - upperBound: Upper bound of the random distribution (inclusive)
+    ///   - count: Number of elements to write to the buffer
+    static func fillRandomUniform<N: NumericType & RandomizableType>(result: Buffer<N, Device>, lowerBound: N, upperBound: N, count: Int)
+    
+    
+    /// Fills the buffer by sampling from a normal distribution
+    /// - Parameters:
+    ///   - result: Buffer to fill
+    ///   - mean: Mean value of sampled distribution
+    ///   - stdev: Standard deviation of sampled distribution
+    ///   - count: Number of elements to write to the buffer
+    static func fillRandomNormal<N: NumericType & RandomizableType>(result: Buffer<N, Device>, mean: N, stdev: N, count: Int)
+    
+    
+    /// Fills the buffer by sampling from a Bernoulli distribution
+    /// - Parameters:
+    ///   - result: Buffer to fill
+    ///   - prob: Probability of a 1
+    ///   - count: Number of elements to write to the buffer
+    static func fillRandomBernoulli<N: NumericType>(result: Buffer<N, Device>, prob: Float, count: Int)
+    
     /// Element-wise Vector-vector add
     /// - Parameters:
     ///   - lhs: First summand

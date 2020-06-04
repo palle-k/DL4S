@@ -212,17 +212,6 @@ class ArrayFireTests: XCTestCase {
         print(gb)
     }
     
-    func testSubscript() {
-        let ((images_af, labels_af), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: GPU.self)
-        let ds_size = images_af.shape[0]
-        
-        for i in 0 ..< 20 {
-            let idx = Int.random(in: 0 ..< ds_size)
-            let image = images_af[idx].cgImage()
-            print(labels_af[idx])
-        }
-    }
-    
     func testMNISTLoad() {
         let ((images, labels), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         let ((images_af, labels_af), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: GPU.self)
@@ -273,5 +262,37 @@ class ArrayFireTests: XCTestCase {
     func testArgmax() {
         let a = Tensor<Float, GPU>([5, 6, 7, 8, 3])
         print(a.argmax())
+    }
+    
+    func testPermute1() {
+        let a = Tensor<Int32, GPU>([
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11, 12]
+        ])
+        
+        print(a.permuted(to: 1, 0))
+        print(a.copied(to: CPU.self).permuted(to: 1, 0))
+    }
+    
+    func testPermute() {
+        let a = Tensor<Int32, GPU>([
+            [
+                [1, 2, 3, 4],
+                [5, 6, 7, 8]
+            ],
+            [
+                [9, 10, 11, 12],
+                [13, 14, 15, 16]
+            ],
+            [
+                [17, 18, 19, 20],
+                [21, 22, 23, 24]
+            ]
+        ])
+        
+        print(a)
+        print()
+        print(a.permuted(to: 2, 0, 1))
     }
 }

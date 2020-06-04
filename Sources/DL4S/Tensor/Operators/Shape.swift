@@ -125,7 +125,7 @@ public extension Tensor {
         var dstShape = [Int](repeating: 0, count: dim)
         
         for i in dstShape.indices {
-            dstShape[axisArangement[i]] = shape[i]
+            dstShape[i] = shape[axisArangement[i]]
         }
         
         let resultBuffer = Device.Memory.allocateBuffer(withShape: dstShape, type: Element.self)

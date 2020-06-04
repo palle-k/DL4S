@@ -61,15 +61,43 @@ size_t d4af_get_size(const d4af_array source) {
 }
 
 void d4af_fill_32f(d4af_array dst, float value) {
-    dst->array.operator=(value);
+    dst->array = value;
 }
 
 void d4af_fill_64f(d4af_array dst, double value) {
-    dst->array.operator=(value);
+    dst->array = value;
 }
 
 void d4af_fill_32s(d4af_array dst, int value) {
-    dst->array.operator=(value);
+    dst->array = value;
+}
+
+void d4af_randu_32f(d4af_array dst, float min, float max, dim_t count) {
+    dst->array = af::randu(count, f32) * (max - min) + min;
+}
+
+void d4af_randu_64f(d4af_array dst, double min, double max, dim_t count) {
+    dst->array = af::randu(count, f64) * (max - min) + min;
+}
+
+void d4af_randu_32s(d4af_array dst, int min, int max, dim_t count) {
+    dst->array = af::randu(count, s32) * (max - min) + min;
+}
+
+void d4af_randn_32f(d4af_array dst, float mean, float stdev, dim_t count) {
+    dst->array = af::randn(count, f32) * stdev + mean;
+}
+
+void d4af_randn_64f(d4af_array dst, double mean, double stdev, dim_t count) {
+    dst->array = af::randn(count, f64) * stdev + mean;
+}
+
+void d4af_randn_32s(d4af_array dst, int mean, int stdev, dim_t count) {
+    dst->array = af::randn(count, s32) * stdev + mean;
+}
+
+void d4af_randb(d4af_array dst, float prob, af_dtype type, dim_t count) {
+    dst->array = (af::randu(count, f32) <= prob).as(type);
 }
 
 void d4af_subscript(d4af_array dst, const d4af_array src, const int* shape, const int* indices) {
@@ -329,13 +357,13 @@ void d4af_min_ctx(d4af_array dst, d4af_array ctx, const d4af_array lhs, const d4
 void d4af_permute(d4af_array dst, const d4af_array src, const dim_t dims, const dim_t* shape, const dim_t* arangement) {
     // arangement must be 1-padded permutation of length 4.
     auto src_view = af::moddims(src->array, dims, shape);
-    dst->array = af::reorder(src->array, arangement[0], arangement[1], arangement[2], arangement[3]);
+    dst->array = af::reorder(src_view, arangement[0], arangement[1], arangement[2], arangement[3]);
 }
 
 void d4af_permute_add(d4af_array dst, const d4af_array src, const dim_t dims, const dim_t* shape, const dim_t* arangement, const d4af_array add) {
     // arangement must be 1-padded permutation of length 4.
     auto src_view = af::moddims(src->array, dims, shape);
-    dst->array = add->array + af::reorder(src->array, arangement[0], arangement[1], arangement[2], arangement[3]);
+    dst->array = af::flat(add->array) + af::flat(af::reorder(src_view, arangement[0], arangement[1], arangement[2], arangement[3]));
 }
 
 void d4af_reverse(d4af_array dst, const d4af_array src) {

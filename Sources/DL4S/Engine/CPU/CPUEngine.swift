@@ -61,6 +61,63 @@ public struct CPUEngine: EngineType {
         N.fill(value: value, result: result.memory.bindMemory(to: N.self), count: count)
     }
     
+    @_specialize(where N == Float)
+    @_specialize(where N == Double)
+    @_specialize(where N == Int32)
+    public static func fillRandomUniform<N>(result: Buffer<N, CPU>, lowerBound: N, upperBound: N, count: Int) where N : NumericType & RandomizableType {
+        let pointer = result.pointer.pointer(capacity: count)
+        for i in 0 ..< count {
+            pointer[i] = N.random(in: lowerBound ... upperBound, using: &WyHash.shared)
+        }
+    }
+    
+    @_specialize(where N == Float)
+    @_specialize(where N == Double)
+    @_specialize(where N == Int32)
+    public static func fillRandomNormal<N>(result: Buffer<N, CPU>, mean: N, stdev: N, count: Int) where N : NumericType & RandomizableType {
+        @_specialize(where N == Float)
+        @_specialize(where N == Double)
+        @_specialize(where N == Int32)
+        func randNormal(stdev: N, mean: N) -> (N, N) {
+            let a = N.random(in: 0 ... 1, using: &WyHash.shared)
+            let b = N.random(in: 0 ... 1, using: &WyHash.shared)
+            
+            let scale = (-2 * a.log()).sqrt() * stdev
+            
+            let twoPiB = 2 * 3.141592653589 * b
+            
+            let (x, y) = (scale * twoPiB.sin() + mean, scale * twoPiB.cos() + mean)
+            
+            if x.isFinite && !x.isNaN && y.isFinite && !y.isNaN {
+                return (x, y)
+            } else {
+                return randNormal(stdev: stdev, mean: mean)
+            }
+        }
+        let pointer = result.pointer.pointer(capacity: count)
+        
+        for i in stride(from: 0, to: count - 1, by: 2) {
+            let (a, b) = randNormal(stdev: stdev, mean: mean)
+            pointer[i] = a
+            pointer[i+1] = b
+        }
+        
+        if count % 2 == 1 {
+            let (a, _) = randNormal(stdev: stdev, mean: mean)
+            pointer[count-1] = a
+        }
+    }
+    
+    @_specialize(where N == Float)
+    @_specialize(where N == Double)
+    @_specialize(where N == Int32)
+    public static func fillRandomBernoulli<N>(result: Buffer<N, CPU>, prob: Float, count: Int) where N : NumericType {
+        let pointer = result.pointer.pointer(capacity: count)
+        for i in 0 ..< count {
+            pointer[i] = Float.random(in: 0 ... 1, using: &WyHash.shared) <= prob ? 1 : 0
+        }
+    }
+    
     public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
         N.vAdd(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
     }
@@ -857,21 +914,21 @@ public struct CPUEngine: EngineType {
         // let suffix = 0
         
         let copyCount = shape.suffix(suffix).reduce(1, *)
-        let iterShape = shape.dropLast(suffix) as Array
+        let iterShape = dstShape.dropLast(suffix) as Array
 
         let srcStrides = CPU.Memory.strides(from: shape)
         let dstStrides = CPU.Memory.strides(from: dstShape)
         
         let indexDim = iterShape.count
         let indices = flatIterate(iterShape)
-        let indexCount = indices.count / indexDim
+        let indexCount = indices.count / max(indexDim, 1)
         for j in 0 ..< indexCount {
             let offset = indexDim * j
             var srcIdx = 0
             var dstIdx = 0
             for i in 0 ..< indexDim {
-                srcIdx += indices[offset + i] * srcStrides[i]
-                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
+                srcIdx += indices[offset + i] * srcStrides[arangement[i]]
+                dstIdx += indices[offset + i] * dstStrides[i]
             }
             
             dstMem.advanced(by: dstIdx).assign(from: sourceMem.advanced(by: srcIdx), count: copyCount)
@@ -889,7 +946,7 @@ public struct CPUEngine: EngineType {
         let suffix = zip(shape.indices, arangement).suffix(while: {$0 == $1}).count
         
         let copyCount = shape.suffix(suffix).reduce(1, *)
-        let iterShape = shape.dropLast(suffix) as Array
+        let iterShape = dstShape.dropLast(suffix) as Array
         
         let srcStrides = CPU.Memory.strides(from: shape)
         let dstStrides = CPU.Memory.strides(from: dstShape)
@@ -902,8 +959,8 @@ public struct CPUEngine: EngineType {
             var srcIdx = 0
             var dstIdx = 0
             for i in 0 ..< indexDim {
-                srcIdx += indices[offset + i] * srcStrides[i]
-                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
+                srcIdx += indices[offset + i] * srcStrides[arangement[i]]
+                dstIdx += indices[offset + i] * dstStrides[i]
             }
             
             N.vAdd(lhs: sourceMem.advanced(by: srcIdx), rhs: addMem.advanced(by: dstIdx), result: dstMem.advanced(by: dstIdx), count: copyCount)

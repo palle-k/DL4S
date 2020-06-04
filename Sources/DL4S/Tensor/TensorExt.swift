@@ -174,7 +174,7 @@ public extension Tensor where Element: RandomizableType {
     ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(normalDistributedWithShape shape: [Int], mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fillNormal(self.values, mean: mean, stdev: stdev)
+        Device.Engine.fillRandomNormal(result: self.values.values, mean: mean, stdev: stdev, count: self.count)
     }
     
     /// Creates a tensor and fills it with random values sampled from a normal distribution with the given mean and variance.
@@ -195,7 +195,7 @@ public extension Tensor where Element: RandomizableType {
     ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fill(self.values, a: min, b: max)
+        Device.Engine.fillRandomUniform(result: self.values.values, lowerBound: min, upperBound: max, count: self.count)
     }
     
     /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
@@ -212,7 +212,7 @@ public extension Tensor where Element: RandomizableType {
 public extension Tensor {
     init(bernoulliDistributedWithShape shape: [Int], probability: Float, requiresGradient: Bool = false) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.bernoulli(values, p: probability)
+        Device.Engine.fillRandomBernoulli(result: self.values.values, prob: probability, count: self.count)
     }
     
     init(bernoulliDistributedWithShape shape: Int..., probability: Float, requiresGradient: Bool = false) {

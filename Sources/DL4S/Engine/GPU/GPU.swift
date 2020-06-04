@@ -136,6 +136,18 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func fillRandomNormal<N>(result: Buffer<N, GPU>, mean: N, stdev: N, count: Int) where N : RandomizableType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func fillRandomUniform<N>(result: Buffer<N, GPU>, lowerBound: N, upperBound: N, count: Int) where N : RandomizableType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func fillRandomBernoulli<N>(result: Buffer<N, GPU>, prob: Float, count: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int) {
         fatalError("\(#function) not available for GPU")
     }

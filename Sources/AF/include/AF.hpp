@@ -59,6 +59,16 @@ void d4af_fill_32f(d4af_array dst, float value);
 void d4af_fill_64f(d4af_array dst, double value);
 void d4af_fill_32s(d4af_array dst, int value);
 
+void d4af_randu_32f(d4af_array dst, float min, float max, dim_t count);
+void d4af_randu_64f(d4af_array dst, double min, double max, dim_t count);
+void d4af_randu_32s(d4af_array dst, int min, int max, dim_t count);
+
+void d4af_randn_32f(d4af_array dst, float mean, float stdev, dim_t count);
+void d4af_randn_64f(d4af_array dst, double mean, double stdev, dim_t count);
+void d4af_randn_32s(d4af_array dst, int mean, int stdev, dim_t count);
+
+void d4af_randb(d4af_array dst, float prob, af_dtype type, dim_t count);
+
 void d4af_neg(d4af_array dst, const d4af_array src);
 void d4af_add(d4af_array dst, const d4af_array lhs, const d4af_array rhs);
 void d4af_sub(d4af_array dst, const d4af_array lhs, const d4af_array rhs);
@@ -101,7 +111,6 @@ void d4af_tan(d4af_array dst, const d4af_array src);
 void d4af_sinh(d4af_array dst, const d4af_array src);
 void d4af_cosh(d4af_array dst, const d4af_array src);
 void d4af_tanh(d4af_array dst, const d4af_array src);
-
 
 void d4af_permute(d4af_array dst, const d4af_array src, const dim_t dims, const dim_t* shape, const dim_t* arangement);
 void d4af_permute_add(d4af_array dst, const d4af_array src, const dim_t dims, const dim_t* shape, const dim_t* arangement, const d4af_array add);
