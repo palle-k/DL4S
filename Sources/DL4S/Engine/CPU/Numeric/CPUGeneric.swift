@@ -278,10 +278,10 @@ public extension CPUNumeric {
         dst_strides[dst_dim - 1] = 1
         src_strides[dst_dim - 2] = 1
         
-        for i in (0 ... (dst_dim - 2)).reversed() {
+        for i in (0 ..< Swift.max(dst_dim - 1, 0)).reversed() {
             dst_strides[i] = dst_shape[i &+ 1] &* dst_strides[i &+ 1]
         }
-        for i in (0 ... (dst_dim - 2)).reversed() {
+        for i in (0 ..< Swift.max(dst_dim - 1, 0)).reversed() {
             src_shape[i] = dst_shape[i >= axis ? i &+ 1 : i]
             if (i < dst_dim - 2) {
                 src_strides[i] = src_shape[i &+ 1] &* src_strides[i &+ 1]

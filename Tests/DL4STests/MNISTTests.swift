@@ -177,23 +177,25 @@ class MNISTTests: XCTestCase {
     func performAccuracyTest<L: LayerType>(_ model: L, loss: (Tensor<Int32, L.Device>, Tensor<L.Parameter, L.Device>) -> Tensor<L.Parameter, L.Device>) where L.Inputs == Tensor<Float, L.Device>, L.Outputs == L.Inputs, L.Parameter == Float {
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: L.Device.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let epochs = 100
+        let epochs = 100_000
         let batchSize = 256
         
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        var bar = ProgressBar<Float>(totalUnitCount: epochs / 100, formatUserInfo: {"loss: \($0)"}, label: "training")
         
-        for _ in 1 ... epochs {
+        for epoch in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
             
-            let predicted = optimizer.model.callAsFunction(input.view(as: [batchSize, 28 * 28]))
-            let loss = loss(target, predicted)
+            let predicted = optimizer.model(input.copied(to: L.Device.self).view(as: [batchSize, 28 * 28]))
+            let loss = loss(target.copied(to: L.Device.self), predicted)
             
             let gradients = loss.gradients(of: optimizer.model.parameters)
             optimizer.update(along: gradients)
             
-            bar.next(userInfo: loss.item)
+            if epoch.isMultiple(of: 100) {
+                bar.next(userInfo: loss.item)
+            }
         }
         
         bar.complete()
@@ -202,7 +204,7 @@ class MNISTTests: XCTestCase {
         
         for i in 0 ..< imagesVal.shape[0] {
             let x = imagesVal[i].view(as: [1, 28 * 28])
-            let y = optimizer.model.callAsFunction(x).squeezed()
+            let y = optimizer.model(x.copied(to: L.Device.self)).squeezed()
             let pred = y.argmax()
             
             let actual = Int(labelsVal[i].item)
@@ -221,13 +223,13 @@ class MNISTTests: XCTestCase {
         ArrayFire.setOpenCL()
         ArrayFire.printInfo()
         var model = Sequential {
-            Dense<Float, ArrayFire>(inputSize: 28 * 28, outputSize: 500)
+            Dense<Float, ArrayFire>(inputSize: 28 * 28, outputSize: 2500)
             Relu<Float, ArrayFire>()
             
-            Dense<Float, ArrayFire>(inputSize: 500, outputSize: 300)
+            Dense<Float, ArrayFire>(inputSize: 2500, outputSize: 1200)
             Relu<Float, ArrayFire>()
 
-            Dense<Float, ArrayFire>(inputSize: 300, outputSize: 10)
+            Dense<Float, ArrayFire>(inputSize: 1200, outputSize: 10)
             Softmax<Float, ArrayFire>()
         }
         

@@ -8,7 +8,7 @@
 import Foundation
 import XCTest
 import DL4S
-import AF
+import AppKit
 
 fileprivate typealias GPU = ArrayFire
 
@@ -210,5 +210,63 @@ class ArrayFireTests: XCTestCase {
         print(ga)
         print()
         print(gb)
+    }
+    
+    func testSubscript() {
+        let ((images_af, labels_af), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: GPU.self)
+        let ds_size = images_af.shape[0]
+        
+        for i in 0 ..< 20 {
+            let idx = Int.random(in: 0 ..< ds_size)
+            let image = images_af[idx].cgImage()
+            print(labels_af[idx])
+        }
+    }
+    
+    func testMNISTLoad() {
+        let ((images, labels), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images_af, labels_af), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: GPU.self)
+        
+        print(images.flattened().reduceMean())
+        print(images_af.flattened().reduceMean())
+        let delta = images - images_af.copied(to: CPU.self)
+        print((delta * delta).reduceSum())
+        
+        print(labels.reduceSum())
+        print(labels_af.reduceSum())
+        print(labels_af.copied(to: CPU.self) == labels)
+    }
+    
+    func testStack() {
+        let a = Tensor<Float, GPU>([[
+            [1, 2, 3, 4],
+            [5, 6, 7, 8]
+        ]])
+        let b = Tensor<Float, GPU>([[
+            [9, 10, 11, 12],
+            [13, 14, 15, 16]
+        ]])
+        print(a)
+        print(b)
+        
+        print(Tensor(stacking: [a, b], along: 0))
+    }
+    
+    func testStack2() {
+        let a = Tensor<Int32, GPU>([2])
+        let b = Tensor<Int32, GPU>([3])
+        let c = Tensor<Int32, GPU>([7])
+        let d = Tensor<Int32, GPU>([-1])
+        print(a, b, c, d)
+        print(Tensor(stacking: [a, b, c, d], along: 0))
+    }
+    
+    func testStack3() {
+        GPU.printInfo()
+        let a = Tensor<Int32, GPU>(uniformlyDistributedWithShape: [60000], min: 0, max: 9)
+        let b = Tensor<Float, GPU>(uniformlyDistributedWithShape: [256])
+        let stacked = Random.minibatch(from: a, count: 256)
+        print(stacked)
+        print(b.scatter(using: stacked, alongAxis: 1, withSize: 10))
     }
 }

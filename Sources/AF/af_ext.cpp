@@ -4,6 +4,7 @@
 #include "af/data.h"
 #include "af/array.h"
 #include "af/gfor.h"
+#include "af/internal.h"
 #include <csignal>
 #include <iostream>
 
@@ -354,7 +355,7 @@ void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel
     af::array third;
     af::array fourth;
     
-    dst->array = af::moddims(srcs[0]->array, shapes[00], shapes[1], shapes[2], shapes[3]);
+    dst->array = af::moddims(srcs[0]->array, shapes[0], shapes[1], shapes[2], shapes[3]);
     
     for (unsigned int i = 1; i < numel; i += 3) {
         switch ((numel - i) > 3 ? 3 : (numel - i)) {
@@ -367,13 +368,13 @@ void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel
                 break;
             case 2:
                 second = af::moddims(srcs[i]->array, shapes[i*4], shapes[i*4+1], shapes[i*4+2], shapes[i*4+3]);
-                third = af::moddims(srcs[i]->array, shapes[i*4+4], shapes[i*4+5], shapes[i*4+6], shapes[i*4+7]);
+                third = af::moddims(srcs[i+1]->array, shapes[i*4+4], shapes[i*4+5], shapes[i*4+6], shapes[i*4+7]);
                 dst->array = af::join(dim, dst->array, second, third);
                 break;
             case 3:
                 second = af::moddims(srcs[i]->array, shapes[i*4], shapes[i*4+1], shapes[i*4+2], shapes[i*4+3]);
-                third = af::moddims(srcs[i]->array, shapes[i*4+4], shapes[i*4+5], shapes[i*4+6], shapes[i*4+7]);
-                fourth = af::moddims(srcs[i]->array, shapes[i*4+8], shapes[i*4+9], shapes[i*4+10], shapes[i*4+11]);
+                third = af::moddims(srcs[i+1]->array, shapes[i*4+4], shapes[i*4+5], shapes[i*4+6], shapes[i*4+7]);
+                fourth = af::moddims(srcs[i+2]->array, shapes[i*4+8], shapes[i*4+9], shapes[i*4+10], shapes[i*4+11]);
                 dst->array = af::join(dim, dst->array, second, third, fourth);
                 break;
             default:
@@ -408,7 +409,7 @@ void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, con
 
 void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim) {
     af::array src_view = af::flat(src->array);
-    af::array indices = ctx->array;
+    af::array indices = af::flat(ctx->array);
     
     af::array result = af::constant(0.0f, dst->array.elements());
     
@@ -418,14 +419,14 @@ void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, co
     
     if (dim == 1) {
         af::array col_idx = af::iota((float) ctx->array.elements());
-        af::array row_idx = ctx->array;
+        af::array row_idx = indices;
         
-        linear_idx = col_idx + row_idx * n_cols;
+        linear_idx = col_idx + row_idx * (float) n_cols;
     } else if (dim == 0) {
         af::array row_idx = af::iota((float) ctx->array.elements());
-        af::array col_idx = ctx->array;
+        af::array col_idx = indices;
         
-        linear_idx = col_idx + row_idx * n_cols;
+        linear_idx = col_idx + row_idx * (float) n_cols;
     } else {
         std::cerr << "Invalid scatter dimension, can only scatter along dim 0 or 1." << std::endl;
         raise(SIGINT);
