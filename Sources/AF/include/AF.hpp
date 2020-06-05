@@ -84,6 +84,7 @@ void d4af_gemm(d4af_array dst, const d4af_array lhs, const d4af_array rhs, bool 
 
 void d4af_reduce_sum(d4af_array dst, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t reduce_dim);
 void d4af_sum_all(d4af_array dst, const d4af_array src);
+void d4af_reduce_sum_multi(d4af_array dst, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t num_reduce, const dim_t* reduce_dims);
 void d4af_reduce_mean(d4af_array dst, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t reduce_dim);
 void d4af_mean_all(d4af_array dst, const d4af_array src);
 void d4af_reduce_max(d4af_array dst, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t reduce_dim);
@@ -129,6 +130,8 @@ void d4af_col2im(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t c
 void d4af_arange_32f(d4af_array dst, float lower_bound, float upper_bound, dim_t count);
 void d4af_arange_64f(d4af_array dst, double lower_bound, double upper_bound, dim_t count);
 void d4af_arange_32s(d4af_array dst, int lower_bound, int upper_bound, dim_t count);
+
+void d4af_band(d4af_array dst, const d4af_array src, int rows, int columns, int below_diag, int above_diag);
 
 #ifdef __cplusplus
 }

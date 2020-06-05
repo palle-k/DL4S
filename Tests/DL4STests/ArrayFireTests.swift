@@ -8,6 +8,7 @@
 import Foundation
 import XCTest
 import DL4S
+import AF
 import AppKit
 
 fileprivate typealias GPU = ArrayFire
@@ -293,6 +294,18 @@ class ArrayFireTests: XCTestCase {
         
         print(a)
         print()
-        print(a.permuted(to: 2, 0, 1))
+        print(a.copied(to: CPU.self).permuted(to: 1, 0, 2))
+    }
+    
+    func testMultiSum() {
+        let a = Tensor<Float, GPU>(uniformlyDistributedWithShape: 4, 5, 6)
+        print(a.reduceSum(along: 0, 1))
+        print()
+        print(a.copied(to: CPU.self).reduceSum(along: 0, 1))
+    }
+    
+    func testBand() {
+        let x = Tensor<Float, GPU>(uniformlyDistributedWithShape: 5, 7)
+        print(x.bandMatrix(belowDiagonal: 2, aboveDiagonal: -1))
     }
 }

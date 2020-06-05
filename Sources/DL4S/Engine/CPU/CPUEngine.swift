@@ -921,7 +921,7 @@ public struct CPUEngine: EngineType {
         
         let indexDim = iterShape.count
         let indices = flatIterate(iterShape)
-        let indexCount = indices.count / max(indexDim, 1)
+        let indexCount = indices.count / Swift.max(indexDim, 1)
         for j in 0 ..< indexCount {
             let offset = indexDim * j
             var srcIdx = 0

@@ -230,7 +230,8 @@ public struct AFEngine: EngineType {
     }
     
     public static func band<N>(buffer: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, belowDiagonal: Int?, aboveDiagonal: Int?) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        precondition(buffer.dim == 2, "Band input must be a matrix")
+        d4af_band(result.values.memory, buffer.values.memory, Int32(buffer.shape[0]), Int32(buffer.shape[1]), belowDiagonal.map(Int32.init) ?? Int32.max, aboveDiagonal.map(Int32.init) ?? Int32.max)
     }
     
     public static func broadcastAdd<N>(lhs: ShapedBuffer<N, ArrayFire>, rhs: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>) where N : NumericType {
@@ -348,19 +349,30 @@ public struct AFEngine: EngineType {
     }
     
     public static func reduceSum<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, axes: [Int]) where N : NumericType {
-        if let firstAxis = axes.first, axes.count == 1 {
-            reduceSum(values: values, result: result, axis: firstAxis)
-        } else {
-            fatalError("\(#function) unavailable")
-        }
+        d4af_reduce_sum_multi(
+            result.values.memory,
+            values.values.memory,
+            dim_t(values.dim),
+            values.shape.reversed().map(dim_t.init),
+            dim_t(axes.count),
+            axes.map {dim_t(values.dim - $0 - 1)}.reversed()
+        )
     }
     
     public static func reduceMax<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, context: ShapedBuffer<Int32, ArrayFire>?, axes: [Int]) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        if axes.count == 1 {
+            reduceMax(values: values, result: result, context: context, axis: axes[0])
+        } else {
+            fatalError("\(#function) is unavailable for multiple axes")
+        }
     }
     
     public static func reduceMin<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, context: ShapedBuffer<Int32, ArrayFire>?, axes: [Int]) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        if axes.count == 1 {
+            reduceMin(values: values, result: result, context: context, axis: axes[0])
+        } else {
+            fatalError("\(#function) is unavailable for multiple axes")
+        }
     }
     
     public static func reduceMean<N>(values: ShapedBuffer<N, ArrayFire>, result: ShapedBuffer<N, ArrayFire>, axes: [Int]) where N : NumericType {

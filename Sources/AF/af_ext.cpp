@@ -177,12 +177,6 @@ void d4af_div(d4af_array dst, const d4af_array lhs, const d4af_array rhs) {
     dst->array = af::flat(lhs->array) / af::flat(rhs->array);
 }
 
-void d4af_band(d4af_array dst, const d4af_array src, int belowDiag, int aboveDiag) {
-    // TODO: Implement
-    // Probably best way is to add diagonals from af::diag
-    std::raise(SIGINT);
-}
-
 void d4af_broadcast_add(d4af_array dst, const d4af_array lhs, const d4af_array rhs, const dim_t dims, const dim_t* lhs_shape, const dim_t* rhs_shape) {
     // https://gist.github.com/pavanky/a6904653333c5c196d82
     af::gforSet(true);
@@ -247,6 +241,15 @@ void d4af_reduce_sum(d4af_array dst, const d4af_array src, const dim_t src_dim, 
 
 void d4af_sum_all(d4af_array dst, const d4af_array src) {
     dst->array = af::sum(src->array);
+}
+
+void d4af_reduce_sum_multi(d4af_array dst, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t num_reduce, const dim_t* reduce_dims) {
+    af::array src_view = af::moddims(src->array, src_dim, src_shape);
+    af::array partial_dst = src_view;
+    for (dim_t i = 0; i < num_reduce; i++) {
+        partial_dst = af::sum(partial_dst, reduce_dims[i]);
+    }
+    dst->array = partial_dst;
 }
 
 void d4af_reduce_mean(d4af_array dst, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t reduce_dim) {
@@ -494,6 +497,17 @@ void d4af_col2im(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t c
     auto dst_view = af::wrap(src->array, columns + 2 * pad, rows + 2 * pad, window_width, window_height, stride, stride);
     dst->array = dst_view(af::seq(pad, columns - pad - 1), af::seq(pad, rows - pad - 1));
 }
+
+void d4af_band(d4af_array dst, const d4af_array src, int rows, int columns, int below_diag, int above_diag) {
+    af::array a = af::range(af::dim4(columns, rows), 1);
+    af::array b = af::range(columns);
+    af::gforSet(true);
+    af::array ranges = a - b;
+    af::gforSet(false);
+    af::array mask = ranges >= -above_diag && ranges <= below_diag;
+    dst->array = af::flat(mask) * af::flat(src->array);
+}
+
 
 void d4af_api_version() {
     int api = AF_API_VERSION;
