@@ -243,7 +243,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         
         // The derivative of the function wrt. itself is 1.
         var grads: [UInt64: Tensor<Element, Device>] = [
-            result.backpropID: Tensor(repeating: 1, shape: result.shape)
+            result.backpropID: Tensor(repeating: 1, shape: result.shape, requiresGradient: retainGraph)
         ]
         grads.reserveCapacity(operationOrder.count)
         

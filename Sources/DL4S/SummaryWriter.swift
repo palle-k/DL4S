@@ -27,6 +27,7 @@ import Foundation
 
 
 /// Writes a summary of a training procedure to a CSV file.
+@available(*, deprecated, message: "Use DL4S-Tensorboard (https://github.com/palle-k/DL4S-Tensorboard) instead")
 public class SummaryWriter {
     private let eventsFile: FileHandle
     

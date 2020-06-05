@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
-@testable import DL4S
+import DL4S
 
 // let MNIST_PATH = "./Tests/DL4STests/"
 let MNIST_PATH = "/Users/Palle/Developer/DL4S/Tests/DL4STests/"

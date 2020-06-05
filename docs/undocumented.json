@@ -1620,35 +1620,35 @@
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
       "line": 300,
-      "symbol": "EncoderLayer.selfAttention",
+      "symbol": "TransformerEncoderBlock.selfAttention",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
       "line": 301,
-      "symbol": "EncoderLayer.pointwiseFeedForward",
+      "symbol": "TransformerEncoderBlock.pointwiseFeedForward",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
       "line": 340,
-      "symbol": "DecoderLayer.selfAttention",
+      "symbol": "TransformerDecoderBlock.selfAttention",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
       "line": 341,
-      "symbol": "DecoderLayer.encoderAttention",
+      "symbol": "TransformerDecoderBlock.encoderAttention",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
       "line": 342,
-      "symbol": "DecoderLayer.pointwiseFeedForward",
+      "symbol": "TransformerDecoderBlock.pointwiseFeedForward",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },

@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
-@testable import DL4S
+import DL4S
 
 class GradientTests: XCTestCase {
     func testSecondDerivative() {
@@ -44,6 +44,57 @@ class GradientTests: XCTestCase {
         
         let thirdGrad = secondGrad.gradients(of: [t], retainBackwardsGraph: true)[0]
         print(thirdGrad)
+    }
+    
+    func testSecondDerivative2() {
+        let functions: [(Tensor<Float, CPU>) -> Tensor<Float, CPU>] = [
+            DL4S.exp,
+            DL4S.log,
+            DL4S.sum,
+            DL4S.mean,
+            DL4S.tanh,
+            DL4S.sin,
+            DL4S.cos,
+            DL4S.relu,
+            DL4S.sqrt,
+            {DL4S.softmax($0, axis: 1)},
+            {$0 * 2},
+            {$0 * $0},
+            {1 / $0},
+            {Tensor(stacking: [$0, $0], along: 1)},
+            {logSoftmax($0, axis: 1)}
+        ]
+        
+        for function in functions {
+            let t = Tensor<Float, CPU>([[2, 3, 4, 5]], requiresGradient: true)
+            let result = function(t)
+            
+            let grad = result.gradients(of: [t], retainBackwardsGraph: true)[0]
+            print(grad)
+            
+            XCTAssert(grad.requiresGradient)
+            
+            let secondGrad = grad.gradients(of: [t], retainBackwardsGraph: true)[0]
+            print(secondGrad)
+        }
+    }
+    
+    func testSecondDerivative3() {
+        // Note: This test should not leak memory.
+        
+        for _ in 1 ... 1 {
+            let net = Concat<Float, CPU>()
+            
+            let input1 = Tensor<Float, CPU>(uniformlyDistributedWithShape: 1, 16, requiresGradient: true)
+            let input2 = Tensor<Float, CPU>(uniformlyDistributedWithShape: 1, 16, requiresGradient: true)
+            let result = net([input1, input2])
+            let loss = meanSquaredError(expected: 1, actual: result)
+            
+            print("[result info] shape: \(result.shape), mean: \(result.reduceMean()), stdev: \(result.variance().sqrt()), max: \(result.detached().reduceMax()), min: \(-(-result).detached().reduceMax())")
+            
+            let grad = loss.gradients(of: [input1], retainBackwardsGraph: true)[0]
+            print("[grad info] shape: \(grad.shape), mean: \(grad.reduceMean()), stdev: \(grad.variance().sqrt()), max: \(grad.detached().reduceMax()), min: \(-(-grad).detached().reduceMax())")
+        }
     }
     
     func testGradient() {

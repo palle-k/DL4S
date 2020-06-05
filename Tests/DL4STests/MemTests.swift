@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
-@testable import DL4S
+import DL4S
 
 class MemTests: XCTestCase {
     func testSliceRead() {
