@@ -55,6 +55,18 @@ int d4af_get_pointee_32s(const d4af_array source) {
     return source->array.scalar<int>();
 }
 
+void d4af_set_pointee_32f(const d4af_array dst, float value) {
+    dst->array(0, 0, 0, 0) = value;
+}
+
+void d4af_set_pointee_64f(const d4af_array dst, double value) {
+    dst->array(0, 0, 0, 0) = value;
+}
+
+void d4af_set_pointee_32s(const d4af_array dst, int value) {
+    dst->array(0, 0, 0, 0) = value;
+}
+
 size_t d4af_get_size(const d4af_array source) {
     source->array.eval();
     return source->array.elements();
@@ -411,6 +423,44 @@ void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel
             default:
                 break;
         }
+    }
+}
+
+void d4af_unstack(const d4af_array* dsts, const size_t num_dst, const dim_t* unstack_dim_lengths, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const int dim) {
+    dim_t offset = 0;
+    af::array src_view = af::moddims(src->array, src_dim, src_shape);
+    
+    af::index* indices = (af::index*) alloca(sizeof(af::index) * 4);
+    for (size_t i = 0; i < 4; i++) {
+        if (dim == i) {
+            continue;
+        }
+        indices[i] = af::index(af::span);
+    }
+    
+    for (size_t i = 0; i < num_dst; i++) {
+        indices[dim] = af::index(af::seq(offset, offset + unstack_dim_lengths[i] - 1));
+        offset += unstack_dim_lengths[i] - 1;
+        dsts[i]->array = af::flat(src_view(indices[0], indices[1], indices[2], indices[3]));
+    }
+}
+
+void d4af_unstack_add(const d4af_array* dsts, const d4af_array* add, const size_t num_dst, const dim_t* unstack_dim_lengths, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const int dim) {
+    dim_t offset = 0;
+    af::array src_view = af::moddims(src->array, src_dim, src_shape);
+    
+    af::index* indices = (af::index*) alloca(sizeof(af::index) * 4);
+    for (size_t i = 0; i < 4; i++) {
+        if (dim == i) {
+            continue;
+        }
+        indices[i] = af::index(af::span);
+    }
+    
+    for (size_t i = 0; i < num_dst; i++) {
+        indices[dim] = af::index(af::seq(offset, offset + unstack_dim_lengths[i] - 1));
+        offset += unstack_dim_lengths[i] - 1;
+        dsts[i]->array = af::flat(src_view(indices[0], indices[1], indices[2], indices[3])) + af::flat(add[i]->array);
     }
 }
 

@@ -139,8 +139,15 @@ public extension AFMemoryOps {
     }
     
     static func setPointee<Element: NumericType>(of buffer: Buffer<Element, ArrayFire>, to newValue: Element) {
-        // let status = af_write_array(buffer.memory, [newValue], MemoryLayout<Element>.stride, afHost)
-        fatalError("\(#function) unavailable")
+        if Element.self == Float.self {
+            d4af_set_pointee_32f(buffer.memory, newValue.floatValue)
+        } else if Element.self == Int32.self {
+            d4af_set_pointee_64f(buffer.memory, newValue.doubleValue)
+        } else if Element.self == Double.self {
+            d4af_set_pointee_32s(buffer.memory, newValue.intValue)
+        } else {
+            fatalError("Unsupported element type")
+        }
     }
     
     static func advance<Element: NumericType>(buffer: Buffer<Element, ArrayFire>, by advancement: Int) -> Buffer<Element, ArrayFire> {
@@ -550,11 +557,28 @@ public struct AFEngine: EngineType {
     }
     
     public static func unstackAdd<N>(stacked: ShapedBuffer<N, ArrayFire>, add: [ShapedBuffer<N, ArrayFire>], result: [ShapedBuffer<N, ArrayFire>], axis: Int) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_unstack_add(
+            result.map {$0.values.memory},
+            add.map {$0.values.memory},
+            result.count,
+            result.map {dim_t($0.shape[axis])},
+            stacked.values.memory,
+            Int64(stacked.dim),
+            stacked.shape.reversed().map(dim_t.init),
+            Int32(stacked.dim - axis - 1)
+        )
     }
     
     public static func unstack<N>(stacked: ShapedBuffer<N, ArrayFire>, result: [ShapedBuffer<N, ArrayFire>], axis: Int) where N : NumericType {
-        fatalError("\(#function) unavailable")
+        d4af_unstack(
+            result.map {$0.values.memory},
+            result.count,
+            result.map {dim_t($0.shape[axis])},
+            stacked.values.memory,
+            Int64(stacked.dim),
+            stacked.shape.reversed().map(dim_t.init),
+            Int32(stacked.dim - axis - 1)
+        )
     }
     
     public static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, ArrayFire>) where N : NumericType {

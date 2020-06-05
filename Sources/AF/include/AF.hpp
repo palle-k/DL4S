@@ -47,6 +47,10 @@ float d4af_get_pointee_32f(const d4af_array source);
 double d4af_get_pointee_64f(const d4af_array source);
 int d4af_get_pointee_32s(const d4af_array source);
 
+void d4af_set_pointee_32f(const d4af_array dst, float value);
+void d4af_set_pointee_64f(const d4af_array dst, double value);
+void d4af_set_pointee_32s(const d4af_array dst, int value);
+
 size_t d4af_get_size(const d4af_array source);
 
 void d4af_subscript(d4af_array dst, const d4af_array src, const int* shape, const int* indices);
@@ -120,6 +124,8 @@ void d4af_reverse(d4af_array dst, const d4af_array src);
 void d4af_reverse_add(d4af_array dst, const d4af_array src, const d4af_array add);
 
 void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel, const dim_t* shapes, const int dim);
+void d4af_unstack(const d4af_array* dsts, const size_t num_dst, const dim_t* unstack_dim_lengths, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const int dim);
+void d4af_unstack_add(const d4af_array* dsts, const d4af_array* add, const size_t num_dst, const dim_t* unstack_dim_lengths, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const int dim);
 
 void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* src_shape, int dim);
 void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim);
