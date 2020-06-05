@@ -56,8 +56,8 @@ size_t d4af_get_size(const d4af_array source);
 void d4af_subscript(d4af_array dst, const d4af_array src, const int* shape, const int* indices);
 void d4af_subscript_range(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds);
 
-void d4af_subscript_write(d4af_array dst, const d4af_array src, const int* shape, const int* indices);
-void d4af_subscript_write_range(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds);
+void d4af_subscript_write(d4af_array dst, const d4af_array src, const dim_t* shape, const int* indices);
+void d4af_subscript_write_range(d4af_array dst, const d4af_array src, const dim_t* shape, const int* lower_bounds, const int* upper_bounds);
 
 void d4af_fill_32f(d4af_array dst, float value);
 void d4af_fill_64f(d4af_array dst, double value);

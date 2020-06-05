@@ -139,34 +139,45 @@ void d4af_subscript_range(d4af_array dst, const d4af_array src, const int* shape
     dst->array = af::flat(dst->array);
 }
 
-void d4af_subscript_write(d4af_array dst, const d4af_array src, const int* shape, const int* indices) {
-#warning "Implementation for subscript_write is currently incorrect"
+void d4af_subscript_write(d4af_array dst, const d4af_array src, const dim_t* dst_shape, const int* indices) {
     af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
+    dim_t* src_shape = (dim_t*) alloca(sizeof(dim_t) * 4);
+    
     for (int i = 0; i < 4; i++) {
         dim_t ii = indices[i];
         if (ii == -1) {
             index[i] = af::index(af::span);
+            src_shape[i] = dst_shape[i];
         } else {
             index[i] = af::index(ii);
+            src_shape[i] = 1;
         }
     }
     
-    dst->array = af::moddims(src->array, (dim_t) shape[0], (dim_t) shape[1], (dim_t) shape[2], (dim_t) shape[3])(index[0], index[1], index[2], index[3]);
-    dst->array = af::flat(dst->array);
+    af::array dst_view = af::moddims(dst->array, 4, dst_shape);
+    af::array src_view = af::moddims(src->array, 4, src_shape);
+    
+    dst_view(index[0], index[1], index[2], index[3]) = src_view;
 }
 
-void d4af_subscript_range_write(d4af_array dst, const d4af_array src, const int* shape, const int* lower_bounds, const int* upper_bounds) {
-#warning "Implementation for subscript_range_write is currently incorrect"
+void d4af_subscript_write_range(d4af_array dst, const d4af_array src, const dim_t* dst_shape, const int* lower_bounds, const int* upper_bounds) {
     af::index* index = (af::index*) alloca(sizeof(af::index) * 4);
+    dim_t* src_shape = (dim_t*) alloca(sizeof(dim_t) * 4);
+    
     for (int i = 0; i < 4; i++) {
         if (lower_bounds[i] == -1) {
             index[i] = af::index(af::span);
+            src_shape[i] = dst_shape[i];
         } else {
             index[i] = af::index(af::seq((double) lower_bounds[i], (double) upper_bounds[i] - 1));
+            src_shape[i] = upper_bounds[i] - lower_bounds[i];
         }
     }
-    dst->array = af::moddims(src->array, (dim_t) shape[0], (dim_t) shape[1], (dim_t) shape[2], (dim_t) shape[3])(index[0], index[1], index[2], index[3]);
-    dst->array = af::flat(dst->array);
+    
+    af::array dst_view = af::moddims(dst->array, 4, dst_shape);
+    af::array src_view = af::moddims(src->array, 4, src_shape);
+    
+    dst_view(index[0], index[1], index[2], index[3]) = src_view;
 }
 
 void d4af_neg(d4af_array dst, const d4af_array src) {
@@ -241,8 +252,7 @@ void d4af_gemm(
     if (beta == 0) {
         dst->array = alpha * result;
     } else {
-        dst->array *= beta;
-        dst->array += alpha * af::flat(result);
+        dst->array = alpha * af::flat(result) + af::flat(dst->array) * beta;
     }
 }
 

@@ -28,7 +28,9 @@ import DL4S
 
 class TransformerTests: XCTestCase {
     func testTransformerConvergence() {
-        let transformer = Transformer<Float, ArrayFire>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
+        // ArrayFire.setCPU()
+        
+        let transformer = Transformer<Float, CPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
         let samples: [[Int32]] = [
             [1, 2, 3, 0],
             [2, 0, 3, 1],

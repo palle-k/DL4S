@@ -1,5 +1,6 @@
 module AF [system] {
     header "AF.hpp"
+    link "af"
     // umbrella "/opt/arrayfire/include/"
     // exclude header "/opt/arrayfire/include/ComputeCopy.h"
     // exclude header "/opt/arrayfire/include/forge.h"

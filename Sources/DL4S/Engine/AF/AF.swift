@@ -131,11 +131,28 @@ public extension AFMemoryOps {
     }
     
     static func set<Element: NumericType>(slice: [Int?], of buffer: Buffer<Element, ArrayFire>, with dstShape: [Int], from source: Buffer<Element, ArrayFire>, with sourceShape: [Int]) {
-        fatalError("\(#function) unavailable")
+        let paddedShape = Array(repeating: 1, count: 4 - dstShape.count) + dstShape
+        let paddedIndex = Array(repeating: nil, count: 4 - dstShape.count) + slice + Array(repeating: nil, count: dstShape.count - slice.count)
+        
+        d4af_subscript_write(
+            buffer.memory,
+            source.memory,
+            paddedShape.reversed().map(dim_t.init),
+            paddedIndex.reversed().map {Int32($0 ?? -1)}
+        )
     }
     
     static func set<Element: NumericType>(slice: [Range<Int>?], of buffer: Buffer<Element, ArrayFire>, with dstShape: [Int], from source: Buffer<Element, ArrayFire>, with sourceShape: [Int]) {
-        fatalError("\(#function) unavailable")
+        let paddedShape = Array(repeating: 1, count: 4 - dstShape.count) + dstShape
+        let paddedIndex = Array(repeating: nil, count: 4 - dstShape.count) + slice + Array(repeating: nil, count: dstShape.count - slice.count)
+        
+        d4af_subscript_write_range(
+            buffer.memory,
+            source.memory,
+            paddedShape.reversed().map(dim_t.init),
+            paddedIndex.reversed().map {Int32($0?.lowerBound ?? -1)},
+            paddedIndex.reversed().map {Int32($0?.upperBound ?? -1)}
+        )
     }
     
     static func setPointee<Element: NumericType>(of buffer: Buffer<Element, ArrayFire>, to newValue: Element) {
@@ -523,8 +540,8 @@ public struct AFEngine: EngineType {
         d4af_subscript_write(
             result.values.memory,
             values.values.memory,
-            (Array(repeating: 1, count: 4 - result.dim) + result.shape).map(Int32.init).reversed(),
-            (Array(repeating: nil, count: 4 - index.count) + index).map {Int32($0 ?? -1)}.reversed()
+            (Array(repeating: 1, count: 4 - result.dim) + result.shape).map(dim_t.init).reversed(),
+            (index + Array(repeating: nil, count: 4 - index.count)).map {Int32($0 ?? -1)}.reversed()
         )
     }
     
@@ -624,14 +641,5 @@ public struct AFEngine: EngineType {
     }
     
 }
-
-public struct AFRawBuffer {
-    fileprivate var array: d4af_array
-    
-    init(array: d4af_array) {
-        self.array = array
-    }
-}
-
 
 #endif

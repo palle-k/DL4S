@@ -59,6 +59,23 @@ Then add `DL4S` as a dependency to your target:
 .target(name: "MyPackage", dependencies: ["DL4S"])
 ```
 
+#### ArrayFire Support
+
+GPU acceleration is achieved with [ArrayFire](http://arrayfire.org/docs/index.htm). 
+To enable ArrayFire acceleration, download and install ArrayFire.
+
+Compiling with ArrayFire support:
+```bash
+# After installing ArrayFire
+export ARRAYFIRE_ROOT=/opt/arrayfire
+
+swift build -c release \
+    -Xswiftc -DAF_ENABLE \
+    -Xcc -I/opt/arrayfire/include \
+    -Xlinker -L/opt/arrayfire/lib \
+    -Xlinker -rpath -Xlinker /opt/arrayfire/lib
+```
+
 #### MKL / IPP / OpenMP Support
 
 DL4S can be accelerated with Intel's Math Kernel Library, Integrated Performance Primitives and OpenMP ([Installation Instructions](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo)).
