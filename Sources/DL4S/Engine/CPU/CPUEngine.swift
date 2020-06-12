@@ -616,7 +616,7 @@ public struct CPUEngine: EngineType {
                 result: result,
                 axis: axis
             ) { buffer, stride, count in
-                N.argmax(values: buffer, stride: stride, count: stride).1
+                N.argmax(values: buffer, stride: stride, count: count).1
             }
         }
     }
