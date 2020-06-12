@@ -329,4 +329,9 @@ class EngineV2Tests: XCTestCase {
             _ = Tensor<Float, CPU>(uniformlyDistributedWithShape: 30, 50, 50, 50)
         }
     }
+    
+    func testReduce() {
+        let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, requiresGradient: true)
+        XCTAssertEqual(a.reduceMax(along: 1), a.detached().reduceMax(along: 1))
+    }
 }

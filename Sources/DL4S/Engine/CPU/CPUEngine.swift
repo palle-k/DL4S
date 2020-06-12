@@ -241,14 +241,14 @@ public struct CPUEngine: EngineType {
             var prefixOffset = 0
             var suffixOffset = 0
             var linearIndex = 0
-            for i in 0 ..< axis {
-                prefixOffset += srcStrides[i] * indices[base + i]
+            for i in 0 ..< Swift.min(axis, dim) {
+                prefixOffset &+= srcStrides[i] &* indices[base &+ i]
             }
-            for i in Swift.min(axis + 1, dim) ..< dim {
-                suffixOffset += srcStrides[i] * indices[base + i]
+            for i in Swift.min(axis, dim) ..< dim {
+                suffixOffset &+= srcStrides[i &+ 1] &* indices[base &+ i]
             }
             for i in 0 ..< dim {
-                linearIndex += indices[base + i] * dstStrides[i]
+                linearIndex &+= indices[base &+ i] &* dstStrides[i]
             }
             
             // let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
