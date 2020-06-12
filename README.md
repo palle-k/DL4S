@@ -246,9 +246,9 @@ Engines
 - [x] CPU (Accelerate framework for Apple Devices)
 - [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
 - [x] CPU (Generic)
-- [ ] GPU (Metal)
+- [ ] GPU (ArrayFire: OpenCL, CUDA)
 
-For an experimental, early stage Metal implementation, check out `feature/metal`.
+For an experimental, early stage GPU accelerated version, check out `feature/arrayfire`.
 
 </p>
 </details>
