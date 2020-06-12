@@ -473,3 +473,27 @@ public extension UIImage {
     }
 }
 #endif
+
+#if canImport(TensorFlow)
+
+import TensorFlow
+
+public extension Tensor where Element: TensorFlowScalar {
+    
+    /// Creates a tensor that copies the elements of the given TensorFlow tensor.
+    /// - Parameters:
+    ///   - tensor: TensorFlow tensor, whose elements should be copied
+    ///   - requiresGradient: Whether the gradient of the created tensor should be computable.
+    init(_ tensor: TensorFlow.Tensor<Element>, requiresGradient: Bool = false) {
+        self.init(tensor.scalars, shape: tensor.shape.dimensions)
+    }
+    
+    /// Copies the elements of the tensor into a TensorFlow tensor
+    /// - Returns: TensorFlow tensor with the same elements and shape as the source tensor.
+    func tfTensor() -> TensorFlow.Tensor<Element> {
+        return TensorFlow.Tensor<Element>(self.elements)
+            .reshaped(to: TensorFlow.TensorShape(self.shape))
+    }
+}
+
+#endif

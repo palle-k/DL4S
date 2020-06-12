@@ -329,4 +329,51 @@ class EngineV2Tests: XCTestCase {
             _ = Tensor<Float, CPU>(uniformlyDistributedWithShape: 30, 50, 50, 50)
         }
     }
+    
+    func testPermute() {
+        let x = Tensor<Int32, CPU>(Array(0 ..< 24), requiresGradient: true).view(as: 1, 2, 3, 4)
+        let y = x.permuted(to: 2, 0, 1, 3)
+        print(y.gradients(of: [x])[0])
+        // XCTAssert(x.permuted(to: 0, 1, 3, 2).permuted(to: 0, 1, 3, 2) == x)
+        // XCTAssert(x.permuted(to: 1, 0, 2, 3).permuted(to: 1, 0, 2, 3) == x)
+        // XCTAssert(x.permuted(to: 2, 0, 1, 3).permuted(to: 1, 2, 0, 3) == x)
+        // XCTAssert(x.permuted(to: 3, 2, 1, 0).permuted(to: 3, 2, 1, 0) == x)
+        
+    }
+    
+    func testPermute2() {
+        for _ in 0 ..< 10000 {
+            let axes = Int.random(in: 2 ... 4)
+            
+            
+            let shape = (0 ..< axes).map {_ in Int.random(in: 1 ..< 8)}
+            let t = Tensor<Int32, CPU>(uniformlyDistributedWithShape: shape, min: Int32.min / 100, max: Int32.max / 100, requiresGradient: true)
+            let arangement = (0 ..< axes).shuffled()
+            let permutation = t.permuted(to: arangement)
+            
+            var invArangement = Array(repeating: 0, count: axes)
+            for (i, j) in arangement.enumerated() {
+                invArangement[j] = i
+            }
+            
+            if permutation.permuted(to: invArangement) != t {
+                print("Found issue with shape: \(shape), arangement: \(arangement)")
+            }
+            
+            let result = sum(permutation) + sum(permutation)
+            let grad = result.gradients(of: [t])[0]
+            
+            if Set(grad.elements) != [2] {
+                print("Found gradient issue with shape: \(shape), arangement: \(arangement)")
+            }
+        }
+    }
+    
+    func testReduceMax() {
+        let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, requiresGradient: true)
+        let max = x.reduceMax(along: 1)
+        let maxD = x.detached().reduceMax(along: 1)
+        
+        XCTAssertEqual(max, maxD)
+    }
 }

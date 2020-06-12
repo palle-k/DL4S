@@ -28,8 +28,6 @@ import DL4S
 
 class TransformerTests: XCTestCase {
     func testTransformerConvergence() {
-        // ArrayFire.setCPU()
-        
         let transformer = Transformer<Float, CPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
         let samples: [[Int32]] = [
             [1, 2, 3, 0],
@@ -55,7 +53,17 @@ class TransformerTests: XCTestCase {
             
             let prediction = optim.model((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
             let loss = categoricalNegativeLogLikelihood(expected: Tensor(expected), actual: prediction)
+            
+            if loss.item.isNaN {
+                print("Found NaN")
+            }
+            
             let grads = loss.gradients(of: optim.model.parameters)
+            
+            if grads.contains(where: {$0.containsNaN}) {
+                print("Found NaN")
+            }
+            
             optim.update(along: grads)
             bar.next(userInfo: loss.item)
             
@@ -68,5 +76,42 @@ class TransformerTests: XCTestCase {
         bar.complete()
         
         XCTAssertLessThanOrEqual(lastLoss, 0.1)
+    }
+    
+    func testTransformerDevice() {
+        let transformer_cpu = Transformer<Float, CPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
+        var transformer_gpu = Transformer<Float, GPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
+        
+        transformer_gpu.copyingParameters(of: transformer_cpu)
+        
+        let samples: [[Int32]] = [
+            [1, 2, 3, 0],
+            [2, 0, 3, 1],
+            [3, 2, 1, 0],
+            [2, 1, 3, 3]
+        ]
+        let outputs: [[Int32]] = [[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]]
+        
+        var optim_cpu = Adam(model: transformer_cpu, learningRate: 0.001)
+        var optim_gpu = Adam(model: transformer_gpu, learningRate: 0.001)
+        
+        let indices = (0 ..< 4).shuffled()
+        let input = indices.map {samples[$0]}
+        let expected = indices.map {outputs[$0]}
+        let decoderInput = expected.map {
+            [0] + $0.dropLast()
+        }
+        
+        let prediction_cpu = optim_cpu.model((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
+        let prediction_gpu = optim_gpu.model((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
+        
+        let loss_cpu = categoricalNegativeLogLikelihood(expected: Tensor(expected), actual: prediction_cpu)
+        let loss_gpu = categoricalNegativeLogLikelihood(expected: Tensor(expected), actual: prediction_gpu)
+        
+        let grads_cpu = loss_cpu.gradients(of: optim_cpu.model.parameters)
+        let grads_gpu = loss_gpu.gradients(of: optim_gpu.model.parameters)
+        
+        optim_cpu.update(along: grads_cpu)
+        optim_gpu.update(along: grads_gpu)
     }
 }

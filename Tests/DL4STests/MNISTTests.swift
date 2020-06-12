@@ -220,21 +220,23 @@ class MNISTTests: XCTestCase {
     }
     
     func testReluActivation() {
-        ArrayFire.setOpenCL()
-        ArrayFire.printInfo()
+        GPU.printInfo()
+        
         var model = Sequential {
-            Dense<Float, ArrayFire>(inputSize: 28 * 28, outputSize: 2500)
-            Relu<Float, ArrayFire>()
+            Dense<Float, GPU>(inputSize: 28 * 28, outputSize: 2500)
+            Relu<Float, GPU>()
             
-            Dense<Float, ArrayFire>(inputSize: 2500, outputSize: 1200)
-            Relu<Float, ArrayFire>()
+            Dense<Float, GPU>(inputSize: 2500, outputSize: 1200)
+            Relu<Float, GPU>()
 
-            Dense<Float, ArrayFire>(inputSize: 1200, outputSize: 10)
-            Softmax<Float, ArrayFire>()
+            Dense<Float, GPU>(inputSize: 1200, outputSize: 10)
+            Softmax<Float, GPU>()
         }
         
         model.tag = "Classifier"
         performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        
+        GPU.printMemInfo()
     }
     
     func testSwishActivation() {

@@ -163,7 +163,7 @@ public struct CPUEngine: EngineType {
         assert(dim == result.dim)
         // Check, whether lhs and rhs have compatible shapes.
         // Every dimension must be either equal or 1 for one of the operands
-        assert(zip(lhs.shape, rhs.shape).map {$0 == $1 || $0 == 1 || $1 == 1}.allSatisfy {$0 == true})
+        assert(zip(lhs.shape, rhs.shape).allSatisfy {$0.0 == $0.1 || $0.0 == 1 || $0.1 == 1})
         // Check whether shape of result buffer matches combined operands
         assert(zip(zip(lhs.shape, rhs.shape), result.shape).map {Swift.max($0.0, $0.1) == $1}.allSatisfy {$0 == true})
         #endif
@@ -298,14 +298,14 @@ public struct CPUEngine: EngineType {
             var prefixOffset = 0
             var suffixOffset = 0
             var linearIndex = 0
-            for i in 0 ..< axis {
-                prefixOffset += srcStrides[i] * indices[base + i]
+            for i in 0 ..< Swift.min(axis, dim) {
+                prefixOffset &+= srcStrides[i] &* indices[base &+ i]
             }
-            for i in Swift.min(axis + 1, dim) ..< dim {
-                suffixOffset += srcStrides[i] * indices[base + i]
+            for i in Swift.min(axis, dim) ..< dim {
+                suffixOffset &+= srcStrides[i &+ 1] &* indices[base &+ i]
             }
             for i in 0 ..< dim {
-                linearIndex += indices[base + i] * dstStrides[i]
+                linearIndex &+= indices[base &+ i] &* dstStrides[i]
             }
             
             // let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
@@ -673,7 +673,7 @@ public struct CPUEngine: EngineType {
                 result: result,
                 axis: axis
             ) { buffer, stride, count in
-                N.argmax(values: buffer, stride: stride, count: stride).1
+                N.argmax(values: buffer, stride: stride, count: count).1
             }
         }
     }
@@ -920,6 +920,12 @@ public struct CPUEngine: EngineType {
         let dstStrides = CPU.Memory.strides(from: dstShape)
         
         let indexDim = iterShape.count
+        
+        if indexDim == 0 {
+            dstMem.assign(from: sourceMem, count: copyCount)
+            return
+        }
+        
         let indices = flatIterate(iterShape)
         let indexCount = indices.count / Swift.max(indexDim, 1)
         for j in 0 ..< indexCount {
@@ -952,6 +958,12 @@ public struct CPUEngine: EngineType {
         let dstStrides = CPU.Memory.strides(from: dstShape)
         
         let indexDim = iterShape.count
+        
+        if indexDim == 0 {
+            N.vAdd(lhs: sourceMem, rhs: addMem, result: dstMem, count: copyCount)
+            return
+        }
+        
         let indices = flatIterate(iterShape)
         let indexCount = indices.count / indexDim
         for j in 0 ..< indexCount {

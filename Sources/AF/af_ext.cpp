@@ -1,4 +1,5 @@
-// needs to stay
+
+// #if AF_ENABLE
 #include "AF.hpp"
 #include "arrayfire.h"
 #include "af/data.h"
@@ -573,3 +574,4 @@ void d4af_api_version() {
     int api = AF_API_VERSION;
     std::cout << "API VERSION: " << api << std::endl;
 }
+// #endif

@@ -141,7 +141,7 @@ public extension Tensor {
                 backpropagateAccumulate: [{ resultGradient, acc in
                     var invArangement = [Int](repeating: 0, count: dim)
                     for (i, j) in axisArangement.enumerated() {
-                        invArangement[i] = j
+                        invArangement[j] = i
                     }
                     if var acc = acc {
                         acc.addingPermuted(resultGradient, permutation: invArangement)

@@ -11,8 +11,6 @@ import DL4S
 import AF
 import AppKit
 
-fileprivate typealias GPU = ArrayFire
-
 class ArrayFireTests: XCTestCase {
     func testAFBinop() {
         GPU.setOpenCL()

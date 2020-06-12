@@ -26,6 +26,8 @@
 #ifndef d4af_h
 #define d4af_h
 
+// #ifdef AF_ENABLE
+
 #include "arrayfire.h"
 
 #ifdef __cplusplus
@@ -143,4 +145,5 @@ void d4af_band(d4af_array dst, const d4af_array src, int rows, int columns, int 
 }
 #endif
 
+// #endif /* AF_ENABLE */
 #endif /* d4af_h */
