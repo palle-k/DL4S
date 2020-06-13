@@ -540,7 +540,7 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         let decoded = decoder((embeddedDecoderInput, encoderStates, encInLens, decInLens)) // [batchSize, maxLen, hiddenSize]
         
         // [batchSize, maxLen, hiddenSize] x [vocabSize, hiddenSize]^T --> [batchSize, maxLen, vocabSize]
-        let deembedded = decoded.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true) + outputBias
+        let deembedded = (decoded.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true) + outputBias)
         
         return logSoftmax(deembedded, axis: 2)
     }

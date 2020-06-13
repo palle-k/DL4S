@@ -35,5 +35,6 @@ let package = Package(
             dependencies: ["DL4S", "AF"]
         )
     ],
+    swiftLanguageVersions: [.v5],
     cxxLanguageStandard: .cxx11
 )

@@ -130,4 +130,28 @@ public extension Tensor {
             ) : nil
         )
     }
+    
+    
+    /// Creates a tensor with the same values as the source tensor that executes the provided function during backpropagation. This function is primarily intended for debugging purposes.
+    /// - Parameter hook: Hook to execute during backpropagation. Will receive the gradients of all operations that have the returned tensor as an input. The function may be called multiple times in a single backwards pass.
+    /// - Returns: Tensor that contains the same values as the source tensor and that executes the provided hook during backpropagation.
+    func withHook(_ hook: @escaping (Self) -> ()) -> Self {
+        if !self.requiresGradient {
+            print("Attempting to install gradient hook on tensor that does not require gradient. This operation has no effect.", to: &FileHandle.stderr)
+            return self
+        }
+        
+        return Tensor(
+            handle: self.handle,
+            shape: self.shape,
+            context: TensorContext(
+                tag: nil,
+                sources: [self],
+                backpropagate: [{ outputGrad in
+                    hook(outputGrad)
+                    return outputGrad
+                }]
+            )
+        )
+    }
 }

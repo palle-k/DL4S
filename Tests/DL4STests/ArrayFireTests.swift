@@ -258,6 +258,27 @@ class ArrayFireTests: XCTestCase {
         print(b.scatter(using: stacked, alongAxis: 1, withSize: 10))
     }
     
+    func testStack4() {
+        let maxLen = 8
+        let hiddenSize = 16
+        
+        let inputRange = Tensor<Float, GPU>((0 ..< maxLen).map(Float.init))
+        
+        let hiddenRange = Tensor<Float, GPU>((0 ..< hiddenSize / 2).map(Float.init))
+        let frequencies = Tensor(10000).raised(toPowerOf: hiddenRange / Tensor(Float(hiddenSize / 2)))
+        let samplePoints = inputRange.unsqueezed(at: 1) / frequencies.unsqueezed(at: 0) // [seqlen, hiddenSize / 2]
+        
+        let samples = Tensor(
+            stacking: [
+                sin(samplePoints).unsqueezed(at: 2),
+                cos(samplePoints).unsqueezed(at: 2)
+            ],
+            along: 2
+        ).view(as: -1, hiddenSize) // [seqlen, hiddenSize]
+        
+        print(samples)
+    }
+    
     func testArgmax() {
         let a = Tensor<Float, GPU>([5, 6, 7, 8, 3])
         print(a.argmax())
@@ -305,5 +326,18 @@ class ArrayFireTests: XCTestCase {
     func testBand() {
         let x = Tensor<Float, GPU>(uniformlyDistributedWithShape: 5, 7)
         print(x.bandMatrix(belowDiagonal: 2, aboveDiagonal: -1))
+    }
+    
+    
+    func testBroadcastMatmul() {
+        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
+        let b = Tensor<Float, GPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let result = a.broadcastMatrixMultiplied(with: b)
+        
+        let loss = result.raised(toPowerOf: 2).reduceSum()
+        let grads = loss.gradients(of: [a, b])
+        print(loss)
+        print(grads[0])
+        print(grads[1])
     }
 }

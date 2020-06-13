@@ -565,7 +565,7 @@ public struct AFEngine: EngineType {
             buffers.flatMap { buffer in
                 (Array(repeating: 1, count: 4 - buffer.dim) + buffer.shape.map(dim_t.init)).reversed()
             },
-            Int32(3 - axis)
+            Int32(result.dim - axis - 1)
         )
     }
     
