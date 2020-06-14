@@ -28,7 +28,7 @@ import DL4S
 
 class TransformerTests: XCTestCase {
     func testTransformerConvergence() {
-        let transformer = Transformer<Float, CPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
+        let transformer = Transformer<Float, GPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
         let samples: [[Int32]] = [
             [1, 2, 3, 0],
             [2, 0, 3, 1],
@@ -54,22 +54,13 @@ class TransformerTests: XCTestCase {
             let prediction = optim.model((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
             let loss = categoricalNegativeLogLikelihood(expected: Tensor(expected), actual: prediction)
             
-            if loss.item.isNaN {
-                print("Found NaN")
-            }
-            
             let grads = loss.gradients(of: optim.model.parameters)
             
-            if grads.contains(where: {$0.containsNaN}) {
-                print("Found NaN")
-            }
-            
             optim.update(along: grads)
-            bar.next(userInfo: loss.item)
             
             lastLoss = loss.item
-            
-            if loss.item < 0.01 {
+            bar.next(userInfo: lastLoss)
+            if lastLoss < 0.01 {
                 break
             }
         }

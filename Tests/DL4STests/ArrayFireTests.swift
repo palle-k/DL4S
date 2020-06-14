@@ -328,10 +328,31 @@ class ArrayFireTests: XCTestCase {
         print(x.bandMatrix(belowDiagonal: 2, aboveDiagonal: -1))
     }
     
+    func testSubscriptGrad() {
+        let a = Tensor<Int32, GPU>([
+            [
+                [1, 2, 3, 4],
+                [5, 6, 7, 8]
+            ],
+            [
+                [9, 10, 11, 12],
+                [13, 14, 15, 16]
+            ],
+            [
+                [17, 18, 19, 20],
+                [21, 22, 23, 24]
+            ]
+        ], requiresGradient: true)
+        
+        let slice = a[0]
+        let grad = slice.gradients(of: [a])[0]
+        
+        print(grad)
+    }
     
     func testBroadcastMatmul() {
-        let a = Tensor<Float, GPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
-        let b = Tensor<Float, GPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
         let result = a.broadcastMatrixMultiplied(with: b)
         
         let loss = result.raised(toPowerOf: 2).reduceSum()

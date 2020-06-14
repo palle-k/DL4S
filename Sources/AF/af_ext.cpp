@@ -159,6 +159,7 @@ void d4af_subscript_write(d4af_array dst, const d4af_array src, const dim_t* dst
     af::array src_view = af::moddims(src->array, 4, src_shape);
     
     dst_view(index[0], index[1], index[2], index[3]) = src_view;
+    dst->array = dst_view;
 }
 
 void d4af_subscript_write_range(d4af_array dst, const d4af_array src, const dim_t* dst_shape, const int* lower_bounds, const int* upper_bounds) {
