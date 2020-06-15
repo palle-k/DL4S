@@ -36,7 +36,7 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
         return """
         Tensor<\(Element.self), \(Device.self)>(
             \(values.description.replacingOccurrences(of: "\n", with: "\n    ")),
-            context: \(self.context as Any? ?? "nil" as Any)
+            context: \(self.context?.tag ?? "nil")
         )
         """
     }
