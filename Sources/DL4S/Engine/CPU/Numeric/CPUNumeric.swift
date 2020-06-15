@@ -26,6 +26,8 @@
 import Foundation
 
 public protocol CPUNumeric: Numeric, Comparable {
+    
+    
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func fill(value: Self, result: UnsafeMutableBufferPointer<Self>, stride: Int, count: Int)
     

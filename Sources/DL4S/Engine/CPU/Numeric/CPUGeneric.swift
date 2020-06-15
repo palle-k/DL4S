@@ -42,7 +42,7 @@ struct D4Img2ColSetup {
     let stride: Int
 }
 
-public extension CPUNumeric {
+public extension CPUNumeric where Self: Numeric {
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
