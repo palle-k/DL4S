@@ -476,33 +476,33 @@ void d4af_unstack_add(const d4af_array* dsts, const d4af_array* add, const size_
     }
 }
 
-void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* src_shape, int dim) {
-    auto index = af::index(ctx->array);
+void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* src_shape, int dim, int ignore_idx) {
+    auto index = af::max(ctx->array, 0.0);
     auto src_view = af::moddims(src->array, src_shape[0], src_shape[1], src_shape[2], src_shape[3]);
-    
+    af::array result;
     switch (dim) {
         case 0:
-            dst->array = src_view(index, af::span);
+            result = src_view(af::index(index), af::span);
             break;
         case 1:
-            dst->array = src_view(af::span, index);
+            result = src_view(af::span, af::index(index));
             break;
         case 2:
-            dst->array = src_view(af::span, af::span, index);
+            result = src_view(af::span, af::span, af::index(index));
             break;
         case 3:
-            dst->array = src_view(af::span, af::span, af::span, index);
+            result = src_view(af::span, af::span, af::span, af::index(index));
             break;
         default:
-            break;
+            raise(SIGINT);
     }
     // TODO: There may be a better way to do this.
-    dst->array = af::diag(dst->array);
+    dst->array = af::diag(result) * (ctx->array != ignore_idx);
 }
 
-void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim) {
+void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim, int ignore_idx) {
     af::array src_view = af::flat(src->array);
-    af::array indices = af::flat(ctx->array);
+    af::array indices = af::max(af::flat(ctx->array), 0.0);
     
     af::array result = af::constant(0.0f, dst->array.elements());
     
@@ -525,7 +525,7 @@ void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, co
         raise(SIGINT);
         return;
     }
-    result(linear_idx) = af::flat(src->array);
+    result(linear_idx) = af::flat(src->array) * (ctx->array != ignore_idx);
     dst->array = result;
 }
 

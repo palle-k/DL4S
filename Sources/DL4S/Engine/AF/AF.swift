@@ -489,7 +489,8 @@ public struct AFEngine: EngineType {
             reduced.values.memory,
             context.values.memory,
             (Array(repeating: 1, count: 4 - result.dim) + result.shape).map(dim_t.init).reversed(),
-            Int32(result.dim - axis - 1)
+            Int32(result.dim - axis - 1),
+            ignoreIndex
         )
     }
     
@@ -499,7 +500,8 @@ public struct AFEngine: EngineType {
             expanded.values.memory,
             context.values.memory,
             (Array(repeating: 1, count: 4 - expanded.dim) + expanded.shape).map(dim_t.init).reversed(),
-            Int32(expanded.dim - axis - 1)
+            Int32(expanded.dim - axis - 1),
+            ignoreIndex
         )
     }
     

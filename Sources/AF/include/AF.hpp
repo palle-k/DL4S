@@ -129,8 +129,8 @@ void d4af_stack(d4af_array dst, const d4af_array* srcs, const unsigned int numel
 void d4af_unstack(const d4af_array* dsts, const size_t num_dst, const dim_t* unstack_dim_lengths, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const int dim);
 void d4af_unstack_add(const d4af_array* dsts, const d4af_array* add, const size_t num_dst, const dim_t* unstack_dim_lengths, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const int dim);
 
-void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* src_shape, int dim);
-void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim);
+void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* src_shape, int dim, int ignore_idx);
+void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim, int ignore_idx);
 
 void d4af_im2col(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad);
 void d4af_col2im(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad);

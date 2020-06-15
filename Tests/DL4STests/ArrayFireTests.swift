@@ -361,4 +361,16 @@ class ArrayFireTests: XCTestCase {
         print(grads[0])
         print(grads[1])
     }
+    
+    func testGatherIgnore() {
+        let a = Tensor<Float, GPU>([[1,2,3], [4,5,6], [7,8,9]])
+        let ctx = Tensor<Int32, GPU>([-1, 1, 2])
+        print(a.gather(using: ctx, alongAxis: 1, ignoreIndex: -1))
+    }
+    
+    func testScatterIgnore() {
+        let ctx = Tensor<Int32, GPU>([2, -1, 1])
+        let b = Tensor<Float, GPU>([3, 1, 4])
+        print(b.scatter(using: ctx, alongAxis: 1, withSize: 3))
+    }
 }
