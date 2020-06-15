@@ -32,10 +32,21 @@ public struct GPU: DeviceType {
     public typealias Memory = AFMemoryOps
     public typealias Engine = AFEngine
     
+    
+    /// Sets the backend to CPU.
+    ///
+    /// This is intended for debugging purposes.
+    /// If the CPU is desired as a compute device, use the `CPU` engine instead, which will be faster.
+    public static func debugSetCPU() {
+        af_set_backend(AF_BACKEND_CPU)
+    }
+    
+    /// Sets the GPU backend to OpenCL
     public static func setOpenCL() {
         af_set_backend(AF_BACKEND_OPENCL)
     }
     
+    /// Sets the GPU backend to CUDA
     public static func setCUDA() {
         af_set_backend(AF_BACKEND_CUDA)
     }
