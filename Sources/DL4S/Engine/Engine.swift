@@ -479,6 +479,20 @@ public protocol EngineType {
     ///   - index: Index to write to, nil values indicate that all values along the corresponding axis should be written
     static func subscriptWrite<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [Int?])
     
+    /// Reads elements from the value buffer using the given dynamic subscript
+    /// - Parameters:
+    ///   - values: Value buffer
+    ///   - result: Target value buffer
+    ///   - index: Subscript
+    static func dynamicSubscriptRead<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [SubscriptElement<Device>])
+    
+    /// Writes elements to the result buffer at the elements specified by the given dynamic subscript
+    /// - Parameters:
+    ///   - values: Values to write
+    ///   - result: result buffer to write to
+    ///   - index: Index at which the result buffer should be updated
+    static func dynamicSubscriptWrite<N>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, index: [SubscriptElement<Device>])
+    
     /// Reads elements from the given index and adds a second vector
     /// - Parameters:
     ///   - values: Buffer of values to read

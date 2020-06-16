@@ -1100,4 +1100,25 @@ public struct CPUEngine: EngineType {
             )
         }
     }
+    
+    static func broadcast<N>(values: ShapedBuffer<N, CPU>, toShape targetShape: [Int]) -> ShapedBuffer<N, Device> {
+        precondition(values.dim <= targetShape.count, "Shape \(values.shape) cannot be broadcasted to shape \(targetShape)")
+        
+        let paddedSourceShape = Array(repeating: 1, count: targetShape.count - values.dim) + values.shape
+        let values = values.reshaped(to: paddedSourceShape)
+        
+        precondition(zip(paddedSourceShape, targetShape).allSatisfy { source, target in
+            source == 1 || source == target
+        }, "Shape \(values.shape) cannot be broadcasted to shape \(targetShape)")
+        
+        let result = Device.Memory.allocateBuffer(withShape: targetShape, type: N.self)
+    }
+    
+    public static func dynamicSubscriptRead<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [SubscriptElement<CPU>]) {
+        fatalError("\(#function) not available for CPU")
+    }
+    
+    public static func dynamicSubscriptWrite<N>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, index: [SubscriptElement<CPU>]) {
+        fatalError("\(#function) not available for CPU")
+    }
 }

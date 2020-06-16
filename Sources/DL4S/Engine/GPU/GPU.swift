@@ -276,6 +276,14 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func dynamicSubscriptRead<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [SubscriptElement<GPU>]) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func dynamicSubscriptWrite<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [SubscriptElement<GPU>]) {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func reverse<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) {
         fatalError("\(#function) not available for GPU")
     }
