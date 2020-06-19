@@ -85,6 +85,15 @@ swift build -c release \
 
 [DL4S-Tensorboard](https://github.com/palle-k/DL4S-Tensorboard) provides a summary writer that can write tensorboard compatible logs.
 
+### LLDB Extension
+
+DL4S includes a LLDB python script that provides custom descriptions for Tensors (`util/debugger_support/tensor.py`).
+
+To use enhanced summaries, execute  `command script import /path/to/DL4S/util/debugger_support/tensor.py`
+either directly in LLDB or add the command to your `~/.lldbinit` file.
+
+Then you can use the `print` or `frame variable` commands to print human-readable descriptions of tensors.
+
 ## Features
 
 <details>
