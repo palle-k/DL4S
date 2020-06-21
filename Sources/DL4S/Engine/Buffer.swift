@@ -151,3 +151,13 @@ extension ShapedBuffer: CustomStringConvertible {
         }
     }
 }
+
+extension ShapedBuffer: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        return """
+        \(count) elements (\(shape)) {
+            \(description.replacingOccurrences(of: "\n", with: "\n    "))
+        }
+        """
+    }
+}

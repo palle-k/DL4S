@@ -33,11 +33,29 @@ extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     }
     
     public var debugDescription: String {
+        let contextDescription: String
+        if let ctx = self.context?.tag {
+            contextDescription = ", context: \(ctx) "
+        } else {
+            contextDescription = " "
+        }
+        let elementString: String
+        if count == 1 {
+            elementString = "\(count) element"
+        } else {
+            elementString = "\(count) elements"
+        }
+        let shapeString: String
+        if shape == [] {
+            shapeString = "scalar"
+        } else {
+            shapeString = "\(shape)"
+        }
+        
         return """
-        Tensor<\(Element.self), \(Device.self)>(
-            \(values.description.replacingOccurrences(of: "\n", with: "\n    ")),
-            context: \(self.context as Any? ?? "nil" as Any)
-        )
+        \(elementString) (\(shapeString))\(contextDescription){
+            \(values.description.replacingOccurrences(of: "\n", with: "\n    "))
+        }
         """
     }
 }
