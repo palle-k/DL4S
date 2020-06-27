@@ -106,7 +106,7 @@ public struct CPUEngine: EngineType {
         assert(dim == result.dim)
         // Check, whether lhs and rhs have compatible shapes.
         // Every dimension must be either equal or 1 for one of the operands
-        assert(zip(lhs.shape, rhs.shape).map {$0 == $1 || $0 == 1 || $1 == 1}.allSatisfy {$0 == true})
+        assert(zip(lhs.shape, rhs.shape).allSatisfy {$0.0 == $0.1 || $0.0 == 1 || $0.1 == 1})
         // Check whether shape of result buffer matches combined operands
         assert(zip(zip(lhs.shape, rhs.shape), result.shape).map {Swift.max($0.0, $0.1) == $1}.allSatisfy {$0 == true})
         #endif
