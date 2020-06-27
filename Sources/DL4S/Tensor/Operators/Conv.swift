@@ -122,6 +122,9 @@ public extension Tensor {
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
     func convolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
+        precondition(filters.dim == 4, "Filters must be 4-dimensional (outputChannels, inputChannels, height, width")
+        precondition(self.dim == 4, "Convolution input must be 4-dimensional (batchSize, channels, height, width)")
+        
         let padding = padding ?? ((filters.shape[2] - 1) / 2)
         
         let outputShape = [

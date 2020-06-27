@@ -448,9 +448,10 @@ public struct CPUEngine: EngineType {
         let stride = result.count
         let count = values.count / stride
         
-        N.fill(value: 0, result: result.pointer, count: result.count)
+        // N.fill(value: 0, result: result.pointer, count: result.count)
+        result.values.pointer.assign(from: values.immutable, count: stride)
         
-        for i in 0 ..< count {
+        for i in 1 ..< count {
             let offset = stride * i
             
             reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, stride)

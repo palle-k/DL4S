@@ -33,7 +33,7 @@ void d4af_assign_h2d(d4af_array target, const void* source, const size_t byte_co
 }
 
 void d4af_assign_d2d(const d4af_array target, const d4af_array source) {
-    target->array.operator=(source->array);
+    target->array = source->array;
 }
 
 void d4af_assign_d2h(void* target, const d4af_array source) {
@@ -551,8 +551,10 @@ af::array af_ext_pad(const af::array src, dim_t lx, dim_t rx, dim_t ly, dim_t ry
 }
 
 void d4af_im2col(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad) {
-    auto src_view = af_ext_pad(af::moddims(src->array, columns, rows, channels, batch_size), pad, pad, pad, pad, 0, 0, 0, 0);
-    dst->array = af::unwrap(src_view, window_width, window_height, stride, stride);
+    // af::print("im2col input", af::moddims(src->array, columns, rows, channels, batch_size));
+    auto src_view = af::moddims(src->array, columns, rows, channels, batch_size);
+    // af::print("padded input", af::moddims(src_view, columns, rows, channels, batch_size));
+    dst->array = af::unwrap(src_view, window_width, window_height, stride, stride, pad, pad, false);
 }
 
 void d4af_col2im(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad) {
