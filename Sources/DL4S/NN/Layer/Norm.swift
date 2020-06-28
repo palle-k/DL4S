@@ -71,8 +71,8 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
 }
 
 /// A layer that normalizes its inputs along all dimensions except the batch dimension
-public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+public struct LayerNorm<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<LayerNorm<Element, Device>, Tensor<Element, Device>>] {
         [\.shift, \.scale]
     }
     public var parameters: [Tensor<Element, Device>] {
@@ -98,10 +98,10 @@ public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
         
         self.momentum = momentum
         
-        #if DEBUG
-        shift.tag = "shift"
-        scale.tag = "scale"
-        #endif
+        // #if DEBUG
+        // shift.tag = "shift"
+        // scale.tag = "scale"
+        // #endif
     }
     
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {

@@ -58,6 +58,14 @@ public struct GPU: DeviceType {
     public static func printMemInfo() {
         af_print_mem_info("MemInfo:", 0)
     }
+    
+    static func nativePrint(_ buffer: d4af_array) {
+        d4af_print(buffer)
+    }
+    
+    static func nativePrintShape(_ buffer: d4af_array) {
+        d4af_print_shape(buffer)
+    }
 }
 
 public struct AFMemoryOps: MemoryOperatorsType {
@@ -638,6 +646,8 @@ public struct AFEngine: EngineType {
         d4af_col2im(
             image.values.memory,
             matrix.values.memory,
+            dim_t(matrix.shape[0]),
+            dim_t(matrix.shape[1]),
             dim_t(image.shape[0]),
             dim_t(image.shape[1]),
             dim_t(image.shape[2]),

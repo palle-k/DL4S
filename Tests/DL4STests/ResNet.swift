@@ -29,11 +29,11 @@ import XCTest
 
 class ResNetTests: XCTestCase {
     func testResNet() {
-        let resnet = ResNet18<Float, CPU>(inputShape: [3, 64, 64], classes: 256)
+        let resnet = ResNet18<Float, GPU>(inputShape: [3, 64, 64], classes: 256)
         var optim = Adam(model: resnet, learningRate: 0.001)
         
-        let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 32, 3, 64, 64, min: 0, max: 1)
-        let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 32, min: 0, max: 255)
+        let t = Tensor<Float, GPU>(uniformlyDistributedWithShape: 32, 3, 64, 64, min: 0, max: 1)
+        let expected = Tensor<Int32, GPU>(uniformlyDistributedWithShape: 32, min: 0, max: 255)
         
         let epochs = 5
         

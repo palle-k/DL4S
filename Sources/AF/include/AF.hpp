@@ -133,13 +133,16 @@ void d4af_gather(d4af_array dst, const d4af_array src, const d4af_array ctx, con
 void d4af_scatter(d4af_array dst, const d4af_array src, const d4af_array ctx, const dim_t* dst_shape, int dim, int ignore_idx);
 
 void d4af_im2col(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad);
-void d4af_col2im(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad);
+void d4af_col2im(d4af_array dst, const d4af_array src, dim_t im2col_rows, dim_t im2col_columns, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad);
 
 void d4af_arange_32f(d4af_array dst, float lower_bound, float upper_bound, dim_t count);
 void d4af_arange_64f(d4af_array dst, double lower_bound, double upper_bound, dim_t count);
 void d4af_arange_32s(d4af_array dst, int lower_bound, int upper_bound, dim_t count);
 
 void d4af_band(d4af_array dst, const d4af_array src, int rows, int columns, int below_diag, int above_diag);
+
+void d4af_print(const d4af_array array);
+void d4af_print_shape(const d4af_array array);
 
 #ifdef __cplusplus
 }

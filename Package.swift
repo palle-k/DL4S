@@ -14,7 +14,8 @@ let package = Package(
     products: [
         .library(
             name: "DL4S",
-            targets: ["DL4S", "MKL", "AF"]),
+            targets: ["DL4S", "MKL", "AF"]
+        ),
     ],
     dependencies: [],
     targets: [

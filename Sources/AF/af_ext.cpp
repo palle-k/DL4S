@@ -292,7 +292,7 @@ void d4af_reduce_max(d4af_array dst, const d4af_array src, const dim_t src_dim, 
 
 void d4af_reduce_max_ctx(d4af_array dst, d4af_array ctx, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t reduce_dim) {
     af::array src_view = af::moddims(src->array, src_dim, src_shape);
-    af::max(dst->array, ctx->array, src_view);
+    af::max(dst->array, ctx->array, src_view, (int) reduce_dim);
 }
 
 void d4af_reduce_min(d4af_array dst, const d4af_array src, const dim_t src_dim, const dim_t* src_shape, const dim_t reduce_dim) {
@@ -554,11 +554,13 @@ void d4af_im2col(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t c
     // af::print("im2col input", af::moddims(src->array, columns, rows, channels, batch_size));
     auto src_view = af::moddims(src->array, columns, rows, channels, batch_size);
     // af::print("padded input", af::moddims(src_view, columns, rows, channels, batch_size));
-    dst->array = af::unwrap(src_view, window_width, window_height, stride, stride, pad, pad, false);
+    auto result = af::unwrap(src_view, window_width, window_height, stride, stride, pad, pad, false); // [columns, rows, channels, batchSize];
+    dst->array = af::reorder(result, 0, 3, 1, 2);
 }
 
-void d4af_col2im(d4af_array dst, const d4af_array src, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad) {
-    auto dst_view = af::wrap(src->array, columns + 2 * pad, rows + 2 * pad, window_width, window_height, stride, stride);
+void d4af_col2im(d4af_array dst, const d4af_array src, dim_t im2col_rows, dim_t im2col_columns, dim_t batch_size, dim_t channels, dim_t rows, dim_t columns, dim_t window_width, dim_t window_height, dim_t stride, dim_t pad) {
+    auto src_view = af::reorder(af::moddims(src->array, im2col_columns / batch_size, batch_size, im2col_rows / channels, channels), 0, 2, 3, 1);
+    auto dst_view = af::wrap(src_view, columns, rows, window_width, window_height, stride, stride, pad, pad, false);
     dst->array = dst_view(af::seq(pad, columns - pad - 1), af::seq(pad, rows - pad - 1));
 }
 
@@ -577,4 +579,13 @@ void d4af_api_version() {
     int api = AF_API_VERSION;
     std::cout << "API VERSION: " << api << std::endl;
 }
+
+void d4af_print(const d4af_array array) {
+    af::print("", array->array);
+}
+
+void d4af_print_shape(const d4af_array array) {
+    std::cout << array->array.dims() << std::endl;
+}
+
 // #endif

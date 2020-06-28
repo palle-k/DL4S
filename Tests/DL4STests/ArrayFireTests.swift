@@ -450,6 +450,85 @@ class ArrayFireTests: XCTestCase {
         print(y)
     }
     
+    func testIm2col() {
+        let a = Tensor<Float, GPU>([[
+            [
+                [0, 1, 2, 1, 0],
+                [0, 1, 2, 1, 0],
+                [0, 1, 2, 1, 0],
+                [0, 1, 2, 1, 0],
+                [0, 1, 2, 1, 0]
+            
+            ],
+            [
+                [0, -1, -2, -1, 0],
+                [0, -1, -2, -1, 0],
+                [0, -1, -2, -1, 0],
+                [0, -1, -2, -1, 0],
+                [0, -1, -2, -1, 0]
+            
+            ]
+        ]])
+        XCTAssertEqual(
+            a.img2col(kernelWidth: 2, kernelHeight: 2, padding: 0, stride: 2).copied(to: CPU.self),
+            a.copied(to: CPU.self).img2col(kernelWidth: 2, kernelHeight: 2, padding: 0, stride: 2)
+        )
+    }
+    
+    func testIm2ColGrad() {
+        let a_gpu = Tensor<Float, GPU>([
+            [
+                [
+                    [0, 1, 2, 1, 0],
+                    [0, 1, 2, 1, 0],
+                    [0, 1, 2, 1, 0],
+                    [0, 1, 2, 1, 0],
+                    [0, 1, 2, 1, 0]
+                
+                ],
+                [
+                    [0, -1, -2, -1, 0],
+                    [0, -1, -2, -1, 0],
+                    [0, -1, -2, -1, 0],
+                    [0, -1, -2, -1, 0],
+                    [0, -1, -2, -1, 0]
+                
+                ]
+            ],
+            [
+                [
+                    [0, 1, -1, 1, 0],
+                    [0, 1, -1, 1, 0],
+                    [0, 1, -1, 1, 0],
+                    [0, 1, -1, 1, 0],
+                    [0, 1, -1, 1, 0]
+                
+                ],
+                [
+                    [0, -1, 2, -1, 0],
+                    [0, -1, 2, -1, 0],
+                    [0, -1, 2, -1, 0],
+                    [0, -1, 2, -1, 0],
+                    [0, -1, 2, -1, 0]
+                
+                ]
+            ],
+        ], requiresGradient: true)
+        var a_cpu = a_gpu.copied(to: CPU.self)
+        a_cpu.requiresGradient = true
+        
+        let result_gpu = a_gpu.img2col(kernelWidth: 3, kernelHeight: 3, padding: 0, stride: 1).reduceSum()
+        let grad_gpu = result_gpu.gradients(of: [a_gpu])[0]
+        
+        let result_cpu = a_cpu.img2col(kernelWidth: 3, kernelHeight: 3, padding: 0, stride: 1).reduceSum()
+        let grad_cpu = result_cpu.gradients(of: [a_cpu])[0]
+        
+        XCTAssertEqual(
+            grad_gpu.copied(to: CPU.self),
+            grad_cpu
+        )
+    }
+    
     func testMaxPool() {
         let a = Tensor<Float, GPU>([[
             [
@@ -469,9 +548,11 @@ class ArrayFireTests: XCTestCase {
             
             ]
         ]])
-        print(a)
-        print(a.maxPooled2d(windowSize: 2))
-        print(a.img2col(kernelWidth: 2, kernelHeight: 2, padding: 0, stride: 2))
+        
+        XCTAssertEqual(
+            a.maxPooled2d(windowSize: 3).copied(to: CPU.self),
+            a.copied(to: CPU.self).maxPooled2d(windowSize: 3)
+        )
     }
 }
 #endif

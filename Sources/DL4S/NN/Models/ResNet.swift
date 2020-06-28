@@ -97,7 +97,7 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Laye
     }
 }
 
-public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType {
+public struct ResNet18<Element: RandomizableType & NumericType, Device: DeviceType>: LayerType {
     public var parameters: [Tensor<Parameter, Self.Device>] {
         get {
             Array([
