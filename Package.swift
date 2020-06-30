@@ -15,7 +15,7 @@ let package = Package(
         .library(
             name: "DL4S",
             targets: ["DL4S", "MKL", "AF"]
-        ),
+        )
     ],
     dependencies: [],
     targets: [

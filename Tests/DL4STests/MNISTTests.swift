@@ -55,38 +55,42 @@ class MNISTTests: XCTestCase {
     }
     
     func testConvNet() {
+        GPU.printInfo()
+        
+        typealias Device = GPU
+        
         var model = Sequential {
-            Convolution2D<Float, GPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0)
-            LayerNorm<Float, GPU>(inputSize: [6, 24, 24])
-            Relu<Float, GPU>()
-            MaxPool2D<Float, GPU>(windowSize: 2, stride: 2)
-            Convolution2D<Float, GPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5), padding: 0)
-            LayerNorm<Float, GPU>(inputSize: [16, 8, 8])
-            Relu<Float, GPU>()
-            MaxPool2D<Float, GPU>(windowSize: 2, stride: 2)
-            Flatten<Float, GPU>()
-            Dense<Float, GPU>(inputSize: 16 * 4 * 4, outputSize: 120)
-            LayerNorm<Float, GPU>(inputSize: [120])
-            Relu<Float, GPU>()
-            Dense<Float, GPU>(inputSize: 120, outputSize: 10)
-            LogSoftmax<Float, GPU>()
+            Convolution2D<Float, Device>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0)
+            LayerNorm<Float, Device>(inputSize: [6, 24, 24])
+            Relu<Float, Device>()
+            MaxPool2D<Float, Device>(windowSize: 2, stride: 2)
+            Convolution2D<Float, Device>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5), padding: 0)
+            LayerNorm<Float, Device>(inputSize: [16, 8, 8])
+            Relu<Float, Device>()
+            MaxPool2D<Float, Device>(windowSize: 2, stride: 2)
+            Flatten<Float, Device>()
+            Dense<Float, Device>(inputSize: 16 * 4 * 4, outputSize: 120)
+            LayerNorm<Float, Device>(inputSize: [120])
+            Relu<Float, Device>()
+            Dense<Float, Device>(inputSize: 120, outputSize: 10)
+            LogSoftmax<Float, Device>()
         }
         
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: Device.self)
         
-        let epochs = 100
-        let batchSize = 256
+        let epochs = 10_000
+        let batchSize = 1024
         
         var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
         
         for _ in 1 ... epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
 
-            let predicted = optimizer.model(input.copied(to: GPU.self).view(as: [batchSize, 1, 28, 28]))
-            let loss = categoricalNegativeLogLikelihood(expected: target.copied(to: GPU.self), actual: predicted)
+            let predicted = optimizer.model(input.view(as: [batchSize, 1, 28, 28]))
+            let loss = categoricalNegativeLogLikelihood(expected: target, actual: predicted)
             
             let gradients = loss.gradients(of: optimizer.model.parameters)
             
@@ -100,7 +104,7 @@ class MNISTTests: XCTestCase {
         
         for i in 0 ..< imagesVal.shape[0] {
             let x = imagesVal[i].view(as: [1, 1, 28, 28])
-            let pred = optimizer.model(x.copied(to: GPU.self)).squeezed().argmax()
+            let pred = optimizer.model(x).squeezed().argmax()
             let actual = Int(labelsVal[i].item)
             
             if pred == actual {

@@ -190,6 +190,13 @@ public extension AFMemoryOps {
 public struct AFEngine: EngineType {
     public typealias Device = GPU
     
+    @inline(__always)
+    private static func shapecheck<N>(_ buffer: ShapedBuffer<N, Device>) {
+        #if DEBUG
+        assert(buffer.count == buffer.shape.reduce(1, *), "Shape of buffer (\(buffer.shape)) does not match number of elements (\(buffer.count))")
+        #endif
+    }
+    
     public static func fill<N>(value: N, result: Buffer<N, GPU>, count: Int) where N : NumericType {
         if N.self == Float.self {
             d4af_fill_32f(result.memory, Float(element: value))
@@ -511,6 +518,7 @@ public struct AFEngine: EngineType {
             Int32(result.dim - axis - 1),
             ignoreIndex
         )
+        shapecheck(result)
     }
     
     public static func gather<N>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: ShapedBuffer<N, GPU>, axis: Int, ignoreIndex: Int32) where N : NumericType {
@@ -522,6 +530,7 @@ public struct AFEngine: EngineType {
             Int32(expanded.dim - axis - 1),
             ignoreIndex
         )
+        shapecheck(result)
     }
     
     public static func permuteAxes<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, arangement: [Int]) where N : NumericType {
@@ -532,6 +541,7 @@ public struct AFEngine: EngineType {
         }
         
         d4af_permute(result.values.memory, values.values.memory, 4, paddedShape.reversed().map(dim_t.init), invertedArangement.map(dim_t.init))
+        shapecheck(result)
     }
     
     public static func permuteAxesAdd<N>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, arangement: [Int]) where N : NumericType {
@@ -542,6 +552,7 @@ public struct AFEngine: EngineType {
         }
         
         d4af_permute_add(result.values.memory, values.values.memory, 4, paddedShape.reversed().map(dim_t.init), invertedArangement.map(dim_t.init), add.values.memory)
+        shapecheck(result)
     }
     
     public static func subscriptRead<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
@@ -551,6 +562,7 @@ public struct AFEngine: EngineType {
             (Array(repeating: 1, count: 4 - values.dim) + values.shape).map(Int32.init).reversed(),
             (Array(repeating: nil, count: 4 - index.count) + index).map {Int32($0 ?? -1)}.reversed()
         )
+        shapecheck(result)
     }
     
     public static func subscriptWrite<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
@@ -560,6 +572,7 @@ public struct AFEngine: EngineType {
             (Array(repeating: 1, count: 4 - result.dim) + result.shape).map(dim_t.init).reversed(),
             (index + Array(repeating: nil, count: 4 - index.count)).map {Int32($0 ?? -1)}.reversed()
         )
+        shapecheck(result)
     }
     
     public static func subscriptReadAdd<N>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, index: [Int?]) where N : NumericType {
@@ -588,6 +601,7 @@ public struct AFEngine: EngineType {
             },
             Int32(result.dim - axis - 1)
         )
+        shapecheck(result)
     }
     
     public static func unstackAdd<N>(stacked: ShapedBuffer<N, GPU>, add: [ShapedBuffer<N, GPU>], result: [ShapedBuffer<N, GPU>], axis: Int) where N : NumericType {
@@ -601,6 +615,9 @@ public struct AFEngine: EngineType {
             stacked.shape.reversed().map(dim_t.init),
             Int32(stacked.dim - axis - 1)
         )
+        result.forEach {
+            shapecheck($0)
+        }
     }
     
     public static func unstack<N>(stacked: ShapedBuffer<N, GPU>, result: [ShapedBuffer<N, GPU>], axis: Int) where N : NumericType {
@@ -613,6 +630,9 @@ public struct AFEngine: EngineType {
             stacked.shape.reversed().map(dim_t.init),
             Int32(stacked.dim - axis - 1)
         )
+        result.forEach {
+            shapecheck($0)
+        }
     }
     
     public static func arange<N>(lowerBound: N, upperBound: N, result: ShapedBuffer<N, GPU>) where N : NumericType {
@@ -625,6 +645,7 @@ public struct AFEngine: EngineType {
         } else {
             fatalError("\(#function) not available for type \(N.self)")
         }
+        shapecheck(result)
     }
     
     public static func img2col<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
@@ -640,6 +661,7 @@ public struct AFEngine: EngineType {
             dim_t(stride),
             dim_t(padding)
         )
+        shapecheck(result)
     }
     
     public static func col2img<N>(matrix: ShapedBuffer<N, GPU>, image: ShapedBuffer<N, GPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
@@ -657,6 +679,7 @@ public struct AFEngine: EngineType {
             dim_t(stride),
             dim_t(padding)
         )
+        shapecheck(image)
     }
     
 }
