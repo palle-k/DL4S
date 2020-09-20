@@ -193,6 +193,26 @@ public protocol EngineType {
 
     //MARK: Matrix operations
     
+    
+    /// Matrix diagonal fill in-place
+    /// - Parameters:
+    ///   - values: Values to fill the diagonal with
+    ///   - target: Matrix to be filled
+    static func fillDiagonal<N: NumericType>(values: ShapedBuffer<N, Device>, target: ShapedBuffer<N, Device>)
+    
+    /// Matrix diagonal fill in-place
+    /// - Parameters:
+    ///   - value: Value to fill the diagonal with
+    ///   - target: Matrix to be filled
+    static func fillDiagonal<N: NumericType>(value: N, target: ShapedBuffer<N, Device>)
+    
+    
+    /// Extracts the diagonal of a matrix
+    /// - Parameters:
+    ///   - value: Matrix to extract diagonal from
+    ///   - target: Vector to write diagonal values to
+    static func extractDiagonal<N: NumericType>(values: ShapedBuffer<N, Device>, target: ShapedBuffer<N, Device>)
+    
     /// Matrix multiply add in-place
     /// - Parameters:
     ///   - lhs: Left-hand side matrix

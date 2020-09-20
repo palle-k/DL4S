@@ -242,6 +242,9 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] swish activation
 - [x] mish activation
 - [x] lisht activation
+- [x] diagonal matrix generation
+- [x] diagonal extraction
+- [x] band matrix generation
 
 </p>
 </details>
