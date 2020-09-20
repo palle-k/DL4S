@@ -32,6 +32,7 @@ extension Optional {
     }
 }
 
+/// Residual block with two convolution and batch normalization layers as well as an optional downsampling block.
 public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: LayerType {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
         return Array([
@@ -53,10 +54,18 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Laye
         ].joined())
     }
     
+    /// First convolution layer
     public var conv1: Convolution2D<Element, Device>
+    /// Second convolution layer
     public var conv2: Convolution2D<Element, Device>
+    
+    /// First batch normalization layer
     public var bn1: BatchNorm<Element, Device>
+    
+    /// Second batch normalization layer
     public var bn2: BatchNorm<Element, Device>
+    
+    /// Optional downsampling layer (conv+batchnorm)
     public var downsample: Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>>?
     
     public init(inputShape: [Int], outPlanes: Int, downsample: Int) {
@@ -97,6 +106,7 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Laye
     }
 }
 
+/// Residual neural network with 18 layers (17 convolutional, 1 dense)
 public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType {
     public var parameters: [Tensor<Parameter, Self.Device>] {
         get {

@@ -25,6 +25,11 @@
 
 import Foundation
 
+/// AlexNet image classification network.
+///
+/// Batch normalization has been added to this implementation.
+///
+/// https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
 public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
         Array([
@@ -42,22 +47,32 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
         ].joined())
     }
     
-    var featureNet: Sequential<Sequential<Sequential<Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>, Sequential<MaxPool2D<Element, Device>, Convolution2D<Element, Device>>>, Sequential<Sequential<Relu<Element, Device>, MaxPool2D<Element, Device>>, Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>>>, Sequential<Sequential<Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>, Convolution2D<Element, Device>>, Sequential<Relu<Element, Device>, MaxPool2D<Element, Device>>>>
+    var featureNet: Sequential<Sequential<Sequential<Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>, Sequential<MaxPool2D<Element, Device>, Convolution2D<Element, Device>>>, Sequential<Sequential<BatchNorm<Element, Device>, Relu<Element, Device>>, Sequential<MaxPool2D<Element, Device>, Convolution2D<Element, Device>>>>, Sequential<Sequential<Sequential<Relu<Element, Device>, Convolution2D<Element, Device>>, Sequential<BatchNorm<Element, Device>, Relu<Element, Device>>>, Sequential<Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>>, Sequential<Relu<Element, Device>, MaxPool2D<Element, Device>>>>>
     
     var avgPool: AdaptiveAvgPool2D<Element, Device>
     
-    var classifier: Sequential<Sequential<Sequential<Dropout<Element, Device>, Dense<Element, Device>>, Sequential<Relu<Element, Device>, Dropout<Element, Device>>>, Sequential<Sequential<Dense<Element, Device>, Relu<Element, Device>>, Sequential<Dense<Element, Device>, Softmax<Element, Device>>>>
+    var classifier: Sequential<Sequential<Sequential<Sequential<Flatten<Element, Device>, Dropout<Element, Device>>, Sequential<Dense<Element, Device>, BatchNorm<Element, Device>>>, Sequential<Sequential<Relu<Element, Device>, Dropout<Element, Device>>, Sequential<Dense<Element, Device>, BatchNorm<Element, Device>>>>, Sequential<Sequential<Relu<Element, Device>, Dense<Element, Device>>, LogSoftmax<Element, Device>>>
     
-    var isDropoutActive: Bool {
+    /// Determines whether dropout is applied in the classification block
+    public var isDropoutActive: Bool {
         get {
-            classifier.first.first.first.isActive || classifier.first.second.second.isActive
+            classifier.first.first.first.second.isActive || classifier.first.second.first.second.isActive
         }
         set {
-            classifier.first.first.first.isActive = newValue
-            classifier.first.second.second.isActive = newValue
+            classifier.first.first.first.second.isActive = newValue
+            classifier.first.second.first.second.isActive = newValue
         }
     }
     
+    
+    /// Creates an AlexNet image classification network with the given number of input channels and classes.
+    ///
+    /// The network expects images with a resolution of 192x192 or higher.
+    ///
+    /// https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+    /// - Parameters:
+    ///   - inputChannels: Number of input channesls. Data forwarded through the network must have [batchSize, inputChannels, height, depth] shape.
+    ///   - classes: Number of classes / dimensionality of network output
     public init(inputChannels: Int, classes: Int) {
         featureNet = Sequential {
             Convolution2D<Element, Device>(inputChannels: inputChannels, outputChannels: 64, kernelSize: (11, 11), padding: 2, stride: 4)
@@ -65,6 +80,7 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
             
             Convolution2D<Element, Device>(inputChannels: 64, outputChannels: 192, kernelSize: (5, 5), padding: 2, stride: 1)
+            BatchNorm<Element, Device>(inputSize: [192, 1, 1])
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
             
@@ -72,9 +88,11 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
             Relu<Element, Device>()
             
             Convolution2D<Element, Device>(inputChannels: 384, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1)
+            BatchNorm<Element, Device>(inputSize: [256, 1, 1])
             Relu<Element, Device>()
             
-            Convolution2D<Element, Device>(inputChannels: 384, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1)
+            Convolution2D<Element, Device>(inputChannels: 256, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1)
+            BatchNorm<Element, Device>(inputSize: [256, 1, 1])
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
         }
@@ -82,16 +100,20 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
         avgPool = AdaptiveAvgPool2D(targetSize: 6)
         
         classifier = Sequential {
+            Flatten<Element, Device>()
+            
             Dropout<Element, Device>(rate: Float(0.5))
             Dense<Element, Device>(inputSize: 256 * 6 * 6, outputSize: 4096)
+            BatchNorm<Element, Device>(inputSize: [4096])
             Relu<Element, Device>()
             
             Dropout<Element, Device>(rate: Float(0.5))
             Dense<Element, Device>(inputSize: 4096, outputSize: 4096)
+            BatchNorm<Element, Device>(inputSize: [4096])
             Relu<Element, Device>()
             
             Dense<Element, Device>(inputSize: 4096, outputSize: classes)
-            Softmax<Element, Device>()
+            LogSoftmax<Element, Device>()
         }
     }
     

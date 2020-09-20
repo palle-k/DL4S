@@ -31,6 +31,9 @@ extension FileHandle: TextOutputStream {
         self.write(string.data(using: .utf8)!)
     }
     
+    /// The standard output
+    ///
+    /// This alias can be used as a print target.
     public static var stdout: FileHandle {
         get {
             return FileHandle.standardOutput
@@ -40,6 +43,9 @@ extension FileHandle: TextOutputStream {
         }
     }
     
+    /// The standard error output
+    ///
+    /// This alias can be used as a print target.
     public static var stderr: FileHandle {
         get {
             return FileHandle.standardError
