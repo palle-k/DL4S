@@ -560,7 +560,7 @@ public struct CPUEngine: EngineType {
         let src = values.immutable.baseAddress!
         let dst = target.pointer.baseAddress!
         
-        let stride = target.shape[1] + 1
+        let stride = target.shape[0] + 1
         
         var i = 0
         while i < maxIdx {

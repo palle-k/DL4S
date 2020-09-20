@@ -334,4 +334,38 @@ class EngineV2Tests: XCTestCase {
         let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, requiresGradient: true)
         XCTAssertEqual(a.reduceMax(along: 1), a.detached().reduceMax(along: 1))
     }
+    
+    func testDiagonal() {
+        let a = Tensor<Float, CPU>([
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9]
+        ])
+        let diag = a.diagonalElements()
+        let expected = Tensor<Float, CPU>([1, 5, 9])
+        XCTAssertEqual(diag, expected)
+    }
+    
+    func testDiagonalGeneration() {
+        let b = Tensor<Float, CPU>([1, 5, 9])
+        let diag = b.diagonalMatrix()
+        
+        let expected = Tensor<Float, CPU>([
+            [1, 0, 0],
+            [0, 5, 0],
+            [0, 0, 9]
+        ])
+        XCTAssertEqual(diag, expected)
+    }
+    
+    func testConstantDiagonal() {
+        let a = Tensor<Float, CPU>(fillingDiagonalWith: 3, size: 4)
+        let expected = Tensor<Float, CPU>([
+            [3, 0, 0, 0],
+            [0, 3, 0, 0],
+            [0, 0, 3, 0],
+            [0, 0, 0, 3]
+        ])
+        XCTAssertEqual(a, expected)
+    }
 }
