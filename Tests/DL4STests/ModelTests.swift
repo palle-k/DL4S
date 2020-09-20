@@ -40,7 +40,7 @@ class ModelTests: XCTestCase {
         for i in 1 ... epochs {
             let result = optim.model(t)
             
-            let loss = categoricalCrossEntropy(expected: expected, actual: result)
+            let loss = categoricalNegativeLogLikelihood(expected: expected, actual: result)
             let grads = loss.gradients(of: optim.model.parameters)
             optim.update(along: grads)
             
@@ -48,7 +48,7 @@ class ModelTests: XCTestCase {
         }
         
         XCTAssertLessThan(
-            categoricalCrossEntropy(expected: expected, actual: optim.model(t)).item,
+            categoricalNegativeLogLikelihood(expected: expected, actual: optim.model(t)).item,
             0.01
         )
     }
@@ -74,17 +74,17 @@ class ModelTests: XCTestCase {
         }
         
         XCTAssertLessThan(
-            categoricalCrossEntropy(expected: expected, actual: optim.model(t)).item,
+            categoricalNegativeLogLikelihood(expected: expected, actual: optim.model(t)).item,
             0.1
         )
     }
     
     func testVGG() {
-        let vgg = VGG19<Float, CPU>(inputChannels: 3, classes: 256)
+        let vgg = VGG11<Float, CPU>(inputChannels: 3, classes: 256)
         var optim = Adam(model: vgg, learningRate: 0.001)
         
-        let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 32, 3, 192, 192, min: 0, max: 1)
-        let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 32, min: 0, max: 255)
+        let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 16, 3, 192, 192, min: 0, max: 1)
+        let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 16, min: 0, max: 255)
         
         let epochs = 5
         
@@ -99,7 +99,7 @@ class ModelTests: XCTestCase {
         }
         
         XCTAssertLessThan(
-            categoricalCrossEntropy(expected: expected, actual: optim.model(t)).item,
+            categoricalNegativeLogLikelihood(expected: expected, actual: optim.model(t)).item,
             0.1
         )
     }

@@ -1,8 +1,8 @@
 //
-//  SGD.swift
-//  DL4S
+//  File.swift
+//  
 //
-//  Created by Palle Klewitz on 19.10.19.
+//  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,39 +25,61 @@
 
 import Foundation
 
-/// 'Vanilla' stochastic gradient descent optimizer
-public struct SGD<Layer: LayerType>: Optimizer {
+/// Gradient descent optimizer with momentum
+public struct Momentum<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
     
     public private(set) var model: Layer
+    private var velocities: [ParamTensor]
+    
+    /// Learning rate with which to move along the gradient
     public var learningRate: ParamTensor
+    
+    /// Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
+    public var momentum: ParamTensor
     private var paths: [WritableKeyPath<Layer, ParamTensor>]
     
-    /// 'Vanilla' stochastic gradient descent optimizer
+    /// Gradient descent optimizer with momentum
     /// - Parameters:
     ///   - model: Model to optimize
     ///   - learningRate: Learning rate with which to move along the gradient
-    public init(model: Layer, learningRate: ParamTensor) {
+    ///   - momentum: Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
+    public init(model: Layer, learningRate: ParamTensor, momentum: ParamTensor = 0.8) {
         self.model = model
         self.learningRate = learningRate
-        // paths are only queried once, as creating keypaths is a major performance bottleneck
+        self.momentum = momentum
+        
+        self.velocities = model.parameters.map {
+            Tensor(repeating: 0, shape: $0.shape)
+        }
         self.paths = model.parameterPaths
     }
     
+    /// Resets the state of the optimizer
+    public mutating func reset() {
+        self.velocities = model.parameters.map {
+            Tensor(repeating: 0, shape: $0.shape)
+        }
+    }
+    
     public mutating func update(along gradients: [ParamTensor]) {
-        for (keyPath, grad) in zip(paths, gradients) {
-            model[keyPath: keyPath] -= learningRate * grad
+        for i in paths.indices {
+            let keyPath = paths[i]
+            velocities[i] = velocities[i] * momentum + learningRate * gradients[i]
+            model[keyPath: keyPath] -= velocities[i]
             model[keyPath: keyPath].discardContext()
         }
     }
 }
 
-extension SGD: Codable where Layer: Codable {
+extension Momentum: Codable where Layer: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         model = try container.decode(Layer.self, forKey: .model)
+        momentum = try container.decode(ParamTensor.self, forKey: .momentum)
         learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
+        velocities = try container.decode([ParamTensor].self, forKey: .velocities)
         
         paths = model.parameterPaths
     }
@@ -66,11 +88,15 @@ extension SGD: Codable where Layer: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         try container.encode(model, forKey: .model)
+        try container.encode(momentum, forKey: .momentum)
         try container.encode(learningRate, forKey: .learningRate)
+        try container.encode(velocities, forKey: .velocities)
     }
     
     private enum CodingKeys: String, CodingKey {
         case model
+        case velocities
         case learningRate
+        case momentum
     }
 }
