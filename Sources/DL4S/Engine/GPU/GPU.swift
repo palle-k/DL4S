@@ -160,6 +160,18 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
+    public static func fillDiagonal<N>(value: N, target: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func fillDiagonal<N>(values: ShapedBuffer<N, GPU>, target: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func extractDiagonal<N>(values: ShapedBuffer<N, GPU>, target: ShapedBuffer<N, GPU>) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
     public static func gemm<N>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }

@@ -130,4 +130,71 @@ public extension Tensor {
             ) : nil
         )
     }
+    
+    /// Computes the vector of diagonal elements of a matrix
+    ///
+    /// Source tensor must have dimensionality of 2.
+    /// For backpropagation, the matrix must have square shape.
+    ///
+    /// - Returns: Vector containing matrix diagonal elements
+    func diagonalElements() -> Self {
+        precondition(dim == 2, "source tensor must be matrix")
+        
+        let resultCount = Swift.min(shape[0], shape[1])
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: [resultCount], type: Element.self)
+        Device.Engine.extractDiagonal(values: self.values, target: resultBuffer)
+        
+        return Tensor(
+            using: resultBuffer,
+            context: requiresGradient ? TensorContext(
+                tag: "diag",
+                sources: [self],
+                backpropagate: [{ vector in
+                    vector.diagonalMatrix()
+                }]
+            ) : nil
+        )
+    }
+    
+    /// Computes a matrix that contains the elements of a vector in its diagonal. The remaining elements will be filled with zeros.
+    ///
+    /// The source tensor must have a dimensionality of two.
+    /// The resulting matrix will have a number of rows and columns equal to number of elements in the vector
+    ///
+    /// - Returns: Square diagonal matrix
+    func diagonalMatrix() -> Self {
+        precondition(dim == 1, "diagonal element tensor must be vector")
+        
+        let matrixValues = Device.Memory.allocateBuffer(withShape: [count, count], type: Element.self)
+        Device.Engine.fill(value: 0, result: matrixValues.values, count: matrixValues.count)
+        Device.Engine.fillDiagonal(values: values, target: matrixValues)
+        
+        return Tensor(
+            using: matrixValues,
+            context: requiresGradient ? TensorContext(
+                tag: "diag-mat",
+                sources: [self],
+                backpropagate: [{ matrix in
+                    matrix.diagonalElements()
+                }]
+            ) : nil
+        )
+    }
+    
+    /// Creates a matrix filled with the given value on its diagonal and zeros everywhere else
+    /// - Parameters:
+    ///   - value: Value to fill diagonal with
+    ///   - size: Number of rows and columns of the resulting matrix
+    ///   - requiresGradient: Whether to include the tensor in the compute graph for gradient computation
+    init(fillingDiagonalWith value: Element, size: Int, requiresGradient: Bool = false) {
+        let matrixValues = Device.Memory.allocateBuffer(withShape: [size, size], type: Element.self)
+        Device.Engine.fill(value: 0, result: matrixValues.values, count: matrixValues.count)
+        Device.Engine.fillDiagonal(value: value, target: matrixValues)
+        
+        self.init(
+            using: matrixValues,
+            context: nil
+        )
+        self.requiresGradient = requiresGradient
+    }
 }
