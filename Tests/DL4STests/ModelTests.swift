@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
-import DL4S
+@testable import DL4S
 
 
 class ModelTests: XCTestCase {

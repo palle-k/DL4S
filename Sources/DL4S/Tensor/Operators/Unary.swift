@@ -270,6 +270,13 @@ public extension Tensor {
         self * self.tanh()
     }
 
+    /// Element-wise exponential linear unit activation
+    ///
+    /// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf
+    /// - Parameter alpha: Scale applied to exponential part
+    func exponentialLinearActivated(alpha: Self = 1) -> Self {
+        Tensor.min(alpha * (exp(self) - 1), self)
+    }
 }
 
 /// Element-wise exponentiates the tensor.
@@ -347,6 +354,12 @@ func gelu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element,
     tensor.gaussianErrorLinear()
 }
 
+/// Element-wise exponential linear unit activation
+///
+/// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf
+func elu<Element, Device>(_ tensor: Tensor<Element, Device>, alpha: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
+    tensor.exponentialLinearActivated(alpha: alpha)
+}
 
 /// Computes the element-wise Swish activation
 ///
@@ -370,3 +383,4 @@ func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor
 func lishtActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.lishtActivated()
 }
+
