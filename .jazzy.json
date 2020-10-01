@@ -57,7 +57,8 @@
         "name": "Loss Functions",
         "children": [
             "binaryCrossEntropy(expected:actual:)",
-            "categoricalCrossEntropy(expected:actual:)",
+            "categoricalCrossEntropy(expected:actual:ignoreIndex:)",
+			"categoricalNegativeLogLikelihood(expected:actual:ignoreIndex:)",
             "meanSquaredError(expected:actual:)",
             "l1loss(_:loss:)",
             "l2loss(_:loss:)"
