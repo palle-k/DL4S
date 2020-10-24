@@ -153,8 +153,8 @@ extension Adam: Codable where Layer: Codable {
         epsilon = try container.decode(ParamTensor.self, forKey: .epsilon)
         firstMoments = try container.decode([ParamTensor].self, forKey: .firstMoments)
         secondMoments = try container.decode([ParamTensor].self, forKey: .secondMoments)
-        if container.contains(.useAMSGrad) {
-            useAMSGrad = try container.decode(Bool.self, forKey: .useAMSGrad)
+        if container.contains(.useAMSGrad), try container.decode(Bool.self, forKey: .useAMSGrad) {
+            useAMSGrad = true
             secondMomentMax = try container.decode([ParamTensor].self, forKey: .secondMomentMax)
         } else {
             useAMSGrad = false
