@@ -237,6 +237,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] relu
 - [x] leaky relu
 - [x] gelu
+- [x] elu
 - [x] elementwise min
 - [x] elementwise max
 - [x] reduce sum
@@ -255,10 +256,12 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] im2col
 - [x] col2im
 - [x] stack / concat
-- [x] gelu activation
 - [x] swish activation
 - [x] mish activation
 - [x] lisht activation
+- [x] diagonal matrix generation
+- [x] diagonal extraction
+- [x] band matrix generation
 
 </p>
 </details>

@@ -1,20 +1,6 @@
 {
   "warnings": [
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Assertions.swift",
-      "line": 34,
-      "symbol": "FileHandle.stdout",
-      "symbol_kind": "source.lang.swift.decl.var.static",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Assertions.swift",
-      "line": 43,
-      "symbol": "FileHandle.stderr",
-      "symbol_kind": "source.lang.swift.decl.var.static",
-      "warning": "undocumented"
-    },
-    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/CPU/CPU.swift",
       "line": 29,
       "symbol": "CPU",
@@ -1094,14 +1080,14 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 243,
+      "line": 255,
       "symbol": "GPUEngine.square(values:result:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 363,
+      "line": 375,
       "symbol": "GPUEngine.distribute(source:context:lhs:rhs:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
@@ -1436,610 +1422,547 @@
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/AlexNet.swift",
-      "line": 28,
-      "symbol": "AlexNet",
-      "symbol_kind": "source.lang.swift.decl.struct",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/AlexNet.swift",
-      "line": 61,
-      "symbol": "AlexNet.init(inputChannels:classes:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 35,
-      "symbol": "ResidualBlock",
-      "symbol_kind": "source.lang.swift.decl.struct",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 56,
-      "symbol": "ResidualBlock.conv1",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 57,
-      "symbol": "ResidualBlock.conv2",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 58,
-      "symbol": "ResidualBlock.bn1",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 59,
-      "symbol": "ResidualBlock.bn2",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 60,
-      "symbol": "ResidualBlock.downsample",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 62,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Residual.swift",
+      "line": 64,
       "symbol": "ResidualBlock.init(inputShape:outPlanes:downsample:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 100,
-      "symbol": "ResNet18",
-      "symbol_kind": "source.lang.swift.decl.struct",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 125,
+      "line": 61,
       "symbol": "ResNet18.start",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 126,
+      "line": 62,
       "symbol": "ResNet18.l1",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 127,
+      "line": 63,
       "symbol": "ResNet18.l2",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 128,
+      "line": 64,
       "symbol": "ResNet18.l3",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 129,
+      "line": 65,
       "symbol": "ResNet18.l4",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 130,
+      "line": 66,
       "symbol": "ResNet18.classifier",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/ResNet.swift",
-      "line": 132,
+      "line": 68,
       "symbol": "ResNet18.init(inputShape:classes:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 103,
-      "symbol": "PointwiseFeedForward.dense1",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 104,
-      "symbol": "PointwiseFeedForward.dense2",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 105,
-      "symbol": "PointwiseFeedForward.norm",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 106,
-      "symbol": "PointwiseFeedForward.dropout",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 158,
-      "symbol": "ScaledDotProductAttention.temperature",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 160,
-      "symbol": "ScaledDotProductAttention.init(temperature:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 206,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/MultiHeadAttention.swift",
+      "line": 38,
       "symbol": "MultiHeadAttention.attn",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 207,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/MultiHeadAttention.swift",
+      "line": 39,
       "symbol": "MultiHeadAttention.norm",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 208,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/MultiHeadAttention.swift",
+      "line": 40,
       "symbol": "MultiHeadAttention.dropout",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 300,
-      "symbol": "TransformerEncoderBlock.selfAttention",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/PointwiseFeedForward.swift",
+      "line": 33,
+      "symbol": "PointwiseFeedForward.dense1",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 301,
-      "symbol": "TransformerEncoderBlock.pointwiseFeedForward",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/PointwiseFeedForward.swift",
+      "line": 34,
+      "symbol": "PointwiseFeedForward.dense2",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 340,
-      "symbol": "TransformerDecoderBlock.selfAttention",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/PointwiseFeedForward.swift",
+      "line": 35,
+      "symbol": "PointwiseFeedForward.norm",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 341,
-      "symbol": "TransformerDecoderBlock.encoderAttention",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/PointwiseFeedForward.swift",
+      "line": 36,
+      "symbol": "PointwiseFeedForward.dropout",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 342,
-      "symbol": "TransformerDecoderBlock.pointwiseFeedForward",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/ScaledDotProductAttention.swift",
+      "line": 30,
+      "symbol": "ScaledDotProductAttention.temperature",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 383,
-      "symbol": "TransformerEncoder.encoderLayers",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/ScaledDotProductAttention.swift",
+      "line": 32,
+      "symbol": "ScaledDotProductAttention.init(temperature:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 429,
-      "symbol": "TransformerDecoder.decoderLayers",
-      "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 471,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/Transformer.swift",
+      "line": 35,
       "symbol": "Transformer.embedding",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 472,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/Transformer.swift",
+      "line": 36,
       "symbol": "Transformer.positionalEncoding",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 473,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/Transformer.swift",
+      "line": 37,
       "symbol": "Transformer.dropout",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 475,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/Transformer.swift",
+      "line": 39,
       "symbol": "Transformer.encoder",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 476,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/Transformer.swift",
+      "line": 40,
       "symbol": "Transformer.decoder",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer.swift",
-      "line": 478,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/Transformer.swift",
+      "line": 42,
       "symbol": "Transformer.outputBias",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/TransformerDecoder.swift",
+      "line": 30,
+      "symbol": "TransformerDecoder.decoderLayers",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/TransformerDecoderBlock.swift",
+      "line": 30,
+      "symbol": "TransformerDecoderBlock.selfAttention",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/TransformerDecoderBlock.swift",
+      "line": 31,
+      "symbol": "TransformerDecoderBlock.encoderAttention",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/TransformerDecoderBlock.swift",
+      "line": 32,
+      "symbol": "TransformerDecoderBlock.pointwiseFeedForward",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/TransformerEncoder.swift",
+      "line": 30,
+      "symbol": "TransformerEncoder.encoderLayers",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/TransformerEncoderBlock.swift",
+      "line": 30,
+      "symbol": "TransformerEncoderBlock.selfAttention",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/Transformer/TransformerEncoderBlock.swift",
+      "line": 31,
+      "symbol": "TransformerEncoderBlock.pointwiseFeedForward",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
       "line": 28,
       "symbol": "VGGBase",
       "symbol_kind": "source.lang.swift.decl.protocol",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
       "line": 29,
       "symbol": "VGGBase.Conv1",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
       "line": 30,
       "symbol": "VGGBase.Conv2",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
       "line": 31,
       "symbol": "VGGBase.Conv3",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
       "line": 32,
       "symbol": "VGGBase.Conv4",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
       "line": 33,
       "symbol": "VGGBase.Conv5",
       "symbol_kind": "source.lang.swift.decl.associatedtype",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 40,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 34,
       "symbol": "VGGBase.DenseLayer",
       "symbol_kind": "source.lang.swift.decl.typealias",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 48,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 36,
       "symbol": "VGGBase.conv1",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 49,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 37,
       "symbol": "VGGBase.conv2",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 50,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 38,
       "symbol": "VGGBase.conv3",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 51,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 39,
       "symbol": "VGGBase.conv4",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 52,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 40,
       "symbol": "VGGBase.conv5",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 53,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 41,
       "symbol": "VGGBase.dense",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 56,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 44,
       "symbol": "VGGBase",
       "symbol_kind": "source.lang.swift.decl.extension",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 81,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 69,
       "symbol": "VGGBase.isDropoutActive",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 101,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG.swift",
+      "line": 90,
       "symbol": "VGGBase.makeDense(classes:)",
       "symbol_kind": "source.lang.swift.decl.function.method.static",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 117,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 28,
       "symbol": "VGG11",
       "symbol_kind": "source.lang.swift.decl.struct",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 121,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 32,
       "symbol": "VGG11.conv1",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 122,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 33,
       "symbol": "VGG11.conv2",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 123,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 34,
       "symbol": "VGG11.conv3",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 124,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 35,
       "symbol": "VGG11.conv4",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 125,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 36,
       "symbol": "VGG11.conv5",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 126,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 37,
       "symbol": "VGG11.dense",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 128,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG11.swift",
+      "line": 39,
       "symbol": "VGG11.init(inputChannels:classes:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 175,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 28,
       "symbol": "VGG13",
       "symbol_kind": "source.lang.swift.decl.struct",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 179,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 32,
       "symbol": "VGG13.conv1",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 180,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 33,
       "symbol": "VGG13.conv2",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 181,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 34,
       "symbol": "VGG13.conv3",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 182,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 35,
       "symbol": "VGG13.conv4",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 183,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 36,
       "symbol": "VGG13.conv5",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 184,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 37,
       "symbol": "VGG13.dense",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 186,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG13.swift",
+      "line": 39,
       "symbol": "VGG13.init(inputChannels:classes:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 241,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 28,
       "symbol": "VGG16",
       "symbol_kind": "source.lang.swift.decl.struct",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 245,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 32,
       "symbol": "VGG16.conv1",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 246,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 33,
       "symbol": "VGG16.conv2",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 247,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 34,
       "symbol": "VGG16.conv3",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 248,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 35,
       "symbol": "VGG16.conv4",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 249,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 36,
       "symbol": "VGG16.conv5",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 250,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 37,
       "symbol": "VGG16.dense",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 252,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG16.swift",
+      "line": 39,
       "symbol": "VGG16.init(inputChannels:classes:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 316,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 28,
       "symbol": "VGG19",
       "symbol_kind": "source.lang.swift.decl.struct",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 320,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 32,
       "symbol": "VGG19.conv1",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 321,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 33,
       "symbol": "VGG19.conv2",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 322,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 34,
       "symbol": "VGG19.conv3",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 323,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 35,
       "symbol": "VGG19.conv4",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 324,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 36,
       "symbol": "VGG19.conv5",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 325,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 37,
       "symbol": "VGG19.dense",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG.swift",
-      "line": 327,
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Models/VGG/VGG19.swift",
+      "line": 39,
       "symbol": "VGG19.init(inputChannels:classes:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
@@ -2122,6 +2045,13 @@
       "warning": "undocumented"
     },
     {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/Momentum.swift",
+      "line": 30,
+      "symbol": "Momentum.ParamTensor",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/RMSProp.swift",
       "line": 32,
       "symbol": "RMSProp.ParamTensor",
@@ -2140,13 +2070,6 @@
       "line": 33,
       "symbol": "SGD.learningRate",
       "symbol_kind": "source.lang.swift.decl.var.instance",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Optimizer/SGD.swift",
-      "line": 57,
-      "symbol": "Momentum.ParamTensor",
-      "symbol_kind": "source.lang.swift.decl.typealias",
       "warning": "undocumented"
     },
     {
@@ -2767,28 +2690,28 @@
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 213,
+      "line": 231,
       "symbol": "Tensor.init(bernoulliDistributedWithShape:probability:requiresGradient:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 218,
+      "line": 236,
       "symbol": "Tensor.init(bernoulliDistributedWithShape:probability:requiresGradient:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 257,
+      "line": 275,
       "symbol": "Tensor.elements",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Tensor/TensorExt.swift",
-      "line": 345,
+      "line": 363,
       "symbol": "Tensor.cgImage(normalizeFrom:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"

@@ -3,7 +3,7 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 16.03.19.
-//  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - 2020 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -568,6 +568,62 @@ public struct CPUEngine: EngineType {
             let offset = stride * i
             
             reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, context.pointer, stride)
+        }
+    }
+    
+    @_specialize(where N == Float)
+    public static func fillDiagonal<N>(values: ShapedBuffer<N, CPU>, target: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(values.dim == 1, "values must be a vector")
+        precondition(target.dim == 2, "target must be a matrix")
+        
+        let maxIdx = Swift.min(target.shape[0], target.shape[1])
+        precondition(values.count == maxIdx, "number of values must be equal to smaller dimension of matrix")
+        
+        let src = values.immutable.baseAddress!
+        let dst = target.pointer.baseAddress!
+        
+        let stride = target.shape[1] + 1
+        
+        var i = 0
+        while i < maxIdx {
+            dst[i &* stride] = src[i]
+            i &+= 1
+        }
+    }
+    
+    @_specialize(where N == Float)
+    public static func fillDiagonal<N>(value: N, target: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(target.dim == 2, "target must be a matrix")
+        let maxIdx = Swift.min(target.shape[0], target.shape[1])
+        
+        let dst = target.pointer.baseAddress!
+        
+        let stride = target.shape[1] + 1
+        
+        var i = 0
+        while i < maxIdx {
+            dst[i &* stride] = value
+            i &+= 1
+        }
+    }
+    
+    @_specialize(where N == Float)
+    public static func extractDiagonal<N>(values: ShapedBuffer<N, CPU>, target: ShapedBuffer<N, CPU>) where N : NumericType {
+        precondition(target.dim == 1, "values must be a vector")
+        precondition(values.dim == 2, "target must be a matrix")
+        
+        let maxIdx = Swift.min(values.shape[0], values.shape[1])
+        precondition(target.count == maxIdx, "number of values must be equal to smaller dimension of matrix")
+        
+        let src = values.immutable.baseAddress!
+        let dst = target.pointer.baseAddress!
+        
+        let stride = target.shape[0] + 1
+        
+        var i = 0
+        while i < maxIdx {
+            dst[i] = src[i &* stride]
+            i &+= 1
         }
     }
     

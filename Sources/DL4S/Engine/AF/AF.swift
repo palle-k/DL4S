@@ -682,6 +682,17 @@ public struct AFEngine: EngineType {
         shapecheck(image)
     }
     
+    public static func fillDiagonal<N: NumericType>(value: N, target: ShapedBuffer<N, Device>) {
+        fatalError("\(#function) is not available on ArrayFire engine")
+    }
+    
+    public static func fillDiagonal<N: NumericType>(values: ShapedBuffer<N, Device>, target: ShapedBuffer<N, Device>) {
+        fatalError("\(#function) is not available on ArrayFire engine")
+    }
+    
+    public static func extractDiagonal<N: NumericType>(values: ShapedBuffer<N, Device>, target: ShapedBuffer<N, Device>) {
+        fatalError("\(#function) is not available on ArrayFire engine")
+    }
 }
 
 #endif

@@ -270,6 +270,13 @@ public extension Tensor {
         self * self.tanh()
     }
 
+    /// Element-wise exponential linear unit activation
+    ///
+    /// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf
+    /// - Parameter alpha: Scale applied to exponential part
+    func exponentialLinearActivated(alpha: Self = 1) -> Self {
+        Tensor.min(alpha * (self.exp() - 1), self)
+    }
 }
 
 /// Element-wise exponentiates the tensor.
@@ -343,15 +350,21 @@ public func logSoftmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis:
 /// Computes the element-wise GeLU activation
 ///
 /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
-func gelu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func gelu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.gaussianErrorLinear()
 }
 
+/// Element-wise exponential linear unit activation
+///
+/// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf
+public func elu<Element, Device>(_ tensor: Tensor<Element, Device>, alpha: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
+    tensor.exponentialLinearActivated(alpha: alpha)
+}
 
 /// Computes the element-wise Swish activation
 ///
 /// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
-func swishActivated<Element, Device>(_ tensor: Tensor<Element, Device>, beta: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
+public func swishActivated<Element, Device>(_ tensor: Tensor<Element, Device>, beta: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
     tensor.swishActivated(beta: beta)
 }
 
@@ -359,7 +372,7 @@ func swishActivated<Element, Device>(_ tensor: Tensor<Element, Device>, beta: Te
 /// Computes the element-wise Mish activation
 ///
 /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
-func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.mishActivated()
 }
 
@@ -367,6 +380,7 @@ func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor
 /// Computes the element-wise LiSHT activation
 ///
 /// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
-func lishtActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func lishtActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.lishtActivated()
 }
+

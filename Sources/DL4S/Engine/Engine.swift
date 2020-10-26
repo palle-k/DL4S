@@ -3,7 +3,7 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 10.03.19.
-//  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - 2020 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -218,6 +218,26 @@ public protocol EngineType {
     static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: Buffer<N, Device>, count: Int)
 
     //MARK: Matrix operations
+    
+    
+    /// Matrix diagonal fill in-place
+    /// - Parameters:
+    ///   - values: Values to fill the diagonal with
+    ///   - target: Matrix to be filled
+    static func fillDiagonal<N: NumericType>(values: ShapedBuffer<N, Device>, target: ShapedBuffer<N, Device>)
+    
+    /// Matrix diagonal fill in-place
+    /// - Parameters:
+    ///   - value: Value to fill the diagonal with
+    ///   - target: Matrix to be filled
+    static func fillDiagonal<N: NumericType>(value: N, target: ShapedBuffer<N, Device>)
+    
+    
+    /// Extracts the diagonal of a matrix
+    /// - Parameters:
+    ///   - value: Matrix to extract diagonal from
+    ///   - target: Vector to write diagonal values to
+    static func extractDiagonal<N: NumericType>(values: ShapedBuffer<N, Device>, target: ShapedBuffer<N, Device>)
     
     /// Matrix multiply add in-place
     /// - Parameters:

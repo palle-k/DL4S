@@ -32,72 +32,9 @@ extension Optional {
     }
 }
 
-public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: LayerType {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
-        return Array([
-            conv1.parameterPaths.map((\Self.conv1).appending(path:)),
-            conv2.parameterPaths.map((\Self.conv2).appending(path:)),
-            bn1.parameterPaths.map((\Self.bn1).appending(path:)),
-            bn2.parameterPaths.map((\Self.bn2).appending(path:)),
-            downsample?.parameterPaths.map((\Self.downsample.forceUnwrapped).appending(path:)) ?? []
-        ].joined())
-    }
-    
-    public var parameters: [Tensor<Element, Device>] {
-        Array([
-            conv1.parameters,
-            conv2.parameters,
-            bn1.parameters,
-            bn2.parameters,
-            downsample?.parameters ?? []
-        ].joined())
-    }
-    
-    public var conv1: Convolution2D<Element, Device>
-    public var conv2: Convolution2D<Element, Device>
-    public var bn1: BatchNorm<Element, Device>
-    public var bn2: BatchNorm<Element, Device>
-    public var downsample: Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>>?
-    
-    public init(inputShape: [Int], outPlanes: Int, downsample: Int) {
-        conv1 = Convolution2D(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (3, 3), stride: downsample)
-        conv2 = Convolution2D(inputChannels: outPlanes, outputChannels: outPlanes, kernelSize: (3, 3))
-        
-        let convShape = ConvUtil.outputShape(for: inputShape, kernelCount: outPlanes, kernelWidth: 3, kernelHeight: 3, stride: downsample, padding: 1)
-        
-        bn1 = BatchNorm(inputSize: convShape)
-        bn2 = BatchNorm(inputSize: convShape)
-        
-        if downsample != 1 {
-            self.downsample = Sequential {
-                Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (1, 1), padding: 0, stride: downsample)
-                BatchNorm<Element, Device>(inputSize: [outPlanes, inputShape[1] / downsample, inputShape[2] / downsample])
-            }
-        } else {
-            self.downsample = nil
-        }
-    }
-    
-    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "ResidualBlock") {
-            var x = inputs
-            
-            let r = downsample?(x) ?? x
-            
-            x = conv1(x)
-            x = bn1(x)
-            x = relu(x)
-            x = conv2(x)
-            x = bn2(x)
-            x = x + r
-            x = relu(x)
-            
-            return x
-        }
-    }
-}
+/// Residual neural network with 18 layers (17 convolutional, 1 dense)
+public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType {
 
-public struct ResNet18<Element: RandomizableType & NumericType, Device: DeviceType>: LayerType {
     public var parameters: [Tensor<Parameter, Self.Device>] {
         get {
             Array([
@@ -127,7 +64,7 @@ public struct ResNet18<Element: RandomizableType & NumericType, Device: DeviceTy
     public var l2: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l3: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l4: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
-    public var classifier: Sequential<Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>>, Sequential<Dense<Element, Device>, Softmax<Element, Device>>>
+    public var classifier: Sequential<Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>>, Sequential<Dense<Element, Device>, LogSoftmax<Element, Device>>>
     
     public init(inputShape: [Int], classes: Int) {
         let startOut = ConvUtil.outputShape(for: inputShape, kernelCount: 64, kernelWidth: 7, kernelHeight: 7, stride: 2, padding: 3)
@@ -162,7 +99,7 @@ public struct ResNet18<Element: RandomizableType & NumericType, Device: DeviceTy
             AdaptiveAvgPool2D<Element, Device>(targetSize: 1)
             Flatten<Element, Device>()
             Dense<Element, Device>(inputSize: 512, outputSize: classes)
-            Softmax<Element, Device>()
+            LogSoftmax<Element, Device>()
         }
     }
     
