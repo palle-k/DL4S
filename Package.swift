@@ -23,8 +23,7 @@ let package = Package(
             dependencies: []),
         .target(
             name: "DL4S",
-            dependencies: ["MKL"],
-            swiftSettings: [.unsafeFlags(["-enable-testing"])]
+            dependencies: ["MKL"]
         ),
         .testTarget(
             name: "DL4STests",
