@@ -12,7 +12,7 @@
 
 DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
 It furthermore has automatic differentiation builtin, which allows you to create and train neural networks without needing to manually
-implement backpropagation.
+implement backpropagation - without needing a special Swift toolchain.
 
 Features include implementations for many basic binary and unary operators,
 broadcasting, matrix operations, convolutional and recurrent neural networks, 
