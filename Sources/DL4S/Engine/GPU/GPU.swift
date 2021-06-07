@@ -130,6 +130,7 @@ public struct VRAMBuffer: Hashable {
 
 
 public struct GPUEngine: EngineType {
+    
     public typealias Device = GPU
     
     public static func fill<N>(value: N, result: Buffer<N, Device>, count: Int) {
@@ -317,6 +318,14 @@ public struct GPUEngine: EngineType {
     }
     
     public static func col2img<N>(matrix: ShapedBuffer<N, GPU>, image: ShapedBuffer<N, GPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func img2col1d<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, kernelSize: Int, padding: Int, stride: Int) where N : NumericType {
+        fatalError("\(#function) not available for GPU")
+    }
+    
+    public static func col2img1d<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, kernelSize: Int, padding: Int, stride: Int) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
     

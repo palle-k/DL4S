@@ -107,6 +107,73 @@ public extension Tensor {
             )
         )
     }
+    
+    
+    /// Performs an im2col1d transformation
+    ///
+    /// the source tensor is expected to have a shape of [batchSize, channels, size]
+    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelSize]
+    ///
+    /// - Parameters:
+    ///   - filters: Filters to convolve the tensor with
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
+    /// - Returns: A tensor of shape [batchSize, outputChannels,  (size + 2 \* padding - kernelSize) / stride + 1)
+    func img2col1d(kernelSize: Int, padding: Int, stride: Int = 1) -> Tensor<Element, Device> {
+        // => [channels * kernelWidth * kernelHeight, outputWidth * outputHeight * batchSize]
+        let resultSize = (shape[2] + 2 * padding - kernelSize) / stride + 1
+        
+        let resultShape = [
+            shape[1] * kernelSize,
+            resultSize * shape[0]
+        ]
+        print("im2col1dOutputShape: \(resultShape)")
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
+        Device.Engine.img2col1d(
+            values: values,
+            result: resultBuffer,
+            kernelSize: kernelSize,
+            padding: padding,
+            stride: stride
+        )
+        
+        let res = Tensor(
+            using: resultBuffer,
+            context: requiresGradient ? TensorContext(
+                tag: "img2col1d",
+                sources: [self],
+                backpropagate: [{ resultGradient in
+                    resultGradient.col2img1d(kernelSize: kernelSize, padding: padding, stride: stride, resultShape: resultShape)
+                }]
+            ) : nil
+        )
+        
+        return res
+    }
+    
+    func col2img1d(kernelSize: Int, padding: Int, stride: Int, resultShape: [Int]) -> Tensor<Element, Device> {
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
+        Device.Engine.col2img1d(
+            values: values,
+            result: resultBuffer,
+            kernelSize: kernelSize,
+            padding: padding,
+            stride: stride
+        )
+        
+        return Tensor(
+            using: resultBuffer,
+            context: requiresGradient ? TensorContext(
+                tag: "transposedConvolution1d",
+                sources: [self],
+                backpropagate: [{ resultGradient in
+                    resultGradient.img2col1d(kernelSize: kernelSize, padding: padding, stride: stride)
+                }]
+            ) : nil
+        )
+    }
+    
+    
 }
 
 //MARK: Convolution
@@ -143,6 +210,121 @@ public extension Tensor {
         
         return conv.permuted(to: [1, 0, 2, 3])
     }
+    
+    /// Performs a 1d convolution
+    ///
+    /// the source tensor is expected to have a shape of [batchSize, channels, size]
+    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelSize]
+    ///
+    /// - Parameters:
+    ///   - filters: Filters to convolve the tensor with
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
+    /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
+    func convolved1d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
+        let padding = padding ?? ((filters.shape[2] - 1) / 2)
+        
+        let outputShape = [
+            shape[0],
+            filters.shape[0],
+            (shape[2] + 2 * padding - filters.shape[2]) / stride + 1
+        ]
+        
+        let im2col1dRes = self.img2col1d(kernelSize: filters.shape[2], padding: padding, stride: stride)
+        
+        print("1d im to col returned shape: \(im2col1dRes.shape) original shape: \(self.shape)")
+        let conv = filters
+            .view(as: [filters.shape[0], filters.shape[1] * filters.shape[2]])
+            .matrixMultiplied(with: im2col1dRes)
+//         => [batchSize, outputChannels, outputHeight, outputWidth]
+            .view(as: outputShape)
+        
+        return conv
+    }
+    
+    func transposedConvolution1d(filters: Tensor<Element, Device>, padding: Int, stride: Int) -> Tensor<Element, Device> {
+        let kernelSize = filters.shape[2]
+        let resultSize = (shape[2] + 2 * padding - kernelSize) / stride + 1
+        
+        let resultShape = [
+            shape[1] * kernelSize,
+            resultSize * shape[0]
+        ]
+        
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
+        Device.Engine.col2img1d(
+            values: values,
+            result: resultBuffer,
+            kernelSize: kernelSize,
+            padding: padding,
+            stride: stride
+        )
+        
+        return Tensor(
+            using: resultBuffer,
+            context: requiresGradient ? TensorContext(
+                tag: "transposedConvolution1d",
+                sources: [self],
+                backpropagate: [{ resultGradient in
+                    resultGradient.convolved1d(filters: filters, padding: padding, stride: stride)
+                }]
+            ) : nil
+        )
+    }
+    
+    /// Performs a 1d convolution
+    ///
+    /// the source tensor is expected to have a shape of [batchSize, channels, size]
+    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelSize]
+    ///
+    /// - Parameters:
+    ///   - filters: Filters to convolve the tensor with
+    ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
+    ///   - stride: Stride, with which the kernel is moved along the image
+    /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
+//    func convolved1d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
+//        let padding = padding ?? ((filters.shape[2] - 1) / 2)
+//        let kernelSize = filters.shape[0]
+//        let n_convs_per_batch = self.shape[2] - kernelSize + 1 // seq length - kernel size + 1
+//        let outputShape = [ shape[0], filters.shape[0], (shape[1] + 2 * padding - filters.shape[1]) / stride + 2 ] // batch size, output channels, kernel size
+//        print("outputShape: \(outputShape)")
+//        var result = Tensor<Element, Device>(repeating: 0, shape: outputShape)
+//
+//        print("n_convs_per_batch: \(n_convs_per_batch)")
+//        //TODO: sorry for the for loop hell. get rid of for loop hell
+//        for b_i in 0...self.shape[0]-1{ // for each batch
+//            let batch = self[b_i].view(as: [self.shape[2], -1]) //got the batch, and fliped shape to [seq len, channels]
+//            print("batch \(b_i), batch shape: \(batch.shape), self shape: \(self.shape)")
+//            for k_i in 0...filters.shape[0]-1{ // for each output filter
+//                print("kernel \(k_i)")
+//                //TODO: oh yaeh also another forloop for channels is needed
+//                for i in 0...outputShape[2] - 1{ // for each convolution
+//                    let product = matMul(batch[i..<(i+kernelSize + 1)], filters[k_i]).reduceSum()
+//                    print("got product \(i): \(product)")
+//                    print(" currently getting: [",b_i,",",k_i,",",i,"] \n out of: ", result.shape)
+//                    result[b_i][k_i][i] = product
+//                    // corresponding python code
+//                    // dot_product = np.dot(batch[i:i+kernel_size], k)
+//                    // res.append(dot_product)
+//                }
+//            }
+//        }
+////        for i in 0...(self.shape[0])-1{
+////            print("ABOUT TO CONV 1 ITEM: \(self[i].shape) with filter: \(filters[i][i].shape)")
+////            let convoluted = self[i]
+////                .matrixMultiplied(with: filters[i].view(as: -1,filters[i].shape[0]))
+////            if i == 0 {
+////                result = convoluted
+////            } else {
+////                result += convoluted
+////            }
+////
+////        }
+//
+//        print("result: \(result.shape)")
+//        return result
+//    }
+    
     
     /// Performs a transposed 2d convolution (also called fractionally strided convolution).
     ///

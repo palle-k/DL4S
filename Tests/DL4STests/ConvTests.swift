@@ -60,7 +60,7 @@ class ConvTests: XCTestCase {
         }
     }
     
-    func testConv1() {
+    func testConv2d1() {
         let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
         let c = a.repeated(4)
         let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
@@ -77,7 +77,7 @@ class ConvTests: XCTestCase {
         print(d.convolved2d(filters: filters))
     }
     
-    func testConv() {
+    func testConv2d() {
         let filters = Tensor<Float, CPU>([
             [
                 [[1, 2, 1],
@@ -115,7 +115,51 @@ class ConvTests: XCTestCase {
         #endif
     }
     
-    func testTransposedConv() {
+    func testConv1d1() {
+        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let c = a.repeated(4)
+        let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
+        
+        let filters = Tensor<Float, CPU>([
+            [
+                [[1]]
+            ],
+            [
+                [[-1]]
+            ]
+        ])
+        
+        print(d.convolved1d(filters: filters))
+    }
+    
+    func testConv1d() {
+        let filters = Tensor<Float, CPU>([0.6627, 0.4369, 0.7015, 0.9647, 0.7631, 0.3203]).view(as: 2, 1, 3)
+        print("filter shape: \(filters.shape)")
+
+        //testSequenceData shape => [batchSize = 2, channels = 1, size = 9]
+        let testSequenceData = Tensor<Float, CPU>([0.2067, 0.1982, 0.9340, 0.7587, 0.4605, 0.2909, 0.3100, 0.1927, 0.1929,
+                                                   0.9159, 0.6602, 0.5774, 0.0699, 0.9077, 0.4604, 0.3512, 0.4984, 0.7223]).view(as: [2,1,9])
+        print("ABT TO BE CONVOLVED 1d")
+        let filtered = testSequenceData.convolved1d(filters: filters)
+        print("FINISHED Convolution process with --- \n res: \(filtered), \n res shape: \(filtered.shape), \n inp shape: \(testSequenceData.shape), \n filters shape: \(filters.shape); kernel size: \(filters.shape[2])")
+        
+//        #if canImport(AppKit) && false
+//        for i in 0 ..< batch.shape[0] {
+//            let src = batch[i]
+//            let dst = filtered[i]
+//
+//            let srcImg = NSImage(src)
+//            try? srcImg?.save(to: "/Users/Palle/Desktop/conv/src_\(i).png")
+//
+//            for j in 0 ..< dst.shape[0] {
+//                let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
+//                try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j)a.png")
+//            }
+//        }
+//        #endif
+    }
+    
+    func testTransposedConv2d() {
         let filters = Tensor<Float, CPU>([
             [
                 [[1, 2, 1],

@@ -578,4 +578,22 @@ public protocol EngineType {
     ///   - padding: Zero padding applied around the input image
     ///   - stride: Stride, with which the window is moved over the input image
     static func col2img<N: NumericType>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+    
+    /// Performs a 1d img2col transformation
+    /// - Parameters:
+    ///   - values: Image buffer, shape [batchSize, channels, size]
+    ///   - result: Result buffer, shape [channels * kernelSize, number of windows]
+    ///   - kernelSize: Size of the convolution kernel
+    ///   - padding: Zero padding applied around the input image
+    ///   - stride: Stride, with which the window is moved over the input image
+    static func img2col1d<N: NumericType>(values: ShapedBuffer<N, Device>,result: ShapedBuffer<N, Device>, kernelSize: Int, padding: Int, stride: Int)
+    
+    /// Performs a 1d col2img transformation
+    /// - Parameters:
+    ///   - values: Image buffer, shape [batchSize, channels, size]
+    ///   - result: Result buffer, shape [channels * kernelSize, number of windows]
+    ///   - kernelSize: Size of the convolution kernel
+    ///   - padding: Zero padding applied around the input image
+    ///   - stride: Stride, with which the window is moved over the input image
+    static func col2img1d<N: NumericType>(values: ShapedBuffer<N, Device>, result: ShapedBuffer<N, Device>, kernelSize: Int, padding: Int, stride: Int)
 }

@@ -25,6 +25,63 @@
 
 import Foundation
 
+/// A 1D convolutional layer
+public struct Convolution1D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+        \.filters,
+        \.bias
+    ]}
+    
+    /// Convolution filters, shape [outputChannels, inputChannels, kernelSize]
+    public var filters: Tensor<Element, Device>
+    /// Bias, shape [1, outputChannels, 1,]
+    public var bias: Tensor<Element, Device>
+    // Convolution stride >= 1
+    public let stride: Int
+    // Padding around the edges of the input
+    public let padding: Int?
+    
+    public var parameters: [Tensor<Element, Device>] {
+        get {
+            [filters, bias]
+        }
+    }
+    
+    /// Creates a 1D convolutional layer.
+    ///
+    /// The inputs of the layer must have a shape [batchSize, channels, kernelSize]
+    ///
+    /// - Parameters:
+    ///   - inputChannels: Number of channels in the input
+    ///   - outputChannels: Number of channels in the output
+    ///   - kernelSize: Width and height of the convolution kernel
+    ///   - padding: Padding, that will be applied around the edges of the input
+    ///   - stride: Stride, with which the convolution kernel is moved over the input tensor, >= 1.
+    public init(inputChannels: Int, outputChannels: Int, kernelSize: Int, padding: Int? = nil, stride: Int = 1) {
+        self.filters = Tensor(
+            normalDistributedWithShape: [outputChannels, inputChannels, kernelSize],
+            mean: 0,
+            stdev: 2 / Element(kernelSize * inputChannels).sqrt(),
+            requiresGradient: true
+        )
+        self.bias = Tensor(repeating: 0, shape: [1, outputChannels, 1], requiresGradient: true)
+        self.stride = stride
+        self.padding = padding
+        
+        #if DEBUG
+        filters.tag = "W"
+        bias.tag = "b"
+        #endif
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        OperationGroup.capture(named: "Conv1D") {
+            inputs.convolved1d(filters: filters, padding: padding, stride: stride) + bias
+        }
+    }
+}
+
+
 /// A 2D convolutional layer
 public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
