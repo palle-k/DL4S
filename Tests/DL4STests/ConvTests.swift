@@ -133,14 +133,17 @@ class ConvTests: XCTestCase {
     }
     
     func testConv1d() {
-        let filters = Tensor<Float, CPU>([0.6627, 0.4369, 0.7015, 0.9647, 0.7631, 0.3203]).view(as: 2, 1, 3)
+        let filters = Tensor<Float, CPU>([0.02641911, 0.70953383, 0.42951898, 0.58568196, 0.50831411,
+                                          0.13808442]).view(as: 2, 1, 3)
         print("filter shape: \(filters.shape)")
 
         //testSequenceData shape => [batchSize = 2, channels = 1, size = 9]
-        let testSequenceData = Tensor<Float, CPU>([0.2067, 0.1982, 0.9340, 0.7587, 0.4605, 0.2909, 0.3100, 0.1927, 0.1929,
-                                                   0.9159, 0.6602, 0.5774, 0.0699, 0.9077, 0.4604, 0.3512, 0.4984, 0.7223]).view(as: [2,1,9])
+        let testSequenceData = Tensor<Float, CPU>([0.52582376, 0.92104604, 0.46794182, 0.08924296, 0.16710744,
+                                                   0.37407358, 0.04043267, 0.25526662, 0.89840653, 0.22725283,
+                                                   0.68823759, 0.86775579, 0.06474228, 0.70579868, 0.99648027,
+                                                   0.51797662, 0.03736867, 0.19278374]).view(as: [2,1,9])
         print("ABT TO BE CONVOLVED 1d")
-        let filtered = testSequenceData.convolved1d(filters: filters)
+        let filtered = testSequenceData.convolved1d(filters: filters, padding: 0)
         print("FINISHED Convolution process with --- \n res: \(filtered), \n res shape: \(filtered.shape), \n inp shape: \(testSequenceData.shape), \n filters shape: \(filters.shape); kernel size: \(filters.shape[2])")
         
 //        #if canImport(AppKit) && false

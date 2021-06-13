@@ -321,14 +321,6 @@ public struct GPUEngine: EngineType {
         fatalError("\(#function) not available for GPU")
     }
     
-    public static func img2col1d<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, kernelSize: Int, padding: Int, stride: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
-    public static func col2img1d<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>, kernelSize: Int, padding: Int, stride: Int) where N : NumericType {
-        fatalError("\(#function) not available for GPU")
-    }
-    
     public static func exp<N>(values: ShapedBuffer<N, GPU>, result: ShapedBuffer<N, GPU>) where N : NumericType {
         fatalError("\(#function) not available for GPU")
     }
