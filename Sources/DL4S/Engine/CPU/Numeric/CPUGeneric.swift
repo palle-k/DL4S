@@ -42,16 +42,6 @@ struct D4Img2ColSetup {
     let stride: Int
 }
 
-struct D4Conv1DSetup {
-    let batch_size: Int
-    let channels: Int
-    let size: Int
-    let kernel_size: Int
-    let padding: Int
-    let stride: Int
-}
-
-
 public extension CPUNumeric {
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
@@ -187,9 +177,6 @@ public extension CPUNumeric {
             }
         }
     }
-    
-    
-    
     
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)

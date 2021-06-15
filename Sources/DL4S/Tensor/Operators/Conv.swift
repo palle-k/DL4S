@@ -48,8 +48,8 @@ public extension Tensor {
         let resultWidth = (shape[3] + 2 * padding - kernelWidth) / stride + 1
         
         let resultShape = [
-            shape[1] * kernelWidth * kernelHeight, // channels * kernel area
-            resultHeight * resultWidth * shape[0] // result area * batchSize
+            shape[1] * kernelWidth * kernelHeight,
+            resultHeight * resultWidth * shape[0]
         ]
         
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)

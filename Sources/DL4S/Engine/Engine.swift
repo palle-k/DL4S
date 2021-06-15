@@ -578,5 +578,4 @@ public protocol EngineType {
     ///   - padding: Zero padding applied around the input image
     ///   - stride: Stride, with which the window is moved over the input image
     static func col2img<N: NumericType>(matrix: ShapedBuffer<N, Device>, image: ShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
-    
 }

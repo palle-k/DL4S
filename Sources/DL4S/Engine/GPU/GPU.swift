@@ -130,7 +130,6 @@ public struct VRAMBuffer: Hashable {
 
 
 public struct GPUEngine: EngineType {
-    
     public typealias Device = GPU
     
     public static func fill<N>(value: N, result: Buffer<N, Device>, count: Int) {

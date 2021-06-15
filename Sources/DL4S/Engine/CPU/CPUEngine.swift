@@ -55,7 +55,6 @@ private enum BroadcastMode: Int {
 
 
 public struct CPUEngine: EngineType {
-    
     public typealias Device = CPU
     
     public static func fill<N: NumericType>(value: N, result: Buffer<N, Device>, count: Int) {
@@ -1132,7 +1131,6 @@ public struct CPUEngine: EngineType {
         precondition(image.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
         N.col2img(values: matrix.immutable, result: image.pointer, batchSize: image.shape[0], channels: image.shape[1], height: image.shape[2], width: image.shape[3], kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride);
     }
-    
     
     public static func band<N>(buffer: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, belowDiagonal: Int?, aboveDiagonal: Int?) where N : NumericType {
         precondition(buffer.shape == result.shape, "Shape of result must be equal to shape of buffer.")
