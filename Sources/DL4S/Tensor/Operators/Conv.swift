@@ -160,11 +160,16 @@ public extension Tensor {
         // uses im2col where the kernelHeight is always 1
         let filters = filters.unsqueezed(at: 3) // seting height to 1
         print("padding: \(padding)")
-        let res = self
+//        print("original: \(self)")
+        var res = self
+            .padded(padding: [0,0,padding])
+//        print("padded: \(res)")
+        res = res
             .unsqueezed(at: 3) // set height to 1
-            //[batchSize, channels, w, h] => [bs, c, h, w]
-//            .permuted(to: [0, 1, 3, 2])
-            .convolved2d(filters: filters, padding: padding, stride: stride)
+//        print("unsqueezed: \(res)")
+        res = res
+            .convolved2d(filters: filters, padding: 0, stride: stride)
+            
             
         return res.view(as: [res.shape[0],res.shape[1],res.shape[2]*res.shape[3]])
     }
