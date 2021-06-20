@@ -277,6 +277,24 @@ public extension Tensor {
     func exponentialLinearActivated(alpha: Self = 1) -> Self {
         Tensor.min(alpha * (self.exp() - 1), self)
     }
+    
+    /// Element-wise softplus activation.
+    ///
+    /// This function is similar to a rectified linear unit but is smooth and has a continuous gradient.
+    ///
+    /// See [Dugas et al. - Incorporating Second-Order Functional Knowledge for Better Option Pricing](https://proceedings.neurips.cc/paper/2000/file/44968aece94f667e4095002d140b5896-Paper.pdf)
+    func softplus() -> Self {
+        return (self.exp() + 1).log()
+    }
+    
+    /// Element-wise squareplus activation.
+    ///
+    /// This activation function is similar to softplus but does not use exponentiation and logarithms.
+    ///
+    /// See https://twitter.com/jon_barron/status/1387167648669048833
+    func squareplus() -> Self {
+        (self + (self * self + 4).sqrt()) / 2
+    }
 }
 
 /// Element-wise exponentiates the tensor.
@@ -384,3 +402,16 @@ public func lishtActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -
     tensor.lishtActivated()
 }
 
+/// Element-wise softplus activation
+///
+/// See [Dugas et al. - Incorporating Second-Order Functional Knowledge for Better Option Pricing](https://proceedings.neurips.cc/paper/2000/file/44968aece94f667e4095002d140b5896-Paper.pdf)
+public func softplus<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.softplus()
+}
+
+/// Element-wise squareplus activation
+///
+/// See https://twitter.com/jon_barron/status/1387167648669048833
+public func squareplus<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    tensor.squareplus()
+}
