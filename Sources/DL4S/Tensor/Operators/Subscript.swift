@@ -69,6 +69,8 @@ public extension Tensor {
         set (slice) {
             precondition(!requiresGradient, "Cannot write into tensor that requires gradient.")
             
+            self.ensureOwnership()
+            
             let index = zip(index, shape).map { idx, dim -> Int? in
                 if let idx = idx, idx < 0 {
                     return dim + idx
@@ -153,6 +155,8 @@ public extension Tensor {
             if slice.dim == 0 && dim - index.filter({$0 != nil}).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }
+            
+            self.ensureOwnership()
             
             //TODO: Proper handling of replacement when gradient is computed.
             

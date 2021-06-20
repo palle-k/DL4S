@@ -202,15 +202,15 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
             let count = dIdx.count &* dStride
             dstStart.assign(from: source, count: count)
         } else {
-            let srcShape = zip(dstIndex, dstStrides)
-                .map {$1}
+            let srcShape = zip(dstIndex, dstShape)
+                .map {$0?.count ?? $1}
             let srcStrides = MemoryOps.strides(from: srcShape)
             let sStride = srcStrides[0]
             
             for i in dIdx {
                 let offset = i &* dStride
                 let dstStart = destination.advanced(by: offset)
-                let srcOffset = i &* sStride
+                let srcOffset = (i &- dIdx.lowerBound) &* sStride
                 let srcStart = source.advanced(by: srcOffset)
                 
                 recursiveWrite(
