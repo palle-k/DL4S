@@ -81,6 +81,66 @@ public struct Convolution1D<Element: RandomizableType, Device: DeviceType>: Laye
     }
 }
 
+/// A 1D transposed (fractionally strided) convolutional layer
+public struct TransposedConvolution1D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+        \.filters,
+        \.bias
+    ]}
+    
+    /// Convolution filters, shape [outputChannels, inputChannels, kernelSize]
+    public var filters: Tensor<Element, Device>
+    
+    /// Bias vector, shape [1, outputChannels, 1, 1]
+    public var bias: Tensor<Element, Device>
+    
+    /// Stride fraction >= 1
+    public let stride: Int
+    
+    /// Number of elements that are removed from the edges of the output.
+    public let inset: Int?
+    
+    public var parameters: [Tensor<Element, Device>] {
+        get {
+            [filters, bias]
+        }
+    }
+    
+    /// Creates a 1D transposed (fractionally strided) convolutional layer.
+    ///
+    /// The inputs of the layer must have a shape [batchSize, channels, size]
+    ///
+    /// - Parameters:
+    ///   - inputChannels: Number of channels in the input
+    ///   - outputChannels: Number of channels in the output
+    ///   - kernelSize: size of the convolution kernel
+    ///   - inset: Number of elements that are removed from the edges of the output.
+    ///   - stride: Inverse of stride, with which the convolution kernel is moved over the input tensor, >= 1.
+    public init(inputChannels: Int, outputChannels: Int, kernelSize: Int, inset: Int? = nil, stride: Int = 1) {
+        self.filters = Tensor(
+            normalDistributedWithShape: [outputChannels, inputChannels, kernelSize],
+            mean: 0,
+            stdev: 2 / Element(kernelSize * inputChannels).sqrt(),
+            requiresGradient: true
+        )
+        self.bias = Tensor(repeating: 0, shape: [1, outputChannels, 1], requiresGradient: true)
+        self.stride = stride
+        self.inset = inset
+        
+        #if DEBUG
+        filters.tag = "W"
+        bias.tag = "b"
+        #endif
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        OperationGroup.capture(named: "TransposedConv1D") {
+            let t_conv = inputs.transposedConvolved1d(filters: filters, inset: inset, stride: stride)
+            return t_conv + bias
+        }
+    }
+}
+
 
 /// A 2D convolutional layer
 public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
