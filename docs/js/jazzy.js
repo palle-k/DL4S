@@ -1,4 +1,4 @@
-window.jazzy = { 'docset': false }
+window.jazzy = {'docset': false}
 if (typeof window.dash != 'undefined') {
   document.documentElement.className += ' dash'
   window.jazzy.docset = true
@@ -34,7 +34,7 @@ $(openCurrentItemIfClosed);
 $(window).on('hashchange', openCurrentItemIfClosed);
 
 // On item link ('token') click, toggle its discussion
-$('.token').on('click', function (event) {
+$('.token').on('click', function(event) {
   if (window.jazzy.docset) {
     return;
   }
@@ -52,7 +52,7 @@ $('.token').on('click', function (event) {
 });
 
 // Clicks on links to the current, closed, item need to open the item
-$("a:not('.token')").on('click', function () {
+$("a:not('.token')").on('click', function() {
   if (location == this.href) {
     openCurrentItemIfClosed();
   }
@@ -60,7 +60,7 @@ $("a:not('.token')").on('click', function () {
 
 // KaTeX rendering
 if ("katex" in window) {
-  $($('.math').each((_, element) => {
+  $($('.math').each( (_, element) => {
     katex.render(element.textContent, element, {
       displayMode: $(element).hasClass('m-block'),
       throwOnError: false,

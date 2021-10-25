@@ -1023,76 +1023,6 @@
       "warning": "undocumented"
     },
     {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 30,
-      "symbol": "GPU",
-      "symbol_kind": "source.lang.swift.decl.struct",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 43,
-      "symbol": "VRAMAllocator",
-      "symbol_kind": "source.lang.swift.decl.struct",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 44,
-      "symbol": "VRAMAllocator.RawBuffer",
-      "symbol_kind": "source.lang.swift.decl.typealias",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 45,
-      "symbol": "VRAMAllocator.Device",
-      "symbol_kind": "source.lang.swift.decl.typealias",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 117,
-      "symbol": "VRAMBuffer",
-      "symbol_kind": "source.lang.swift.decl.struct",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 132,
-      "symbol": "GPUEngine",
-      "symbol_kind": "source.lang.swift.decl.struct",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 133,
-      "symbol": "GPUEngine.Device",
-      "symbol_kind": "source.lang.swift.decl.typealias",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 159,
-      "symbol": "GPUEngine.svDiv(lhs:rhs:result:count:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.static",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 255,
-      "symbol": "GPUEngine.square(values:result:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.static",
-      "warning": "undocumented"
-    },
-    {
-      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/Engine/GPU/GPU.swift",
-      "line": 375,
-      "symbol": "GPUEngine.distribute(source:context:lhs:rhs:)",
-      "symbol_kind": "source.lang.swift.decl.function.method.static",
-      "warning": "undocumented"
-    },
-    {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Activation.swift",
       "line": 73,
       "symbol": "LeakyRelu.leakage",
@@ -1151,13 +1081,27 @@
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Convolution.swift",
       "line": 40,
-      "symbol": "Convolution2D.stride",
+      "symbol": "Convolution1D.stride",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
     },
     {
       "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Convolution.swift",
       "line": 42,
+      "symbol": "Convolution1D.padding",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Convolution.swift",
+      "line": 157,
+      "symbol": "Convolution2D.stride",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/Users/Palle/Developer/DL4S/Sources/DL4S/NN/Layer/Convolution.swift",
+      "line": 159,
       "symbol": "Convolution2D.padding",
       "symbol_kind": "source.lang.swift.decl.var.instance",
       "warning": "undocumented"
