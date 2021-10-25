@@ -60,7 +60,7 @@ class ConvTests: XCTestCase {
         }
     }
     
-    func testConv1() {
+    func testConv2d1() {
         let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
         let c = a.repeated(4)
         let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
@@ -77,7 +77,7 @@ class ConvTests: XCTestCase {
         print(d.convolved2d(filters: filters))
     }
     
-    func testConv() {
+    func testConv2d() {
         let filters = Tensor<Float, CPU>([
             [
                 [[1, 2, 1],
@@ -115,7 +115,26 @@ class ConvTests: XCTestCase {
         #endif
     }
     
-    func testTransposedConv() {
+    func testConv1d() {
+        let filters = Tensor<Float, CPU>([0.02641911, 0.70953383, 0.42951898, 0.58568196, 0.50831411, 0.13808442]).view(as: 2, 1, 3)
+
+        //testSequenceData shape => [batchSize = 2, channels = 1, size = 9]
+        let testSequenceData = Tensor<Float, CPU>([0.52582376, 0.92104604, 0.46794182, 0.08924296, 0.16710744, 0.37407358, 0.04043267, 0.25526662,  0.89840653,  0.22725283, 0.68823759, 0.86775579, 0.06474228, 0.70579868, 0.99648027,0.51797662, 0.03736867, 0.19278374]).view(as: [2,1,9])
+        let filtered = testSequenceData.convolved1d(filters: filters, padding: 2)
+        print("Finished Convolution process with --- \n res: \(filtered), \n res shape: \(filtered.shape), \n inp shape: \(testSequenceData.shape), \n filters shape: \(filters.shape); kernel size: \(filters.shape[2])")
+        
+    }
+    
+    func testTransposedConv1d() {
+        let filters = Tensor<Float, CPU>([0.02641911, 0.70953383, 0.42951898, 0.58568196, 0.50831411, 0.13808442]).view(as: 2, 1, 3)
+        //testSequenceData shape => [batchSize = 2, channels = 1, size = 9]
+        let testSequenceData = Tensor<Float, CPU>([0.52582376, 0.92104604, 0.46794182, 0.08924296, 0.16710744, 0.37407358, 0.04043267, 0.25526662,  0.89840653,  0.22725283, 0.68823759, 0.86775579, 0.06474228, 0.70579868, 0.99648027,0.51797662, 0.03736867, 0.19278374]).view(as: [2,1,9])
+        let filtered = testSequenceData.transposedConvolved1d(filters: filters, inset: 0)
+        print("Finished Transposed Convolution process with --- \n res: \(filtered), \n res shape: \(filtered.shape), \n inp shape: \(testSequenceData.shape), \n filters shape: \(filters.shape); kernel size: \(filters.shape[2])")
+        
+    }
+    
+    func testTransposedConv2d() {
         let filters = Tensor<Float, CPU>([
             [
                 [[1, 2, 1],

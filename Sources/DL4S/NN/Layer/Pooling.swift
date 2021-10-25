@@ -25,6 +25,109 @@
 
 import Foundation
 
+/// A 1D max pooling layer
+public struct MaxPool1D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+    
+    /// Pooling window size
+    public let windowSize: Int
+    
+    /// Pooling window stride
+    public let stride: Int
+    
+    /// Padding applied around the edges of the input of the layer.
+    public let padding: Int?
+    
+    /// Creates a 1D max pooling layer.
+    /// - Parameters:
+    ///   - windowSize: Size of the window
+    ///   - stride: Stride, with which the window moves over the input tensor >= 1.
+    ///   - padding: Padding applied around the edges of the input of the layer.
+    public init(windowSize: Int = 2, stride: Int = 2, padding: Int? = nil) {
+        self.windowSize = windowSize
+        self.stride = stride
+        self.padding = padding
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        inputs.maxPooled1d(windowSize: windowSize, padding: padding, stride: stride)
+    }
+}
+
+/// A 1D average pooling layer
+public struct AvgPool1D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+    
+    /// Pooling window size
+    public let windowSize: Int
+    
+    /// Pooling window stride
+    public let stride: Int
+    
+    /// Padding applied around the edges of the input of the layer.
+    public let padding: Int?
+    
+    /// Creates a 1D average pooling layer.
+    /// - Parameters:
+    ///   - windowSize: Size of the window
+    ///   - stride: Stride, with which the window moves over the input tensor >= 1.
+    ///   - padding: Padding applied around the edges of the input of the layer.
+    public init(windowSize: Int = 2, stride: Int = 2, padding: Int? = nil) {
+        self.windowSize = windowSize
+        self.stride = stride
+        self.padding = padding
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        inputs.averagePooled1d(windowSize: windowSize, padding: padding, stride: stride)
+    }
+}
+
+/// A 1D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+public struct AdaptiveMaxPool1D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+    
+    /// Width and height of the output tensor
+    public let targetSize: Int
+    
+    /// A 1D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+    /// - Parameter targetSize: Width and height of the output tensor
+    public init(targetSize: Int) {
+        self.targetSize = targetSize
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        let size = inputs.shape[1]
+        let windowSize = size / targetSize
+        return inputs.maxPooled1d(windowSize: windowSize, padding: 0, stride: windowSize)
+    }
+}
+
+/// A 1D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+public struct AdaptiveAvgPool1D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameters: [Tensor<Element, Device>] { get {[]} }
+
+    /// Width and height of the output tensor
+    public let targetSize: Int
+    
+    /// A 1D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+    /// - Parameter targetSize: Width and height of the output tensor
+    public init(targetSize: Int) {
+        self.targetSize = targetSize
+    }
+    
+    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        let size = inputs.shape[1]
+        let windowSize = size / targetSize
+        return inputs.averagePooled1d(windowSize: windowSize, padding: 0, stride: windowSize)
+    }
+}
+
+
 
 /// A 2D max pooling layer
 public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
