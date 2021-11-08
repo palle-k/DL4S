@@ -27,7 +27,13 @@ let package = Package(
         ),
         .testTarget(
             name: "DL4STests",
-            dependencies: ["DL4S"]
+            dependencies: ["DL4S"],
+            resources: [
+                .copy("t10k-images.idx3-ubyte"),
+                .copy("t10k-labels.idx1-ubyte"),
+                .copy("train-images.idx3-ubyte"),
+                .copy("train-labels.idx1-ubyte")
+            ]
         )
     ]
 )
