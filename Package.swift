@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.5
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,8 +6,8 @@ import PackageDescription
 let package = Package(
     name: "DL4S",
     platforms: [
-        .macOS(.v10_15),
-        .iOS(.v13),
+        .macOS(.v11),
+        .iOS(.v14),
         .tvOS(.v13),
         .watchOS(.v6)
     ],
@@ -16,14 +16,22 @@ let package = Package(
             name: "DL4S",
             targets: ["DL4S", "MKL"]),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(name: "ARHeadsetKit", url: "https://github.com/philipturner/ARHeadsetKit", branch: "main")
+    ],
     targets: [
         .target(
             name: "MKL",
             dependencies: []),
         .target(
             name: "DL4S",
-            dependencies: ["MKL"]
+            dependencies: [
+                .product(
+                    name: "ARHeadsetKit",
+                    package: "ARHeadsetKit",
+                    condition: .when(platforms: [.iOS, .macOS])),
+                "MKL"
+            ]
         ),
         .testTarget(
             name: "DL4STests",
