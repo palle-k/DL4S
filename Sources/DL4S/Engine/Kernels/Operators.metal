@@ -341,25 +341,25 @@ kernel void conv2d_Float32(
 ) {
     // row-major arangement, shape: (z, row, column)
     // const uint col = pos.w;
-    const uint row = pos.z;
-    const uint z = pos.y;
-    const uint batch_idx = pos.x;
-    
-    const uint col_stride = stride.y;
-    const uint row_stride = stride.x;
-    
-    const uint kern_width = kernel_dim.z;
-    const uint kern_height = kernel_dim.y;
-    const uint kern_depth = kernel_dim.x;
-    
-    const uint src_width = src_dim.z;
-    const uint src_height = src_dim.y;
-    
-    
-    const uint kern_idx = kern_width * kern_height * kern_depth * z;
-    const device float* kern = &kernel_vals[kern_idx];
-    
-    
+//    const uint row = pos.z;
+//    const uint z = pos.y;
+//    const uint batch_idx = pos.x;
+//    
+//    const uint col_stride = stride.y;
+//    const uint row_stride = stride.x;
+//    
+//    const uint kern_width = kernel_dim.z;
+//    const uint kern_height = kernel_dim.y;
+//    const uint kern_depth = kernel_dim.x;
+//    
+//    const uint src_width = src_dim.z;
+//    const uint src_height = src_dim.y;
+//    
+//    
+//    const uint kern_idx = kern_width * kern_height * kern_depth * z;
+//    const device float* kern = &kernel_vals[kern_idx];
+//    
+//    
 }
 
 kernel void permuteAxes_Float32() {
