@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>CPUNumeric Protocol Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Protocol/CPUNumeric" class="dashAnchor"></a>
+
+    <a title="CPUNumeric Protocol Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          DL4S Docs
+        </a>
+         (68% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/palle-k/DL4S">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">DL4S Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      CPUNumeric Protocol Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Math.html">Math</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Tensor.html">Tensor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Tensor.html">Tensor</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Network%20Layers.html">Network Layers</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Sequential.html">Sequential</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Dense.html">Dense</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Convolution2D.html">Convolution2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TransposedConvolution2D.html">TransposedConvolution2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MaxPool2D.html">MaxPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AvgPool2D.html">AvgPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveMaxPool2D.html">AdaptiveMaxPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveAvgPool2D.html">AdaptiveAvgPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RNN.html">RNN</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LSTM.html">LSTM</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/GRU.html">GRU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/BasicRNN.html">BasicRNN</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Bidirectional.html">Bidirectional</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Embedding.html">Embedding</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/PositionalEncoding.html">PositionalEncoding</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ScaledDotProductAttention.html">ScaledDotProductAttention</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MultiHeadAttention.html">MultiHeadAttention</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TransformerEncoderBlock.html">TransformerEncoderBlock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TransformerDecoderBlock.html">TransformerDecoderBlock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TransformerEncoder.html">TransformerEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TransformerDecoder.html">TransformerDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/PointwiseFeedForward.html">PointwiseFeedForward</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LayerNorm.html">LayerNorm</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/BatchNorm.html">BatchNorm</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Dropout.html">Dropout</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Tanh.html">Tanh</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Sigmoid.html">Sigmoid</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Relu.html">Relu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LeakyRelu.html">LeakyRelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Softmax.html">Softmax</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Lambda.html">Lambda</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Flatten.html">Flatten</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Reshape.html">Reshape</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Concat.html">Concat</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AnyLayer.html">AnyLayer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Gelu.html">Gelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Swish.html">Swish</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Mish.html">Mish</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/LiSHT.html">LiSHT</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Loss%20Functions.html">Loss Functions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Loss%20Functions.html#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Loss%20Functions.html#/s:4DL4S23categoricalCrossEntropy8expected6actual11ignoreIndexAA6TensorVyxq_GAGys5Int32Vq_G_AhJtAA11NumericTypeRzAA06DeviceL0R_r0_lF">categoricalCrossEntropy(expected:actual:ignoreIndex:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Loss%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actual11ignoreIndexAA6TensorVyxq_GAGys5Int32Vq_G_AhJtAA11NumericTypeRzAA06DeviceM0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:ignoreIndex:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Loss%20Functions.html#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Loss%20Functions.html#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Loss%20Functions.html#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Optimizers.html">Optimizers</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Optimizer.html">Optimizer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SGD.html">SGD</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Momentum.html">Momentum</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Adam.html">Adam</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Adadelta.html">Adadelta</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Adagrad.html">Adagrad</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/RMSProp.html">RMSProp</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Model%20Zoo.html">Model Zoo</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Transformer.html">Transformer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AlexNet.html">AlexNet</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ResNet18.html">ResNet18</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ResidualBlock.html">ResidualBlock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG11.html">VGG11</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG13.html">VGG13</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG16.html">VGG16</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VGG19.html">VGG19</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Classes.html">Other Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/Queue.html">Queue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/SummaryWriter.html">SummaryWriter</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Enums.html">Other Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ConvUtil.html">ConvUtil</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/LayerBuilder.html">LayerBuilder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/OperationGroup.html">OperationGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/RNNDirection.html">RNNDirection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/Random.html">Random</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Extensions.html">Other Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Collection.html">Collection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Double.html">Double</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/FileHandle.html">FileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Float.html">Float</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Int32.html">Int32</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/NSImage.html">NSImage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Sequence.html">Sequence</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Slice.html">Slice</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UIImage.html">UIImage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt8.html">UInt8</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableBufferPointer.html">UnsafeMutableBufferPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableRawBufferPointer.html">UnsafeMutableRawBufferPointer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Functions.html">Other Functions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3elu_5alphaAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceF0R_r0_lF">elu(_:alpha:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3expyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">exp(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4geluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">gelu(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">heaviside(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">leakyRelu(_:leakage:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S14lishtActivatedyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceF0R_r0_lF">lishtActivated(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3logyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">log(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S10logSoftmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceG0R_r0_lF">logSoftmax(_:axis:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S6matMulyAA6TensorVyxq_GAE_AEtAA11NumericTypeRzAA06DeviceF0R_r0_lF">matMul(_:_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4meanyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">mean(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S13mishActivatedyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceF0R_r0_lF">mishActivated(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">relu(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S7sigmoidyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sigmoid(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sinyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sin(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S7softmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">softmax(_:axis:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4sqrtyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sqrt(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S5stack_5alongAA6TensorVyxq_GSayAFG_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">stack(_:along:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sumyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sum(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S14swishActivated_4betaAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">swishActivated(_:beta:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S4tanhyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">tanh(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S8varianceyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">variance(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Other%20Functions.html#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Protocols.html">Other Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/CPUNumeric.html">CPUNumeric</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/DeviceType.html">DeviceType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EngineType.html">EngineType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/LearningRateScheduler.html">LearningRateScheduler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MemoryOperatorsType.html">MemoryOperatorsType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/NumericType.html">NumericType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RandomizableType.html">RandomizableType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/VGGBase.html">VGGBase</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ZeroableType.html">ZeroableType</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Other%20Structs.html">Other Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Buffer.html">Buffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CPU.html">CPU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CPUEngine.html">CPUEngine</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CPUMemoryOperators.html">CPUMemoryOperators</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/GPU.html">GPU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/GPUEngine.html">GPUEngine</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NoamScheduler.html">NoamScheduler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Progress.html">Progress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ProgressBar.html">ProgressBar</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ShapedBuffer.html">ShapedBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VRAMAllocator.html">VRAMAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/VRAMBuffer.html">VRAMBuffer</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            <h1>CPUNumeric</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">CPUNumeric</span> <span class="p">:</span> <span class="kt">Comparable</span><span class="p">,</span> <span class="kt">Numeric</span></code></pre>
+
+                </div>
+              </div>
+            <p>Undocumented</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4fill5value6result5countyx_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/fill(value:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4fill5value6result5countyx_SryxGSitFZ">fill(value:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">fill</span><span class="p">(</span><span class="nv">value</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4fill5value6result6stride5countyx_SryxGS2itFZ"></a>
+                    <a name="//apple_ref/swift/Method/fill(value:result:stride:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4fill5value6result6stride5countyx_SryxGS2itFZ">fill(value:<wbr>result:<wbr>stride:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">fill</span><span class="p">(</span><span class="nv">value</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP9transpose3val6result7srcRows0F4ColsySRyxG_SryxGS2itFZ"></a>
+                    <a name="//apple_ref/swift/Method/transpose(val:result:srcRows:srcCols:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP9transpose3val6result7srcRows0F4ColsySRyxG_SryxGS2itFZ">transpose(val:<wbr>result:<wbr>srcRows:<wbr>srcCols:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">transpose</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">srcRows</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">srcCols</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4vAdd3lhs3rhs6result5countySRyxG_AISryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/vAdd(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4vAdd3lhs3rhs6result5countySRyxG_AISryxGSitFZ">vAdd(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">vAdd</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP5vsAdd3lhs3rhs6result5countySRyxG_xSryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/vsAdd(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP5vsAdd3lhs3rhs6result5countySRyxG_xSryxGSitFZ">vsAdd(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">vsAdd</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4vNeg3val6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/vNeg(val:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4vNeg3val6result5countySRyxG_SryxGSitFZ">vNeg(val:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">vNeg</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4vSub3lhs3rhs6result5countySRyxG_AISryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/vSub(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4vSub3lhs3rhs6result5countySRyxG_AISryxGSitFZ">vSub(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">vSub</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4vMul3lhs3rhs6result5countySRyxG_AISryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/vMul(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4vMul3lhs3rhs6result5countySRyxG_AISryxGSitFZ">vMul(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">vMul</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP5vsMul3lhs3rhs6result5countySRyxG_xSryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/vsMul(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP5vsMul3lhs3rhs6result5countySRyxG_xSryxGSitFZ">vsMul(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">vsMul</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4vDiv3lhs3rhs6result5countySRyxG_AISryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/vDiv(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4vDiv3lhs3rhs6result5countySRyxG_AISryxGSitFZ">vDiv(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">vDiv</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP5svDiv3lhs3rhs6result5countyx_SRyxGSryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/svDiv(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP5svDiv3lhs3rhs6result5countyx_SRyxGSryxGSitFZ">svDiv(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">svDiv</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4gemm3lhs3rhs6result0D5Shape0eG00fG05alpha4beta14transposeFirst0J6SecondySRyxG_AOSryxGSi_SitSi_SitSi_SitxxS2btFZ"></a>
+                    <a name="//apple_ref/swift/Method/gemm(lhs:rhs:result:lhsShape:rhsShape:resultShape:alpha:beta:transposeFirst:transposeSecond:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4gemm3lhs3rhs6result0D5Shape0eG00fG05alpha4beta14transposeFirst0J6SecondySRyxG_AOSryxGSi_SitSi_SitSi_SitxxS2btFZ">gemm(lhs:<wbr>rhs:<wbr>result:<wbr>lhsShape:<wbr>rhsShape:<wbr>resultShape:<wbr>alpha:<wbr>beta:<wbr>transposeFirst:<wbr>transposeSecond:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">gemm</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">lhsShape</span><span class="p">:</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">Int</span><span class="p">),</span> <span class="nv">rhsShape</span><span class="p">:</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">Int</span><span class="p">),</span> <span class="nv">resultShape</span><span class="p">:</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">Int</span><span class="p">),</span> <span class="nv">alpha</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">beta</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">transposeFirst</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">,</span> <span class="nv">transposeSecond</span><span class="p">:</span> <span class="kt">Bool</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3log3val6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/log(val:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3log3val6result5countySRyxG_SryxGSitFZ">log(val:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">log</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3exp3val6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/exp(val:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3exp3val6result5countySRyxG_SryxGSitFZ">exp(val:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">exp</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4relu3val6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/relu(val:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4relu3val6result5countySRyxG_SryxGSitFZ">relu(val:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">relu</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4tanh3val6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/tanh(val:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4tanh3val6result5countySRyxG_SryxGSitFZ">tanh(val:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">tanh</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4sqrt3val6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/sqrt(val:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4sqrt3val6result5countySRyxG_SryxGSitFZ">sqrt(val:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">sqrt</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3sum3val5countxSRyxG_SitFZ"></a>
+                    <a name="//apple_ref/swift/Method/sum(val:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3sum3val5countxSRyxG_SitFZ">sum(val:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">sum</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3sum3val6stride5countxSRyxG_S2itFZ"></a>
+                    <a name="//apple_ref/swift/Method/sum(val:stride:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3sum3val6stride5countxSRyxG_S2itFZ">sum(val:<wbr>stride:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">sum</span><span class="p">(</span><span class="nv">val</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">Self</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP6argmax6values5countSi_xtSRyxG_SitFZ"></a>
+                    <a name="//apple_ref/swift/Method/argmax(values:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP6argmax6values5countSi_xtSRyxG_SitFZ">argmax(values:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">argmax</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="k">Self</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP6argmin6values5countSi_xtSRyxG_SitFZ"></a>
+                    <a name="//apple_ref/swift/Method/argmin(values:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP6argmin6values5countSi_xtSRyxG_SitFZ">argmin(values:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">argmin</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="k">Self</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP6argmax6values6stride5countSi_xtSRyxG_S2itFZ"></a>
+                    <a name="//apple_ref/swift/Method/argmax(values:stride:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP6argmax6values6stride5countSi_xtSRyxG_S2itFZ">argmax(values:<wbr>stride:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">argmax</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="k">Self</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP6argmin6values6stride5countSi_xtSRyxG_S2itFZ"></a>
+                    <a name="//apple_ref/swift/Method/argmin(values:stride:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP6argmin6values6stride5countSi_xtSRyxG_S2itFZ">argmin(values:<wbr>stride:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">argmin</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="k">Self</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3max3lhs3rhs6result5countySRyxG_AISryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/max(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3max3lhs3rhs6result5countySRyxG_AISryxGSitFZ">max(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">max</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3min3lhs3rhs6result5countySRyxG_AISryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/min(lhs:rhs:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3min3lhs3rhs6result5countySRyxG_AISryxGSitFZ">min(lhs:<wbr>rhs:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">min</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3max3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/max(lhs:rhs:result:context:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3max3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ">max(lhs:<wbr>rhs:<wbr>result:<wbr>context:<wbr>count:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">max</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3min3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/min(lhs:rhs:result:context:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3min3lhs3rhs6result7context5countySRyxG_AJSryxGAKSitFZ">min(lhs:<wbr>rhs:<wbr>result:<wbr>context:<wbr>count:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">min</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP4copy6values9srcStride6result03dstF05countySRyxG_SiSryxGS2itFZ"></a>
+                    <a name="//apple_ref/swift/Method/copy(values:srcStride:result:dstStride:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP4copy6values9srcStride6result03dstF05countySRyxG_SiSryxGS2itFZ">copy(values:<wbr>srcStride:<wbr>result:<wbr>dstStride:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">copy</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">srcStride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">dstStride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP6arange5start3end6result5countyx_xSryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/arange(start:end:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP6arange5start3end6result5countyx_xSryxGSitFZ">arange(start:<wbr>end:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">arange</span><span class="p">(</span><span class="nv">start</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">end</span><span class="p">:</span> <span class="k">Self</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3sin6values6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/sin(values:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3sin6values6result5countySRyxG_SryxGSitFZ">sin(values:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">sin</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3cos6values6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/cos(values:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3cos6values6result5countySRyxG_SryxGSitFZ">cos(values:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">cos</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP3tan6values6result5countySRyxG_SryxGSitFZ"></a>
+                    <a name="//apple_ref/swift/Method/tan(values:result:count:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP3tan6values6result5countySRyxG_SryxGSitFZ">tan(values:<wbr>result:<wbr>count:<wbr>)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">tan</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">count</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP7img2col6values6result9batchSize8channels6height5width12kernelHeight0K5Width7padding6strideySRyxG_SryxGS8itFZ"></a>
+                    <a name="//apple_ref/swift/Method/img2col(values:result:batchSize:channels:height:width:kernelHeight:kernelWidth:padding:stride:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP7img2col6values6result9batchSize8channels6height5width12kernelHeight0K5Width7padding6strideySRyxG_SryxGS8itFZ">img2col(values:<wbr>result:<wbr>batchSize:<wbr>channels:<wbr>height:<wbr>width:<wbr>kernelHeight:<wbr>kernelWidth:<wbr>padding:<wbr>stride:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">img2col</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">batchSize</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">channels</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">height</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">width</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelHeight</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelWidth</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">padding</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP7col2img6values6result9batchSize8channels6height5width12kernelHeight0K5Width7padding6strideySRyxG_SryxGS8itFZ"></a>
+                    <a name="//apple_ref/swift/Method/col2img(values:result:batchSize:channels:height:width:kernelHeight:kernelWidth:padding:stride:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP7col2img6values6result9batchSize8channels6height5width12kernelHeight0K5Width7padding6strideySRyxG_SryxGS8itFZ">col2img(values:<wbr>result:<wbr>batchSize:<wbr>channels:<wbr>height:<wbr>width:<wbr>kernelHeight:<wbr>kernelWidth:<wbr>padding:<wbr>stride:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">col2img</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">batchSize</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">channels</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">height</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">width</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelHeight</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">kernelWidth</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">padding</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP7scatter6values7context6result9dst_shape4axis11ignoreIndexySRyxG_SRys5Int32VGSryxGSaySiGSiAMtFZ"></a>
+                    <a name="//apple_ref/swift/Method/scatter(values:context:result:dst_shape:axis:ignoreIndex:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP7scatter6values7context6result9dst_shape4axis11ignoreIndexySRyxG_SRys5Int32VGSryxGSaySiGSiAMtFZ">scatter(values:<wbr>context:<wbr>result:<wbr>dst_shape:<wbr>axis:<wbr>ignoreIndex:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">scatter</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="kt">Int32</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">dst_shape</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">ignoreIndex</span><span class="p">:</span> <span class="kt">Int32</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:4DL4S10CPUNumericP6gather6values7context6result9src_shape4axis11ignoreIndexySRyxG_SRys5Int32VGSryxGSaySiGSiAMtFZ"></a>
+                    <a name="//apple_ref/swift/Method/gather(values:context:result:src_shape:axis:ignoreIndex:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:4DL4S10CPUNumericP6gather6values7context6result9src_shape4axis11ignoreIndexySRyxG_SRys5Int32VGSryxGSaySiGSiAMtFZ">gather(values:<wbr>context:<wbr>result:<wbr>src_shape:<wbr>axis:<wbr>ignoreIndex:<wbr>)</a>
+                    </code>
+                      <span class="declaration-note">
+                        Default implementation
+                      </span>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <h4>Default Implementation</h4>
+                      <div class="default_impl abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">static</span> <span class="kd">func</span> <span class="nf">gather</span><span class="p">(</span><span class="nv">values</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="kt">Int32</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">result</span><span class="p">:</span> <span class="kt">UnsafeMutableBufferPointer</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">src_shape</span><span class="p">:</span> <span class="p">[</span><span class="kt">Int</span><span class="p">],</span> <span class="nv">axis</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">ignoreIndex</span><span class="p">:</span> <span class="kt">Int32</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-10-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

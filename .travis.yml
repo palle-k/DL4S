@@ -1,0 +1,12 @@
+os:
+  - osx
+language: generic
+sudo: required
+dist: trusty
+osx_image: xcode11.4
+script:
+  - swift test -c release -Xswiftc -enable-testing
+notifications:
+  email:
+    on_success: never
+    on_failure: change

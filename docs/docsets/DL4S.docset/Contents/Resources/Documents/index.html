@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>DL4S  Reference</title>
+    <link rel="stylesheet" type="text/css" href="css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="js/jquery.min.js" defer></script>
+    <script src="js/jazzy.js" defer></script>
+    
+    <script src="js/lunr.min.js" defer></script>
+    <script src="js/typeahead.jquery.js" defer></script>
+    <script src="js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+
+    <a title="DL4S  Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="index.html">
+          DL4S Docs
+        </a>
+         (68% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/palle-k/DL4S">
+            <img class="header-icon" src="img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="index.html">DL4S Reference</a>
+      <img class="carat" src="img/carat.png" />
+      DL4S  Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Math.html">Math</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Tensor.html">Tensor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/Tensor.html">Tensor</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Network%20Layers.html">Network Layers</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/LayerType.html">LayerType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Sequential.html">Sequential</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Dense.html">Dense</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Convolution2D.html">Convolution2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/TransposedConvolution2D.html">TransposedConvolution2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/MaxPool2D.html">MaxPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AvgPool2D.html">AvgPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AdaptiveMaxPool2D.html">AdaptiveMaxPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AdaptiveAvgPool2D.html">AdaptiveAvgPool2D</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/RNN.html">RNN</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LSTM.html">LSTM</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/GRU.html">GRU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/BasicRNN.html">BasicRNN</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Bidirectional.html">Bidirectional</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Embedding.html">Embedding</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/PositionalEncoding.html">PositionalEncoding</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ScaledDotProductAttention.html">ScaledDotProductAttention</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/MultiHeadAttention.html">MultiHeadAttention</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/TransformerEncoderBlock.html">TransformerEncoderBlock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/TransformerDecoderBlock.html">TransformerDecoderBlock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/TransformerEncoder.html">TransformerEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/TransformerDecoder.html">TransformerDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/PointwiseFeedForward.html">PointwiseFeedForward</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LayerNorm.html">LayerNorm</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/BatchNorm.html">BatchNorm</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Dropout.html">Dropout</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Tanh.html">Tanh</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Sigmoid.html">Sigmoid</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Relu.html">Relu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LeakyRelu.html">LeakyRelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Softmax.html">Softmax</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LogSoftmax.html">LogSoftmax</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Lambda.html">Lambda</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Flatten.html">Flatten</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Reshape.html">Reshape</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Concat.html">Concat</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AnyLayer.html">AnyLayer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Gelu.html">Gelu</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Swish.html">Swish</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Mish.html">Mish</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/LiSHT.html">LiSHT</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Loss%20Functions.html">Loss Functions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S18binaryCrossEntropy8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">binaryCrossEntropy(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S23categoricalCrossEntropy8expected6actual11ignoreIndexAA6TensorVyxq_GAGys5Int32Vq_G_AhJtAA11NumericTypeRzAA06DeviceL0R_r0_lF">categoricalCrossEntropy(expected:actual:ignoreIndex:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S32categoricalNegativeLogLikelihood8expected6actual11ignoreIndexAA6TensorVyxq_GAGys5Int32Vq_G_AhJtAA11NumericTypeRzAA06DeviceM0R_r0_lF">categoricalNegativeLogLikelihood(expected:actual:ignoreIndex:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S16meanSquaredError8expected6actualAA6TensorVyxq_GAG_AGtAA11NumericTypeRzAA06DeviceI0R_r0_lF">meanSquaredError(expected:actual:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S6l1loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l1loss(_:loss:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Loss%20Functions.html#/s:4DL4S6l2loss_4lossAA6TensorVyxq_GAF_xtAA11NumericTypeRzAA06DeviceF0R_r0_lF">l2loss(_:loss:)</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Optimizers.html">Optimizers</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/Optimizer.html">Optimizer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/SGD.html">SGD</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Momentum.html">Momentum</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Adam.html">Adam</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Adadelta.html">Adadelta</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Adagrad.html">Adagrad</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/RMSProp.html">RMSProp</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Model%20Zoo.html">Model Zoo</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Transformer.html">Transformer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/AlexNet.html">AlexNet</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ResNet18.html">ResNet18</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ResidualBlock.html">ResidualBlock</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/VGG11.html">VGG11</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/VGG13.html">VGG13</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/VGG16.html">VGG16</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/VGG19.html">VGG19</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Other%20Classes.html">Other Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/Queue.html">Queue</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Classes/SummaryWriter.html">SummaryWriter</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Other%20Enums.html">Other Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/ConvUtil.html">ConvUtil</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/LayerBuilder.html">LayerBuilder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/OperationGroup.html">OperationGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/RNNDirection.html">RNNDirection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Enums/Random.html">Random</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Other%20Extensions.html">Other Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/Collection.html">Collection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/Double.html">Double</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/FileHandle.html">FileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/Float.html">Float</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/Int32.html">Int32</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/NSImage.html">NSImage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/Sequence.html">Sequence</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/Slice.html">Slice</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/UIImage.html">UIImage</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/UInt8.html">UInt8</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/UnsafeMutableBufferPointer.html">UnsafeMutableBufferPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Extensions/UnsafeMutableRawBufferPointer.html">UnsafeMutableRawBufferPointer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Other%20Functions.html">Other Functions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3cosyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">cos(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3elu_5alphaAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceF0R_r0_lF">elu(_:alpha:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3expyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">exp(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4geluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">gelu(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S9heavisideyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">heaviside(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S9leakyRelu_7leakageAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">leakyRelu(_:leakage:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S14lishtActivatedyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceF0R_r0_lF">lishtActivated(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3logyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">log(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S10logSoftmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceG0R_r0_lF">logSoftmax(_:axis:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S6matMulyAA6TensorVyxq_GAE_AEtAA11NumericTypeRzAA06DeviceF0R_r0_lF">matMul(_:_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4meanyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">mean(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4mean_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">mean(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S13mishActivatedyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceF0R_r0_lF">mishActivated(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4reluyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">relu(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S7sigmoidyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sigmoid(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3sinyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sin(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S7softmax_4axisAA6TensorVyxq_GAF_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">softmax(_:axis:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4sqrtyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sqrt(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S5stack_5alongAA6TensorVyxq_GSayAFG_SitAA11NumericTypeRzAA06DeviceF0R_r0_lF">stack(_:along:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3sumyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">sum(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S3sum_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">sum(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S14swishActivated_4betaAA6TensorVyxq_GAF_AFtAA11NumericTypeRzAA06DeviceG0R_r0_lF">swishActivated(_:beta:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S4tanhyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">tanh(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S8varianceyAA6TensorVyxq_GAeA11NumericTypeRzAA06DeviceE0R_r0_lF">variance(_:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SaySiGtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Other%20Functions.html#/s:4DL4S8variance_4axesAA6TensorVyxq_GAF_SidtAA11NumericTypeRzAA06DeviceF0R_r0_lF">variance(_:axes:)</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Other%20Protocols.html">Other Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/CPUNumeric.html">CPUNumeric</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/DeviceType.html">DeviceType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/EngineType.html">EngineType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/LearningRateScheduler.html">LearningRateScheduler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/MemoryOperatorsType.html">MemoryOperatorsType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/NumericType.html">NumericType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/RandomizableType.html">RandomizableType</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/VGGBase.html">VGGBase</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Protocols/ZeroableType.html">ZeroableType</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="Other%20Structs.html">Other Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Buffer.html">Buffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/CPU.html">CPU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/CPUEngine.html">CPUEngine</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/CPUMemoryOperators.html">CPUMemoryOperators</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/GPU.html">GPU</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/GPUEngine.html">GPUEngine</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/NoamScheduler.html">NoamScheduler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/Progress.html">Progress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ProgressBar.html">ProgressBar</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/ShapedBuffer.html">ShapedBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/VRAMAllocator.html">VRAMAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="Structs/VRAMBuffer.html">VRAMBuffer</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content top-matter">
+            
+            <p align="center">
+<img src="https://github.com/palle-k/DL4S/blob/develop/.github/logo.png?raw=true" alt="DL4S" width="300" />
+</p>
+
+<p align="center">
+<a href="https://github.com/palle-k/DL4S/blob/master/License"><img src="https://img.shields.io/github/license/palle-k/DL4S.svg" alt="License"/></a>
+<a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
+<a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
+<a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS%20|%20watchOS-green.svg" alt="Supports Linux, macOS, iOS, tvOS and watchOS" /></a>
+<a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
+</p>
+
+<p>DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
+It furthermore has automatic differentiation builtin, which allows you to create and train neural networks without needing to manually
+implement backpropagation.</p>
+
+<p>Features include implementations for many basic binary and unary operators,
+broadcasting, matrix operations, convolutional and recurrent neural networks, 
+commonly used optimizers, second derivatives and much more.
+DL4S provides implementations for common network architectures, such as VGG, AlexNet, ResNet and Transformers.</p>
+
+<p>While its primary purpose is deep learning and optimization, DL4S can be used as a library for vectorized mathematical operations like numpy.</p>
+
+<p><a href="https://palle-k.github.io/DL4S/">Read the full documentation</a></p>
+<h2 id='overview' class='heading'>Overview</h2>
+
+<ol>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#features">Features</a>
+
+<ol>
+<li>Layers</li>
+<li>Optimizers</li>
+<li>Losses</li>
+<li>Tensor Operations</li>
+<li>Engines</li>
+<li>Architectures</li>
+</ol></li>
+<li><a href="#examples">Examples</a></li>
+</ol>
+<h2 id='installation' class='heading'>Installation</h2>
+<h3 id='ios-tvos-macos' class='heading'>iOS / tvOS / macOS</h3>
+
+<ol>
+<li>In Xcode, select &ldquo;File&rdquo; &gt; &ldquo;Swift Packages&rdquo; &gt; &ldquo;Add Package Dependency&rdquo;</li>
+<li>Enter <code>https://github.com/palle-k/DL4S.git</code> into the Package URL field and click &ldquo;Next&rdquo;.</li>
+<li>Select &ldquo;Branch&rdquo;, &ldquo;master&rdquo; and click &ldquo;Next&rdquo;.</li>
+<li>Enable the Package Product DL4S, your app in the &ldquo;Add to Target&rdquo; column and click &ldquo;Next&rdquo;.</li>
+</ol>
+
+<p><strong>Note</strong>: Installation via CocoaPods is no longer supported for newer versions.</p>
+<h3 id='swift-package' class='heading'>Swift Package</h3>
+
+<p>Add the dependency to your <code>Package.swift</code> file:</p>
+<pre class="highlight swift"><code><span class="o">.</span><span class="nf">package</span><span class="p">(</span><span class="nv">url</span><span class="p">:</span> <span class="s">"https://github.com/palle-k/DL4S.git"</span><span class="p">,</span> <span class="o">.</span><span class="nf">branch</span><span class="p">(</span><span class="s">"master"</span><span class="p">))</span>
+</code></pre>
+
+<p>Then add <code>DL4S</code> as a dependency to your target:</p>
+<pre class="highlight swift"><code><span class="o">.</span><span class="nf">target</span><span class="p">(</span><span class="nv">name</span><span class="p">:</span> <span class="s">"MyPackage"</span><span class="p">,</span> <span class="nv">dependencies</span><span class="p">:</span> <span class="p">[</span><span class="s">"DL4S"</span><span class="p">])</span>
+</code></pre>
+<h4 id='mkl-ipp-openmp-support' class='heading'>MKL / IPP / OpenMP Support</h4>
+
+<p>DL4S can be accelerated with Intel&rsquo;s Math Kernel Library, Integrated Performance Primitives and OpenMP (<a href="https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo">Installation Instructions</a>).</p>
+
+<p>On Apple devices, DL4S uses vectorized functions provided by the builtin Accelerate framework by default.
+If no acceleration library is available, a fallback implementation is used.</p>
+
+<p>Compiling with MKL/IPP:</p>
+<pre class="highlight shell"><code><span class="c"># After adding the APT repository as described in the installation instructions</span>
+<span class="nb">sudo </span>apt-get <span class="nb">install </span>intel-mkl-64bit-2019.5-075 intel-ipp-64bit-2019.5-075 libiomp-dev
+
+<span class="nb">export </span><span class="nv">MKLROOT</span><span class="o">=</span>/opt/intel/mkl
+<span class="nb">export </span><span class="nv">IPPROOT</span><span class="o">=</span>/opt/intel/ipp
+<span class="nb">export </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span><span class="k">${</span><span class="nv">MKLROOT</span><span class="k">}</span>/lib/intel64:<span class="k">${</span><span class="nv">IPPROOT</span><span class="k">}</span>/lib/intel64:<span class="k">${</span><span class="nv">LD_LIBRARY_PATH</span><span class="k">}</span>
+
+swift build <span class="nt">-c</span> release <span class="se">\</span>
+    <span class="nt">-Xswiftc</span> <span class="nt">-DMKL_ENABLE</span> <span class="se">\</span>
+    <span class="nt">-Xlinker</span> <span class="nt">-L</span><span class="k">${</span><span class="nv">MKLROOT</span><span class="k">}</span>/lib/intel64 <span class="se">\</span>
+    <span class="nt">-Xlinker</span> <span class="nt">-L</span><span class="k">${</span><span class="nv">IPPROOT</span><span class="k">}</span>/lib/intel64
+</code></pre>
+<h3 id='tensorboard-support' class='heading'>TensorBoard Support</h3>
+
+<p><a href="https://github.com/palle-k/DL4S-Tensorboard">DL4S-Tensorboard</a> provides a summary writer that can write tensorboard compatible logs.</p>
+<h3 id='lldb-extension' class='heading'>LLDB Extension</h3>
+
+<p>DL4S includes a LLDB python script that provides custom descriptions for Tensors (<code>util/debugger_support/tensor.py</code>).</p>
+
+<p>To use enhanced summaries, execute  <code>command script import /path/to/DL4S/util/debugger_support/tensor.py</code>
+either directly in LLDB or add the command to your <code>~/.lldbinit</code> file.</p>
+
+<p>Then you can use the <code>print</code> or <code>frame variable</code> commands to print human-readable descriptions of tensors.</p>
+<h2 id='features' class='heading'>Features</h2>
+
+<details>
+<summary>
+Layers
+</summary>
+<p>
+
+Core:
+
+- [x] Convolution
+- [x] Transposed Convolution
+- [x] Dense/Linear/Fully Connected
+- [x] LSTM
+- [x] Gated Recurrent Unit (GRU)
+- [x] Vanilla RNN
+- [x] Embedding
+- [x] Multi-head Attention
+- [x] Transformer Block
+
+Pooling:
+
+- [x] Max Pooling
+- [x] Average Pooling
+- [x] Adaptive Max Pooling
+- [x] Adaptive Average Pooling
+
+Norm:
+
+- [x] Batch Norm
+- [x] Layer Norm
+
+Utility:
+
+- [x] Bidirectional RNNs
+- [x] Sequential
+- [x] Lambda
+- [x] Dropout
+- [x] Lambda
+
+Activation:
+
+- [x] Relu
+- [x] LeakyRelu
+- [x] Gelu
+- [x] Tanh
+- [x] Sigmoid
+- [x] Softmax
+- [x] Log Softmax
+- [x] Dropout
+- [x] Gelu
+- [x] Swish
+- [x] Mish
+- [x] LiSHT
+
+Transformer:
+
+- [x] Positional Encoding
+- [x] Scaled Dot Product Attention
+- [x] Multihead Attention
+- [x] Pointwise Feed Forward
+- [x] Transformer Encoder Block
+- [x] Transformer Decoder Block
+
+</p>
+</details>
+
+<details>
+<summary>
+Optimizers
+</summary>
+<p>
+
+- [x] SGD
+- [x] Momentum
+- [x] Adam
+- [x] AMSGrad
+- [x] AdaGrad
+- [x] AdaDelta
+- [x] RMSProp
+
+</p>
+</details>
+
+<details>
+<summary>
+Losses
+</summary>
+<p>
+
+- [x] Binary Cross-Entropy
+- [x] Categorical Cross-Entropy
+- [x] Negative Log Likelihood (NLL Loss)
+- [x] MSE
+- [x] L1 & L2 regularization
+
+</p>
+</details>
+
+<details>
+<summary>
+Tensor Operations
+</summary>
+<p>
+
+Behavior of broadcast operations is consistent with numpy rules.
+
+- [x] broadcast-add
+- [x] broadcast-sub
+- [x] broadcast-mul 
+- [x] broadcast-div
+- [x] matmul
+- [x] neg
+- [x] exp
+- [x] pow
+- [x] log
+- [x] sqrt
+- [x] sin
+- [x] cos
+- [x] tan
+- [x] tanh
+- [x] sum
+- [x] max
+- [x] relu
+- [x] leaky relu
+- [x] gelu
+- [x] elu
+- [x] elementwise min
+- [x] elementwise max
+- [x] reduce sum
+- [x] reduce max
+- [x] scatter
+- [x] gather
+- [x] conv2d
+- [x] transposed conv2d
+- [x] max pool
+- [x] avg pool
+- [x] subscript
+- [x] subscript range
+- [x] transpose
+- [x] axis permute
+- [x] reverse
+- [x] im2col
+- [x] col2im
+- [x] stack / concat
+- [x] swish activation
+- [x] mish activation
+- [x] lisht activation
+- [x] diagonal matrix generation
+- [x] diagonal extraction
+- [x] band matrix generation
+
+</p>
+</details>
+
+<details>
+<summary>
+Engines
+</summary>
+<p>
+
+- [x] CPU (Accelerate framework for Apple Devices)
+- [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
+- [x] CPU (Generic)
+- [ ] GPU (ArrayFire: OpenCL, CUDA)
+
+For an experimental, early stage GPU accelerated version, check out `feature/arrayfire`.
+
+</p>
+</details>
+
+<details>
+<summary>
+Architectures
+</summary>
+<p>
+
+Default implementations are provided for the following architectures:
+
+- [x] ResNet18
+- [x] VGG (11, 13, 16, 19)
+- [x] AlexNet
+- [x] Transformer
+
+</p>
+</details>
+<h2 id='examples' class='heading'>Examples</h2>
+
+<p>Some high level examples have been implemented in other repositories:</p>
+
+<ul>
+<li><a href="https://github.com/palle-k/Seq2Seq-DL4S">Neural Machine Translation</a> based on seq2seq with Attention</li>
+<li><a href="https://github.com/palle-k/DL4S-WGAN-GP">Generative Adversarial Networks</a> - Wasserstein GAN with Gradient Penalty (WGAN-GP)</li>
+<li><a href="https://github.com/palle-k/REINFORCE-DL4S">Reinforcement Learning</a> - Trains an agent to find the exit in a 2D grid world.</li>
+</ul>
+<h3 id='arithmetic-amp-differentiation' class='heading'>Arithmetic &amp; Differentiation</h3>
+
+<p>DL4S provides a high-level interface to many vectorized operations on tensors.</p>
+<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">a</span> <span class="o">=</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],[</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span> <span class="nv">requiresGradient</span><span class="p">:</span> <span class="kc">true</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">prod</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="nf">transposed</span><span class="p">()</span><span class="o">.</span><span class="nf">matrixMultipled</span><span class="p">(</span><span class="nv">with</span><span class="p">:</span> <span class="n">a</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">s</span> <span class="o">=</span> <span class="n">prod</span><span class="o">.</span><span class="nf">reduceSum</span><span class="p">()</span>
+<span class="k">let</span> <span class="nv">l</span> <span class="o">=</span> <span class="nf">log</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="c1">// 5.1873856</span>
+</code></pre>
+
+<p>When a tensor is marked to require a gradient, a compute graph will be captured. 
+The graph stores all operations, which use that tensor directly or indirectly as an operand.</p>
+
+<p>It is then possible to backpropagate through that graph using the <code>gradients(of:)</code> function:</p>
+<pre class="highlight swift"><code><span class="c1">// Backpropagate</span>
+<span class="k">let</span> <span class="nv">dl_da</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="p">[</span><span class="n">a</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="nf">print</span><span class="p">(</span><span class="n">dl_da</span><span class="p">)</span>
+<span class="cm">/*
+[[0.034, 0.034]
+ [0.078, 0.078]
+ [0.123, 0.123]]
+*/</span>
+</code></pre>
+<h4 id='second-derivatives' class='heading'>Second derivatives</h4>
+
+<p>The operations used during backpropagation are themselves differentiable. 
+Therefore, second derivatives can be computed by computing the gradient of the gradient.</p>
+
+<p>When higher order derivatives are required, the compute graph of the backwards pass has to be explicitly retained.</p>
+<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">t</span> <span class="o">=</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span> <span class="nv">requiresGradient</span><span class="p">:</span> <span class="kc">true</span><span class="p">)</span>
+
+<span class="k">let</span> <span class="nv">result</span> <span class="o">=</span> <span class="n">t</span> <span class="o">*</span> <span class="n">t</span> <span class="o">*</span> <span class="n">t</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="c1">// [1, 8, 27, 64]</span>
+
+<span class="k">let</span> <span class="nv">grad</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="nv">retainBackwardsGraph</span><span class="p">:</span> <span class="kc">true</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span> <span class="c1">// [3, 12, 27, 48]</span>
+
+<span class="k">let</span> <span class="nv">secondGrad</span> <span class="o">=</span> <span class="n">grad</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="nv">retainBackwardsGraph</span><span class="p">:</span> <span class="kc">true</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">secondGrad</span><span class="p">)</span> <span class="c1">// [6, 12, 18, 24]</span>
+
+<span class="k">let</span> <span class="nv">thirdGrad</span> <span class="o">=</span> <span class="n">secondGrad</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="p">[</span><span class="n">t</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+<span class="nf">print</span><span class="p">(</span><span class="n">thirdGrad</span><span class="p">)</span> <span class="c1">// [6, 6, 6, 6]</span>
+</code></pre>
+<h3 id='convolutional-networks' class='heading'>Convolutional Networks</h3>
+
+<p>Example for MNIST classification</p>
+<pre class="highlight swift"><code><span class="c1">// Input must be batchSizex1x28x28</span>
+<span class="k">var</span> <span class="nv">model</span> <span class="o">=</span> <span class="kt">Sequential</span> <span class="p">{</span>
+   <span class="kt">Convolution2D</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputChannels</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nv">outputChannels</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="nv">kernelSize</span><span class="p">:</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+   <span class="kt">Relu</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+   <span class="kt">MaxPool2D</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">windowSize</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="mi">2</span><span class="p">)</span>
+
+   <span class="kt">Convolution2D</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputChannels</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="nv">outputChannels</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span> <span class="nv">kernelSize</span><span class="p">:</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+   <span class="kt">Relu</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+   <span class="kt">MaxPool2D</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">windowSize</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nv">stride</span><span class="p">:</span> <span class="mi">2</span><span class="p">)</span>
+
+   <span class="kt">Flatten</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+
+   <span class="kt">Dense</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputSize</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span> <span class="nv">outputSize</span><span class="p">:</span> <span class="mi">120</span><span class="p">)</span>
+   <span class="kt">Relu</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+
+   <span class="kt">Dense</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputSize</span><span class="p">:</span> <span class="mi">120</span><span class="p">,</span> <span class="nv">outputSize</span><span class="p">:</span> <span class="mi">10</span><span class="p">)</span>
+   <span class="kt">LogSoftmax</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="k">var</span> <span class="nv">optimizer</span> <span class="o">=</span> <span class="kt">Adam</span><span class="p">(</span><span class="nv">model</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span> <span class="nv">learningRate</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">)</span>
+
+<span class="c1">// Single iteration of minibatch gradient descent</span>
+<span class="k">let</span> <span class="nv">batch</span><span class="p">:</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// shape: [batchSize, 1, 28, 28]</span>
+<span class="k">let</span> <span class="nv">y_true</span><span class="p">:</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// shape: [batchSize]</span>
+
+<span class="c1">// use optimizer.model, not model</span>
+<span class="k">let</span> <span class="nv">pred</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="nf">model</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">loss</span> <span class="o">=</span> <span class="nf">categoricalNegativeLogLikelihood</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="n">y_true</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="n">pred</span><span class="p">)</span>
+
+<span class="k">let</span> <span class="nv">gradients</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+<span class="n">optimizer</span><span class="o">.</span><span class="nf">update</span><span class="p">(</span><span class="nv">along</span><span class="p">:</span> <span class="n">gradients</span><span class="p">)</span>
+</code></pre>
+<h3 id='recurrent-networks' class='heading'>Recurrent Networks</h3>
+
+<p>Example for MNIST classification</p>
+
+<p>The Gated Reccurent Unit scans the image from top to bottom and uses the final hidden state for classification.</p>
+<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">model</span> <span class="o">=</span> <span class="kt">Sequential</span> <span class="p">{</span>
+    <span class="kt">GRU</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputSize</span><span class="p">:</span> <span class="mi">28</span><span class="p">,</span> <span class="nv">hiddenSize</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span> <span class="nv">direction</span><span class="p">:</span> <span class="o">.</span><span class="n">forward</span><span class="p">)</span>
+    <span class="kt">Lambda</span><span class="o">&lt;</span><span class="kt">GRU</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;.</span><span class="kt">Outputs</span><span class="p">,</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="p">{</span> <span class="n">inputs</span> <span class="k">in</span>
+        <span class="n">inputs</span><span class="o">.</span><span class="mi">0</span>
+    <span class="p">}</span>
+    <span class="kt">Dense</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">inputSize</span><span class="p">:</span> <span class="mi">128</span><span class="p">,</span> <span class="nv">outputSize</span><span class="p">:</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="kt">LogSoftmax</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="k">var</span> <span class="nv">optimizer</span> <span class="o">=</span> <span class="kt">Adam</span><span class="p">(</span><span class="nv">model</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span> <span class="nv">learningRate</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">)</span>
+
+<span class="k">let</span> <span class="nv">batch</span><span class="p">:</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Float</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// shape: [batchSize, 28, 28]</span>
+<span class="k">let</span> <span class="nv">y_true</span><span class="p">:</span> <span class="kt">Tensor</span><span class="o">&lt;</span><span class="kt">Int32</span><span class="p">,</span> <span class="kt">CPU</span><span class="o">&gt;</span> <span class="o">=</span> <span class="o">...</span> <span class="c1">// shape: [batchSize]</span>
+
+<span class="k">let</span> <span class="nv">x</span> <span class="o">=</span> <span class="n">batch</span><span class="o">.</span><span class="nf">permuted</span><span class="p">(</span><span class="nv">to</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="c1">// Swap first and second axis</span>
+<span class="k">let</span> <span class="nv">pred</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="nf">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">loss</span> <span class="o">=</span> <span class="nf">categoricalNegativeLogLikelihood</span><span class="p">(</span><span class="nv">expected</span><span class="p">:</span> <span class="n">y_true</span><span class="p">,</span> <span class="nv">actual</span><span class="p">:</span> <span class="n">pred</span><span class="p">)</span>
+
+<span class="k">let</span> <span class="nv">gradients</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="nf">gradients</span><span class="p">(</span><span class="nv">of</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+<span class="n">optimizer</span><span class="o">.</span><span class="nf">update</span><span class="p">(</span><span class="nv">along</span><span class="p">:</span> <span class="n">gradients</span><span class="p">)</span>
+</code></pre>
+
+          </div>
+        </section>
+
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2020 <a class="link" href="https://github.com/palle-k" target="_blank" rel="external">Palle Klewitz</a>. All rights reserved. (Last updated: 2020-10-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.13.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

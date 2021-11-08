@@ -1,0 +1,91 @@
+{
+    "author": "Palle Klewitz",
+    "author_url": "https://github.com/palle-k",
+    "github_url": "https://github.com/palle-k/DL4S",
+    "module": "DL4S",
+    "theme": "fullwidth",
+    "custom_categories": [{
+        "name": "Math",
+        "children": [
+            "Tensor"
+        ]
+    }, {
+        "name": "Network Layers",
+        "children": [
+            "LayerType",
+            "Sequential",
+            "Dense",
+            "Convolution2D",
+            "TransposedConvolution2D",
+            "MaxPool2D",
+            "AvgPool2D",
+            "AdaptiveMaxPool2D",
+            "AdaptiveAvgPool2D",
+            "RNN",
+            "LSTM",
+            "GRU",
+            "BasicRNN",
+            "Bidirectional",
+            "Embedding",
+			"PositionalEncoding",
+			"ScaledDotProductAttention",
+			"MultiHeadAttention",
+			"TransformerEncoderBlock",
+			"TransformerDecoderBlock",
+			"TransformerEncoder",
+			"TransformerDecoder",
+			"PointwiseFeedForward",
+            "LayerNorm",
+            "BatchNorm",
+			"Dropout",
+            "Tanh",
+            "Sigmoid",
+            "Relu",
+            "LeakyRelu",
+            "Softmax",
+			"LogSoftmax",
+            "Lambda",       
+            "Flatten",
+            "Reshape",
+            "Concat",
+            "AnyLayer",
+			"Gelu",
+			"Swish",
+			"Mish",
+			"LiSHT"
+        ]
+    }, {
+        "name": "Loss Functions",
+        "children": [
+            "binaryCrossEntropy(expected:actual:)",
+            "categoricalCrossEntropy(expected:actual:ignoreIndex:)",
+			"categoricalNegativeLogLikelihood(expected:actual:ignoreIndex:)",
+            "meanSquaredError(expected:actual:)",
+            "l1loss(_:loss:)",
+            "l2loss(_:loss:)"
+        ]
+    }, {
+        "name": "Optimizers",
+        "children": [
+            "Optimizer",
+            "SGD",
+            "Momentum",
+            "Adam",
+            "Adadelta",
+            "Adagrad",
+            "RMSProp"
+        ]
+    }, {
+        "name": "Model Zoo",
+        "children": [
+			"Transformer",
+            "AlexNet",
+            "ResNet18",
+            "ResidualBlock",
+            "VGG11",
+            "VGG13",
+            "VGG16",
+            "VGG19"
+        ]
+    }]
+}

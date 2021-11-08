@@ -1,0 +1,18 @@
+module MKL [system] {
+    header "/opt/intel/mkl/include/mkl.h"
+    header "/opt/intel/ipp/include/ipp.h"
+    header "MKL.h"
+    
+    link "mkl_intel_lp64"
+    link "mkl_intel_thread"
+    link "mkl_core"
+    link "pthread"
+    link "ippcore"
+    link "ippvm"
+    link "ipps"
+    link "m"
+    link "dl"
+    link "iomp5"
+    
+    export *
+}
