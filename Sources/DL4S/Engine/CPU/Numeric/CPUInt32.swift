@@ -42,14 +42,14 @@ extension Int32: CPUNumeric {
         if stride == 1 {
             ippsSet_32s(value, dst, Int32(count))
         } else {
-            for i in 0 ..< count {
+            for i in 0..<count {
                 dst[i &* stride] = value;
             }
         }
         #elseif canImport(Accelerate)
         vDSP_vfilli([value], dst, stride, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i &* stride] = value;
         }
         #endif
@@ -62,7 +62,7 @@ extension Int32: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vfilli([value], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = value;
         }
         #endif
@@ -71,7 +71,7 @@ extension Int32: CPUNumeric {
     public static func relu(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let s = src[i];
             dst[i] = s > 0 ? s : 0;
         }
@@ -80,8 +80,8 @@ extension Int32: CPUNumeric {
     public static func transpose(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, srcRows: Int, srcCols: Int) {
         let src = val.pointer(capacity: srcRows * srcCols)
         let dst = result.pointer(capacity: srcRows * srcCols)
-        for x in 0 ..< srcCols {
-            for y in 0 ..< srcRows {
+        for x in 0..<srcCols {
+            for y in 0..<srcRows {
                 dst[y &+ x &* srcRows] = src[y &* srcCols &+ x];
             }
         }
@@ -90,7 +90,7 @@ extension Int32: CPUNumeric {
     public static func vNeg(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = -src[i]
         }
     }
@@ -101,7 +101,7 @@ extension Int32: CPUNumeric {
         #if !MKL_ENABLE && canImport(Accelerate)
         vDSP_vsaddi(src, 1, [rhs], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] &+ rhs;
         }
         #endif
@@ -110,7 +110,7 @@ extension Int32: CPUNumeric {
     public static func vsMul(lhs: UnsafeBufferPointer<Int32>, rhs: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let src = lhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = src[i] &* rhs;
         }
     }
@@ -118,7 +118,7 @@ extension Int32: CPUNumeric {
     public static func svDiv(lhs: Int32, rhs: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let src = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs / src[i]
         }
     }
@@ -130,7 +130,7 @@ extension Int32: CPUNumeric {
         #if !MKL_ENABLE && canImport(Accelerate)
         vDSP_vaddi(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] &+ rhs[i]
         }
         #endif
@@ -140,7 +140,7 @@ extension Int32: CPUNumeric {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] &- rhs[i]
         }
     }
@@ -149,7 +149,7 @@ extension Int32: CPUNumeric {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] &* rhs[i]
         }
     }
@@ -162,7 +162,7 @@ extension Int32: CPUNumeric {
         #if !MKL_ENABLE && canImport(Accelerate)
         vDSP_vdivi(rhs, 1, lhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] / rhs[i]
         }
         #endif
@@ -171,7 +171,7 @@ extension Int32: CPUNumeric {
     public static func sum(val: UnsafeBufferPointer<Int32>, count: Int) -> Int32 {
         let src = val.pointer(capacity: count)
         var dst: Int32 = 0
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst &+= src[i]
         }
         return dst
@@ -180,7 +180,7 @@ extension Int32: CPUNumeric {
     public static func sum(val: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> Int32 {
         let src = val.pointer(capacity: count * stride)
         var dst: Int32 = 0
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst &+= src[i &* stride]
         }
         return dst
@@ -213,7 +213,7 @@ extension Int32: CPUNumeric {
         maxI = Int(maxI32)
         #else
         maxV = Int32.min;
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i]
             if v > maxV {
                 maxV = v
@@ -235,7 +235,7 @@ extension Int32: CPUNumeric {
         minI = Int(minI32)
         #else
         minV = Int32.max;
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i]
             if v < minV {
                 minV = v
@@ -253,7 +253,7 @@ extension Int32: CPUNumeric {
         var maxI: Int = 0
         var maxV: Int32 = Int32.min
         let src = values.pointer(capacity: stride * count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i &* stride]
             if v > maxV {
                 maxV = v
@@ -270,7 +270,7 @@ extension Int32: CPUNumeric {
         var minI: Int = 0
         var minV: Int32 = Int32.max
         let src = values.pointer(capacity: stride * count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i &* stride]
             if v < minV {
                 minV = v
@@ -283,7 +283,7 @@ extension Int32: CPUNumeric {
     public static func copy(values: UnsafeBufferPointer<Int32>, srcStride: Int, result: UnsafeMutableBufferPointer<Int32>, dstStride: Int, count: Int) {
         let src = values.pointer(capacity: count * srcStride)
         let dst = result.pointer(capacity: count * dstStride)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i &* dstStride] = src[i &* srcStride]
         }
     }
@@ -294,7 +294,7 @@ extension Int32: CPUNumeric {
         #if MKL_ENABLE
         ippsVectorSlope_32s(dst, Int32(count), Double(start), Double(increment))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = start &+ Int32(i) &* increment
         }
         #endif
@@ -304,7 +304,7 @@ extension Int32: CPUNumeric {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let l = lhs[i]
             let r = rhs[i]
             dst[i] = l >= r ? l : r
@@ -315,7 +315,7 @@ extension Int32: CPUNumeric {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let l = lhs[i]
             let r = rhs[i]
             dst[i] = l <= r ? l : r
@@ -341,7 +341,7 @@ extension Int32: CPUNumeric {
     public static func heaviside(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = src[i] > 0 ? 1 : 0
         }
     }

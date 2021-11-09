@@ -53,11 +53,11 @@ func iterativeRead<Element>(
 
     let indices = iterate(iterShape)
     
-    for i in 0 ..< indices.count {
+    for i in 0..<indices.count {
         let index = indices[i]
         var baseIndex = 0
         let dstIndex = i &* copyCount
-        for j in 0 ..< index.count {
+        for j in 0..<index.count {
             baseIndex &+= (srcIndex[j] ?? index[j]) &* srcStrides[j]
         }
         destination
@@ -123,7 +123,7 @@ func recursiveRead<Element, C1: RandomAccessCollection, C2: RandomAccessCollecti
         let dstStrides = MemoryOps.strides(from: dstShape)
         let dStride = dstStrides[0]
         
-        for i in 0 ..< sDim {
+        for i in 0..<sDim {
             let srcOffset = i &* sStride
             let srcStart = source.advanced(by: srcOffset)
             let dstOffset = i &* dStride
@@ -233,7 +233,7 @@ func recursiveWrite<Element, C1: RandomAccessCollection, C2: RandomAccessCollect
         let srcStrides = MemoryOps.strides(from: srcShape)
         let sStride = srcStrides[0]
         
-        for i in 0 ..< dDim {
+        for i in 0..<dDim {
             let srcOffset = i &* sStride
             let srcStart = source.advanced(by: srcOffset)
             let dstOffset = i &* dStride
@@ -260,7 +260,7 @@ enum MemoryOps {
         }
         
         var str = [Int](repeating: 1, count: dim)
-        for i in (0 ..< dim - 1).reversed() {
+        for i in (0..<dim - 1).reversed() {
             str[i] = str[i &+ 1] &* shape[i &+ 1]
         }
         return str

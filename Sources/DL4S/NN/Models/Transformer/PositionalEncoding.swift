@@ -50,9 +50,9 @@ public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>:
     /// - Parameter maxLen: Maximum sequence length in the current minibatch
     /// - Returns: Tensor of shape [max(inputs), hiddenSize]
     public func callAsFunction(_ maxLen: Int) -> Tensor<Element, Device> {
-        let inputRange = Tensor<Element, Device>((0 ..< maxLen).map(Element.init))
+        let inputRange = Tensor<Element, Device>((0..<maxLen).map(Element.init))
         
-        let hiddenRange = Tensor<Element, Device>((0 ..< hiddenSize / 2).map(Element.init))
+        let hiddenRange = Tensor<Element, Device>((0..<hiddenSize / 2).map(Element.init))
         let frequencies = Tensor(10000).raised(toPowerOf: hiddenRange / Tensor(Element(hiddenSize / 2)))
         let samplePoints = inputRange.unsqueezed(at: 1) / frequencies.unsqueezed(at: 0) // [seqlen, hiddenSize / 2]
         

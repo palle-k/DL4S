@@ -41,7 +41,7 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     
     /// Creates aransformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     public init(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float) {
-        decoderLayers = (0 ..< layerCount).map { _ in
+        decoderLayers = (0..<layerCount).map { _ in
             TransformerDecoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
         }
     }

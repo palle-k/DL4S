@@ -151,7 +151,7 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
     
     public func callAsFunction(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Embedding") {
-            let embedded = (0 ..< inputs.shape[0]).map { i -> Tensor<Element, Device> in
+            let embedded = (0..<inputs.shape[0]).map { i -> Tensor<Element, Device> in
                 let idx = Int(inputs[i].item)
                 if idx == ignoreIndex {
                     return Tensor(repeating: 0, shape: 1, outputSize)

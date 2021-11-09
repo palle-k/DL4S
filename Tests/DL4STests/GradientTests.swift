@@ -82,7 +82,7 @@ class GradientTests: XCTestCase {
     func testSecondDerivative3() {
         // Note: This test should not leak memory.
         
-        for _ in 1 ... 1 {
+        for _ in 1...1 {
             let net = Concat<Float, CPU>()
             
             let input1 = Tensor<Float, CPU>(uniformlyDistributedWithShape: 1, 16, requiresGradient: true)

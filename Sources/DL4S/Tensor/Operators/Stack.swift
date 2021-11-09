@@ -58,7 +58,7 @@ public extension Tensor {
                     backpropagate: [{ resultGradient -> Tensor<Element, Device> in
                         let sourceOffsets = lengths.reduce(into: [0], {$0.append($0.last! + $1)})
                         let idx = Array(repeating: nil, count: axis) +
-                            [sourceOffsets[i] ..< sourceOffsets[i] + lengths[i]]
+                            [sourceOffsets[i]..<sourceOffsets[i] + lengths[i]]
                         
                         var target = Tensor<Element, Device>(repeating: 0, shape: selfShape)
                         target[idx] = resultGradient
@@ -77,7 +77,7 @@ public extension Tensor {
     ///   - tensors: Tensors to stack
     ///   - axis: Axis to stack the tensors along.
     init(stacking tensors: [Self], along axis: Int = 0) {
-        precondition(0 ..< tensors[0].dim ~= axis, "Dimensionality of tensors must be in dimensionality range of source tensors")
+        precondition(0..<tensors[0].dim ~= axis, "Dimensionality of tensors must be in dimensionality range of source tensors")
         
         precondition(tensors.allSatisfy {
             $0.shape.count == tensors[0].shape.count &&

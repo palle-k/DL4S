@@ -44,14 +44,14 @@ extension Float: CPUNumeric {
         if stride == 1 {
             ippsSet_32f(value, dst, Int32(count))
         } else {
-            for i in 0 ..< count {
+            for i in 0..<count {
                 dst[i &* stride] = value;
             }
         }
         #elseif canImport(Accelerate)
         vDSP_vfill([value], dst, stride, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i &* stride] = value;
         }
         #endif
@@ -64,7 +64,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vfill([value], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = value;
         }
         #endif
@@ -78,7 +78,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vthres(src, 1, [0], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             let s = src[i];
             dst[i] = s > 0 ? s : 0;
         }
@@ -93,8 +93,8 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_mtrans(src, 1, dst, 1, UInt(srcCols), UInt(srcRows))
         #else
-        for x in 0 ..< srcCols {
-            for y in 0 ..< srcRows {
+        for x in 0..<srcCols {
+            for y in 0..<srcRows {
                 dst[y &+ x &* srcRows] = src[y &* srcCols &+ x];
             }
         }
@@ -109,7 +109,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vneg(src, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = -src[i]
         }
         #endif
@@ -123,7 +123,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vsadd(src, 1, [rhs], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] + rhs;
         }
         #endif
@@ -137,7 +137,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vsmul(lhs, 1, [rhs], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] * rhs;
         }
         #endif
@@ -151,7 +151,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_svdiv([lhs], src, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs / src[i]
         }
         #endif
@@ -166,7 +166,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vadd(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] + rhs[i]
         }
         #endif
@@ -182,7 +182,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vsub(rhs, 1, lhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] - rhs[i]
         }
         #endif
@@ -198,7 +198,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vmul(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] * rhs[i]
         }
         #endif
@@ -214,7 +214,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vdiv(rhs, 1, lhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] / rhs[i]
         }
         #endif
@@ -229,7 +229,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_sve(src, 1, &dst, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst += src[i]
         }
         #endif
@@ -244,7 +244,7 @@ extension Float: CPUNumeric {
         if stride == 1 {
             ippsSum_32f(src, Int32(count), &dst, ippAlgHintFast)
         } else {
-            for i in 0 ..< count {
+            for i in 0..<count {
                 dst += src[i &* stride]
             }
         }
@@ -253,7 +253,7 @@ extension Float: CPUNumeric {
         vDSP_sve(src, stride, &dst, UInt(count))
         return dst
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst += src[i &* stride]
         }
         return dst
@@ -306,7 +306,7 @@ extension Float: CPUNumeric {
         maxI = Int(maxIU)
         #else
         maxV = -Float.infinity;
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i]
             if v > maxV {
                 maxV = v
@@ -332,7 +332,7 @@ extension Float: CPUNumeric {
         minI = Int(minIU)
         #else
         minV = Float.infinity;
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i]
             if v < minV {
                 minV = v
@@ -357,7 +357,7 @@ extension Float: CPUNumeric {
         var maxI: Int = 0
         var maxV: Float = -Float.infinity
         let src = values.pointer(capacity: stride * (count - 1) + 1)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i &* stride]
             if v > maxV {
                 maxV = v
@@ -382,7 +382,7 @@ extension Float: CPUNumeric {
         var minI: Int = 0
         var minV: Float = Float.infinity
         let src = values.pointer(capacity: stride * count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i &* stride]
             if v < minV {
                 minV = v
@@ -400,7 +400,7 @@ extension Float: CPUNumeric {
         #if MKL_ENABLE || canImport(Accelerate)
         cblas_scopy(Int32(count), src, Int32(srcStride), dst, Int32(dstStride))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i &* dstStride] = src[i &* srcStride]
         }
         #endif
@@ -414,7 +414,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vramp([start], [increment], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = start + Float(i) * increment
         }
         #endif
@@ -429,7 +429,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vmax(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             let l = lhs[i]
             let r = rhs[i]
             dst[i] = l >= r ? l : r
@@ -446,7 +446,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vmin(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             let l = lhs[i]
             let r = rhs[i]
             dst[i] = l <= r ? l : r
@@ -462,7 +462,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vvexpf(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = expf(src[i])
         }
         #endif
@@ -476,7 +476,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vvlogf(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = logf(src[i])
         }
         #endif
@@ -490,7 +490,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vvtanhf(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = tanhf(src[i])
         }
         #endif
@@ -504,7 +504,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vvsqrtf(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = sqrtf(src[i])
         }
         #endif
@@ -513,7 +513,7 @@ extension Float: CPUNumeric {
     public static func heaviside(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = src[i] > 0 ? 1 : 0
         }
     }
@@ -526,7 +526,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vvsinf(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = sinf(src[i])
         }
         #endif
@@ -540,7 +540,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vvcosf(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = cosf(src[i])
         }
         #endif
@@ -554,7 +554,7 @@ extension Float: CPUNumeric {
         #elseif canImport(Accelerate)
         vvtanf(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = tanf(src[i])
         }
         #endif

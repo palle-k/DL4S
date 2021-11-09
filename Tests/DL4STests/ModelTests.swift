@@ -37,7 +37,7 @@ class ModelTests: XCTestCase {
         
         let epochs = 5
         
-        for i in 1 ... epochs {
+        for i in 1...epochs {
             let result = optim.model(t)
             
             let loss = categoricalNegativeLogLikelihood(expected: expected, actual: result)
@@ -63,7 +63,7 @@ class ModelTests: XCTestCase {
         
         let epochs = 5
         
-        for i in 1 ... epochs {
+        for i in 1...epochs {
             let result = optim.model(t)
             
             let loss = categoricalNegativeLogLikelihood(expected: expected, actual: result)
@@ -88,7 +88,7 @@ class ModelTests: XCTestCase {
         
         let epochs = 5
         
-        for i in 1 ... epochs {
+        for i in 1...epochs {
             let result = optim.model(t)
             
             let loss = categoricalNegativeLogLikelihood(expected: expected, actual: result)

@@ -120,7 +120,7 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         let encoded = encoder((encIn, [inputSequence.count]))
         
         var tokens: [Int32] = []
-        for _ in 0 ..< maxLength {
+        for _ in 0..<maxLength {
             let tokenInput = [[startToken] + tokens]
             let decIn = prepareInputs(Tensor(tokenInput))
             let output = decoder((decIn, encoded, [inputSequence.count], [tokenInput[0].count]))

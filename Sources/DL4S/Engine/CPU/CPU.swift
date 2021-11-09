@@ -52,7 +52,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         }
         
         var str = [Int](repeating: 1, count: dim)
-        for i in (0 ..< dim - 1).reversed() {
+        for i in (0..<dim - 1).reversed() {
             str[i] = str[i + 1] * shape[i + 1]
         }
         return str

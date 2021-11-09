@@ -136,14 +136,14 @@ extension ShapedBuffer: CustomStringConvertible {
             return "\(formatElement(values.pointee))"
         } else if dim == 1 {
             let dim = self.shape[0]
-            return "[\((0 ..< dim).map {"\(formatElement(values[$0]))"}.joined(separator: ", "))]"
+            return "[\((0..<dim).map {"\(formatElement(values[$0]))"}.joined(separator: ", "))]"
         } else {
             let firstDim = shape.first!
             let restDim = Array(shape.dropFirst())
             
             let stride = restDim.reduce(1, *)
             
-            let slices = (0 ..< firstDim).map {
+            let slices = (0..<firstDim).map {
                 ShapedBuffer(values: values.advanced(by: stride * $0), shape: restDim).generateDescription()
             }
             

@@ -60,8 +60,8 @@ class VecTests: XCTestCase {
     func testVectorReadSlice() {
         let v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
         print(v)
-        print(v[nil, 0 ..< 2])
-        print(v[nil, 0 ..< 1])
+        print(v[nil, 0..<2])
+        print(v[nil, 0..<1])
     }
     
     func testVectorWrite() {
@@ -131,8 +131,8 @@ class VecTests: XCTestCase {
         
         let expected: [[Float]] = [[17, 22, 27], [22, 29, 36], [27, 36, 45]]
         
-        for r in 0 ..< 3 {
-            for c in 0 ..< 3 {
+        for r in 0..<3 {
+            for c in 0..<3 {
                 XCTAssertEqual(result[r, c].item, expected[r][c])
             }
         }
@@ -148,8 +148,8 @@ class VecTests: XCTestCase {
         
         let expected: [[Float]] = [[14, 32], [32, 77]]
         
-        for r in 0 ..< 2 {
-            for c in 0 ..< 2 {
+        for r in 0..<2 {
+            for c in 0..<2 {
                 XCTAssertEqual(result[r, c].item, expected[r][c])
             }
         }
@@ -160,8 +160,8 @@ class VecTests: XCTestCase {
         
         let result = log(exp(x))
         
-        for r in 0 ..< 10 {
-            for c in 0 ..< 10 {
+        for r in 0..<10 {
+            for c in 0..<10 {
                 XCTAssertEqual(result[r, c].item, x[r, c].item, accuracy: 0.0001)
             }
         }
@@ -194,8 +194,8 @@ class VecTests: XCTestCase {
             [2, 2 / e, 2 / (e * e)]
         ]
         
-        for r in 0 ..< result.shape[0] {
-            for c in 0 ..< result.shape[1] {
+        for r in 0..<result.shape[0] {
+            for c in 0..<result.shape[1] {
                 XCTAssertEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
             }
         }
@@ -213,8 +213,8 @@ class VecTests: XCTestCase {
             [4.0 / 10.0, 4.0 / 20.0, 4.0 / 30.0]
         ]
         
-        for r in 0 ..< result.shape[0] {
-            for c in 0 ..< result.shape[1] {
+        for r in 0..<result.shape[0] {
+            for c in 0..<result.shape[1] {
                 XCTAssertEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
             }
         }
@@ -242,7 +242,7 @@ class VecTests: XCTestCase {
     func testSigmoid() {
         let a = Tensor<Float, CPU>(normalDistributedWithShape: 10)
         
-        let elements = (0 ..< 10).map { (x: Int) in a[x].item}
+        let elements = (0..<10).map { (x: Int) in a[x].item}
         
         let ref = elements.map {1 / (1 + exp(-$0))}
         let result = 1 / (1 + exp(-a))
@@ -252,7 +252,7 @@ class VecTests: XCTestCase {
         print(elements.map {1 / $0})
         print(1 / a)
                 
-        for i in 0 ..< 10 {
+        for i in 0..<10 {
             XCTAssertEqual(result[i].item, ref[i], accuracy: 0.0001)
         }
     }
@@ -270,7 +270,7 @@ class VecTests: XCTestCase {
         let bExpected: [Float] = [1, 1]
         let cExpected: [Float] = [1, 1]
         
-        for i in 0 ..< 2 {
+        for i in 0..<2 {
             XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
             XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
@@ -289,12 +289,12 @@ class VecTests: XCTestCase {
         let aExpected: [[Float]] = [[2,2],[2,2],[2,2]]
         let bExpected: [Float] = [6,6]
         
-        for i in 0 ..< 2 {
+        for i in 0..<2 {
             XCTAssertEqual(grads[1][i].item, bExpected[i], accuracy: 0.0001)
         }
         
-        for r in 0 ..< 3 {
-            for c in 0 ..< 2 {
+        for r in 0..<3 {
+            for c in 0..<2 {
                 XCTAssertEqual(grads[0][r, c].item, aExpected[r][c])
             }
         }
@@ -311,8 +311,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
@@ -329,8 +329,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
@@ -349,7 +349,7 @@ class VecTests: XCTestCase {
         let bExpected: [Float] = [1, 1]
         let cExpected: [Float] = [-1, -1]
         
-        for i in 0 ..< 2 {
+        for i in 0..<2 {
             XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
             XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
@@ -366,8 +366,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
@@ -384,8 +384,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[-2.0, -2.0], [-2.0, -2.0], [-2.0, -2.0]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
@@ -405,7 +405,7 @@ class VecTests: XCTestCase {
         let bExpected: [Float] = [1, 2]
         let cExpected: [Float] = [1, 2]
         
-        for i in 0 ..< 2 {
+        for i in 0..<2 {
             XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
             XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
@@ -425,8 +425,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
@@ -444,8 +444,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
@@ -464,7 +464,7 @@ class VecTests: XCTestCase {
         let bExpected: [Float] = [1, 0.5]
         let cExpected: [Float] = [-1, -0.5]
         
-        for i in 0 ..< 2 {
+        for i in 0..<2 {
             XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
             XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
@@ -481,8 +481,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[2.0, 1.0], [2.0, 1.0], [2.0, 1.0]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
@@ -498,8 +498,8 @@ class VecTests: XCTestCase {
         
         let refGrad: [[Float]] = [[-2.0, -1.0], [-0.22222222, -0.25], [-0.08, -0.11111111]]
         
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
+        for row in 0..<3 {
+            for column in 0..<2 {
                 XCTAssertEqual(grads[0][row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }

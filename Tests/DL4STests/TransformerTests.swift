@@ -43,8 +43,8 @@ class TransformerTests: XCTestCase {
         
         var lastLoss = Float.infinity
         
-        for _ in 1 ... 1000 {
-            let indices = (0 ..< 4).shuffled()
+        for _ in 1...1000 {
+            let indices = (0..<4).shuffled()
             let input = indices.map {samples[$0]}
             let expected = indices.map {outputs[$0]}
             let decoderInput = expected.map {

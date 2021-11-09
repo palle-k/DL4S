@@ -258,17 +258,17 @@ class EngineV2Tests: XCTestCase {
             [6, 7, 8]
         ])
         
-        XCTAssertEqual(a[nil, 0 ..< 2], expected1)
-        XCTAssertEqual(a[nil, 1 ..< 3], expected2)
-        XCTAssertEqual(a[0 ..< 2], expected3)
-        XCTAssertEqual(a[1 ..< 3], expected4)
+        XCTAssertEqual(a[nil, 0..<2], expected1)
+        XCTAssertEqual(a[nil, 1..<3], expected2)
+        XCTAssertEqual(a[0..<2], expected3)
+        XCTAssertEqual(a[1..<3], expected4)
     }
     
     func testSubscriptSliceWrite() {
         var result = Tensor<Int32, CPU>(repeating: 0, shape: [3, 3])
         let src1 = Tensor<Int32, CPU>([[0, 1], [3, 4], [6, 7]])
         
-        result[nil, 0 ..< 2] = src1
+        result[nil, 0..<2] = src1
         let expected1 = Tensor<Int32, CPU>([
             [0, 1, 0],
             [3, 4, 0],
@@ -282,7 +282,7 @@ class EngineV2Tests: XCTestCase {
             [0, 3, 4],
             [0, 6, 7]
         ])
-        result[nil, 1 ..< 3] = src1
+        result[nil, 1..<3] = src1
         XCTAssertEqual(result, expected2)
     }
     

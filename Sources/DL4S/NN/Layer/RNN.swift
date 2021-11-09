@@ -92,9 +92,9 @@ extension RNN {
             let range: AnySequence<Int>
             switch direction {
             case .forward:
-                range = AnySequence(0 ..< numberOfSteps(for: inputs))
+                range = AnySequence(0..<numberOfSteps(for: inputs))
             case .backward:
-                range = AnySequence((0 ..< numberOfSteps(for: inputs)).reversed())
+                range = AnySequence((0..<numberOfSteps(for: inputs)).reversed())
             }
             
             for i in range {

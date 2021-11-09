@@ -137,7 +137,7 @@ public enum OperationGroup {
     @inline(__always)
     static func push(_ name: @autoclosure () -> String) {
         #if DEBUG
-        operationStack.append((id: UInt64.random(in: 0 ... UInt64.max), name: name()))
+        operationStack.append((id: UInt64.random(in: 0...UInt64.max), name: name()))
         #endif
     }
     

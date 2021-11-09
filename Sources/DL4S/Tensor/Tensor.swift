@@ -52,7 +52,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     /// Identifies the tensor during backpropagation.
     ///
     /// The id will vary across different runs and different tensors with the same values.
-    let backpropID: UInt64 = UInt64.random(in: 0 ... UInt64.max)
+    let backpropID: UInt64 = UInt64.random(in: 0...UInt64.max)
     
     /// Shape of the tensor.
     ///

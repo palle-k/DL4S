@@ -54,9 +54,9 @@ func iterate(_ shape: [Int]) -> [[Int]] {
     let strides = MemoryOps.strides(from: shape)
     
     
-    for i in 0 ..< count {
+    for i in 0..<count {
         var next: [Int] = Array(repeating: 0, count: shape.count)
-        for axis in 0 ..< shape.count {
+        for axis in 0..<shape.count {
             next[axis] = (i / strides[axis]) % shape[axis]
         }
         
@@ -74,9 +74,9 @@ func flatIterate(_ shape: [Int]) -> [Int] {
     let strides = MemoryOps.strides(from: shape)
     var result = [Int](repeating: 0, count: count * dim)
     
-    for i in 0 ..< count {
+    for i in 0..<count {
         let b = i * dim
-        for axis in 0 ..< dim {
+        for axis in 0..<dim {
             result[b + axis] = (i / strides[axis]) % shape[axis]
         }
     }
@@ -433,6 +433,6 @@ struct ThreadLocal<Value> {
     
     init(wrappedValue: Value) {
         self.initialValue = wrappedValue
-        self.key = UInt64.random(in: 0 ... UInt64.max)
+        self.key = UInt64.random(in: 0...UInt64.max)
     }
 }

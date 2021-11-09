@@ -299,7 +299,7 @@ public extension Tensor {
 #if canImport(CoreGraphics)
 import CoreGraphics
 
-private func copy<Element: NumericType>(from image: CGImage, to buffer: UnsafeMutableBufferPointer<Element>, normalizeTo range: ClosedRange<Element> = 0 ... 1) -> Bool {
+private func copy<Element: NumericType>(from image: CGImage, to buffer: UnsafeMutableBufferPointer<Element>, normalizeTo range: ClosedRange<Element> = 0...1) -> Bool {
     let byteCount = image.height * image.bytesPerRow
     let data = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: 16)
     defer {
@@ -342,7 +342,7 @@ public extension Tensor {
     /// - Parameters:
     ///   - image: Image
     ///   - range: Range to normalize pixel values to
-    init?(_ image: CGImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
+    init?(_ image: CGImage, normalizedTo range: ClosedRange<Element> = 0...1) {
         let shape = [
             (image.colorSpace ?? CGColorSpaceCreateDeviceRGB()).numberOfComponents,
             image.height,
@@ -360,7 +360,7 @@ public extension Tensor {
         self.init(using: buffer, context: nil)
     }
     
-    func cgImage(normalizeFrom tensorRange: ClosedRange<Element> = 0 ... 1) -> CGImage? {
+    func cgImage(normalizeFrom tensorRange: ClosedRange<Element> = 0...1) -> CGImage? {
         let tensor = self
         
         let pixels = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: tensor.count)
@@ -389,9 +389,9 @@ public extension Tensor {
             return nil
         }
         
-        for chan in 0 ..< tensor.shape[0] {
-            for row in 0 ..< tensor.shape[1] {
-                for col in 0 ..< tensor.shape[2] {
+        for chan in 0..<tensor.shape[0] {
+            for row in 0..<tensor.shape[1] {
+                for col in 0..<tensor.shape[2] {
                     let val = (tensor[chan, row, col].item - tensorRange.lowerBound) * (255 / (tensorRange.upperBound - tensorRange.lowerBound))
                     pixels[col * bytesPerRow + row * bytesPerPixel + chan] = UInt8(val)
                 }
@@ -423,7 +423,7 @@ public extension Tensor {
     /// - Parameters:
     ///   - image: Image
     ///   - range: Range to normalize pixel values to
-    init?(_ image: NSImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
+    init?(_ image: NSImage, normalizedTo range: ClosedRange<Element> = 0...1) {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return nil
         }
@@ -436,7 +436,7 @@ public extension NSImage {
     /// - Parameters:
     ///   - tensor: Tensor
     ///   - tensorRange: Range to normalize pixel values to
-    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0...1) {
         guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil
         }
@@ -453,7 +453,7 @@ public extension Tensor {
     /// - Parameters:
     ///   - image: Image
     ///   - range: Range to normalize pixel values to
-    init?(_ image: UIImage, normalizedTo range: ClosedRange<Element> = 0 ... 1) {
+    init?(_ image: UIImage, normalizedTo range: ClosedRange<Element> = 0...1) {
         guard let cgImage = image.cgImage else {
             return nil
         }
@@ -466,7 +466,7 @@ public extension UIImage {
     /// - Parameters:
     ///   - tensor: Tensor
     ///   - tensorRange: Range to normalize pixel values to
-    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0 ... 1) {
+    convenience init?<Element, Device>(_ tensor: Tensor<Element, Device>, tensorRange: ClosedRange<Element> = 0...1) {
         guard let cgImage = tensor.cgImage(normalizeFrom: tensorRange) else {
             return nil
         }

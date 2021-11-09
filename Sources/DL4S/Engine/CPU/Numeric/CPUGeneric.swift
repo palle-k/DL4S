@@ -69,18 +69,18 @@ public extension CPUNumeric {
         let dst_batch_stride = output_width * output_height;
         let dst_full_stride = dst_batch_stride * setup.batch_size;
         
-        for k in 0 ..< setup.kernel_width &* setup.kernel_height &* setup.channels {
+        for k in 0..<setup.kernel_width &* setup.kernel_height &* setup.channels {
             let kx = k % setup.kernel_width
             let kyz = k / setup.kernel_width
             let ky = kyz % setup.kernel_height
             let kz = kyz / setup.kernel_height
-            for b in 0 ..< setup.batch_size {
+            for b in 0..<setup.batch_size {
                 
-                for y in 0 ..< output_height {
+                for y in 0..<output_height {
                     let in_y = y &* setup.stride &- setup.padding &+ ky
                     
                     if in_y >= 0 && in_y < setup.height {
-                        for x in 0 ..< output_width {
+                        for x in 0..<output_width {
                             let in_x = x &* setup.stride &- setup.padding &+ kx
                             let input: Self
                             if (in_x >= 0 && in_x < setup.width) {
@@ -99,7 +99,7 @@ public extension CPUNumeric {
                             vDSP_vfill([0], &dst_float[dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width], 1, UInt(output_width))
                             #else
                             let dst_offset = dst_float.advanced(by: dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width)
-                            for i in 0 ..< output_width {
+                            for i in 0..<output_width {
                                 dst_offset[i] = 0;
                             }
                             #endif
@@ -146,7 +146,7 @@ public extension CPUNumeric {
             #elseif canImport(Accelerate)
             vDSP_vfill([0], (dst as! UnsafeMutablePointer<Float>), 1, UInt(setup.width * setup.height * setup.channels * setup.batch_size))
             #else
-            for i in 0 ..< setup.width * setup.height * setup.channels * setup.batch_size {
+            for i in 0..<setup.width * setup.height * setup.channels * setup.batch_size {
                 dst[i] = 0;
             }
             #endif
@@ -154,18 +154,18 @@ public extension CPUNumeric {
             Self.fill(value: 0, result: UnsafeMutableBufferPointer<Self>(start: dst, count: setup.width * setup.height * setup.channels * setup.batch_size), count: setup.width * setup.height * setup.channels * setup.batch_size)
         }
         
-        for k in 0 ..< setup.kernel_width * setup.kernel_height * setup.channels {
+        for k in 0..<setup.kernel_width * setup.kernel_height * setup.channels {
             let kx = k % setup.kernel_width;
             let kyz = k / setup.kernel_width;
             let ky = kyz % setup.kernel_height;
             let kz = kyz / setup.kernel_height;
             
-            for b in 0 ..< setup.batch_size {
+            for b in 0..<setup.batch_size {
                 
-                for y in 0 ..< input_height {
+                for y in 0..<input_height {
                     let in_y = y &* setup.stride &- setup.padding &+ ky;
                     
-                    for x in 0 ..< input_width {
+                    for x in 0..<input_width {
                         let in_x = x &* setup.stride &- setup.padding &+ kx;
                         
                         if (in_x >= 0 && in_x < setup.width && in_y >= 0 && in_y < setup.height) {
@@ -188,42 +188,42 @@ public extension CPUNumeric {
         
         if (alpha == 0) {
             if (beta == 0) {
-                for i in 0 ..< __M * __N {
+                for i in 0..<__M * __N {
                     __C[i] = 0
                 }
             } else {
-                for i in 0 ..< __M * __N {
+                for i in 0..<__M * __N {
                     __C[i] *= beta
                 }
             }
         }
         
         if (beta == 0) {
-            for i in 0 ..< __M * __N {
+            for i in 0..<__M * __N {
                 __C[i] = 0
             }
         } else {
-            for i in 0 ..< __M * __N {
+            for i in 0..<__M * __N {
                 __C[i] *= beta
             }
         }
         
         if (transA) {
             if (transB) {
-                for r in 0 ..< __M {
-                    for c in 0 ..< __N {
+                for r in 0..<__M {
+                    for c in 0..<__N {
                         var tmp: Self = 0
-                        for l in 0 ..< __K {
+                        for l in 0..<__K {
                             tmp += __A[r &+ l &* __M] * __B[l &+ c &* __K]
                         }
                         __C[r &* __N &+ c] = alpha * tmp
                     }
                 }
             } else {
-                for r in 0 ..< __M {
-                    for c in 0 ..< __N {
+                for r in 0..<__M {
+                    for c in 0..<__N {
                         var tmp: Self = 0
-                        for l in 0 ..< __K {
+                        for l in 0..<__K {
                             tmp += __A[r &+ l &* __M] * __B[l &* __N &+ c]
                         }
                         __C[r &* __N &+ c] = alpha * tmp
@@ -232,20 +232,20 @@ public extension CPUNumeric {
             }
         } else {
             if (transB) {
-                for r in 0 ..< __M {
-                    for c in 0 ..< __N {
+                for r in 0..<__M {
+                    for c in 0..<__N {
                         var tmp: Self = 0
-                        for l in 0 ..< __K {
+                        for l in 0..<__K {
                             tmp += __A[l &+ r &* __K] * __B[l &+ c &* __K]
                         }
                         __C[r &* __N &+ c] = alpha * tmp
                     }
                 }
             } else {
-                for r in 0 ..< __M {
-                    for c in 0 ..< __N {
+                for r in 0..<__M {
+                    for c in 0..<__N {
                         var tmp: Self = 0
-                        for l in 0 ..< __K {
+                        for l in 0..<__K {
                             tmp += __A[l &+ r &* __K] * __B[l &* __N &+ c]
                         }
                         __C[r &* __N &+ c] = alpha * tmp
@@ -278,10 +278,10 @@ public extension CPUNumeric {
         dst_strides[dst_dim - 1] = 1
         src_strides[dst_dim - 2] = 1
         
-        for i in (0 ... (dst_dim - 2)).reversed() {
+        for i in (0...(dst_dim - 2)).reversed() {
             dst_strides[i] = dst_shape[i &+ 1] &* dst_strides[i &+ 1]
         }
-        for i in (0 ... (dst_dim - 2)).reversed() {
+        for i in (0...(dst_dim - 2)).reversed() {
             src_shape[i] = dst_shape[i >= axis ? i &+ 1 : i]
             if (i < dst_dim - 2) {
                 src_strides[i] = src_shape[i &+ 1] &* src_strides[i &+ 1]
@@ -298,17 +298,17 @@ public extension CPUNumeric {
             #elseif canImport(Accelerate)
             vDSP_vfill([0], (target as! UnsafeMutablePointer<Float>), 1, UInt(dst_count))
             #else
-            for i in 0 ..< count {
+            for i in 0..<count {
                 target[i] = 0
             }
             #endif
         } else {
-            for i in 0 ..< count {
+            for i in 0..<count {
                 target[i] = 0
             }
         }
         
-        for i in 0 ..< count {
+        for i in 0..<count {
             let src_idx = i
             let c = context[i]
             if c == ignoreIndex {
@@ -316,7 +316,7 @@ public extension CPUNumeric {
             }
             var dst_idx = Int(c) &* dst_strides[axis]
             
-            for a in 0 ..< dst_dim - 1 {
+            for a in 0..<dst_dim - 1 {
                 let src_dim_idx = (i / src_strides[a]) % src_shape[a]
                 dst_idx = dst_idx &+ src_dim_idx &* dst_strides[a >= axis ? a &+ 1 : a]
             }
@@ -347,10 +347,10 @@ public extension CPUNumeric {
         src_strides[src_dim - 1] = 1
         dst_strides[src_dim - 2] = 1
         
-        for i  in (0 ... (src_dim - 2)).reversed() {
+        for i  in (0...(src_dim - 2)).reversed() {
             src_strides[i] = src_shape[i &+ 1] * src_strides[i &+ 1]
         }
-        for i in (0 ... (src_dim - 2)).reversed() {
+        for i in (0...(src_dim - 2)).reversed() {
             dst_shape[i] = src_shape[i >= axis ? i &+ 1 : i]
             if (i < src_dim &- 2) {
                 dst_strides[i] = dst_shape[i &+ 1] &* dst_strides[i &+ 1]
@@ -361,7 +361,7 @@ public extension CPUNumeric {
         
         let count = dst_shape[0] &* dst_strides[0]
         
-        for i in 0 ..< count {
+        for i in 0..<count {
             let dst_idx = i
             let c = context[i]
             if c == ignoreIndex {
@@ -371,7 +371,7 @@ public extension CPUNumeric {
             
             var src_idx = Int(c) &* src_strides[axis]
             
-            for a in 0 ..< src_dim - 1 {
+            for a in 0..<src_dim - 1 {
                 let dst_dim_idx = (i / dst_strides[a]) % dst_shape[a]
                 src_idx = src_idx &+ dst_dim_idx &* src_strides[a >= axis ? a &+ 1 : a]
             }

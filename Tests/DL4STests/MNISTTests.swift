@@ -81,7 +81,7 @@ class MNISTTests: XCTestCase {
         
         var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
         
-        for _ in 1 ... epochs {
+        for _ in 1...epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
 
             let predicted = optimizer.model(input.view(as: [batchSize, 1, 28, 28]))
@@ -97,7 +97,7 @@ class MNISTTests: XCTestCase {
         
         var correctCount = 0
         
-        for i in 0 ..< imagesVal.shape[0] {
+        for i in 0..<imagesVal.shape[0] {
             let x = imagesVal[i].view(as: [1, 1, 28, 28])
             let pred = optimizer.model(x).squeezed().argmax()
             let actual = Int(labelsVal[i].item)
@@ -137,7 +137,7 @@ class MNISTTests: XCTestCase {
         
         var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
         
-        for _ in 1 ... epochs {
+        for _ in 1...epochs {
             let (batch, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
             let input = batch.view(as: [-1, 28, 28]).permuted(to: [1, 0, 2])
             
@@ -154,7 +154,7 @@ class MNISTTests: XCTestCase {
         
         var correctCount = 0
         
-        for i in 0 ..< imagesVal.shape[0] {
+        for i in 0..<imagesVal.shape[0] {
             let x = imagesVal[i]
                 .view(as: [-1, 28, 28])
                 .permuted(to: [1, 0, 2])
@@ -183,7 +183,7 @@ class MNISTTests: XCTestCase {
         
         var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
         
-        for _ in 1 ... epochs {
+        for _ in 1...epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
             
             let predicted = optimizer.model.callAsFunction(input.view(as: [batchSize, 28 * 28]))
@@ -199,7 +199,7 @@ class MNISTTests: XCTestCase {
         
         var correctCount = 0
         
-        for i in 0 ..< imagesVal.shape[0] {
+        for i in 0..<imagesVal.shape[0] {
             let x = imagesVal[i].view(as: [1, 28 * 28])
             let y = optimizer.model.callAsFunction(x).squeezed()
             let pred = y.argmax()

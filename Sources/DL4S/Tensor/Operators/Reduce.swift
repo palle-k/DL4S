@@ -78,7 +78,7 @@ public extension Tensor {
     /// Computes the sum of all elements of the tensor
     /// - Returns: Scalar, sum of all elements
     func reduceSum() -> Self {
-        reduceSum(along: Array(0 ..< dim))
+        reduceSum(along: Array(0..<dim))
     }
     
     /// Computes the mean of the elements along the given axes
@@ -97,7 +97,7 @@ public extension Tensor {
     /// Computes the mean of all elements of the tensor
     /// - Returns: Scalar, mean of all elements
     func reduceMean() -> Self {
-        reduceMean(along: Array(0 ..< dim))
+        reduceMean(along: Array(0..<dim))
     }
     
     /// Computes the variance of the tensor along the given axes.
@@ -121,7 +121,7 @@ public extension Tensor {
     ///
     /// - Returns: Scalar, variance of all elements
     func variance() -> Self {
-        variance(along: Array(0 ..< dim))
+        variance(along: Array(0..<dim))
     }
     
     /// Returns the index of the largest element in the tensor.
@@ -267,6 +267,6 @@ public extension Tensor {
     /// Computes the maximum of all values in the tensor
     /// - Returns: Scalar, maximum of all elements.
     func reduceMax() -> Self {
-        reduceMax(along: Array(0 ..< dim))
+        reduceMax(along: Array(0..<dim))
     }
 }

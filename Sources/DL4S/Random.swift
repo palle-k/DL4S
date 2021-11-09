@@ -60,8 +60,8 @@ struct WyHash: RandomNumberGenerator {
 }
 
 func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
-    let a = T.random(in: 0 ... 1, using: &WyHash.shared)
-    let b = T.random(in: 0 ... 1, using: &WyHash.shared)
+    let a = T.random(in: 0...1, using: &WyHash.shared)
+    let b = T.random(in: 0...1, using: &WyHash.shared)
     
     let scale = (-2 * a.log()).sqrt() * stdev
     
@@ -82,8 +82,8 @@ public enum Random {
     @_specialize(where Element == Int32, Device == CPU)
     public static func fill<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
-        let range = a ... b
-        for i in 0 ..< vector.count {
+        let range = a...b
+        for i in 0..<vector.count {
             buffer[i] = Element.random(in: range, using: &WyHash.shared)
         }
         Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
@@ -119,8 +119,8 @@ public enum Random {
         let sampleShape = [1] + Array(dataset.shape.dropFirst())
         
         return Tensor(
-            stacking: (0 ..< count)
-                .map {_ in Int.random(in: 0 ..< n)}
+            stacking: (0..<count)
+                .map {_ in Int.random(in: 0..<n)}
                 .map {dataset[$0].view(as: sampleShape)},
             along: 0
         )
@@ -134,7 +134,7 @@ public enum Random {
     public static func minibatch<E1: NumericType, E2: NumericType, D1: DeviceType, D2: DeviceType>(from dataset: Tensor<E1, D1>, labels: Tensor<E2, D2>, count: Int) -> (Tensor<E1, D1>, Tensor<E2, D2>) {
         let n = dataset.shape[0]
         
-        let indices = (0 ..< count).map {_ in Int.random(in: 0 ..< n)}
+        let indices = (0..<count).map {_ in Int.random(in: 0..<n)}
         
         let randomSamples = Tensor(stacking: indices.map {dataset[$0].unsqueezed(at: 0)}, along: 0)
         let randomLabels = Tensor(stacking: indices.map {labels[$0].unsqueezed(at: 0)}, along: 0)
@@ -148,8 +148,8 @@ public enum Random {
     public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
         let count = values.shape.reduce(1, *)
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
-        for i in 0 ..< count {
-            buffer[i] = Float.random(in: 0 ... 1, using: &WyHash.shared) <= p ? 1 : 0
+        for i in 0..<count {
+            buffer[i] = Float.random(in: 0...1, using: &WyHash.shared) <= p ? 1 : 0
         }
         
         Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)

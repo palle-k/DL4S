@@ -122,8 +122,8 @@ public extension Tensor {
     /// Example:
     /// ```
     /// let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
-    /// print(a[0 ..< 2]) // [[1, 2], [4, 5]]
-    /// print(a[nil, 0 ..< 1]) // [[1, 2, 3]]
+    /// print(a[0..<2]) // [[1, 2], [4, 5]]
+    /// print(a[nil, 0..<1]) // [[1, 2, 3]]
     /// ```
     subscript(index: [Range<Int>?]) -> Self {
         get {
@@ -182,8 +182,8 @@ public extension Tensor {
     /// Example:
     /// ```
     /// let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
-    /// print(a[0 ..< 2]) // [[1, 2], [4, 5]]
-    /// print(a[nil, 0 ..< 1]) // [[1, 2, 3]]
+    /// print(a[0..<2]) // [[1, 2], [4, 5]]
+    /// print(a[nil, 0..<1]) // [[1, 2, 3]]
     /// ```
     subscript(index: Range<Int>?...) -> Self {
         get {self[index]}

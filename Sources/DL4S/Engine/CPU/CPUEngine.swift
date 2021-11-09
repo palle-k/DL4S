@@ -149,7 +149,7 @@ public struct CPUEngine: EngineType {
                 var prefixCount = 0
                 var sc = 1
                 
-                loop: for i in (0 ... devIndex).reversed() {
+                loop: for i in (0...devIndex).reversed() {
                     switch mode {
                     case .scalarVector:
                         if lhs.shape[i] > 1 {
@@ -184,13 +184,13 @@ public struct CPUEngine: EngineType {
         let resultDim = iterShape.count
         let indexCount = resultIndices.count / Swift.max(resultDim, 1)
         
-        for k in 0 ..< Swift.max(indexCount, 1) {
+        for k in 0..<Swift.max(indexCount, 1) {
             let base = resultDim * k
             var lhsIdx = 0
             var rhsIdx = 0
             var dstIdx = 0
             
-            for i in 0 ..< resultDim {
+            for i in 0..<resultDim {
                 lhsIdx += lhsStrides[i] * Swift.min(lhs.shape[i] - 1, resultIndices[base + i])
                 rhsIdx += rhsStrides[i] * Swift.min(rhs.shape[i] - 1, resultIndices[base + i])
                 dstIdx += dstStrides[i] * resultIndices[base + i]
@@ -236,18 +236,18 @@ public struct CPUEngine: EngineType {
         let dim = result.dim
         let count = indices.count / Swift.max(dim, 1)
         
-        for k in 0 ..< count {
+        for k in 0..<count {
             let base = k * dim
             var prefixOffset = 0
             var suffixOffset = 0
             var linearIndex = 0
-            for i in 0 ..< Swift.min(axis, dim) {
+            for i in 0..<Swift.min(axis, dim) {
                 prefixOffset &+= srcStrides[i] &* indices[base &+ i]
             }
-            for i in Swift.min(axis, dim) ..< dim {
+            for i in Swift.min(axis, dim)..<dim {
                 suffixOffset &+= srcStrides[i &+ 1] &* indices[base &+ i]
             }
-            for i in 0 ..< dim {
+            for i in 0..<dim {
                 linearIndex &+= indices[base &+ i] &* dstStrides[i]
             }
             
@@ -350,7 +350,7 @@ public struct CPUEngine: EngineType {
         for idx in iterate(result.shape) {
             dstIdx = 0
             srcOffset = 0
-            for i in 0 ..< idx.count {
+            for i in 0..<idx.count {
                 dstIdx += dstStrides[i] * idx[i]
                 srcOffset += srcStridesDstIdx[i] * idx[i]
             }
@@ -359,7 +359,7 @@ public struct CPUEngine: EngineType {
             
             for srcReduceIndex in srcReduceIndices {
                 srcAddOffset = 0
-                for i in 0 ..< srcReduceIndex.count {
+                for i in 0..<srcReduceIndex.count {
                     srcAddOffset += reducedStrides[i] * srcReduceIndex[i]
                 }
                 
@@ -393,7 +393,7 @@ public struct CPUEngine: EngineType {
         
         N.fill(value: 0, result: result.pointer, count: result.count)
         
-        for i in 0 ..< count {
+        for i in 0..<count {
             let offset = stride * i
             
             reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, stride)
@@ -429,11 +429,11 @@ public struct CPUEngine: EngineType {
         let indices = flatIterate(result.shape)
         let resultDim = result.dim
         
-        for i in 0 ..< result.count {
+        for i in 0..<result.count {
             var srcBase = 0
             var dstIdx = 0
             
-            for j in 0 ..< result.dim {
+            for j in 0..<result.dim {
                 srcBase += srcStrides[j] * indices[j + i * resultDim]
                 dstIdx += dstStrides[j] * indices[j + i * resultDim]
             }
@@ -506,7 +506,7 @@ public struct CPUEngine: EngineType {
         N.fill(value: 0, result: result.pointer, count: result.count)
         Context.fill(value: 0, result: context.pointer, count: context.count)
         
-        for i in 0 ..< count {
+        for i in 0..<count {
             let offset = stride * i
             
             reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, context.pointer, stride)
@@ -712,7 +712,7 @@ public struct CPUEngine: EngineType {
     
     @_specialize(where N == Float)
     public static func reduceSum<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) {
-        if axes.elementsEqual(0 ..< axes.count) && result.shape.reduce(1, *) > 1 {
+        if axes.elementsEqual(0..<axes.count) && result.shape.reduce(1, *) > 1 {
             reducePrefix(
                 values: values,
                 result: result,
@@ -835,7 +835,7 @@ public struct CPUEngine: EngineType {
         let srcPtr = values.pointer.pointer(capacity: result.count)
         let dstPtr = result.pointer.pointer(capacity: result.count)
         
-        for i in 0 ..< result.count {
+        for i in 0..<result.count {
             dstPtr[i] = srcPtr[i] > 0 ? 1 : 0
         }
     }
@@ -921,11 +921,11 @@ public struct CPUEngine: EngineType {
         let indexDim = iterShape.count
         let indices = flatIterate(iterShape)
         let indexCount = indices.count / indexDim
-        for j in 0 ..< indexCount {
+        for j in 0..<indexCount {
             let offset = indexDim * j
             var srcIdx = 0
             var dstIdx = 0
-            for i in 0 ..< indexDim {
+            for i in 0..<indexDim {
                 srcIdx += indices[offset + i] * srcStrides[i]
                 dstIdx += indices[offset + i] * dstStrides[arangement[i]]
             }
@@ -953,11 +953,11 @@ public struct CPUEngine: EngineType {
         let indexDim = iterShape.count
         let indices = flatIterate(iterShape)
         let indexCount = indices.count / indexDim
-        for j in 0 ..< indexCount {
+        for j in 0..<indexCount {
             let offset = indexDim * j
             var srcIdx = 0
             var dstIdx = 0
-            for i in 0 ..< indexDim {
+            for i in 0..<indexDim {
                 srcIdx += indices[offset + i] * srcStrides[i]
                 dstIdx += indices[offset + i] * dstStrides[arangement[i]]
             }
@@ -1010,7 +1010,7 @@ public struct CPUEngine: EngineType {
                 var srcIdx = 0
                 var dstIdx = 0
                 
-                for i in 0 ..< idx.count {
+                for i in 0..<idx.count {
                     srcIdx += srcStrides[i] * idx[i]
                     dstIdx += dstStrides[i] * idx[i]
                 }
@@ -1041,7 +1041,7 @@ public struct CPUEngine: EngineType {
                 var srcIdx = 0
                 var dstIdx = 0
                 
-                for i in 0 ..< idx.count {
+                for i in 0..<idx.count {
                     srcIdx += srcStrides[i] * idx[i]
                     dstIdx += dstStrides[i] * idx[i]
                 }
@@ -1071,7 +1071,7 @@ public struct CPUEngine: EngineType {
                 var srcIdx = 0
                 var dstIdx = 0
                 
-                for i in 0 ..< idx.count {
+                for i in 0..<idx.count {
                     srcIdx += srcStrides[i] * idx[i]
                     dstIdx += dstStrides[i] * idx[i]
                 }
@@ -1092,7 +1092,7 @@ public struct CPUEngine: EngineType {
         let srcPtr = values.immutable.pointer(capacity: stride * count)
         let dstPtr = values.pointer.pointer(capacity: stride * count)
         
-        for srcIdx in 0 ..< count {
+        for srcIdx in 0..<count {
             let dstIdx = count - srcIdx - 1
             
             dstPtr.advanced(by: dstIdx * stride).assign(from: srcPtr.advanced(by: srcIdx * stride), count: stride)
@@ -1109,7 +1109,7 @@ public struct CPUEngine: EngineType {
         let addPtr = values.immutable
         let dstPtr = values.pointer
         
-        for srcIdx in 0 ..< count {
+        for srcIdx in 0..<count {
             let dstIdx = count - srcIdx - 1
             N.vAdd(
                 lhs: srcPtr.advanced(by: srcIdx * stride),
@@ -1145,7 +1145,7 @@ public struct CPUEngine: EngineType {
         let src = buffer.values.memory.bindMemory(to: N.self).immutable.pointer(capacity: rows * cols)
         let dst = result.values.memory.bindMemory(to: N.self).pointer(capacity: rows * cols)
         
-        for i in 0 ..< rows {
+        for i in 0..<rows {
             let start = Swift.min(Swift.max(0, i - belowDiagonal), cols)
             let end = Swift.max(Swift.min(cols, i + aboveDiagonal + 1), start)
             

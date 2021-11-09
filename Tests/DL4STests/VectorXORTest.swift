@@ -54,7 +54,7 @@ class VectorXORTest: XCTestCase {
         }
         var optim = Adam(model: net, learningRate: 0.05)
         
-        for epoch in 1 ... 100 {
+        for epoch in 1...100 {
             let pred = optim.model(xor_src)
             let loss = binaryCrossEntropy(expected: xor_dst, actual: pred)
             let grads = loss.gradients(of: optim.model.parameters)
@@ -69,7 +69,7 @@ class VectorXORTest: XCTestCase {
         let predictions = optim.model(xor_src).view(as: -1)
         
         var correctCount = 0
-        for i in 0 ..< 4 {
+        for i in 0..<4 {
             if round(predictions[i].item) == xor_dst[i, 0].item {
                 correctCount += 1
             }

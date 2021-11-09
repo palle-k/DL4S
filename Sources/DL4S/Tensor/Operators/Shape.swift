@@ -113,7 +113,7 @@ public extension Tensor {
     
     /// Swaps the axes of the tensor.
     ///
-    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0..<tensor.dim`.
     ///
     /// With axis arangement of [1, 0], this operation is equivalent to `tensor.transposed()`
     ///
@@ -156,7 +156,7 @@ public extension Tensor {
     
     /// Permutes the other tensor along the given axes and adds it to the current tensor in place.
     ///
-    /// The permutation must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    /// The permutation must have a count of `tensor.dim` and contain all elements in `0..<tensor.dim`.
     ///
     /// - Parameters:
     ///   - other: Tensor to add permuted to the current tensor
@@ -204,7 +204,7 @@ public extension Tensor {
     
     /// Swaps the axes of the tensor.
     /// 
-    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0..<tensor.dim`.
     ///
     /// With axis arangement of [1, 0], this operation is equivalent to `tensor.transposed()`
     ///

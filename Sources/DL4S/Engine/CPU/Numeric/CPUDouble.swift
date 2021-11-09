@@ -41,14 +41,14 @@ extension Double: CPUNumeric {
         if stride == 1 {
             ippsSet_64f(value, dst, Int32(count))
         } else {
-            for i in 0 ..< count {
+            for i in 0..<count {
                 dst[i &* stride] = value;
             }
         }
         #elseif canImport(Accelerate)
         vDSP_vfillD([value], dst, stride, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i &* stride] = value;
         }
         #endif
@@ -61,7 +61,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vfillD([value], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = value;
         }
         #endif
@@ -75,7 +75,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vthresD(src, 1, [0], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             let s = src[i];
             dst[i] = s > 0 ? s : 0;
         }
@@ -90,8 +90,8 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_mtransD(src, 1, dst, 1, UInt(srcCols), UInt(srcRows))
         #else
-        for x in 0 ..< srcCols {
-            for y in 0 ..< srcRows {
+        for x in 0..<srcCols {
+            for y in 0..<srcRows {
                 dst[y &+ x &* srcRows] = src[y &* srcCols &+ x];
             }
         }
@@ -106,7 +106,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vnegD(src, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = -src[i]
         }
         #endif
@@ -120,7 +120,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vsaddD(src, 1, [rhs], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] + rhs;
         }
         #endif
@@ -134,7 +134,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vsmulD(src, 1, [rhs], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] * rhs;
         }
         #endif
@@ -146,7 +146,7 @@ extension Double: CPUNumeric {
         #if !MKL_ENABLE && canImport(Accelerate)
         vDSP_svdivD([lhs], src, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs / src[i]
         }
         #endif
@@ -161,7 +161,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vaddD(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] + rhs[i]
         }
         #endif
@@ -177,7 +177,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vsubD(rhs, 1, lhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] - rhs[i]
         }
         #endif
@@ -193,7 +193,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vmulD(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] * rhs[i]
         }
         #endif
@@ -209,7 +209,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vdivD(rhs, 1, lhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = lhs[i] / rhs[i]
         }
         #endif
@@ -224,7 +224,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_sveD(src, 1, &dst, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst += src[i]
         }
         #endif
@@ -239,7 +239,7 @@ extension Double: CPUNumeric {
         if stride == 1 {
             ippsSum_64f(src, Int32(count), &dst)
         } else {
-            for i in 0 ..< count {
+            for i in 0..<count {
                 dst += src[i &* stride]
             }
         }
@@ -248,7 +248,7 @@ extension Double: CPUNumeric {
         vDSP_sveD(src, stride, &dst, UInt(count))
         return dst
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst += src[i &* stride]
         }
         return dst
@@ -301,7 +301,7 @@ extension Double: CPUNumeric {
         maxI = Int(maxIU)
         #else
         maxV = -Double.infinity;
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i]
             if v > maxV {
                 maxV = v
@@ -327,7 +327,7 @@ extension Double: CPUNumeric {
         minI = Int(minIU)
         #else
         minV = Double.infinity;
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i]
             if v < minV {
                 minV = v
@@ -352,7 +352,7 @@ extension Double: CPUNumeric {
         var maxI: Int = 0
         var maxV: Double = -Double.infinity
         let src = values.pointer(capacity: stride * count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i &* stride]
             if v > maxV {
                 maxV = v
@@ -377,7 +377,7 @@ extension Double: CPUNumeric {
         var minI: Int = 0
         var minV: Double = Double.infinity
         let src = values.pointer(capacity: stride * count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             let v = src[i &* stride]
             if v < minV {
                 minV = v
@@ -395,7 +395,7 @@ extension Double: CPUNumeric {
         #if MKL_ENABLE || canImport(Accelerate)
         cblas_dcopy(Int32(count), src, Int32(srcStride), dst, Int32(dstStride))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i &* dstStride] = src[i &* srcStride]
         }
         #endif
@@ -409,7 +409,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vrampD([start], [increment], dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = start + Double(i) * increment
         }
         #endif
@@ -424,7 +424,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vmaxD(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             let l = lhs[i]
             let r = rhs[i]
             dst[i] = l >= r ? l : r
@@ -441,7 +441,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vDSP_vminD(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             let l = lhs[i]
             let r = rhs[i]
             dst[i] = l <= r ? l : r
@@ -457,7 +457,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vvexp(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = exp(src[i])
         }
         #endif
@@ -471,7 +471,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vvlog(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = log(src[i])
         }
         #endif
@@ -485,7 +485,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vvtanh(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = tanh(src[i])
         }
         #endif
@@ -499,7 +499,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vvsqrt(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = sqrt(src[i])
         }
         #endif
@@ -508,7 +508,7 @@ extension Double: CPUNumeric {
     public static func heaviside(values: UnsafeBufferPointer<Double>, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = src[i] > 0 ? 1 : 0
         }
     }
@@ -521,7 +521,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vvsin(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = sin(src[i])
         }
         #endif
@@ -535,7 +535,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vvcos(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = cos(src[i])
         }
         #endif
@@ -549,7 +549,7 @@ extension Double: CPUNumeric {
         #elseif canImport(Accelerate)
         vvtan(dst, src, [Int32(count)])
         #else
-        for i in 0 ..< count {
+        for i in 0..<count {
             dst[i] = tan(src[i])
         }
         #endif

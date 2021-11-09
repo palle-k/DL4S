@@ -62,7 +62,7 @@ public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "LayerNorm") {
             let x = inputs
-            let axes = Array(1 ..< x.dim)
+            let axes = Array(1..<x.dim)
             let mean = x
                 .reduceMean(along: axes)
                 .view(as: [x.shape[0]] + Array(repeating: 1, count: axes.count))

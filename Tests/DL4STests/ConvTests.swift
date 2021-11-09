@@ -43,7 +43,7 @@ extension NSImage {
 
 class ConvTests: XCTestCase {
     func testIm2col() {
-        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let a = Tensor<Float, CPU>((0..<16).map(Float.init), shape: 1, 1, 4, 4)
         let c = a.repeated(4)
         let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
@@ -61,7 +61,7 @@ class ConvTests: XCTestCase {
     }
     
     func testConv1() {
-        let a = Tensor<Float, CPU>((0 ..< 16).map(Float.init), shape: 1, 1, 4, 4)
+        let a = Tensor<Float, CPU>((0..<16).map(Float.init), shape: 1, 1, 4, 4)
         let c = a.repeated(4)
         let d = c * Tensor<Float, CPU>([1,0.5,0.25,0.125]).view(as: 4, 1, 1, 1)
         
@@ -95,19 +95,19 @@ class ConvTests: XCTestCase {
         
         let ((images, _), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
         
-        let batch = images[0 ..< 64]
+        let batch = images[0..<64]
         
         let filtered = batch.convolved2d(filters: filters)
         
         #if canImport(AppKit) && false
-        for i in 0 ..< batch.shape[0] {
+        for i in 0..<batch.shape[0] {
             let src = batch[i]
             let dst = filtered[i]
             
             let srcImg = NSImage(src)
             try? srcImg?.save(to: "/Users/Palle/Desktop/conv/src_\(i).png")
             
-            for j in 0 ..< dst.shape[0] {
+            for j in 0..<dst.shape[0] {
                 let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
                 try? dstImg?.save(to: "/Users/Palle/Desktop/conv/dst_\(i)_\(j)a.png")
             }
@@ -130,19 +130,19 @@ class ConvTests: XCTestCase {
         ]) / Tensor<Float, CPU>([4, 1]).view(as: -1, 1, 1, 1)
         
         let ((images, _), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
-        let batch = images[0 ..< 64]
+        let batch = images[0..<64]
         
         let filtered = batch.transposedConvolved2d(filters: filters, stride: 2)
         
         #if canImport(AppKit) && false
-        for i in 0 ..< batch.shape[0] {
+        for i in 0..<batch.shape[0] {
             let src = batch[i]
             let dst = filtered[i]
             
             let srcImg = NSImage(src.view(as: [28, 28]).permuted(to: 1, 0).unsqueezed(at: 0))
             try? srcImg?.save(to: "/Users/Palle/Desktop/conv/\(i)_src.png")
             
-            for j in 0 ..< dst.shape[0] {
+            for j in 0..<dst.shape[0] {
                 let dstImg = NSImage(dst[j].permuted(to: 1, 0).unsqueezed(at: 0))
                 try? dstImg?.save(to: "/Users/Palle/Desktop/conv/\(i)_\(j)_t.png")
             }

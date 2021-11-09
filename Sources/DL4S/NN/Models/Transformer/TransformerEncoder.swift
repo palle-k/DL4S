@@ -50,7 +50,7 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
     ///   - forwardDim: Size of hidden layer activations within pointwise feed forward layers
     ///   - dropout: Rate of dropout applied within pointwise feed forward and multi-head attention layers
     public init(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float) {
-        encoderLayers = (0 ..< layerCount).map { i in
+        encoderLayers = (0..<layerCount).map { i in
             TransformerEncoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
         }
     }
