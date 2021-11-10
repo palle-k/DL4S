@@ -39,14 +39,14 @@ class TransformerTests: XCTestCase {
         
         var optim = Adam(model: transformer, learningRate: 0.001)
         
-        var bar = ProgressBar<Float>(totalUnitCount: 1000, formatUserInfo: {"loss: \($0)"}, label: "training")
+        var bar = ProgressBar<Float>(totalUnitCount: 1000, formatUserInfo: { "loss: \($0)" }, label: "training")
         
         var lastLoss = Float.infinity
         
         for _ in 1...1000 {
             let indices = (0..<4).shuffled()
-            let input = indices.map {samples[$0]}
-            let expected = indices.map {outputs[$0]}
+            let input = indices.map{ samples[$0] }
+            let expected = indices.map{ outputs[$0] }
             let decoderInput = expected.map {
                 [0] + $0.dropLast()
             }

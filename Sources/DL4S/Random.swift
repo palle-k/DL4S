@@ -120,8 +120,8 @@ public enum Random {
         
         return Tensor(
             stacking: (0..<count)
-                .map {_ in Int.random(in: 0..<n)}
-                .map {dataset[$0].view(as: sampleShape)},
+                .map{ _ in Int.random(in: 0..<n) }
+                .map{ dataset[$0].view(as: sampleShape) },
             along: 0
         )
     }
@@ -134,10 +134,10 @@ public enum Random {
     public static func minibatch<E1: NumericType, E2: NumericType, D1: DeviceType, D2: DeviceType>(from dataset: Tensor<E1, D1>, labels: Tensor<E2, D2>, count: Int) -> (Tensor<E1, D1>, Tensor<E2, D2>) {
         let n = dataset.shape[0]
         
-        let indices = (0..<count).map {_ in Int.random(in: 0..<n)}
+        let indices = (0..<count).map{ _ in Int.random(in: 0..<n) }
         
-        let randomSamples = Tensor(stacking: indices.map {dataset[$0].unsqueezed(at: 0)}, along: 0)
-        let randomLabels = Tensor(stacking: indices.map {labels[$0].unsqueezed(at: 0)}, along: 0)
+        let randomSamples = Tensor(stacking: indices.map{ dataset[$0].unsqueezed(at: 0) }, along: 0)
+        let randomLabels = Tensor(stacking: indices.map{ labels[$0].unsqueezed(at: 0) }, along: 0)
         
         return (randomSamples, randomLabels)
     }

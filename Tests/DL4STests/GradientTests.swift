@@ -58,9 +58,9 @@ class GradientTests: XCTestCase {
             DL4S.relu,
             DL4S.sqrt,
             {DL4S.softmax($0, axis: 1)},
-            {$0 * 2},
-            {$0 * $0},
-            {1 / $0},
+            { $0 * 2 },
+            { $0 * $0 },
+            { 1 / $0 },
             {Tensor(stacking: [$0, $0], along: 1)},
             {logSoftmax($0, axis: 1)}
         ]
@@ -135,12 +135,12 @@ class GradientTests: XCTestCase {
         grads[1].tag = "∇rhs"
         #endif
         
-        print(grads.map {$0.reduceSum()}.reduce(0, +).graph())
+        print(grads.map{ $0.reduceSum() }.reduce(0, +).graph())
         
         let lhsGradGrads = grads[0].reduceSum().gradients(of: [lhs, rhs])
         let rhsGradGrads = grads[1].reduceSum().gradients(of: [lhs, rhs])
         
-        print(grads.map {$0.detached()})
+        print(grads.map{ $0.detached() })
         print(lhsGradGrads, rhsGradGrads)
     }
     

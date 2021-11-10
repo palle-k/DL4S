@@ -106,15 +106,15 @@ public struct CPUEngine: EngineType {
         assert(dim == result.dim)
         // Check, whether lhs and rhs have compatible shapes.
         // Every dimension must be either equal or 1 for one of the operands
-        assert(zip(lhs.shape, rhs.shape).allSatisfy {$0.0 == $0.1 || $0.0 == 1 || $0.1 == 1})
+        assert(zip(lhs.shape, rhs.shape).allSatisfy{ $0.0 == $0.1 || $0.0 == 1 || $0.1 == 1 })
         // Check whether shape of result buffer matches combined operands
-        assert(zip(zip(lhs.shape, rhs.shape), result.shape).map {Swift.max($0.0, $0.1) == $1}.allSatisfy {$0 == true})
+        assert(zip(zip(lhs.shape, rhs.shape), result.shape).map{ Swift.max($0.0, $0.1) == $1 }.allSatisfy{ $0 == true })
         #endif
         
         // Determine, whether both operands have a suffix with more than 1 element
         // If that is the case, vector-vector mode is used
         
-        let vectorSuffix = zip(lhs.shape, rhs.shape).suffix(while: {$0 == $1}).map {$1}
+        let vectorSuffix = zip(lhs.shape, rhs.shape).suffix(while: { $0 == $1 }).map{ $1 }
         
         let iterShape: [Int]
         let sliceCount: Int
@@ -279,7 +279,7 @@ public struct CPUEngine: EngineType {
         #endif
         
         let dstStrides = CPU.Memory.strides(from: result.shape)
-        let sliceCount = axes.map {values.shape[$0]}.reduce(1, *)
+        let sliceCount = axes.map{ values.shape[$0] }.reduce(1, *)
         
         for idx in iterate(result.shape) {
             var srcIdx: [Int?] = idx
@@ -465,7 +465,7 @@ public struct CPUEngine: EngineType {
         #endif
 
         let dstStrides = CPU.Memory.strides(from: result.shape)
-        let sliceCount = axes.map {values.shape[$0]}.reduce(1, *)
+        let sliceCount = axes.map{ values.shape[$0] }.reduce(1, *)
 
         for idx in iterate(result.shape) {
             var srcIdx: [Int?] = idx
@@ -592,7 +592,7 @@ public struct CPUEngine: EngineType {
             rhs: rhs,
             result: result,
             operator: N.vAdd,
-            scalarOperatorA: {N.vsAdd(lhs: $1, rhs: $0, result: $2, count: $3)},
+            scalarOperatorA: { N.vsAdd(lhs: $1, rhs: $0, result: $2, count: $3) },
             scalarOperatorB: N.vsAdd
         )
     }
@@ -608,7 +608,7 @@ public struct CPUEngine: EngineType {
                 N.vsAdd(lhs: $1, rhs: -$0, result: $2, count: $3)
                 N.vNeg(val: $2.immutable, result: $2, count: $3)
             },
-            scalarOperatorB: {N.vsAdd(lhs: $0, rhs: -$1, result: $2, count: $3)}
+            scalarOperatorB: { N.vsAdd(lhs: $0, rhs: -$1, result: $2, count: $3) }
         )
     }
     
@@ -619,7 +619,7 @@ public struct CPUEngine: EngineType {
             rhs: rhs,
             result: result,
             operator: N.vMul,
-            scalarOperatorA: {N.vsMul(lhs: $1, rhs: $0, result: $2, count: $3)},
+            scalarOperatorA: { N.vsMul(lhs: $1, rhs: $0, result: $2, count: $3) },
             scalarOperatorB: N.vsMul
         )
     }
@@ -632,7 +632,7 @@ public struct CPUEngine: EngineType {
             result: result,
             operator: N.vDiv,
             scalarOperatorA: N.svDiv,
-            scalarOperatorB: {N.vsMul(lhs: $0, rhs: 1 / $1, result: $2, count: $3)}
+            scalarOperatorB: { N.vsMul(lhs: $0, rhs: 1 / $1, result: $2, count: $3) }
         )
     }
     
@@ -732,7 +732,7 @@ public struct CPUEngine: EngineType {
     @_specialize(where N == Float)
     public static func reduceMean<N: NumericType>(values: ShapedBuffer<N, CPU>, result: ShapedBuffer<N, CPU>, axes: [Int]) {
         reduceSum(values: values, result: result, axes: axes)
-        let axisCount = axes.map {values.shape[$0]}.reduce(1, *)
+        let axisCount = axes.map{ values.shape[$0] }.reduce(1, *)
         N.vsMul(lhs: result.immutable, rhs: 1 / N(axisCount), result: result.pointer, count: result.count)
     }
     
@@ -909,7 +909,7 @@ public struct CPUEngine: EngineType {
         let shape = values.shape
         let dstShape = result.shape
         
-        let suffix = zip(shape.indices, arangement).suffix(while: {$0 == $1}).count
+        let suffix = zip(shape.indices, arangement).suffix(while: { $0 == $1 }).count
         // let suffix = 0
         
         let copyCount = shape.suffix(suffix).reduce(1, *)
@@ -942,7 +942,7 @@ public struct CPUEngine: EngineType {
         let shape = values.shape
         let dstShape = result.shape
         
-        let suffix = zip(shape.indices, arangement).suffix(while: {$0 == $1}).count
+        let suffix = zip(shape.indices, arangement).suffix(while: { $0 == $1 }).count
         
         let copyCount = shape.suffix(suffix).reduce(1, *)
         let iterShape = shape.dropLast(suffix) as Array
@@ -995,7 +995,7 @@ public struct CPUEngine: EngineType {
     public static func stack<N>(buffers: [ShapedBuffer<N, CPU>], result: ShapedBuffer<N, CPU>, axis: Int) {
         var offset = 0
         
-        let dstPtr = result.pointer.pointer(capacity: buffers.map {$0.count}.reduce(0, +))
+        let dstPtr = result.pointer.pointer(capacity: buffers.map{ $0.count }.reduce(0, +))
         let dstStrides = CPU.Memory.strides(from: result.shape)
         
         for buffer in buffers {

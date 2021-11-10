@@ -95,7 +95,7 @@ public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Coda
     }
     
     public func concatenate(_ states: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        Tensor(stacking: states.map {$0.unsqueezed(at: 0)}, along: 0)
+        Tensor(stacking: states.map{ $0.unsqueezed(at: 0) }, along: 0)
     }
     
     public func numberOfSteps(for inputs: Tensor<Element, Device>) -> Int {

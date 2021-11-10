@@ -56,7 +56,7 @@ public extension Tensor {
                     tag: "unstack",
                     sources: [self],
                     backpropagate: [{ resultGradient -> Tensor<Element, Device> in
-                        let sourceOffsets = lengths.reduce(into: [0], {$0.append($0.last! + $1)})
+                        let sourceOffsets = lengths.reduce(into: [0], { $0.append($0.last! + $1) })
                         let idx = Array(repeating: nil, count: axis) +
                             [sourceOffsets[i]..<sourceOffsets[i] + lengths[i]]
                         
@@ -83,19 +83,19 @@ public extension Tensor {
             $0.shape.count == tensors[0].shape.count &&
                 zip($0.shape, tensors[0].shape)
                     .enumerated()
-                    .allSatisfy {$0 == axis || $1.0 == $1.1}
+                    .allSatisfy{ $0 == axis || $1.0 == $1.1 }
         }, "All vector shapes must match except on concatenation axis.")
         
-        let requiresGradient = tensors.contains(where: {$0.requiresGradient})
+        let requiresGradient = tensors.contains(where: { $0.requiresGradient })
         
-        let resultStackDimSize = tensors.map {$0.shape[axis]}
+        let resultStackDimSize = tensors.map{ $0.shape[axis] }
         let resultStackDimCount = resultStackDimSize.reduce(0, +)
         
         var resultShape = tensors[0].shape
         resultShape[axis] = resultStackDimCount
         
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        Device.Engine.stack(buffers: tensors.map {$0.values}, result: resultBuffer, axis: axis)
+        Device.Engine.stack(buffers: tensors.map{ $0.values }, result: resultBuffer, axis: axis)
         
         var gradientCache: [UInt64: [Self]] = [:]
         

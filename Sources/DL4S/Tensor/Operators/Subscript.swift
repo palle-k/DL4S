@@ -78,7 +78,7 @@ public extension Tensor {
                     return idx
                 }
             }
-            if slice.dim == 0 && dim - index.filter({$0 != nil}).count > 0 {
+            if slice.dim == 0 && dim - index.filter({ $0 != nil }).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }
             
@@ -152,7 +152,7 @@ public extension Tensor {
         }
         
         set (slice) {
-            if slice.dim == 0 && dim - index.filter({$0 != nil}).count > 0 {
+            if slice.dim == 0 && dim - index.filter({ $0 != nil }).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }
             

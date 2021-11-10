@@ -56,7 +56,7 @@ public extension Tensor {
                 OperationGroup.capture(named: "∇+") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                        .filter{ $1.0 == 1 && $1.1 > 1 }.map{ $0.offset }
                     
                     var tmpReducedShape = aPadded
                     
@@ -116,7 +116,7 @@ public extension Tensor {
                 OperationGroup.capture(named: "∇⊙") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                        .filter{ $1.0 == 1 && $1.1 > 1 }.map{ $0.offset }
                     
                     var tmp1reducedShape = aPadded
                     
@@ -177,7 +177,7 @@ public extension Tensor {
                         OperationGroup.capture(named: "∇₁-") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                                .filter{ $1.0 == 1 && $1.1 > 1 }.map{ $0.offset }
                             
                             var tmpReducedShape = lhsPadded
                             
@@ -196,7 +196,7 @@ public extension Tensor {
                         OperationGroup.capture(named: "∇₂-") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                                .filter{ $1.0 == 1 && $1.1 > 1 }.map{ $0.offset }
                             
                             var tmpReducedShape = rhsPadded
                             
@@ -251,7 +251,7 @@ public extension Tensor {
                         OperationGroup.capture(named: "∇₁÷") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                                .filter{ $1.0 == 1 && $1.1 > 1 }.map{ $0.offset }
                             
                             var tmp1reducedShape = lhsPadded
                             
@@ -271,7 +271,7 @@ public extension Tensor {
                         OperationGroup.capture(named: "∇₂÷") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
+                                .filter{ $1.0 == 1 && $1.1 > 1 }.map{ $0.offset }
                             
                             var tmp1reducedShape = rhsPadded
                             

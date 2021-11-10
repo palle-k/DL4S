@@ -155,6 +155,6 @@ public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable 
     }
     
     public func concatenate(_ states: [State]) -> State {
-        (Tensor(stacking: states.map {$0.hiddenState.unsqueezed(at: 0)}, along: 0), Tensor(stacking: states.map {$0.cellState.unsqueezed(at: 0)}, along: 0))
+        (Tensor(stacking: states.map{ $0.hiddenState.unsqueezed(at: 0) }, along: 0), Tensor(stacking: states.map{ $0.cellState.unsqueezed(at: 0) }, along: 0))
     }
 }

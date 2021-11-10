@@ -143,6 +143,6 @@ public struct GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     }
     
     public func concatenate(_ states: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        Tensor(stacking: states.map {$0.unsqueezed(at: 0)}, along: 0)
+        Tensor(stacking: states.map{ $0.unsqueezed(at: 0) }, along: 0)
     }
 }

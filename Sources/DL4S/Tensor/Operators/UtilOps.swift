@@ -71,8 +71,8 @@ public extension Tensor {
     func padded(with value: Element = 0, padding: [(Int, Int)]) -> Self {
         precondition(padding.count == dim)
         
-        var result = Self(repeating: value, shape: zip(shape, padding).map {$0 + $1.0 + $1.1})
-        let index = zip(shape, padding).map {$1.0..<($0 + $1.0)}
+        var result = Self(repeating: value, shape: zip(shape, padding).map{ $0 + $1.0 + $1.1 })
+        let index = zip(shape, padding).map{ $1.0..<($0 + $1.0) }
         result[index] = self
         
         return result
@@ -85,8 +85,8 @@ public extension Tensor {
     func padded(with value: Element = 0, padding: [Int]) -> Self {
         precondition(padding.count == dim)
         
-        var result = Self(repeating: value, shape: zip(shape, padding).map {$0 + $1 * 2})
-        let index = zip(shape, padding).map {$1..<($0 + $1)}
+        var result = Self(repeating: value, shape: zip(shape, padding).map{ $0 + $1 * 2 })
+        let index = zip(shape, padding).map{ $1..<($0 + $1) }
         result[index] = self
         
         return result

@@ -303,7 +303,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
             context: TensorContext(
                 tag: "identity",
                 sources: [original],
-                backpropagate: [{$0}]
+                backpropagate: [{ $0 }]
             )
         )
     }

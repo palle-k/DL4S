@@ -90,13 +90,13 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
         
         var embedDim: Int? = nil
         
-        var progress = verbose ? ProgressBar<()>(totalUnitCount: words.count, formatUserInfo: {""}, label: "loading embeddings") : nil
+        var progress = verbose ? ProgressBar<()>(totalUnitCount: words.count, formatUserInfo: { "" }, label: "loading embeddings") : nil
         
         var completedCount = 0
         
         for line in File(url: embeddingsURL) {
             autoreleasepool {
-                let components = line.split(whereSeparator: {$0.isWhitespace})
+                let components = line.split(whereSeparator: { $0.isWhitespace })
                 
                 guard components.count >= 2 else {
                     return
@@ -123,7 +123,7 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
         progress?.complete()
         
         if verbose {
-            let unknownCount = tensors.count(where: {$0 == nil})
+            let unknownCount = tensors.count(where: { $0 == nil })
             print("Unknown: \(unknownCount) of \(words.count)")
             print("Embedding size: \(embedDim ?? -1)")
         }

@@ -30,7 +30,7 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     public var decoderLayers: [TransformerDecoderBlock<Element, Device>]
     
     public var parameters: [Tensor<Element, Device>] {Array([
-        decoderLayers.flatMap {$0.parameters},
+        decoderLayers.flatMap{ $0.parameters },
     ].joined())}
     
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {Array([

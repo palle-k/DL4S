@@ -237,7 +237,7 @@ public extension Tensor {
                             }
                         }
                     }, { resultGradient, sourceGradient in
-                        sourceGradient.map {$0 + resultGradient} ?? resultGradient
+                        sourceGradient.map{ $0 + resultGradient } ?? resultGradient
                     }
                 ]
             )

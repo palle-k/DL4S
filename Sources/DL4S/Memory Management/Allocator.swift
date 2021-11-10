@@ -98,7 +98,7 @@ enum CPUAllocator {
     private static let maxCache: Int = 1_000_000_000 // 1GB
     private static var usedCache: Int = 0
     
-    private static var freeBuffers: [Int: [UnsafeMutableRawBufferPointer]] = [:]
+    private static var freeBuffers: [Int : [UnsafeMutableRawBufferPointer]] = [:]
     
     private static var unusedCache: Int {
         return maxCache - usedCache

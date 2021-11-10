@@ -270,8 +270,8 @@ public struct Progress<Element>: Sequence {
             let filled = String(repeating: "#", count: currentCount * 30 / totalUnitCount)
             let empty = String(repeating: " ", count: 30 - (currentCount * 30 / totalUnitCount))
             
-            let label = self.label.map {"\($0) "} ?? ""
-            let unitString = unit.map {"\($0) "} ?? ""
+            let label = self.label.map{ "\($0) " } ?? ""
+            let unitString = unit.map{ "\($0) " } ?? ""
             let userInfo = "(\(unitString)\(currentCount)/\(totalUnitCount))"
             
             Swift.print("\r\033[K\(label)[\(filled)\(empty)] \(userInfo)", terminator: "")

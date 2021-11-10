@@ -242,14 +242,14 @@ class VecTests: XCTestCase {
     func testSigmoid() {
         let a = Tensor<Float, CPU>(normalDistributedWithShape: 10)
         
-        let elements = (0..<10).map { (x: Int) in a[x].item}
+        let elements = (0..<10).map{ (x: Int) in a[x].item }
         
-        let ref = elements.map {1 / (1 + exp(-$0))}
+        let ref = elements.map{ 1 / (1 + exp(-$0)) }
         let result = 1 / (1 + exp(-a))
         
         print(a)
 
-        print(elements.map {1 / $0})
+        print(elements.map{ 1 / $0 })
         print(1 / a)
                 
         for i in 0..<10 {

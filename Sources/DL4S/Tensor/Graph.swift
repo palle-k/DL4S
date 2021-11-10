@@ -38,27 +38,27 @@ struct Digraph: Hashable, Codable {
         var id: String
         var label: String?
         var shape: String = "box"
-        var attributes: Dictionary<String, String> = [:]
+        var attributes: [String : String] = [:]
     }
     
     struct Edge: Hashable, Codable {
         var source: String
         var destination: String
         var label: String?
-        var attributes: Dictionary<String, String> = [:]
+        var attributes: [String : String] = [:]
     }
     
     var id: String? = nil
     var name: String? = nil
     var nodes: Set<Node> = []
     var edges: Set<Edge> = []
-    var subgraphs: [String: Digraph] = [:]
+    var subgraphs: [String : Digraph] = [:]
     
-    mutating func addNode(id: String, label: String? = nil, shape: String = "box", attributes: Dictionary<String, String> = [:]) {
+    mutating func addNode(id: String, label: String? = nil, shape: String = "box", attributes: [String : String] = [:]) {
         nodes.insert(Node(id: id, label: label, shape: shape, attributes: attributes))
     }
     
-    mutating func addEdge(from source: String, to destination: String, label: String? = nil, attributes: Dictionary<String, String> = [:]) {
+    mutating func addEdge(from source: String, to destination: String, label: String? = nil, attributes: [String : String] = [:]) {
         edges.insert(Edge(source: source, destination: destination, label: label, attributes: attributes))
     }
     
@@ -83,7 +83,7 @@ extension Digraph.Node {
         }
         attrs["shape"] = shape
         
-        let pairs = attrs.map {"\($0.key)=\($0.value)"}
+        let pairs = attrs.map{ "\($0.key)=\($0.value)" }
         return "\(repr) [\(pairs.joined(separator: " "))];"
     }
 }
@@ -99,7 +99,7 @@ extension Digraph.Edge {
         if attrs.isEmpty {
             return "\(repr);"
         } else {
-            let pairs = attrs.map {"\($0.key)=\($0.value)"}
+            let pairs = attrs.map{ "\($0.key)=\($0.value)" }
             return "\(repr) [\(pairs.joined(separator: " "))];"
         }
     }
@@ -113,10 +113,10 @@ extension Digraph: CustomStringConvertible {
         \(isRoot ? "    node [fontname=\"helvetica\" fontsize=10 margin=0.03 width=0.2 height=0 color=\"#A0A0A0\"];\n" : "")\
         \(isRoot ? "    edge [fontname=\"helvetica\" fontsize=8 arrowsize=0.5 color=\"#A0A0A0\" fontcolor=\"#A0A0A0\"];\n" : "")\
         \(isRoot ? "    splines=true;\n    ranksep=0.2;\n    nodesep=0.15;\n" : "")\
-        \(nodes.isEmpty ? "" : "    \(nodes.map {$0.dot}.joined(separator: "\n    "))\n")\
-        \(edges.isEmpty ? "" : "    \(edges.map {$0.dot}.joined(separator: "\n    "))\n")\
-        \(subgraphs.isEmpty ? "" : "    \(subgraphs.values.map {$0.dot(type: "subgraph").split(separator: "\n").joined(separator: "\n    ")}.joined(separator: "\n    "))\n")\
-        \(name.map {"    label=\"\($0.escaped())\";\n    labeljust=\"l\";\n"} ?? "")\
+        \(nodes.isEmpty ? "" : "    \(nodes.map{ $0.dot }.joined(separator: "\n    "))\n")\
+        \(edges.isEmpty ? "" : "    \(edges.map{ $0.dot }.joined(separator: "\n    "))\n")\
+        \(subgraphs.isEmpty ? "" : "    \(subgraphs.values.map{ $0.dot(type: "subgraph").split(separator: "\n").joined(separator: "\n    ") }.joined(separator: "\n    "))\n")\
+        \(name.map{ "    label=\"\($0.escaped())\";\n    labeljust=\"l\";\n" } ?? "")\
         }
         """
     }
@@ -178,7 +178,7 @@ public extension Tensor {
             for src in ctx.sources {
                 if let srcCtx = src.context {
                     #if DEBUG
-                    if srcCtx.operationStack.map({$0.id}) == ctx.operationStack.map({$0.id}) && !ctx.operationStack.isEmpty {
+                    if srcCtx.operationStack.map({ $0.id }) == ctx.operationStack.map({ $0.id }) && !ctx.operationStack.isEmpty {
                         graph.addEdge(
                             from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))",
                             to: "\(self.backpropID)\(abs(ctx.tag.hashValue))",

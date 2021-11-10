@@ -65,7 +65,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     
     static func index(from linearIndex: Int, shape: [Int]) -> [Int] {
         let strides = CPUMemoryOperators.strides(from: shape)
-        return zip(shape, strides).map { dim, str in (linearIndex / str) % dim}
+        return zip(shape, strides).map{ dim, str in (linearIndex / str) % dim }
     }
     
     public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> Buffer<Element, CPU> {
@@ -138,9 +138,9 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         
         // Prevent unneccessary copies when index ends with nil
-        let slice = slice.reversed().drop(while: {$0 == nil}).reversed()
+        let slice = slice.reversed().drop(while: { $0 == nil }).reversed()
         
-        let nonNilIndices = slice.compactMap {$0}
+        let nonNilIndices = slice.compactMap{ $0 }
         let strides = CPUMemoryOperators.strides(from: shape)
         
         if nonNilIndices.count == slice.count {
@@ -162,7 +162,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
                 let (index, dimSize) = el
                 return index == nil ? dimSize : nil
             }
-            let flattenedResultShape = resultShape.compactMap {$0}
+            let flattenedResultShape = resultShape.compactMap{ $0 }
             
             let resultCount = flattenedResultShape.reduce(1, *)
             let resultBuffer = allocateBuffer(withCapacity: resultCount, type: Element.self)
@@ -182,7 +182,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         
         let resultShape = zip(padded, shape).enumerated().map { idx, el -> Int in
             let (index, dimSize) = el
-            return index.map {$0.count} ?? dimSize
+            return index.map{ $0.count } ?? dimSize
         }
         
         let resultCount = resultShape.reduce(1, *)
@@ -194,7 +194,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     }
     
     public static func set<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
-        let countDelta = dstShape.count - slice.filter {$0 != nil}.count
+        let countDelta = dstShape.count - slice.filter{ $0 != nil }.count
         precondition(sourceShape.count == countDelta, "Dimensionality of source must be equal to dimensionality of destination minus number of knowns in slice")
         
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)

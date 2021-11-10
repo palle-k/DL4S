@@ -284,7 +284,7 @@ public extension Tensor {
 public extension Tensor {
     /// Indicates whether any element of the tensor is not a number.
     var containsNaN: Bool {
-        elements.contains(where: {$0.isNaN})
+        elements.contains(where: { $0.isNaN })
     }
     
     

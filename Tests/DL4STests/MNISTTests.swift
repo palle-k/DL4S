@@ -79,7 +79,7 @@ class MNISTTests: XCTestCase {
         let epochs = 100
         let batchSize = 256
         
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: { "loss: \($0)" }, label: "training")
         
         for _ in 1...epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
@@ -135,7 +135,7 @@ class MNISTTests: XCTestCase {
 
         print("Created model and optimizer")
         
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: { "loss: \($0)" }, label: "training")
         
         for _ in 1...epochs {
             let (batch, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
@@ -181,7 +181,7 @@ class MNISTTests: XCTestCase {
         let epochs = 100
         let batchSize = 256
         
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
+        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: { "loss: \($0)" }, label: "training")
         
         for _ in 1...epochs {
             let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
@@ -229,7 +229,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        performAccuracyTest(model, loss: { categoricalCrossEntropy(expected:$0, actual: $1) })
     }
     
     func testSwishActivation() {
@@ -244,7 +244,7 @@ class MNISTTests: XCTestCase {
             Softmax<Float, CPU>()
         }
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        performAccuracyTest(model, loss: { categoricalCrossEntropy(expected:$0, actual: $1) })
     }
     
     func testMishActivation() {
@@ -260,7 +260,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        performAccuracyTest(model, loss: { categoricalCrossEntropy(expected:$0, actual: $1) })
     }
     
     func testGeluActivation() {
@@ -276,7 +276,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        performAccuracyTest(model, loss: { categoricalCrossEntropy(expected:$0, actual: $1) })
     }
     
     func testLiSHTActivation() {
@@ -292,7 +292,7 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        performAccuracyTest(model, loss: { categoricalCrossEntropy(expected:$0, actual: $1) })
     }
     
     func testLogSoftmax() {
@@ -308,6 +308,6 @@ class MNISTTests: XCTestCase {
         }
         
         model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalNegativeLogLikelihood(expected:$0, actual: $1)})
+        performAccuracyTest(model, loss: { categoricalNegativeLogLikelihood(expected:$0, actual: $1) })
     }
 }

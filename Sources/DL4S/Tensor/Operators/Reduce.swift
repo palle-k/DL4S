@@ -85,7 +85,7 @@ public extension Tensor {
     /// - Parameter axes: Axes to compute the mean of
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func reduceMean(along axes: [Int]) -> Self {
-        reduceSum(along: axes) / Tensor(integerLiteral: axes.map {shape[$0]}.reduce(1, *))
+        reduceSum(along: axes) / Tensor(integerLiteral: axes.map{ shape[$0] }.reduce(1, *))
     }
     
     /// Computes the mean of the elements along the given axes

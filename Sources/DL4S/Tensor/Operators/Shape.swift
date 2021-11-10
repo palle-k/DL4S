@@ -38,13 +38,13 @@ public extension Tensor {
     /// - Parameter shape: Shape to view the tensor in.
     /// - Returns: Tensor with given shape, where occurrences of -1 have been replaced.
     func view(as shape: [Int]) -> Tensor<Element, Device> {
-        precondition(shape.count(where: {$0 == -1}) <= 1, "The size of at most one dimension can be unknown (-1).")
-        precondition(shape.allSatisfy {$0 >= -1}, "All dimensions must be greater than or equal to -1.")
+        precondition(shape.count(where: { $0 == -1 }) <= 1, "The size of at most one dimension can be unknown (-1).")
+        precondition(shape.allSatisfy{ $0 >= -1 }, "All dimensions must be greater than or equal to -1.")
         precondition(shape.contains(-1) || shape.reduce(1, *) == self.count, "Number of elements in result must be equal to number of elements in source")
         
         var shape = shape
         if let idx = shape.firstIndex(of: -1) {
-            let used = shape.lazy.filter {$0 >= 0}.reduce(1, *)
+            let used = shape.lazy.filter{ $0 >= 0 }.reduce(1, *)
             assert(count % used == 0, "Cannot transform tensor of shape \(self.shape) into tensor shaped \(shape).")
             shape[idx] = count / used
         }
@@ -100,7 +100,7 @@ public extension Tensor {
     
     /// Removes all axes from the tensor that have a size of 1.
     func squeezed() -> Self {
-        view(as: shape.filter {$0 != 1})
+        view(as: shape.filter{ $0 != 1 })
     }
     
     /// Flattens the tensor into a tensor of shape [count]

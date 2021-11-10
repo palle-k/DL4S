@@ -112,7 +112,7 @@ extension Buffer: CustomStringConvertible {
     }
     
     func generateDescription() -> String {
-        return "[\(array.map {"\($0)"}.joined(separator: ", "))]"
+        return "[\(array.map{ "\($0)" }.joined(separator: ", "))]"
     }
 }
 
@@ -136,7 +136,7 @@ extension ShapedBuffer: CustomStringConvertible {
             return "\(formatElement(values.pointee))"
         } else if dim == 1 {
             let dim = self.shape[0]
-            return "[\((0..<dim).map {"\(formatElement(values[$0]))"}.joined(separator: ", "))]"
+            return "[\((0..<dim).map{ "\(formatElement(values[$0]))" }.joined(separator: ", "))]"
         } else {
             let firstDim = shape.first!
             let restDim = Array(shape.dropFirst())
