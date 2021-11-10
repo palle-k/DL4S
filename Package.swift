@@ -6,8 +6,8 @@ import PackageDescription
 let package = Package(
     name: "DL4S",
     platforms: [
-        .macOS(.v11),
-        .iOS(.v14),
+        .macOS(.v10_15),
+        .iOS(.v13),
         .tvOS(.v13),
         .watchOS(.v6)
     ],
@@ -17,7 +17,7 @@ let package = Package(
             targets: ["DL4S", "MKL"]),
     ],
     dependencies: [
-        .package(name: "ARHeadsetKit", url: "https://github.com/philipturner/ARHeadsetKit", branch: "main")
+        .package(name: "ARHeadsetUtil", url: "https://github.com/philipturner/ARHeadsetUtil", branch: "main")
     ],
     targets: [
         .target(
@@ -25,13 +25,7 @@ let package = Package(
             dependencies: []),
         .target(
             name: "DL4S",
-            dependencies: [
-                .product(
-                    name: "ARHeadsetKit",
-                    package: "ARHeadsetKit",
-                    condition: .when(platforms: [.iOS, .macOS])),
-                "MKL"
-            ]
+            dependencies: ["MKL", "ARHeadsetUtil"]
         ),
         .testTarget(
             name: "DL4STests",
