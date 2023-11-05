@@ -248,7 +248,7 @@ public struct ProgressBar<UserInfo> {
 
 
 public struct Progress<Element>: Sequence {
-    private struct ProgressIterator<Element>: IteratorProtocol {
+    private struct ProgressIterator: IteratorProtocol {
         var baseIterator: AnyIterator<Element>
         let totalUnitCount: Int
         var currentCount: Int

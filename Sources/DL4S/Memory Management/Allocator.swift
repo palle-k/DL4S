@@ -60,7 +60,7 @@ extension UnsafeMutableBufferPointer {
         precondition(ptr.count >= count, "Out of bounds access")
         precondition(self.count >= count, "Out of bounds write")
         //memcpy(self.baseAddress!, ptr.baseAddress!, count * MemoryLayout<Element>.stride)
-        self.baseAddress!.assign(from: ptr.baseAddress!, count: count)
+        self.baseAddress!.update(from: ptr.baseAddress!, count: count)
     }
     
     func pointer(capacity: Int) -> UnsafeMutablePointer<Element> {

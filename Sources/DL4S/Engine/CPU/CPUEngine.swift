@@ -930,7 +930,7 @@ public struct CPUEngine: EngineType {
                 dstIdx += indices[offset + i] * dstStrides[arangement[i]]
             }
             
-            dstMem.advanced(by: dstIdx).assign(from: sourceMem.advanced(by: srcIdx), count: copyCount)
+            dstMem.advanced(by: dstIdx).update(from: sourceMem.advanced(by: srcIdx), count: copyCount)
         }
     }
     
@@ -1015,7 +1015,7 @@ public struct CPUEngine: EngineType {
                     dstIdx += dstStrides[i] * idx[i]
                 }
                 
-                dst.advanced(by: dstIdx).assign(from: src.advanced(by: srcIdx), count: copyCount)
+                dst.advanced(by: dstIdx).update(from: src.advanced(by: srcIdx), count: copyCount)
             }
             
             offset += copyCount
@@ -1095,7 +1095,7 @@ public struct CPUEngine: EngineType {
         for srcIdx in 0 ..< count {
             let dstIdx = count - srcIdx - 1
             
-            dstPtr.advanced(by: dstIdx * stride).assign(from: srcPtr.advanced(by: srcIdx * stride), count: stride)
+            dstPtr.advanced(by: dstIdx * stride).update(from: srcPtr.advanced(by: srcIdx * stride), count: stride)
         }
     }
     
