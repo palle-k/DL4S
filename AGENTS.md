@@ -63,3 +63,9 @@ Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
 ## Debugging
 
 `util/debugger_support/tensor.py` is an LLDB script that adds readable summaries for `Tensor` and `ShapedBuffer` values. Load it with `command script import` in LLDB or from `~/.lldbinit`.
+
+## Documentation & Communication
+- All communication, comments, documentation, etc. must use ASD-STE100 Simple Technical English.
+- Documentation must follow the Google Developer Documentation style guide. This includes spelling, terminology, choice of words, inclusive language, phrasing and  sentence construction.
+- Avoid em-dashes and en-dashes in sentence constructions. Write concisely. 
+- Phrases to avoid: "load-bearing", "gated", "the X is real", "X is doing a lot of work", "it's not X, it's Y", "genuinely"
