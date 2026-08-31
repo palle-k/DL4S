@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:6.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,15 +6,15 @@ import PackageDescription
 let package = Package(
     name: "DL4S",
     platforms: [
-        .macOS(.v10_15),
-        .iOS(.v13),
-        .tvOS(.v13),
-        .watchOS(.v6)
+        .macOS(.v15),
+        .iOS(.v18),
+        .tvOS(.v18),
+        .watchOS(.v11)
     ],
     products: [
         .library(
             name: "DL4S",
-            targets: ["DL4S", "MKL"]),
+            targets: ["DL4S"]),
     ],
     dependencies: [],
     targets: [
@@ -23,7 +23,11 @@ let package = Package(
             dependencies: []),
         .target(
             name: "DL4S",
-            dependencies: ["MKL"]
+            dependencies: ["MKL"],
+            exclude: [
+                "kernels.metal",
+                "Engine/Kernels/Operators.metal"
+            ]
         ),
         .testTarget(
             name: "DL4STests",
@@ -35,5 +39,6 @@ let package = Package(
                 .copy("train-labels.idx1-ubyte")
             ]
         )
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

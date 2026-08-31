@@ -93,7 +93,7 @@ class ConvTests: XCTestCase {
         
         print(filters.shape)
         
-        let ((images, _), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, _), _) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
         
         let batch = images[0 ..< 64]
         
@@ -129,7 +129,7 @@ class ConvTests: XCTestCase {
             ]
         ]) / Tensor<Float, CPU>([4, 1]).view(as: -1, 1, 1, 1)
         
-        let ((images, _), _) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, _), _) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
         let batch = images[0 ..< 64]
         
         let filtered = batch.transposedConvolved2d(filters: filters, stride: 2)

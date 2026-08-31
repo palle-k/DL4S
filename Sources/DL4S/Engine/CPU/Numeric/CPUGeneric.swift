@@ -186,18 +186,6 @@ public extension CPUNumeric {
             return
         }
         
-        if (alpha == 0) {
-            if (beta == 0) {
-                for i in 0 ..< __M * __N {
-                    __C[i] = 0
-                }
-            } else {
-                for i in 0 ..< __M * __N {
-                    __C[i] *= beta
-                }
-            }
-        }
-        
         if (beta == 0) {
             for i in 0 ..< __M * __N {
                 __C[i] = 0
@@ -208,6 +196,10 @@ public extension CPUNumeric {
             }
         }
         
+        if (alpha == 0) {
+            return
+        }
+        
         if (transA) {
             if (transB) {
                 for r in 0 ..< __M {
@@ -216,7 +208,7 @@ public extension CPUNumeric {
                         for l in 0 ..< __K {
                             tmp += __A[r &+ l &* __M] * __B[l &+ c &* __K]
                         }
-                        __C[r &* __N &+ c] = alpha * tmp
+                        __C[r &* __N &+ c] += alpha * tmp
                     }
                 }
             } else {
@@ -226,7 +218,7 @@ public extension CPUNumeric {
                         for l in 0 ..< __K {
                             tmp += __A[r &+ l &* __M] * __B[l &* __N &+ c]
                         }
-                        __C[r &* __N &+ c] = alpha * tmp
+                        __C[r &* __N &+ c] += alpha * tmp
                     }
                 }
             }
@@ -238,7 +230,7 @@ public extension CPUNumeric {
                         for l in 0 ..< __K {
                             tmp += __A[l &+ r &* __K] * __B[l &+ c &* __K]
                         }
-                        __C[r &* __N &+ c] = alpha * tmp
+                        __C[r &* __N &+ c] += alpha * tmp
                     }
                 }
             } else {
@@ -248,7 +240,7 @@ public extension CPUNumeric {
                         for l in 0 ..< __K {
                             tmp += __A[l &+ r &* __K] * __B[l &* __N &+ c]
                         }
-                        __C[r &* __N &+ c] = alpha * tmp
+                        __C[r &* __N &+ c] += alpha * tmp
                     }
                 }
             }
@@ -298,12 +290,12 @@ public extension CPUNumeric {
             #elseif canImport(Accelerate)
             vDSP_vfill([0], (target as! UnsafeMutablePointer<Float>), 1, UInt(dst_count))
             #else
-            for i in 0 ..< count {
+            for i in 0 ..< dst_count {
                 target[i] = 0
             }
             #endif
         } else {
-            for i in 0 ..< count {
+            for i in 0 ..< dst_count {
                 target[i] = 0
             }
         }

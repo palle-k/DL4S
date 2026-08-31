@@ -28,11 +28,7 @@ import MKL
 #elseif canImport(Accelerate)
 import Accelerate
 #endif
-#if os(Linux)
-import Glibc
-#else
 import Foundation
-#endif
 
 extension Double: CPUNumeric {
     public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, stride: Int, count: Int) {
@@ -458,7 +454,7 @@ extension Double: CPUNumeric {
         vvexp(dst, src, [Int32(count)])
         #else
         for i in 0 ..< count {
-            dst[i] = exp(src[i])
+            dst[i] = Foundation.exp(src[i])
         }
         #endif
     }
@@ -472,7 +468,7 @@ extension Double: CPUNumeric {
         vvlog(dst, src, [Int32(count)])
         #else
         for i in 0 ..< count {
-            dst[i] = log(src[i])
+            dst[i] = Foundation.log(src[i])
         }
         #endif
     }
@@ -486,7 +482,7 @@ extension Double: CPUNumeric {
         vvtanh(dst, src, [Int32(count)])
         #else
         for i in 0 ..< count {
-            dst[i] = tanh(src[i])
+            dst[i] = Foundation.tanh(src[i])
         }
         #endif
     }
@@ -500,7 +496,7 @@ extension Double: CPUNumeric {
         vvsqrt(dst, src, [Int32(count)])
         #else
         for i in 0 ..< count {
-            dst[i] = sqrt(src[i])
+            dst[i] = Foundation.sqrt(src[i])
         }
         #endif
     }
@@ -522,7 +518,7 @@ extension Double: CPUNumeric {
         vvsin(dst, src, [Int32(count)])
         #else
         for i in 0 ..< count {
-            dst[i] = sin(src[i])
+            dst[i] = Foundation.sin(src[i])
         }
         #endif
     }
@@ -536,7 +532,7 @@ extension Double: CPUNumeric {
         vvcos(dst, src, [Int32(count)])
         #else
         for i in 0 ..< count {
-            dst[i] = cos(src[i])
+            dst[i] = Foundation.cos(src[i])
         }
         #endif
     }
@@ -550,7 +546,7 @@ extension Double: CPUNumeric {
         vvtan(dst, src, [Int32(count)])
         #else
         for i in 0 ..< count {
-            dst[i] = tan(src[i])
+            dst[i] = Foundation.tan(src[i])
         }
         #endif
     }

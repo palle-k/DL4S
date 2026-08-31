@@ -26,15 +26,20 @@
 import XCTest
 import DL4S
 
-let MNIST_PATH = "./Tests/DL4STests/"
-
 class MNISTTests: XCTestCase {
-    static func loadMNIST<Element, Device>(from path: String, type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
+    static func loadMNIST<Element, Device>(type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
         do {
-            let trainingData = try Data(contentsOf: URL(fileURLWithPath: path + "train-images.idx3-ubyte"))
-            let trainingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "train-labels.idx1-ubyte"))
-            let testingData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-images.idx3-ubyte"))
-            let testingLabelData = try Data(contentsOf: URL(fileURLWithPath: path + "t10k-labels.idx1-ubyte"))
+            guard let trainingImagesURL = Bundle.module.url(forResource: "train-images", withExtension: "idx3-ubyte"),
+                  let trainingLabelsURL = Bundle.module.url(forResource: "train-labels", withExtension: "idx1-ubyte"),
+                  let testingImagesURL = Bundle.module.url(forResource: "t10k-images", withExtension: "idx3-ubyte"),
+                  let testingLabelsURL = Bundle.module.url(forResource: "t10k-labels", withExtension: "idx1-ubyte")
+            else {
+                fatalError("MNIST resources are missing from the test bundle.")
+            }
+            let trainingData = try Data(contentsOf: trainingImagesURL)
+            let trainingLabelData = try Data(contentsOf: trainingLabelsURL)
+            let testingData = try Data(contentsOf: testingImagesURL)
+            let testingLabelData = try Data(contentsOf: testingLabelsURL)
             
             let trainImages = Tensor<Element, Device>(trainingData.dropFirst(16).prefix(28 * 28 * 60_000).map(Element.init)) / 256
             let testImages = Tensor<Element, Device>(testingData.dropFirst(16).prefix(28 * 28 * 10_000).map(Element.init)) / 256
@@ -74,7 +79,7 @@ class MNISTTests: XCTestCase {
         model.tag = "Classifier"
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
         
         let epochs = 100
         let batchSize = 256
@@ -114,7 +119,7 @@ class MNISTTests: XCTestCase {
     }
     
     func testGRU() {
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
         
         print("Loaded images")
 
@@ -176,7 +181,7 @@ class MNISTTests: XCTestCase {
     func performAccuracyTest<L: LayerType>(_ model: L, loss: (Tensor<Int32, L.Device>, Tensor<L.Parameter, L.Device>) -> Tensor<L.Parameter, L.Device>) where L.Inputs == Tensor<Float, CPU>, L.Outputs == L.Inputs, L.Parameter == Float, L.Device == CPU {
         var optimizer = Adam(model: model, learningRate: 0.001)
         
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(from: MNIST_PATH, type: Float.self, device: CPU.self)
+        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
         
         let epochs = 100
         let batchSize = 256

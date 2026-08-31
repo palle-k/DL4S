@@ -30,7 +30,12 @@ class UtilTests: XCTestCase {
     @ThreadLocal private var x = 42
     
     func testFileReader() {
-        let f = File(url: URL(fileURLWithPath: "./Package.swift"))
+        let packageManifestURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()  // DL4STests
+            .deletingLastPathComponent()  // Tests
+            .deletingLastPathComponent()  // repository root
+            .appendingPathComponent("Package.swift")
+        let f = File(url: packageManifestURL)
         
         for line in f {
             print("### \(line)")
