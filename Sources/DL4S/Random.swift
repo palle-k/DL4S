@@ -65,7 +65,7 @@ func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
     
     let scale = (-2 * a.log()).sqrt() * stdev
     
-    let twoPiB = 2 * 3.141592653589 * b
+    let twoPiB = T(2 * 3.141592653589) * b
     
     let (x, y) = (scale * twoPiB.sin() + mean, scale * twoPiB.cos() + mean)
     

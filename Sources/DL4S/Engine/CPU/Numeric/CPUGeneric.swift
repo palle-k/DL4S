@@ -257,14 +257,14 @@ public extension CPUNumeric {
         
         let dst_dim = dst_shape.count
         
-        let src_strides = malloc(MemoryLayout<Int>.stride * dst_dim - 1).assumingMemoryBound(to: Int.self)
-        let src_shape = malloc(MemoryLayout<Int>.stride * dst_dim - 1).assumingMemoryBound(to: Int.self)
-        let dst_strides = malloc(MemoryLayout<Int>.stride * dst_dim).assumingMemoryBound(to: Int.self)
-        
+        let src_strides = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim - 1)
+        let src_shape = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim - 1)
+        let dst_strides = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim)
+
         defer {
-            free(src_strides)
-            free(src_shape)
-            free(dst_strides)
+            src_strides.deallocate()
+            src_shape.deallocate()
+            dst_strides.deallocate()
         }
         
         dst_strides[dst_dim - 1] = 1
@@ -326,14 +326,14 @@ public extension CPUNumeric {
         let target = result.baseAddress!
         let context = context.baseAddress!
         
-        let dst_strides = malloc(MemoryLayout<Int>.stride &* src_dim &- 1).assumingMemoryBound(to: Int.self)
-        let dst_shape = malloc(MemoryLayout<Int>.stride &* src_dim &- 1).assumingMemoryBound(to: Int.self)
-        let src_strides = malloc(MemoryLayout<Int>.stride &* src_dim).assumingMemoryBound(to: Int.self)
-        
+        let dst_strides = UnsafeMutablePointer<Int>.allocate(capacity: src_dim - 1)
+        let dst_shape = UnsafeMutablePointer<Int>.allocate(capacity: src_dim - 1)
+        let src_strides = UnsafeMutablePointer<Int>.allocate(capacity: src_dim)
+
         defer {
-            free(dst_strides)
-            free(dst_shape)
-            free(src_strides)
+            dst_strides.deallocate()
+            dst_shape.deallocate()
+            src_strides.deallocate()
         }
         
         src_strides[src_dim - 1] = 1

@@ -25,17 +25,6 @@
 
 import Foundation
 
-let DefaultNumberFormatter: NumberFormatter = {
-    let f = NumberFormatter()
-    f.allowsFloats = true
-    f.minimumIntegerDigits = 1
-    f.minimumFractionDigits = 1
-    f.maximumFractionDigits = 3
-    
-    return f
-}()
-
-
 extension Double: NumericType {
     public func format(maxDecimals: Int) -> String {
         return String(format: "%.\(maxDecimals)f", self)

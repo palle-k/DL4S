@@ -47,7 +47,7 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
     public var momentum: Element
 
     /// A layer that normalizes its inputs along the batch dimension.
-    public init(inputSize: [Int], momentum: Element = 0.9) {
+    public init(inputSize: [Int], momentum: Element = Element(0.9)) {
         shift = Tensor(repeating: 0, shape: inputSize, requiresGradient: true)
         scale = Tensor(repeating: 1, shape: inputSize, requiresGradient: true)
         

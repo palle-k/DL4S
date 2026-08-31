@@ -31,11 +31,7 @@ import Accelerate
 #warning("Compiling DL4S without any accelerator library")
 #warning("DL4S can be accelerated with Intel MKL, IPP and TBB. See README.md")
 #endif
-#if os(Linux)
-import Glibc
-#else
 import Foundation
-#endif
 
 extension Float: CPUNumeric {
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, stride: Int, count: Int) {
