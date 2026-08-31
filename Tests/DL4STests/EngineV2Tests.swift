@@ -27,6 +27,28 @@ import XCTest
 @testable import DL4S
 
 class EngineV2Tests: XCTestCase {
+    func testScatterZeroFillsLargerResult() {
+        // The result buffer is larger than the source tensor and starts with placeholder values.
+        // Scatter must zero the full result buffer.
+        let values = Tensor<Double, CPU>([3, 1, 4])
+        let context = Tensor<Int32, CPU>([0, 1, 2])
+
+        let result = CPU.Memory.allocateBuffer(withShape: [5, 3], type: Double.self)
+        defer { CPU.Memory.free(result) }
+        CPU.Engine.fill(value: 42, result: result.values, count: result.count)
+
+        CPU.Engine.scatter(reduced: values.values, context: context.values, result: result, axis: 0, ignoreIndex: -1)
+
+        let expected: [Double] = [
+            3, 0, 0,
+            0, 1, 0,
+            0, 0, 4,
+            0, 0, 0,
+            0, 0, 0
+        ]
+        XCTAssertEqual(result.values.array, expected)
+    }
+
     func testBroadcast1() {
         // let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
         // let rhs = Tensor<Float, CPU>([1,2])

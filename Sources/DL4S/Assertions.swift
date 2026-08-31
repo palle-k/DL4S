@@ -26,40 +26,18 @@
 import Foundation
 
 
-extension FileHandle: TextOutputStream {
-    public func write(_ string: String) {
-        self.write(string.data(using: .utf8)!)
-    }
-    
-    /// The standard output
-    ///
-    /// This alias can be used as a print target.
-    public static var stdout: FileHandle {
-        get {
-            return FileHandle.standardOutput
-        }
-        set {
-            // noop
-        }
-    }
-    
-    /// The standard error output
-    ///
-    /// This alias can be used as a print target.
-    public static var stderr: FileHandle {
-        get {
-            return FileHandle.standardError
-        }
-        set {
-            // noop
-        }
+/// A text output stream that writes to the standard error output.
+struct StderrStream: TextOutputStream {
+    mutating func write(_ string: String) {
+        fputs(string, stderr)
     }
 }
 
 func weakAssert(_ assertion: @autoclosure () -> Bool, message: String = "", line: Int = #line, function: String = #function, file: String = #file) {
     #if DEBUG
     if !assertion() {
-        print("Assertion failed at \(file):\(function):\(line) \(message.count > 0 ? ": \(message)" : "")", to: &FileHandle.stderr)
+        var stream = StderrStream()
+        print("Assertion failed at \(file):\(function):\(line) \(message.count > 0 ? ": \(message)" : "")", to: &stream)
     }
     #endif
 }

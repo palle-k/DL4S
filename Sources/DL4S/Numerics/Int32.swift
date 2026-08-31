@@ -99,8 +99,4 @@ extension Int32: NumericType {
         return Int32(round(Float(Foundation.tanh(Float(self)))))
     }
     
-    public init(floatLiteral value: Double) {
-        self = Int32(value)
-    }
-    
 }

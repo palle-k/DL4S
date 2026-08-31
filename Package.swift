@@ -23,11 +23,7 @@ let package = Package(
             dependencies: []),
         .target(
             name: "DL4S",
-            dependencies: ["MKL"],
-            exclude: [
-                "kernels.metal",
-                "Engine/Kernels/Operators.metal"
-            ]
+            dependencies: ["MKL"]
         ),
         .testTarget(
             name: "DL4STests",

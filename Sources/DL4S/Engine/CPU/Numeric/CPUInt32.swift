@@ -28,11 +28,7 @@ import MKL
 #elseif canImport(Accelerate)
 import Accelerate
 #endif
-#if os(Linux)
-import Glibc
-#else
 import Foundation
-#endif
 
 
 extension Int32: CPUNumeric {

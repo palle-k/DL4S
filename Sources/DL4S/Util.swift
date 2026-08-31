@@ -26,6 +26,8 @@
 import Foundation
 
 #if os(Linux)
+/// Stub that just calls the passed function on Linux.
+/// Foundation on Linux does not provide `autoreleasepool` because Linux has no Objective-C runtime.
 func autoreleasepool<Result>(_ function: () -> Result) -> Result {
     function()
 }
@@ -90,20 +92,6 @@ prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parame
     }
 }
 
-extension Slice: Equatable where Element: Hashable {
-    public static func == (lhs: Slice<Base>, rhs: Slice<Base>) -> Bool {
-        return lhs.count == rhs.count && !zip(lhs, rhs).map(==).contains(false)
-    }
-}
-
-extension Slice: Hashable where Element: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        for element in self {
-            hasher.combine(element)
-        }
-    }
-}
-
 extension Collection {
     func minIndex(by comparator: (Element, Element) throws -> Bool) rethrows -> Index? {
         var minIndex: Index? = nil
@@ -116,98 +104,6 @@ extension Collection {
         }
         return minIndex
     }
-}
-
-
-extension DispatchSemaphore {
-    func execute<Result>(_ block: () throws -> Result) rethrows -> Result {
-        self.wait()
-        let result = try block()
-        self.signal()
-        return result
-    }
-}
-
-
-public class Queue<Element> {
-    private let sema = DispatchSemaphore(value: 0)
-    private let maxLenSema: DispatchSemaphore?
-    private let lock = DispatchSemaphore(value: 1)
-    
-    public private(set) var isStopped: Bool = false
-    public let maxLength: Int?
-    private var collection: [Element] = []
-    
-    public init(maxLength: Int? = nil) {
-        self.maxLength = maxLength
-        self.maxLenSema = maxLength.map(DispatchSemaphore.init(value:))
-    }
-    
-    public func enqueue(_ element: Element) {
-        maxLenSema?.wait()
-        if isStopped {
-            maxLenSema?.signal()
-            return
-        }
-        lock.execute {
-            collection.append(element)
-        }
-        sema.signal()
-    }
-    
-    public func dequeue() -> Element? {
-        sema.wait()
-        
-        if isStopped {
-            sema.signal()
-            return nil
-        }
-        
-        let result = lock.execute {
-            self.collection.removeFirst()
-        }
-        maxLenSema?.signal()
-        return result
-    }
-    
-    public func stop() {
-        lock.execute {
-            self.isStopped = true
-        }
-        maxLenSema?.signal()
-        sema.signal()
-    }
-}
-
-
-fileprivate let intervalFormatter: (TimeInterval) -> String = { interval in
-    let totalSeconds = Int(interval)
-    
-    var remainingSeconds = totalSeconds
-    var formattedString = ""
-    
-    if totalSeconds >= 86400 {
-        let days = remainingSeconds / 86400
-        remainingSeconds %= 86400
-        formattedString += "\(days) day\(days > 1 ? "s" : ""), "
-    }
-    if totalSeconds >= 3600 {
-        let hours = remainingSeconds / 3600
-        remainingSeconds %= 3600
-        formattedString += "\(hours):"
-    }
-    if totalSeconds >= 60 {
-        let minutes = String(format: "%02ld", (totalSeconds % 3600) / 60)
-        remainingSeconds %= 60
-        formattedString += "\(minutes):"
-    }
-    let seconds = String(format: "%02ld", remainingSeconds)
-    formattedString += seconds
-    if totalSeconds < 60 {
-        formattedString += " seconds"
-    }
-    
-    return "About \(formattedString) remaining"
 }
 
 
@@ -225,13 +121,20 @@ public struct ProgressBar<UserInfo> {
         self.currentUnitCount = 0
     }
     
+    private static func formatRemainingTime(_ interval: TimeInterval) -> String {
+        let remaining = Duration.seconds(interval).formatted(
+            .units(allowed: [.days, .hours, .minutes, .seconds], width: .narrow)
+        )
+        return "About \(remaining) remaining"
+    }
+
     public mutating func next(userInfo: UserInfo) {
         currentUnitCount += 1
-        
+
         let interval = Date().timeIntervalSince(startTime)
         let perUnitDuration = interval / Double(currentUnitCount)
         let remainingDuration = perUnitDuration * Double(totalUnitCount - currentUnitCount)
-        let remainingString = intervalFormatter(remainingDuration)
+        let remainingString = Self.formatRemainingTime(remainingDuration)
         
         
         let filled = String(repeating: "#", count: currentUnitCount * 30 / totalUnitCount)

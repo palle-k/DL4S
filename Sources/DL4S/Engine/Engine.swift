@@ -38,7 +38,7 @@ public protocol DeviceType {
 /// Memory manager for a device
 public protocol MemoryOperatorsType {
     associatedtype Device: DeviceType where Device.Memory == Self
-    associatedtype RawBuffer: Hashable
+    associatedtype RawBuffer
     
     
     /// Allocates a buffer with capacity for the given amount of elements of the given type.
