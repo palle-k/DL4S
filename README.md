@@ -7,7 +7,7 @@
 <a href="https://github.com/palle-k/DL4S/releases"><img src="https://img.shields.io/github/v/tag/palle-k/DL4S" alt="Releases"/></a>
 <a href="https://palle-k.github.io/DL4S/"><img src="https://palle-k.github.io/DL4S/badge.svg" alt="Documentation" /></a><br/>
 <a href="#installation"><img src="https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20iOS%20|%20tvOS%20|%20watchOS-green.svg" alt="Supports Linux, macOS, iOS, tvOS and watchOS" /></a>
-<a href="https://travis-ci.org/palle-k/DL4S"><img src="https://travis-ci.org/palle-k/DL4S.svg?branch=master" alt="Build Status" /></a>
+<a href="https://github.com/palle-k/DL4S/actions/workflows/ci.yml"><img src="https://github.com/palle-k/DL4S/actions/workflows/ci.yml/badge.svg" alt="Build Status" /></a>
 </p>
 
 DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.

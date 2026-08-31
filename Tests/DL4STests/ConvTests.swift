@@ -52,7 +52,8 @@ class ConvTests: XCTestCase {
         print(result.permuted(to: 1, 0))
     }
     
-    func testIm2colPerformance() {
+    func testIm2colPerformance() throws {
+        try skipUnlessLongTestsEnabled()
         let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32, 128, 128])
         
         measure {

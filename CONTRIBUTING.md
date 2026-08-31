@@ -89,9 +89,11 @@ If you want to go the usual route and run the project locally, though:
 Then in your terminal:
 
 ```bash
-swift package generate-xcodeproj
-open DL4S.xcodeproj
+swift build
+swift test
 ```
+
+To work in Xcode, open the package directory (or `Package.swift`).
 
 And you should be ready to go!
 

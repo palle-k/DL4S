@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.configuration }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-24.04]
+        configuration: [debug, release]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        if: runner.os == 'Linux'
+        with:
+          swift-version: "6.1"
+      - name: Show Swift version
+        run: swift --version
+      - name: Run tests (debug)
+        if: matrix.configuration == 'debug'
+        run: swift test
+      - name: Run tests (release)
+        if: matrix.configuration == 'release'
+        run: swift test -c release -Xswiftc -enable-testing
