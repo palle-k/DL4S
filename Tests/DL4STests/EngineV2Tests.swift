@@ -324,7 +324,8 @@ class EngineV2Tests: XCTestCase {
         _ = result3.gradients(of: [x, y])
     }
     
-    func testRandomPerformance() {
+    func testRandomPerformance() throws {
+        try skipUnlessLongTestsEnabled()
         measure {
             _ = Tensor<Float, CPU>(uniformlyDistributedWithShape: 30, 50, 50, 50)
         }

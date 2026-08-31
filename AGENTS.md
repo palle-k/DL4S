@@ -16,11 +16,11 @@ swift test --filter DL4STests.GradientTests/testMul  # run one test method
 swift test --generate-linuxmain                      # regenerate XCTestManifests.swift after adding tests
 ```
 
-There is no linter or formatter configuration in this repo. CI is a legacy `.travis.yml` (runs `swift test -c release -Xswiftc -enable-testing`); there are no GitHub Actions.
+There is no linter or formatter configuration in this repo. CI is a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `swift test` in debug and release configuration (`-c release -Xswiftc -enable-testing`) on macOS and Ubuntu.
 
 On Linux, acceleration comes from Intel MKL/IPP instead of Accelerate. Build with `swift build -c release -Xswiftc -DMKL_ENABLE -Xlinker -L${MKLROOT}/lib/intel64 -Xlinker -L${IPPROOT}/lib/intel64` (see README for setup). Without MKL or Accelerate, a slow generic fallback is used.
 
-Tests are XCTest classes in `Tests/DL4STests`. The MNIST idx files in that directory are bundled as test resources; some tests (e.g. `MNISTTests`, `TransformerTests`) train real models and are slow.
+Tests are XCTest classes in `Tests/DL4STests`. The MNIST idx files in that directory are bundled as test resources. Tests that train real models (`MNISTTests`, `TransformerTests`, `ModelTests`) or measure performance are slow and are skipped unless the `DL4S_LONG_TESTS` environment variable is set, so CI does not run them. Run them locally with `DL4S_LONG_TESTS=1 swift test`.
 
 ## Architecture
 

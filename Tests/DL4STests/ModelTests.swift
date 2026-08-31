@@ -28,7 +28,8 @@ import XCTest
 
 
 class ModelTests: XCTestCase {
-    func testResNet() {
+    func testResNet() throws {
+        try skipUnlessLongTestsEnabled()
         let resnet = ResNet18<Float, CPU>(inputShape: [3, 64, 64], classes: 256)
         var optim = Adam(model: resnet, learningRate: 0.001)
         
@@ -53,7 +54,8 @@ class ModelTests: XCTestCase {
         )
     }
     
-    func testAlexNet() {
+    func testAlexNet() throws {
+        try skipUnlessLongTestsEnabled()
         var alexNet = AlexNet<Float, CPU>(inputChannels: 3, classes: 256)
         alexNet.isDropoutActive = false
         var optim = Adam(model: alexNet, learningRate: 0.001)
@@ -79,7 +81,8 @@ class ModelTests: XCTestCase {
         )
     }
     
-    func testVGG() {
+    func testVGG() throws {
+        try skipUnlessLongTestsEnabled()
         let vgg = VGG11<Float, CPU>(inputChannels: 3, classes: 256)
         var optim = Adam(model: vgg, learningRate: 0.001)
         

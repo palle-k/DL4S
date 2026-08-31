@@ -58,7 +58,8 @@ class MNISTTests: XCTestCase {
         
     }
     
-    func testConvNet() {
+    func testConvNet() throws {
+        try skipUnlessLongTestsEnabled()
         var model = Sequential {
             Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0)
             LayerNorm<Float, CPU>(inputSize: [6, 24, 24])
@@ -118,7 +119,8 @@ class MNISTTests: XCTestCase {
         XCTAssertGreaterThan(accuracy, 0.7)
     }
     
-    func testGRU() {
+    func testGRU() throws {
+        try skipUnlessLongTestsEnabled()
         let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
         
         print("Loaded images")
@@ -221,7 +223,8 @@ class MNISTTests: XCTestCase {
         XCTAssertGreaterThan(accuracy, 0.7)
     }
     
-    func testReluActivation() {
+    func testReluActivation() throws {
+        try skipUnlessLongTestsEnabled()
         var model = Sequential {
             Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
             Relu<Float, CPU>()
@@ -237,7 +240,8 @@ class MNISTTests: XCTestCase {
         performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
-    func testSwishActivation() {
+    func testSwishActivation() throws {
+        try skipUnlessLongTestsEnabled()
         var model = Sequential {
             Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
             Swish<Float, CPU>(trainableWithChannels: 500)
@@ -252,7 +256,8 @@ class MNISTTests: XCTestCase {
         performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
-    func testMishActivation() {
+    func testMishActivation() throws {
+        try skipUnlessLongTestsEnabled()
         var model = Sequential {
             Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
             Mish<Float, CPU>()
@@ -268,7 +273,8 @@ class MNISTTests: XCTestCase {
         performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
-    func testGeluActivation() {
+    func testGeluActivation() throws {
+        try skipUnlessLongTestsEnabled()
         var model = Sequential {
             Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
             Gelu<Float, CPU>()
@@ -284,7 +290,8 @@ class MNISTTests: XCTestCase {
         performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
-    func testLiSHTActivation() {
+    func testLiSHTActivation() throws {
+        try skipUnlessLongTestsEnabled()
         var model = Sequential {
             Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
             LiSHT<Float, CPU>()
@@ -300,7 +307,8 @@ class MNISTTests: XCTestCase {
         performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
     }
     
-    func testLogSoftmax() {
+    func testLogSoftmax() throws {
+        try skipUnlessLongTestsEnabled()
         var model = Sequential {
             Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
             LiSHT<Float, CPU>()
