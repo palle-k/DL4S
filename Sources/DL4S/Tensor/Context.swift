@@ -25,6 +25,7 @@
 
 import Foundation
 
+@usableFromInline
 struct TensorContext<Element: NumericType, Device: DeviceType> {
     var tag: String?
     var sources: [Tensor<Element, Device>]
