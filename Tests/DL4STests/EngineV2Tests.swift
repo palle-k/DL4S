@@ -46,7 +46,7 @@ class EngineV2Tests: XCTestCase {
             0, 0, 0,
             0, 0, 0
         ]
-        XCTAssertEqual(result.values.array, expected)
+        XCTAssertEqual(Buffer(result.values).array, expected)
     }
 
     func testBroadcast1() {
@@ -74,9 +74,9 @@ class EngineV2Tests: XCTestCase {
         let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
         let rhs = Tensor<Float, CPU>([1,2,3]).view(as: -1, 1)
         
-        let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
+        var result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
         
-        CPUEngine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: result.values)
+        CPUEngine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: result.mutableValues)
         
         print(result)
     }
@@ -102,8 +102,8 @@ class EngineV2Tests: XCTestCase {
     func testReduceSum1() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
-        let result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
-        let r = result.values
+        var result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
+        let r = result.mutableValues
         
         CPU.Engine.reduceSum(values: v, result: r, axis: 0)
         
@@ -113,8 +113,8 @@ class EngineV2Tests: XCTestCase {
     func testReduceSum2() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
-        let result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
-        let r = result.values
+        var result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
+        let r = result.mutableValues
         
         CPU.Engine.reduceSum(values: v, result: r, axis: 1)
         
@@ -124,8 +124,8 @@ class EngineV2Tests: XCTestCase {
     func testReduceSum3() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
-        let result = Tensor<Float, CPU>(repeating: Float(0), shape: [])
-        let r = result.values
+        var result = Tensor<Float, CPU>(repeating: Float(0), shape: [])
+        let r = result.mutableValues
         
         CPU.Engine.reduceSum(values: v, result: r, axes: [0, 1])
         

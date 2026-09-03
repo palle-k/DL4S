@@ -65,7 +65,17 @@ class TransformerTests: XCTestCase {
             }
         }
         bar.complete()
-        
+
         XCTAssertLessThanOrEqual(lastLoss, 0.1)
+    }
+
+    func testLayerNormNormalizesEachSequenceElement() {
+        let norm = LayerNorm<Float, CPU>(inputSize: [4])
+        let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: [2, 3, 4], min: -10, max: 10)
+
+        let perSequenceElement = norm(x)
+        let flat = norm(x.view(as: [6, 4])).view(as: [2, 3, 4])
+
+        XCTAssertLessThan(((perSequenceElement - flat) * (perSequenceElement - flat)).reduceSum().item, 1e-8)
     }
 }

@@ -127,26 +127,28 @@ extension Digraph: CustomStringConvertible {
 }
 
 
+#if DEBUG
+/// One level of the operation stack that `OperationGroup.capture(named:_:)` records.
+struct OperationGroupEntry: Sendable, Hashable {
+    /// Distinguishes captures with the same name.
+    let id: UInt64
+    
+    /// Name that `Tensor.graph()` shows for the group.
+    let name: String
+}
+#endif
+
 /// OperationGroup allows the grouping of operations in the compute graph.
 /// This improves the readability, when displaying the compute graph using `result.graph()`.
 /// It has no effect on the way that computations are performed. When optimization is enabled,
 /// operation groups are not captured.
 public enum OperationGroup {
-    @ThreadLocal static private(set) var operationStack: [(id: UInt64, name: String)] = []
-    
-    @inline(__always)
-    static func push(_ name: @autoclosure () -> String) {
-        #if DEBUG
-        operationStack.append((id: UInt64.random(in: 0 ... UInt64.max), name: name()))
-        #endif
-    }
-    
-    @inline(__always)
-    static func pop() {
-        #if DEBUG
-        operationStack.removeLast()
-        #endif
-    }
+    #if DEBUG
+    /// Groups that enclose the current operation, outermost first.
+    ///
+    /// Task-local, so parallel tasks and threads have their own stack.
+    @TaskLocal static var operationStack: [OperationGroupEntry] = []
+    #endif
     
     /// Captures a group of operations that is displayed within a box in the compute graph, when using `result.graph()`.
     /// Only applicable for debug builds. In release builds, the operation closure is executed but otherwise, the operation group has no effect.
@@ -155,10 +157,14 @@ public enum OperationGroup {
     ///   - operations: Operations to group
     @inline(__always)
     public static func capture<Output>(named name: String, _ operations: () -> Output) -> Output {
-        push(name)
-        let result = operations()
-        pop()
-        return result
+        #if DEBUG
+        let entry = OperationGroupEntry(id: UniqueID.next(), name: name)
+        return $operationStack.withValue(operationStack + [entry]) {
+            operations()
+        }
+        #else
+        return operations()
+        #endif
     }
 }
 

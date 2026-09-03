@@ -139,111 +139,71 @@ public extension Tensor {
             context: (self.requiresGradient || other.requiresGradient) ? TensorContext(
                 tag: "mmul",
                 sources: [self, other],
-                backpropagateAccumulate: [
-                    { resultGradient, acc in
-                        let res: Self
-                        if let acc = acc {
-                            let acc = transposeSelf ? acc.transposed() : acc
-                            res = resultGradient._matMulAdd(other, add: acc, transposeSelf: false, transposeOther: !transposeOther, inplaceAdd: !acc.requiresGradient)
-                        } else {
-                             res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
-                        }
-                        
-                        if transposeSelf {
-                            return res.transposed()
-                        } else {
-                            return res
-                        }
-                    }, { resultGradient, acc in
-                        let res: Self
-                        
-                        if let acc = acc {
-                            let acc = transposeOther ? acc.transposed() : acc
-                            res = self._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeSelf, transposeOther: false, inplaceAdd: !acc.requiresGradient)
-                        } else {
-                            res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
-                        }
-                        
-                        if transposeOther {
-                            return res.transposed()
-                        } else {
-                            return res
-                        }
-                    }
-                ]
+                backpropagateAccumulate: Self.matMulBackwards(lhs: self, rhs: other, transposeLhs: transposeSelf, transposeRhs: transposeOther)
             ) : nil
         )
     }
     
-    private func _matMulAdd(_ other: Self, add: Self, transposeSelf: Bool = false, transposeOther: Bool = false, inplaceAdd: Bool = false) -> Self {
-        precondition(self.dim == 2)
-        precondition(other.dim == 2)
-        precondition(self.shape[transposeSelf ? 0 : 1] == other.shape[transposeOther ? 1 : 0])
-        
-        let resultShape = [self.shape[transposeSelf ? 1 : 0], other.shape[transposeOther ? 0 : 1]]
-        precondition(resultShape == add.shape)
-        
-        var target = add
-        if !inplaceAdd {
-            target.ensureOwnership()
-        }
-        
-        Device.Engine.gemm(
-            lhs: self.values,
-            rhs: other.values,
-            result: target.values,
-            alpha: 1,
-            beta: 1,
-            transposeFirst: transposeSelf,
-            transposeSecond: transposeOther
-        )
-        
-        if self.requiresGradient || other.requiresGradient || add.requiresGradient {
-            target.requiresGradient = true
-            target.context = TensorContext(
-                tag: "gemm",
-                sources: [self, other, add],
-                backpropagateAccumulate: [
-                    { resultGradient, sourceGradient in
-                        if let src = sourceGradient {
-                            let res = resultGradient._matMulAdd(other, add: transposeSelf ? src.transposed() : src, transposeSelf: false, transposeOther: !transposeOther)
-                            if transposeSelf {
-                                return res.transposed()
-                            } else {
-                                return res
-                            }
-                        } else {
-                            let res = resultGradient._matMul(other, transposeSelf: false, transposeOther: !transposeOther)
-                            if transposeSelf {
-                                return res.transposed()
-                            } else {
-                                return res
-                            }
-                        }
-                    }, { resultGradient, sourceGradient in
-                        if let src = sourceGradient {
-                            let res = self._matMulAdd(resultGradient, add: transposeOther ? src.transposed() : src, transposeSelf: !transposeSelf, transposeOther: false)
-                            if transposeOther {
-                                return res.transposed()
-                            } else {
-                                return res
-                            }
-                        } else {
-                            let res = self._matMul(resultGradient, transposeSelf: !transposeSelf, transposeOther: false)
-                            if transposeOther {
-                                return res.transposed()
-                            } else {
-                                return res
-                            }
-                        }
-                    }, { resultGradient, sourceGradient in
-                        sourceGradient.map {$0 + resultGradient} ?? resultGradient
-                    }
-                ]
+    /// Returns the matrix product of `self` and `other` added to `add`. When `add` is nil, returns the product.
+    private func _matMulAdd(_ other: Self, add: consuming Self?, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
+        switch consume add {
+        case .none:
+            return _matMul(other, transposeSelf: transposeSelf, transposeOther: transposeOther)
+        case .some(var target):
+            precondition(self.dim == 2)
+            precondition(other.dim == 2)
+            precondition(self.shape[transposeSelf ? 0 : 1] == other.shape[transposeOther ? 1 : 0])
+            precondition(target.shape == [self.shape[transposeSelf ? 1 : 0], other.shape[transposeOther ? 0 : 1]])
+            
+            // When we're capturing a graph, we need target pre-addition. Without a graph, we can work in-place.
+            let original = target.requiresGradient ? target : nil
+            
+            Device.Engine.gemm(
+                lhs: self.values,
+                rhs: other.values,
+                result: target.mutableValues,
+                alpha: 1,
+                beta: 1,
+                transposeFirst: transposeSelf,
+                transposeSecond: transposeOther
             )
+            
+            guard self.requiresGradient || other.requiresGradient || original != nil else {
+                return target
+            }
+            
+            var sources = [self, other]
+            var backpropagate = Self.matMulBackwards(lhs: self, rhs: other, transposeLhs: transposeSelf, transposeRhs: transposeOther)
+            if let original = original {
+                sources.append(original)
+                backpropagate.append { resultGradient, acc in
+                    acc.map { $0 + resultGradient } ?? resultGradient
+                }
+            }
+            target.context = TensorContext(tag: "gemm", sources: sources, backpropagateAccumulate: backpropagate)
+            target.requiresGradient = true
+            return target
         }
-        
-        return target
+    }
+    
+    /// Backpropagation closures for the product of `lhs` and `rhs`, one per operand.
+    private static func matMulBackwards(lhs: Self, rhs: Self, transposeLhs: Bool, transposeRhs: Bool) -> [(Self, consuming Self?) -> Self] {
+        [
+            { resultGradient, acc in
+                if transposeLhs {
+                    return rhs._matMulAdd(resultGradient, add: acc, transposeSelf: transposeRhs, transposeOther: true)
+                } else {
+                    return resultGradient._matMulAdd(rhs, add: acc, transposeSelf: false, transposeOther: !transposeRhs)
+                }
+            },
+            { resultGradient, acc in
+                if transposeRhs {
+                    return resultGradient._matMulAdd(lhs, add: acc, transposeSelf: true, transposeOther: transposeLhs)
+                } else {
+                    return lhs._matMulAdd(resultGradient, add: acc, transposeSelf: !transposeLhs, transposeOther: false)
+                }
+            }
+        ]
     }
 }
 

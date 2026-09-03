@@ -37,26 +37,36 @@ public struct VGG11<E: RandomizableType, D: DeviceType>: VGGBase {
     public var dense: DenseLayer
 
     public init(inputChannels: Int, classes: Int) {
+        var generator = WyHash()
+        self.init(inputChannels: inputChannels, classes: classes, using: &generator)
+    }
+
+    /// Creates a VGG11 image classification network.
+    /// - Parameters:
+    ///   - inputChannels: Number of input channels. Inputs must have the shape [batchSize, inputChannels, height, width].
+    ///   - classes: Number of classes / dimensionality of network output
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputChannels: Int, classes: Int, using generator: inout Generator) {
         conv1 = Sequential {
-            Convolution2D<E, D>(inputChannels: inputChannels, outputChannels: 64, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: inputChannels, outputChannels: 64, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [64, 1, 1])
             Relu<E, D>()
             MaxPool2D<E, D>()
         }
         
         conv2 = Sequential {
-            Convolution2D<E, D>(inputChannels: 64, outputChannels: 128, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: 64, outputChannels: 128, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [128, 1, 1])
             Relu<E, D>()
             MaxPool2D<E, D>()
         }
         
         conv3 = Sequential {
-            Convolution2D<E, D>(inputChannels: 128, outputChannels: 256, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: 128, outputChannels: 256, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [256, 1, 1])
             Relu<E, D>()
             
-            Convolution2D<E, D>(inputChannels: 256, outputChannels: 256, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: 256, outputChannels: 256, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [256, 1, 1])
             Relu<E, D>()
             
@@ -64,11 +74,11 @@ public struct VGG11<E: RandomizableType, D: DeviceType>: VGGBase {
         }
         
         conv4 = Sequential {
-            Convolution2D<E, D>(inputChannels: 256, outputChannels: 512, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: 256, outputChannels: 512, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [512, 1, 1])
             Relu<E, D>()
             
-            Convolution2D<E, D>(inputChannels: 512, outputChannels: 512, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: 512, outputChannels: 512, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [512, 1, 1])
             Relu<E, D>()
             
@@ -76,17 +86,17 @@ public struct VGG11<E: RandomizableType, D: DeviceType>: VGGBase {
         }
         
         conv5 = Sequential {
-            Convolution2D<E, D>(inputChannels: 512, outputChannels: 512, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: 512, outputChannels: 512, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [512, 1, 1])
             Relu<E, D>()
             
-            Convolution2D<E, D>(inputChannels: 512, outputChannels: 512, kernelSize: (3, 3))
+            Convolution2D<E, D>(inputChannels: 512, outputChannels: 512, kernelSize: (3, 3), using: &generator)
             BatchNorm<E, D>(inputSize: [512, 1, 1])
             Relu<E, D>()
             
             MaxPool2D<E, D>()
         }
         
-        dense = Self.makeDense(classes: classes)
+        dense = Self.makeDense(classes: classes, using: &generator)
     }
 }

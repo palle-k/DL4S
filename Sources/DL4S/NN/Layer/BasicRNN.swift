@@ -59,10 +59,23 @@ public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Coda
     ///  - inputSize: Number of elements in each input vector of the RNN. The RNN expects inputs to have a shape of [sequence length, batch size, input size].
     ///  - hiddenSize: Number of elements in each output vector of the RNN.
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {
+        var generator = WyHash()
+        self.init(inputSize: inputSize, hiddenSize: hiddenSize, direction: direction, using: &generator)
+    }
+    
+    /// A 'vanilla' RNN.
+    /// In each step, the RNN performs the transformation matMul(x\_t, W) + matMul(h\_t-1, U) + b.
+    ///
+    /// - Parameters:
+    ///  - inputSize: Number of elements in each input vector of the RNN. The RNN expects inputs to have a shape of [sequence length, batch size, input size].
+    ///  - hiddenSize: Number of elements in each output vector of the RNN.
+    ///  - direction: Direction, in which the RNN consumes the input sequence.
+    ///  - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward, using generator: inout Generator) {
         self.direction = direction
         
-        W = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        U = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        W = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        U = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
         b = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
     }
     

@@ -88,18 +88,27 @@ public extension VGGBase {
     }
     
     static func makeDense(classes: Int) -> DenseLayer {
+        var generator = WyHash()
+        return makeDense(classes: classes, using: &generator)
+    }
+
+    /// Creates the dense classifier that follows the convolutional blocks. 
+    /// - Parameters:
+    ///   - classes: Number of classes / dimensionality of network output
+    ///   - generator: Random number generator that provides the initial weights.
+    static func makeDense<Generator: RandomNumberGenerator>(classes: Int, using generator: inout Generator) -> DenseLayer {
         Sequential {
-            Dense<Parameter, Device>(inputSize: 512 * 6 * 6, outputSize: 4096)
+            Dense<Parameter, Device>(inputSize: 512 * 6 * 6, outputSize: 4096, using: &generator)
             BatchNorm<Parameter, Device>(inputSize: [4096])
             Relu<Parameter, Device>()
             Dropout<Parameter, Device>(rate: 0.5)
             
-            Dense<Parameter, Device>(inputSize: 4096, outputSize: 4096)
+            Dense<Parameter, Device>(inputSize: 4096, outputSize: 4096, using: &generator)
             BatchNorm<Parameter, Device>(inputSize: [4096])
             Relu<Parameter, Device>()
             Dropout<Parameter, Device>(rate: 0.5)
             
-            Dense<Parameter, Device>(inputSize: 4096, outputSize: classes)
+            Dense<Parameter, Device>(inputSize: 4096, outputSize: classes, using: &generator)
             LogSoftmax<Parameter, Device>()
         }
     }

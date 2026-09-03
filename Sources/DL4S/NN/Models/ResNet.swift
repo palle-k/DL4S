@@ -66,38 +66,48 @@ public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType
     public var classifier: Sequential<Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>>, Sequential<Dense<Element, Device>, LogSoftmax<Element, Device>>>
     
     public init(inputShape: [Int], classes: Int) {
+        var generator = WyHash()
+        self.init(inputShape: inputShape, classes: classes, using: &generator)
+    }
+
+    /// Creates a ResNet18 image classification network.
+    /// - Parameters:
+    ///   - inputShape: Shape of the input without the batch dimension, [channels, height, width]
+    ///   - classes: Number of classes / dimensionality of network output
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputShape: [Int], classes: Int, using generator: inout Generator) {
         let startOut = ConvUtil.outputShape(for: inputShape, kernelCount: 64, kernelWidth: 7, kernelHeight: 7, stride: 2, padding: 3)
         
         start = Sequential {
-            Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: 64, kernelSize: (7, 7), padding: 3, stride: 2)
+            Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: 64, kernelSize: (7, 7), padding: 3, stride: 2, using: &generator)
             BatchNorm<Element, Device>(inputSize: startOut)
             Relu<Element, Device>()
         }
         
         l1 = Sequential {
-            ResidualBlock<Element, Device>(inputShape: startOut, outPlanes: 64, downsample: 1)
-            ResidualBlock<Element, Device>(inputShape: startOut, outPlanes: 64, downsample: 1)
+            ResidualBlock<Element, Device>(inputShape: startOut, outPlanes: 64, downsample: 1, using: &generator)
+            ResidualBlock<Element, Device>(inputShape: startOut, outPlanes: 64, downsample: 1, using: &generator)
         }
         
         l2 = Sequential {
-            ResidualBlock<Element, Device>(inputShape: [64, startOut[1], startOut[2]], outPlanes: 128, downsample: 2)
-            ResidualBlock<Element, Device>(inputShape: [128, startOut[1] / 2, startOut[2] / 2], outPlanes: 128, downsample: 1)
+            ResidualBlock<Element, Device>(inputShape: [64, startOut[1], startOut[2]], outPlanes: 128, downsample: 2, using: &generator)
+            ResidualBlock<Element, Device>(inputShape: [128, startOut[1] / 2, startOut[2] / 2], outPlanes: 128, downsample: 1, using: &generator)
         }
         
         l3 = Sequential {
-            ResidualBlock<Element, Device>(inputShape: [128, startOut[1] / 2, startOut[2] / 2], outPlanes: 256, downsample: 2)
-            ResidualBlock<Element, Device>(inputShape: [256, startOut[1] / 4, startOut[2] / 4], outPlanes: 256, downsample: 1)
+            ResidualBlock<Element, Device>(inputShape: [128, startOut[1] / 2, startOut[2] / 2], outPlanes: 256, downsample: 2, using: &generator)
+            ResidualBlock<Element, Device>(inputShape: [256, startOut[1] / 4, startOut[2] / 4], outPlanes: 256, downsample: 1, using: &generator)
         }
         
         l4 = Sequential {
-            ResidualBlock<Element, Device>(inputShape: [256, startOut[1] / 4, startOut[2] / 4], outPlanes: 512, downsample: 2)
-            ResidualBlock<Element, Device>(inputShape: [512, startOut[1] / 8, startOut[2] / 8], outPlanes: 512, downsample: 1)
+            ResidualBlock<Element, Device>(inputShape: [256, startOut[1] / 4, startOut[2] / 4], outPlanes: 512, downsample: 2, using: &generator)
+            ResidualBlock<Element, Device>(inputShape: [512, startOut[1] / 8, startOut[2] / 8], outPlanes: 512, downsample: 1, using: &generator)
         }
         
         classifier = Sequential {
             AdaptiveAvgPool2D<Element, Device>(targetSize: 1)
             Flatten<Element, Device>()
-            Dense<Element, Device>(inputSize: 512, outputSize: classes)
+            Dense<Element, Device>(inputSize: 512, outputSize: classes, using: &generator)
             LogSoftmax<Element, Device>()
         }
     }

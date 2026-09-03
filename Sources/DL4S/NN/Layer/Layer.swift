@@ -27,7 +27,7 @@ import Foundation
 
 /// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
 /// The layer may have parameters, which influence, how the outputs are generated.
-public protocol LayerType {
+public protocol LayerType<Inputs, Outputs, Parameter, Device> {
     /// Inputs of the layer
     associatedtype Inputs
     
@@ -55,44 +55,3 @@ public protocol LayerType {
     func callAsFunction(_ inputs: Inputs) -> Outputs
 }
 
-
-/// Type erased layer
-public struct AnyLayer<Inputs, Outputs, Parameter: NumericType, Device: DeviceType>: LayerType {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>>] {
-        parameters.indices.map {
-            \Self.parameters[$0]
-        }
-    }
-    
-    public var parameters: [Tensor<Parameter, Device>] {
-        get { getParameters() }
-        set { setParameters(newValue) }
-    }
-    
-    private var getParameters: () -> [Tensor<Parameter, Device>]
-    private var setParameters: ([Tensor<Parameter, Device>]) -> ()
-    private var forward: (Inputs) -> Outputs
-    
-    /// Creates a layer by type-erasing the given layer
-    /// - Parameter wrappedLayer: Layer to wrap.
-    public init<L: LayerType>(_ wrappedLayer: L) where L.Inputs == Inputs, L.Outputs == Outputs, L.Parameter == Parameter, L.Device == Device {
-        var wrappedLayer = wrappedLayer
-        let paths = wrappedLayer.parameterPaths
-        
-        getParameters = {
-            wrappedLayer.parameters
-        }
-        setParameters = {
-            zip(paths, $0).forEach {
-                wrappedLayer[keyPath: $0] = $1
-            }
-        }
-        forward = {
-            wrappedLayer.callAsFunction($0)
-        }
-    }
-    
-    public func callAsFunction(_ inputs: Inputs) -> Outputs {
-        forward(inputs)
-    }
-}

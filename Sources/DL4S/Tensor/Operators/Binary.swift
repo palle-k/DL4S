@@ -185,11 +185,8 @@ public extension Tensor {
                                 tmpReducedShape.remove(at: a)
                             }
                             
-                            if let acc = acc {
-                                return acc + resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
-                            } else {
-                                return resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
-                            }
+                            let gradient = resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            return acc.map { $0 + gradient } ?? gradient
                             
                         }
                     }, { resultGradient, acc in
@@ -204,11 +201,8 @@ public extension Tensor {
                                 tmpReducedShape.remove(at: a)
                             }
                             
-                            if let acc = acc {
-                                return acc - resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
-                            } else {
-                                return -resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
-                            }
+                            let gradient = resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            return acc.map { $0 - gradient } ?? -gradient
                         }
                     }
                 ]
@@ -247,7 +241,7 @@ public extension Tensor {
                 tag: "÷",
                 sources: [lhs, rhs],
                 backpropagateAccumulate: [
-                    { resultGradient, acc -> Self in
+                    { resultGradient, acc in
                         OperationGroup.capture(named: "∇₁÷") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
@@ -260,14 +254,11 @@ public extension Tensor {
                             }
                             
                             let d = resultGradient / rhs
-                            if let acc = acc {
-                                return acc + d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
-                            } else {
-                                return d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
-                            }
+                            let gradient = d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
+                            return acc.map { $0 + gradient } ?? gradient
                             
                         }
-                    }, { resultGradient, acc -> Self in
+                    }, { resultGradient, acc in
                         OperationGroup.capture(named: "∇₂÷") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
@@ -281,11 +272,8 @@ public extension Tensor {
                             
                             let m = resultGradient * lhs
                             let d = m / (rhs * rhs)
-                            if let acc = acc {
-                                return acc - d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
-                            } else {
-                                return -d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
-                            }
+                            let gradient = d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
+                            return acc.map { $0 - gradient } ?? -gradient
                         }
                     }
                 ]

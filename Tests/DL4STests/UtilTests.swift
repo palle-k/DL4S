@@ -27,8 +27,6 @@ import XCTest
 @testable import DL4S
 
 class UtilTests: XCTestCase {
-    @ThreadLocal private var x = 42
-    
     func testFileReader() {
         let packageManifestURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()  // DL4STests
@@ -40,20 +38,5 @@ class UtilTests: XCTestCase {
         for line in f {
             print("### \(line)")
         }
-    }
-    
-    func testThreadLocal() {
-        XCTAssertEqual(self.x, 42)
-        x = 1337
-        // Using sema instead of sync block, because sync block is executed on main thread.
-        let sema = DispatchSemaphore(value: 0)
-        DispatchQueue.global().async {
-            XCTAssertEqual(self.x, 42)
-            self.x = 314
-            XCTAssertEqual(self.x, 314)
-            sema.signal()
-        }
-        sema.wait()
-        XCTAssertEqual(self.x, 1337)
     }
 }

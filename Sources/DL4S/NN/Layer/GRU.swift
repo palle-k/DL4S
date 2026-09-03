@@ -70,14 +70,28 @@ public struct GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     ///   - hiddenSize: Number of elements at each timestep in the output
     ///   - direction: Direction, in which the RNN consumes the input sequence.
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {
+        var generator = WyHash()
+        self.init(inputSize: inputSize, hiddenSize: hiddenSize, direction: direction, using: &generator)
+    }
+    
+    /// Creates a Gated Recurrent Unit layer.
+    ///
+    /// The RNN expects inputs to have a shape of [sequence length, batch size, input size].
+    ///
+    /// - Parameters:
+    ///   - inputSize: Number of elements at each timestep of the input
+    ///   - hiddenSize: Number of elements at each timestep in the output
+    ///   - direction: Direction, in which the RNN consumes the input sequence.
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward, using generator: inout Generator) {
         self.direction = direction
         
-        Wz = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Wr = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Wh = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Uz = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Ur = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uh = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Wz = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        Wr = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        Wh = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        Uz = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
+        Ur = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
+        Uh = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
         bz = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         br = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         bh = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)

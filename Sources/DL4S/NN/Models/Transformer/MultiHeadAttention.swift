@@ -66,16 +66,29 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     ///   - valueDim: Intermediate last dimension of values
     ///   - dropout: Dropout rate
     public init(heads: Int, hiddenDim: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1) {
+        var generator = WyHash()
+        self.init(heads: heads, hiddenDim: hiddenDim, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
+    }
+    
+    /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// - Parameters:
+    ///   - heads: Number of attention heads
+    ///   - hiddenDim: Last dimension of keys, queries and values
+    ///   - keyDim: Last dimesion of keys
+    ///   - valueDim: Intermediate last dimension of values
+    ///   - dropout: Dropout rate
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(heads: Int, hiddenDim: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1, using generator: inout Generator) {
         self.heads = heads
         self.keyDim = keyDim
         self.valueDim = valueDim
         self.hiddenDim = hiddenDim
         
         attn = ScaledDotProductAttention(temperature: Element(keyDim).sqrt())
-        qDense = Tensor(xavierNormalWithShape: hiddenDim, keyDim * heads, requiresGradient: true)
-        kDense = Tensor(xavierNormalWithShape: hiddenDim, keyDim * heads, requiresGradient: true)
-        vDense = Tensor(xavierNormalWithShape: hiddenDim, valueDim * heads, requiresGradient: true)
-        fc = Tensor(xavierNormalWithShape: valueDim * heads, hiddenDim, requiresGradient: true)
+        qDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
+        kDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
+        vDense = Tensor(xavierNormalWithShape: [hiddenDim, valueDim * heads], requiresGradient: true, using: &generator)
+        fc = Tensor(xavierNormalWithShape: [valueDim * heads, hiddenDim], requiresGradient: true, using: &generator)
         self.dropout = Dropout(rate: dropout)
         norm = LayerNorm(inputSize: [hiddenDim])
         

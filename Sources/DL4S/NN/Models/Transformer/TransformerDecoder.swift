@@ -41,8 +41,15 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     
     /// Creates aransformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     public init(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float) {
+        var generator = WyHash()
+        self.init(layerCount: layerCount, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: modelDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
+    }
+
+    /// Creates aransformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// - Parameter generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float, using generator: inout Generator) {
         decoderLayers = (0 ..< layerCount).map { _ in
-            TransformerDecoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
+            TransformerDecoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
         }
     }
     
