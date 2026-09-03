@@ -27,13 +27,13 @@ import Foundation
 
 /// Residual block with two convolution and batch normalization layers as well as an optional downsampling block.
 public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: LayerType {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         return Array([
-            conv1.parameterPaths.map((\Self.conv1).appending(path:)),
-            conv2.parameterPaths.map((\Self.conv2).appending(path:)),
-            bn1.parameterPaths.map((\Self.bn1).appending(path:)),
-            bn2.parameterPaths.map((\Self.bn2).appending(path:)),
-            downsample?.parameterPaths.map((\Self.downsample.forceUnwrapped).appending(path:)) ?? []
+            parameterPaths(of: \.conv1),
+            parameterPaths(of: \.conv2),
+            parameterPaths(of: \.bn1),
+            parameterPaths(of: \.bn2),
+            downsample == nil ? [] : parameterPaths(of: \.downsample.forceUnwrapped)
         ].joined())
     }
     

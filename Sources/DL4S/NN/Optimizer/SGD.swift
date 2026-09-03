@@ -31,11 +31,7 @@ public struct SGD<Layer: LayerType>: Optimizer {
     
     public private(set) var model: Layer
     public var learningRate: ParamTensor
-    
-    // WritableKeyPath is not Sendable, so we need a computed property.
-    private var paths: [WritableKeyPath<Layer, ParamTensor>] {
-        model.parameterPaths
-    }
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
     
     /// 'Vanilla' stochastic gradient descent optimizer
     /// - Parameters:
@@ -44,10 +40,11 @@ public struct SGD<Layer: LayerType>: Optimizer {
     public init(model: Layer, learningRate: ParamTensor) {
         self.model = model
         self.learningRate = learningRate
+        // paths are only queried once, as creating keypaths is a major performance bottleneck
+        self.paths = model.parameterPaths
     }
     
     public mutating func update(along gradients: [ParamTensor]) {
-        let paths = self.paths
         for (keyPath, grad) in zip(paths, gradients) {
             model[keyPath: keyPath] -= learningRate * grad
             model[keyPath: keyPath].discardContext()
@@ -61,6 +58,8 @@ extension SGD: Codable where Layer: Codable {
         
         model = try container.decode(Layer.self, forKey: .model)
         learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
+        
+        paths = model.parameterPaths
     }
     
     public func encode(to encoder: Encoder) throws {

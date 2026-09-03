@@ -27,7 +27,7 @@ import Foundation
 
 /// A 2D convolutional layer
 public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
         \.filters,
         \.bias
     ]}
@@ -100,7 +100,7 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
 
 /// A 2D transposed (fractionally strided) convolutional layer
 public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
         \.filters,
         \.bias
     ]}

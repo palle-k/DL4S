@@ -31,7 +31,7 @@ public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable 
     public typealias Outputs = (State, () -> State)
     public typealias State = (hiddenState: Tensor<Element, Device>, cellState: Tensor<Element, Device>)
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
         \.Wi, \.Wo, \.Wf, \.Wc,
         \.Ui, \.Uo, \.Uf, \.Uc,
         \.bi, \.bo, \.bf, \.bc

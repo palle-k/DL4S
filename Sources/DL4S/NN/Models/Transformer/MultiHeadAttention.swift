@@ -53,9 +53,9 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         norm.parameters
     ].joined())}
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {Array([
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {Array([
         [\.qDense, \.kDense, \.vDense, \.fc],
-        norm.parameterPaths.map((\Self.norm).appending(path:))
+        parameterPaths(of: \.norm)
     ].joined())}
     
     /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).

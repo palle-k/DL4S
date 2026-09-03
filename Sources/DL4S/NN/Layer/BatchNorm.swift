@@ -27,7 +27,7 @@ import Foundation
 
 /// A layer that normalizes its inputs along the batch dimension
 public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         [\.shift, \.scale]
     }
     public var parameters: [Tensor<Element, Device>] {

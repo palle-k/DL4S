@@ -151,7 +151,7 @@ public struct ProgressBar<UserInfo> {
 
 
 public struct Progress<Element>: Sequence {
-    private struct ProgressIterator<Element>: IteratorProtocol {
+    private struct ProgressIterator: IteratorProtocol {
         var baseIterator: AnyIterator<Element>
         let totalUnitCount: Int
         var currentCount: Int
@@ -200,7 +200,7 @@ public struct Progress<Element>: Sequence {
         self.unit = unit
     }
     
-    public __consuming func makeIterator() -> AnyIterator<Element> {
+    public consuming func makeIterator() -> AnyIterator<Element> {
         let baseIterator = base.makeIterator()
         let progressIterator = ProgressIterator(
             baseIterator: baseIterator,
@@ -315,7 +315,7 @@ struct File: Sequence {
         self.url = url
     }
     
-    __consuming func makeIterator() -> LineIterator {
+    consuming func makeIterator() -> LineIterator {
         return LineIterator(handle: try? FileHandle(forReadingFrom: self.url))
     }
 }

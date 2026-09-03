@@ -52,6 +52,7 @@ Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
 ## Conventions
 - Every file starts with the MIT license header (`// <Filename>.swift / DL4S / Created by ... / Copyright ...`). New files get the same header.
 - Public APIs carry `///` doc comments with `- Parameters:` / `- Returns:`. The `docs/` directory is Jazzy output; do not hand-edit it.
+- The package builds in Swift 6 language mode (`swiftLanguageModes: [.v6]` in `Package.swift`), so concurrency diagnostics are errors.
 - Hot generic functions use `@inline(__always)` and `@_specialize(where Element == Float, Device == CPU)`.
 - Engine primitives use terse names (`vAdd`, `vsMul`, `gemm`, `img2col`); public tensor methods are spelled out (`matrixMultiplied(with:)`, `permuted(to:)`, `reduceSum(along:)`).
 

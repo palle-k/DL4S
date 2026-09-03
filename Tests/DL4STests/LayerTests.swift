@@ -24,6 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
+import Synchronization
 import DL4S
 
 final class LayerTests: XCTestCase {
@@ -54,5 +55,39 @@ final class LayerTests: XCTestCase {
         XCTAssertEqual(zeroed(input), Tensor(repeating: 0, shape: [2, 3]))
         XCTAssertEqual(layer(input), expected)
         XCTAssertEqual(dense(input), expected)
+    }
+    
+    /// Parameter key paths of a composite layer are appended key paths. They must cross a `@Sendable` boundary
+    /// and must still write to the right parameter.
+    func testAppendedParameterPathsAreSendable() {
+        let model = Sequential {
+            Dense<Float, CPU>(inputSize: 3, outputSize: 2)
+            Tanh<Float, CPU>()
+            Dense<Float, CPU>(inputSize: 2, outputSize: 1)
+        }
+        let paths = model.parameterPaths
+        XCTAssertEqual(paths.count, 4)
+        
+        let zeroed: @Sendable () -> [Tensor<Float, CPU>] = {
+            var copy = model
+            for path in paths {
+                copy[keyPath: path] = Tensor(repeating: 0, shape: copy[keyPath: path].shape)
+            }
+            return copy.parameters
+        }
+        
+        let group = DispatchGroup()
+        group.enter()
+        let result = Mutex<[Tensor<Float, CPU>]>([])
+        Thread {
+            result.withLock { $0 = zeroed() }
+            group.leave()
+        }.start()
+        group.wait()
+        
+        let parameters = result.withLock { $0 }
+        XCTAssertEqual(parameters.map(\.shape), model.parameters.map(\.shape))
+        XCTAssertTrue(parameters.allSatisfy { $0.elements.allSatisfy { $0 == 0 } })
+        XCTAssertFalse(model.parameters[0].elements.allSatisfy { $0 == 0 })
     }
 }

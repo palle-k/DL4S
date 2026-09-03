@@ -30,7 +30,7 @@ import Foundation
 /// Every leading dimension of the input is treated as an independent sample. With `inputSize: [hidden]`,
 /// a `[batch, sequence, hidden]` input is normalized per sequence element.
 public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<LayerNorm<Element, Device>, Tensor<Element, Device>>] {
+    public var parameterPaths: [WritableKeyPath<LayerNorm<Element, Device>, Tensor<Element, Device>> & Sendable] {
         [\.shift, \.scale]
     }
     public var parameters: [Tensor<Element, Device>] {

@@ -29,7 +29,7 @@ public struct GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (Tensor<Element, Device>, () -> Tensor<Element, Device>)
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
         \.Wz, \.Wr, \.Wh,
         \.Uz, \.Ur, \.Uh,
         \.bz, \.br, \.bh

@@ -31,11 +31,11 @@ import Foundation
 ///
 /// https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
 public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         Array([
-            featureNet.parameterPaths.map((\Self.featureNet).appending(path:)),
-            avgPool.parameterPaths.map((\Self.avgPool).appending(path:)),
-            classifier.parameterPaths.map((\Self.classifier).appending(path:)),
+            parameterPaths(of: \.featureNet),
+            parameterPaths(of: \.avgPool),
+            parameterPaths(of: \.classifier),
         ].joined())
     }
     

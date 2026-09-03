@@ -39,11 +39,11 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
         Array([dense1.parameters, dense2.parameters, norm.parameters].joined())
     }
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         Array([
-            dense1.parameterPaths.map((\Self.dense1).appending(path:)),
-            dense2.parameterPaths.map((\Self.dense2).appending(path:)),
-            norm.parameterPaths.map((\Self.norm).appending(path:))
+            parameterPaths(of: \.dense1),
+            parameterPaths(of: \.dense2),
+            parameterPaths(of: \.norm)
         ].joined())
     }
     

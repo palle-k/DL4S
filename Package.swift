@@ -23,8 +23,7 @@ let package = Package(
             dependencies: []),
         .target(
             name: "DL4S",
-            dependencies: ["MKL"],
-            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+            dependencies: ["MKL"]
         ),
         .testTarget(
             name: "DL4STests",
@@ -34,9 +33,8 @@ let package = Package(
                 .copy("t10k-labels.idx1-ubyte"),
                 .copy("train-images.idx3-ubyte"),
                 .copy("train-labels.idx1-ubyte")
-            ],
-            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+            ]
         )
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

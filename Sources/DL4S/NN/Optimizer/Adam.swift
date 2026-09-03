@@ -54,10 +54,7 @@ public struct Adam<Layer: LayerType>: Optimizer {
     private var secondMoments: [ParamTensor]
     private var secondMomentMax: [ParamTensor]?
     
-    // WritableKeyPath is not Sendable, so we need a computed property.
-    private var paths: [WritableKeyPath<Layer, ParamTensor>] {
-        model.parameterPaths
-    }
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
 
     /// Adam optimizer (Adaptive moment estimation)
     ///
@@ -88,6 +85,7 @@ public struct Adam<Layer: LayerType>: Optimizer {
         self.secondMoments = model.parameters.map {
             Tensor(repeating: 0, shape: $0.shape)
         }
+        self.paths = model.parameterPaths
         
         if useAMSGrad {
             self.secondMomentMax = model.parameters.map {
@@ -110,7 +108,6 @@ public struct Adam<Layer: LayerType>: Optimizer {
     }
     
     public mutating func update(along gradients: [ParamTensor]) {
-        let paths = self.paths
         for i in paths.indices {
             let path = paths[i]
             let grad = gradients[i].detached()
@@ -163,6 +160,8 @@ extension Adam: Codable where Layer: Codable {
             useAMSGrad = false
             secondMomentMax = nil
         }
+        
+        paths = model.parameterPaths
     }
     
     public func encode(to encoder: Encoder) throws {

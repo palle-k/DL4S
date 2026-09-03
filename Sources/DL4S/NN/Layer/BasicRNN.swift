@@ -31,7 +31,7 @@ public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Coda
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (Tensor<Element, Device>, () -> Tensor<Element, Device>)
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
         \.W, \.U, \.b
     ]}
     

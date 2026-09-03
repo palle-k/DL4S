@@ -31,13 +31,9 @@ public struct Bidirectional<RNNLayer: RNN>: LayerType {
     public typealias Inputs = RNNLayer.Inputs
     public typealias Outputs = (forward: RNNLayer.Outputs, backward: RNNLayer.Outputs)
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<RNNLayer.Parameter, RNNLayer.Device>>] {
-        let forwardPaths = forwardLayer.parameterPaths.map {
-            (\Self.forwardLayer).appending(path: $0)
-        }
-        let backwardPaths = backwardLayer.parameterPaths.map {
-            (\Self.backwardLayer).appending(path: $0)
-        }
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<RNNLayer.Parameter, RNNLayer.Device>> & Sendable] {
+        let forwardPaths = parameterPaths(of: \.forwardLayer)
+        let backwardPaths = parameterPaths(of: \.backwardLayer)
         return forwardPaths + backwardPaths
     }
     

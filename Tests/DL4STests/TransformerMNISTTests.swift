@@ -41,11 +41,11 @@ struct RowTransformerClassifier: LayerType, Codable {
         Array([project.parameters, encoder.parameters, classify.parameters].joined())
     }
 
-    var parameterPaths: [WritableKeyPath<Self, Tensor<Float, CPU>>] {
+    var parameterPaths: [WritableKeyPath<Self, Tensor<Float, CPU>> & Sendable] {
         Array([
-            project.parameterPaths.map((\Self.project).appending(path:)),
-            encoder.parameterPaths.map((\Self.encoder).appending(path:)),
-            classify.parameterPaths.map((\Self.classify).appending(path:))
+            parameterPaths(of: \.project),
+            parameterPaths(of: \.encoder),
+            parameterPaths(of: \.classify)
         ].joined())
     }
 
