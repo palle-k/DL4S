@@ -193,11 +193,11 @@ public struct Lambda<Inputs, Outputs, Element: NumericType, Device: DeviceType>:
     public var parameters: [Tensor<Element, Device>] {[]}
     
     /// Transformation performed by the layer
-    public var transform: (Inputs) -> Outputs
+    public var transform: @Sendable (Inputs) -> Outputs
     
     /// Creates a layer that performs the given transformation on its inputs
     /// - Parameter transform: Transformation to perform
-    public init(_ transform: @escaping (Inputs) -> Outputs) {
+    public init(_ transform: @escaping @Sendable (Inputs) -> Outputs) {
         self.transform = transform
     }
     

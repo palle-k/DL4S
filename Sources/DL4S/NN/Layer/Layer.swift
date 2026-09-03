@@ -27,7 +27,7 @@ import Foundation
 
 /// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
 /// The layer may have parameters, which influence, how the outputs are generated.
-public protocol LayerType<Inputs, Outputs, Parameter, Device> {
+public protocol LayerType<Inputs, Outputs, Parameter, Device>: Sendable {
     /// Inputs of the layer
     associatedtype Inputs
     

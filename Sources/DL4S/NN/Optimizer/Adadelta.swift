@@ -47,7 +47,10 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
     
     private var isInitialized = false
     
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    // WritableKeyPath is not Sendable, so we need a computed property.
+    private var paths: [WritableKeyPath<Layer, ParamTensor>] {
+        model.parameterPaths
+    }
 
     /// Adadelta Optimizer
     ///
@@ -69,7 +72,6 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
         self.updateSums = model.parameters.map {
             Tensor(repeating: 0, shape: $0.shape)
         }
-        self.paths = model.parameterPaths
     }
     
     /// Resets the state of the optimizer
@@ -84,6 +86,7 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
     }
     
     public mutating func update(along gradients: [ParamTensor]) {
+        let paths = self.paths
         for i in paths.indices {
             let path = paths[i]
             let grad = gradients[i].detached()
@@ -127,7 +130,6 @@ extension Adadelta: Codable where Layer: Codable {
         self.gradientSums = try container.decode([ParamTensor].self, forKey: .gradientSums)
         self.updateSums = try container.decode([ParamTensor].self, forKey: .updateSums)
         self.isInitialized = try container.decode(Bool.self, forKey: .isInitialized)
-        self.paths = self.model.parameterPaths
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -152,3 +154,4 @@ extension Adadelta: Codable where Layer: Codable {
         case isInitialized
     }
 }
+

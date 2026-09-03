@@ -27,7 +27,10 @@ import Foundation
 
 //MARK: Device
 /// A device, on which tensor operations can be executed.
-public protocol DeviceType {
+///
+/// A device is a phantom type: values of it are never stored. It is `Sendable` so that its metatype can be
+/// used in `@Sendable` backpropagation closures.
+public protocol DeviceType: Sendable {
     /// Memory manager for a device
     associatedtype Memory: MemoryOperatorsType where Memory.Device == Self
     /// Tensor operation engine for a device

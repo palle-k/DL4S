@@ -39,9 +39,11 @@ enum UniqueID {
     }
 }
 
-final class TensorHandle<Element, Device: DeviceType> {
-    var values: MutableBuffer<Element, Device>
-    var parent: TensorHandle<Element, Device>?
+/// Owns the storage of a tensor and frees it when the last tensor that uses it is released.
+final class TensorHandle<Element, Device: DeviceType>: @unchecked Sendable {
+    // `@unchecked Sendable`: True `Sendable` conformance is achieved through CoW semantics on Tensor that prevents concurrent access.
+    let values: MutableBuffer<Element, Device>
+    let parent: TensorHandle<Element, Device>?
     
     init(values: MutableBuffer<Element, Device>, parent: TensorHandle<Element, Device>? = nil) {
         self.values = values
@@ -368,3 +370,5 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         Tensor(handle: handle, shape: shape, context: nil)
     }
 }
+
+extension Tensor: Sendable {}

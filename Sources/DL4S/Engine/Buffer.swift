@@ -238,3 +238,17 @@ extension ShapedBuffer: CustomDebugStringConvertible {
         """
     }
 }
+
+// Buffers describe raw memory and can therefore not be made Sendable.
+// Tensor CoW semantics ensure Sendable.
+@available(*, unavailable)
+extension Buffer: Sendable {}
+
+@available(*, unavailable)
+extension MutableBuffer: Sendable {}
+
+@available(*, unavailable)
+extension ShapedBuffer: Sendable {}
+
+@available(*, unavailable)
+extension MutableShapedBuffer: Sendable {}

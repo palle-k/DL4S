@@ -25,7 +25,7 @@
 
 import Foundation
 
-public protocol LearningRateScheduler {
+public protocol LearningRateScheduler: Sendable {
     func learningRate<Element: NumericType>(atStep step: Int) -> Element
 }
 

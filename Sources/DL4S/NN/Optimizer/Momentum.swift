@@ -37,8 +37,12 @@ public struct Momentum<Layer: LayerType>: Optimizer {
     
     /// Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
     public var momentum: ParamTensor
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
     
+    // WritableKeyPath is not Sendable, so we need a computed property.
+    private var paths: [WritableKeyPath<Layer, ParamTensor>] {
+        model.parameterPaths
+    }
+
     /// Gradient descent optimizer with momentum
     /// - Parameters:
     ///   - model: Model to optimize
@@ -52,7 +56,6 @@ public struct Momentum<Layer: LayerType>: Optimizer {
         self.velocities = model.parameters.map {
             Tensor(repeating: 0, shape: $0.shape)
         }
-        self.paths = model.parameterPaths
     }
     
     /// Resets the state of the optimizer
@@ -63,6 +66,7 @@ public struct Momentum<Layer: LayerType>: Optimizer {
     }
     
     public mutating func update(along gradients: [ParamTensor]) {
+        let paths = self.paths
         for i in paths.indices {
             let keyPath = paths[i]
             velocities[i] = velocities[i] * momentum + learningRate * gradients[i]
@@ -80,8 +84,6 @@ extension Momentum: Codable where Layer: Codable {
         momentum = try container.decode(ParamTensor.self, forKey: .momentum)
         learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
         velocities = try container.decode([ParamTensor].self, forKey: .velocities)
-        
-        paths = model.parameterPaths
     }
     
     public func encode(to encoder: Encoder) throws {

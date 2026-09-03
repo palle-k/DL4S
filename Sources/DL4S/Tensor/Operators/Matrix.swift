@@ -187,7 +187,7 @@ public extension Tensor {
     }
     
     /// Backpropagation closures for the product of `lhs` and `rhs`, one per operand.
-    private static func matMulBackwards(lhs: Self, rhs: Self, transposeLhs: Bool, transposeRhs: Bool) -> [(Self, consuming Self?) -> Self] {
+    private static func matMulBackwards(lhs: Self, rhs: Self, transposeLhs: Bool, transposeRhs: Bool) -> [@Sendable (Self, consuming Self?) -> Self] {
         [
             { resultGradient, acc in
                 if transposeLhs {
