@@ -13,7 +13,8 @@ swift build                                          # build
 swift test                                           # run all tests
 swift test --filter DL4STests.GradientTests          # run one test class
 swift test --filter DL4STests.GradientTests/testMul  # run one test method
-swift test --generate-linuxmain                      # regenerate XCTestManifests.swift after adding tests
+swift test --filter Concurrency                      # run the thread-safety stress suite
+swift test --sanitize=thread --filter Concurrency    # run it under the thread sanitizer
 ```
 
 There is no linter or formatter configuration in this repo. CI is a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `swift test` in debug and release configuration (`-c release -Xswiftc -enable-testing`) on macOS and Ubuntu.
@@ -21,6 +22,8 @@ There is no linter or formatter configuration in this repo. CI is a GitHub Actio
 On Linux, acceleration comes from Intel MKL/IPP instead of Accelerate. Build with `swift build -c release -Xswiftc -DMKL_ENABLE -Xlinker -L${MKLROOT}/lib/intel64 -Xlinker -L${IPPROOT}/lib/intel64` (see README for setup). Without MKL or Accelerate, a slow generic fallback is used.
 
 Tests are XCTest classes in `Tests/DL4STests`. The MNIST idx files in that directory are bundled as test resources. Tests that train real models (`MNISTTests`, `TransformerTests`, `ModelTests`) or measure performance are slow and are skipped unless the `DL4S_LONG_TESTS` environment variable is set, so CI does not run them. Run them locally with `DL4S_LONG_TESTS=1 swift test`.
+
+`ConcurrencyTests` runs inference, dropout, and weight initialization from several raw threads at the same time. It is the acceptance test for the thread-safety work. Until the fixes land, the tests run as expected failures on Darwin and are skipped on Linux unless `DL4S_CONCURRENCY_TESTS=1` is set. Run the suite under the thread sanitizer to see the data races as reports.
 
 ## Architecture
 
@@ -67,4 +70,5 @@ Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
 - All communication, comments, documentation, etc. must use ASD-STE100 Simple Technical English.
 - Documentation must follow the Google Developer Documentation style guide. This includes spelling, terminology, choice of words, inclusive language, phrasing and  sentence construction.
 - Avoid em-dashes and en-dashes in sentence constructions. Write concisely. 
-- Phrases to avoid: "load-bearing", "gated", "the X is real", "X is doing a lot of work", "it's not X, it's Y", "genuinely"
+- Phrases to avoid: "load-bearing", "gated", "the X is real", "X is doing a lot of work", "it's not X, it's Y", "genuinely", "{Ticket}/{fix} lands" / "{fix} has landed"
+- Do not include ticket IDs or phases in any code, including unit tests.
