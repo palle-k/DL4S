@@ -154,7 +154,30 @@ class GradientTests: XCTestCase {
         
         let result = model(input).0.hiddenState
         let inputGrad = result.gradients(of: [input], retainBackwardsGraph: true)[0]
-        
+
         print(inputGrad.graph())
+    }
+
+    func testRepeatedSubscriptReadAccumulatesGradient() {
+        let x = Tensor<Float, CPU>([[1, 2], [3, 4]], requiresGradient: true)
+        let y = (x[0] * 2 + x[0] * 3 + x[1 ..< 2] * 4 + x[1 ..< 2] * 5).reduceSum()
+
+        XCTAssertEqual(y.gradients(of: [x])[0], Tensor([[5, 5], [9, 9]]))
+    }
+
+    /// Broadcasting reads the same weight slice once per batch element, so the weight gradient must sum over the batch.
+    func testBroadcastMatMulWeightGradientSumsOverBatch() {
+        let batchSize = 4
+        let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: [batchSize, 3, 5])
+        let w = Tensor<Float, CPU>(uniformlyDistributedWithShape: [5, 2], requiresGradient: true)
+        let scale = Tensor<Float, CPU>(uniformlyDistributedWithShape: [batchSize, 3, 2])
+
+        let broadcastGrad = (x.broadcastMatrixMultiplied(with: w) * scale).reduceSum().gradients(of: [w])[0]
+        let explicitGrad = (0 ..< batchSize)
+            .map { (x[$0].matrixMultiplied(with: w) * scale[$0]).reduceSum() }
+            .reduce(Tensor(0), +)
+            .gradients(of: [w])[0]
+
+        XCTAssertLessThan(((broadcastGrad - explicitGrad) * (broadcastGrad - explicitGrad)).reduceSum().item, 1e-8)
     }
 }

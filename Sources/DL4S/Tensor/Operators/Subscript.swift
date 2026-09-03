@@ -59,7 +59,9 @@ public extension Tensor {
                     sources: [self],
                     backpropagateAccumulate: [{ resultGradient, acc in
                         var result = acc ?? Self(repeating: 0, shape: self.shape)
-                        result[index] = resultGradient
+                        // The slice view must be released before the write, or the write copies the whole accumulator.
+                        let slice = result[index] + resultGradient
+                        result[index] = slice
                         return result
                     }]
                 ) : nil
@@ -142,7 +144,9 @@ public extension Tensor {
                     sources: [self],
                     backpropagateAccumulate: [{ resultGradient, acc in
                         var result = acc ?? Self(repeating: 0, shape: self.shape)
-                        result[index] = resultGradient
+                        // The slice view must be released before the write, or the write copies the whole accumulator.
+                        let slice = result[index] + resultGradient
+                        result[index] = slice
                         return result
                     }]
                 ) : nil
