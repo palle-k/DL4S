@@ -6,20 +6,14 @@ on:
   workflow_dispatch:
 
 jobs:
+  # macOS only: on Linux, TSan does not see Synchronization.Mutex and reports false races.
+  # See the tsan job in ci.yml.
   tsan-full:
-    name: full test suite under thread sanitizer (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
+    name: full test suite under thread sanitizer (macos-latest)
+    runs-on: macos-latest
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - uses: swift-actions/setup-swift@v2
-        if: runner.os == 'Linux'
-        with:
-          swift-version: "6.1"
       - name: Show Swift version
         run: swift --version
       - name: Run all tests under the thread sanitizer

@@ -31,7 +31,7 @@ public struct SGD<Layer: LayerType>: Optimizer {
     
     public private(set) var model: Layer
     public var learningRate: ParamTensor
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
     
     /// 'Vanilla' stochastic gradient descent optimizer
     /// - Parameters:

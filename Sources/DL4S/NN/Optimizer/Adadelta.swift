@@ -47,7 +47,7 @@ public struct Adadelta<Layer: LayerType>: Optimizer {
     
     private var isInitialized = false
     
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
 
     /// Adadelta Optimizer
     ///

@@ -26,7 +26,7 @@
 import Foundation
 
 /// Optimizer that updates a neural network along its gradients
-public protocol Optimizer {
+public protocol Optimizer: Sendable {
     /// Type of the layer that is optimized
     associatedtype Layer: LayerType
     

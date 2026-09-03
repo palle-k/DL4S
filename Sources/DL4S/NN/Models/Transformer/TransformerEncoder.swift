@@ -33,9 +33,9 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
         encoderLayers.flatMap {$0.parameters},
     ].joined())}
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {Array([
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {Array([
         encoderLayers.enumerated().flatMap { (idx, layer) in
-            layer.parameterPaths.map((\Self.encoderLayers[idx]).appending(path:))
+            parameterPaths(of: \.encoderLayers[idx])
         }
     ].joined())}
     

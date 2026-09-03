@@ -26,7 +26,7 @@
 import Foundation
 
 
-public enum RNNDirection: String, Codable {
+public enum RNNDirection: String, Codable, Sendable {
     case forward
     case backward
 }

@@ -27,15 +27,15 @@
 import Foundation
 
 @usableFromInline
-struct TensorContext<Element: NumericType, Device: DeviceType> {
+struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
     /// Describes how the gradient of the result flows back to the sources of an operation.
     @usableFromInline
-    enum BackpropagateFunction {
+    enum BackpropagateFunction: Sendable {
         /// One closure per source.
         ///
         /// Each closure receives the gradient of the result and the accumulated gradient of its source.
         /// It adds the gradient of the result with respect to its source to the accumulator and returns the sum.
-        case perSource([(Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>])
+        case perSource([@Sendable (Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>])
         
         /// One closure for all sources.
         ///
@@ -43,17 +43,17 @@ struct TensorContext<Element: NumericType, Device: DeviceType> {
         /// It returns the accumulated gradient of every source in source order.
         /// Operations use this form when one kernel produces the gradients of all sources at once,
         /// so the kernel runs once per backward pass and no state needs to be shared between closures.
-        case allSources((Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>])
+        case allSources(@Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>])
     }
     
     var tag: String?
     var sources: [Tensor<Element, Device>]
     var backpropagate: BackpropagateFunction
     #if DEBUG
-    var operationStack = OperationGroup.operationStack
+    let operationStack = OperationGroup.operationStack
     #endif
     
-    init(tag: String?, sources: [Tensor<Element, Device>], backpropagate: [(Tensor<Element, Device>) -> Tensor<Element, Device>]) {
+    init(tag: String?, sources: [Tensor<Element, Device>], backpropagate: [@Sendable (Tensor<Element, Device>) -> Tensor<Element, Device>]) {
         self.init(tag: tag, sources: sources, backpropagateAccumulate: backpropagate.map { function in
             { resultGradient, accumulator in
                 let gradient = function(resultGradient)
@@ -62,7 +62,7 @@ struct TensorContext<Element: NumericType, Device: DeviceType> {
         })
     }
     
-    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAccumulate: [(Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>]) {
+    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAccumulate: [@Sendable (Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>]) {
         self.tag = tag
         self.sources = sources
         self.backpropagate = .perSource(backpropagateAccumulate)
@@ -74,7 +74,7 @@ struct TensorContext<Element: NumericType, Device: DeviceType> {
     ///   - tag: Name of the operation for graph output.
     ///   - sources: Tensors that the operation reads.
     ///   - backpropagateAll: Closure that receives the gradient of the result and owns one accumulator per source, and returns the accumulated gradient of every source.
-    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAll: @escaping (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>]) {
+    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAll: @escaping @Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>]) {
         self.tag = tag
         self.sources = sources
         self.backpropagate = .allSources(backpropagateAll)

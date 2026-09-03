@@ -24,6 +24,7 @@
 //  SOFTWARE.
 
 import XCTest
+import Synchronization
 @testable import DL4S
 
 
@@ -31,7 +32,7 @@ class OwnershipTests: XCTestCase {
     /// A tensor with the values of `source` and one backpropagation closure that observes the gradient flow to `source`.
     ///
     /// The closure receives the gradient of the probe and the accumulated gradient of `source`, and returns the new accumulated gradient.
-    func probeBackpropagation(_ source: Tensor<Float, CPU>, _ backpropagate: @escaping (Tensor<Float, CPU>, consuming Tensor<Float, CPU>?) -> Tensor<Float, CPU>) -> Tensor<Float, CPU> {
+    func probeBackpropagation(_ source: Tensor<Float, CPU>, _ backpropagate: @escaping @Sendable (Tensor<Float, CPU>, consuming Tensor<Float, CPU>?) -> Tensor<Float, CPU>) -> Tensor<Float, CPU> {
         Tensor(
             handle: source.handle,
             shape: source.shape,
@@ -80,10 +81,10 @@ class OwnershipTests: XCTestCase {
     func testResidualConnectionGradient() {
         let a = Tensor<Float, CPU>([[1, 2], [3, 4]], requiresGradient: true)
         let w = Tensor<Float, CPU>([[1, 0], [0, 1]], requiresGradient: true)
-        var sharedAddress: UnsafeMutableRawPointer?
+        let sharedAddress = Mutex<UInt?>(nil)
         // The probe is the residual path. It receives the gradient of the sum and passes it on to `a` unchanged.
         let s = a.matrixMultiplied(with: w) + probeBackpropagation(a) { gradient, _ in
-            sharedAddress = gradient.bufferAddress
+            sharedAddress.withLock { $0 = gradient.bufferAddress }
             return gradient
         }
 
@@ -91,8 +92,8 @@ class OwnershipTests: XCTestCase {
 
         XCTAssertEqual(grads[1], Tensor([[4, 4], [6, 6]]))
         XCTAssertEqual(grads[0], Tensor([[2, 2], [2, 2]]))
-        XCTAssertNotNil(sharedAddress)
-        XCTAssertNotEqual(grads[0].bufferAddress, sharedAddress)
+        XCTAssertNotNil(sharedAddress.withLock { $0 })
+        XCTAssertNotEqual(grads[0].bufferAddress, sharedAddress.withLock { $0 })
     }
 
     /// Only optimized builds accumulate without a copy. In unoptimized builds, a copy is accepted there.
@@ -101,11 +102,11 @@ class OwnershipTests: XCTestCase {
         let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [5, 4])
         let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: [5, 4])
         let d = Tensor<Float, CPU>(uniformlyDistributedWithShape: [5, 4])
-        var addressAfterFirstProduct: UnsafeMutableRawPointer?
+        let addressAfterFirstProduct = Mutex<UInt?>(nil)
         // Backpropagation visits the products in the order b, then the probe, then a. The probe records the
         // accumulator that the first product created and hands it on without a contribution of its own.
         let probed = probeBackpropagation(w) { _, accumulator in
-            addressAfterFirstProduct = accumulator?.bufferAddress
+            addressAfterFirstProduct.withLock { $0 = accumulator?.bufferAddress }
             return accumulator!
         }
         let y = (a.matrixMultiplied(with: w) + d.matrixMultiplied(with: probed)) + b.matrixMultiplied(with: w)
@@ -114,9 +115,9 @@ class OwnershipTests: XCTestCase {
 
         let expected = (a + b).transposed().matrixMultiplied(with: Tensor(repeating: 1, shape: [5, 3]))
         XCTAssertLessThan(((grad - expected) * (grad - expected)).reduceSum().item, 1e-8)
-        XCTAssertNotNil(addressAfterFirstProduct)
+        XCTAssertNotNil(addressAfterFirstProduct.withLock { $0 })
         #if !DEBUG
-        XCTAssertEqual(grad.bufferAddress, addressAfterFirstProduct)
+        XCTAssertEqual(grad.bufferAddress, addressAfterFirstProduct.withLock { $0 })
         #endif
     }
 
@@ -125,9 +126,9 @@ class OwnershipTests: XCTestCase {
         let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: [3, 4])
         let c = Tensor<Float, CPU>(uniformlyDistributedWithShape: [3, 4])
         let d = Tensor<Float, CPU>(uniformlyDistributedWithShape: [3, 4])
-        var addressAfterFirstTranspose: UnsafeMutableRawPointer?
+        let addressAfterFirstTranspose = Mutex<UInt?>(nil)
         let probed = probeBackpropagation(a) { _, accumulator in
-            addressAfterFirstTranspose = accumulator?.bufferAddress
+            addressAfterFirstTranspose.withLock { $0 = accumulator?.bufferAddress }
             return accumulator!
         }
         let y = (a.transposed() * b + probed.transposed() * d) + a.transposed() * c
@@ -136,9 +137,9 @@ class OwnershipTests: XCTestCase {
 
         let expected = (b + c).transposed()
         XCTAssertLessThan(((grad - expected) * (grad - expected)).reduceSum().item, 1e-8)
-        XCTAssertNotNil(addressAfterFirstTranspose)
+        XCTAssertNotNil(addressAfterFirstTranspose.withLock { $0 })
         #if !DEBUG
-        XCTAssertEqual(grad.bufferAddress, addressAfterFirstTranspose)
+        XCTAssertEqual(grad.bufferAddress, addressAfterFirstTranspose.withLock { $0 })
         #endif
     }
 
@@ -196,8 +197,9 @@ class OwnershipTests: XCTestCase {
 }
 
 private extension Tensor where Device == CPU {
-    var bufferAddress: UnsafeMutableRawPointer? {
-        values.values.memory.baseAddress
+    /// Address of the storage as an integer, so tests can record it from `@Sendable` closures.
+    var bufferAddress: UInt? {
+        values.values.memory.baseAddress.map { UInt(bitPattern: $0) }
     }
 
 }

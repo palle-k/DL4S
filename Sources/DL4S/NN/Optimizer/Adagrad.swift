@@ -41,7 +41,7 @@ public struct Adagrad<Layer: LayerType>: Optimizer {
     public var epsilon: ParamTensor
     private var gradientSums: [ParamTensor]
     
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
 
     /// Adagrad optimizer
     ///

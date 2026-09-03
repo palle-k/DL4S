@@ -54,7 +54,7 @@ public struct Adam<Layer: LayerType>: Optimizer {
     private var secondMoments: [ParamTensor]
     private var secondMomentMax: [ParamTensor]?
     
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
 
     /// Adam optimizer (Adaptive moment estimation)
     ///

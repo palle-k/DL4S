@@ -47,14 +47,14 @@ public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType
         }
     }
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         Array([
-            start.parameterPaths.map((\Self.start).appending(path:)),
-            l1.parameterPaths.map((\Self.l1).appending(path:)),
-            l2.parameterPaths.map((\Self.l2).appending(path:)),
-            l3.parameterPaths.map((\Self.l3).appending(path:)),
-            l4.parameterPaths.map((\Self.l4).appending(path:)),
-            classifier.parameterPaths.map((\Self.classifier).appending(path:))
+            parameterPaths(of: \.start),
+            parameterPaths(of: \.l1),
+            parameterPaths(of: \.l2),
+            parameterPaths(of: \.l3),
+            parameterPaths(of: \.l4),
+            parameterPaths(of: \.classifier)
         ].joined())
     }
     

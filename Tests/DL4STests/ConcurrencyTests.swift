@@ -24,25 +24,8 @@
 //  SOFTWARE.
 
 import XCTest
+import Synchronization
 import DL4S
-
-/// Collects values from several threads behind a lock.
-private final class ThreadSafeCollector<Value> {
-    private var storage: [Value] = []
-    private let lock = NSLock()
-    
-    func append(_ value: Value) {
-        lock.lock()
-        storage.append(value)
-        lock.unlock()
-    }
-    
-    var values: [Value] {
-        lock.lock()
-        defer { lock.unlock() }
-        return storage
-    }
-}
 
 /// Stress tests that run DL4S with several threads at the same time.
 ///
@@ -51,7 +34,7 @@ private final class ThreadSafeCollector<Value> {
 final class ConcurrencyTests: XCTestCase {
     private let threadCounts = [2, 4, 8]
     
-    private func run(threadCount: Int, _ body: @escaping (_ threadIndex: Int) -> Void) {
+    private func run(threadCount: Int, _ body: @escaping @Sendable (_ threadIndex: Int) -> Void) {
         let group = DispatchGroup()
         for index in 0 ..< threadCount {
             group.enter()
@@ -114,21 +97,21 @@ final class ConcurrencyTests: XCTestCase {
         let iterations = 50
         
         for threadCount in threadCounts {
-            let mismatches = ThreadSafeCollector<String>()
+            let mismatches = Mutex<[String]>([])
             
             run(threadCount: threadCount) { threadIndex in
                 for iteration in 0 ..< iterations {
                     let result = model(input).elements
                     if result != reference {
                         let firstDifference = zip(result, reference).enumerated().first { $0.element.0 != $0.element.1 }
-                        mismatches.append(
-                            "thread \(threadIndex), iteration \(iteration), first difference at element \(firstDifference?.offset ?? -1)"
-                        )
+                        mismatches.withLock {
+                            $0.append("thread \(threadIndex), iteration \(iteration), first difference at element \(firstDifference?.offset ?? -1)")
+                        }
                     }
                 }
             }
                 
-            let collected = mismatches.values
+            let collected = mismatches.withLock { $0 }
             XCTAssertEqual(
                 collected.count, 0,
                 "\(collected.count) of \(threadCount * iterations) results with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")"
@@ -147,22 +130,23 @@ final class ConcurrencyTests: XCTestCase {
         let iterations = 100
         let threadCount = 8
         
-        let invalidMasks = ThreadSafeCollector<String>()
-        let masks = ThreadSafeCollector<[Float]>()
+        let invalidMasks = Mutex<[String]>([])
+        let masks = Mutex<[[Float]]>([])
         
         run(threadCount: threadCount) { threadIndex in
             for iteration in 0 ..< iterations {
                 let mask = dropout(input).elements
                 if mask.contains(where: { $0 != 0 && $0 != 1 }) {
-                    invalidMasks.append("thread \(threadIndex), iteration \(iteration)")
+                    invalidMasks.withLock { $0.append("thread \(threadIndex), iteration \(iteration)") }
                 }
-                masks.append(mask)
+                masks.withLock { $0.append(mask) }
             }
         }
         
-        let collectedMasks = masks.values
+        let collectedMasks = masks.withLock { $0 }
         XCTAssertEqual(collectedMasks.count, threadCount * iterations)
-        XCTAssertEqual(invalidMasks.values.count, 0, "Dropout produced values other than 0 and 1: \(invalidMasks.values.prefix(3))")
+        let collectedInvalidMasks = invalidMasks.withLock { $0 }
+        XCTAssertEqual(collectedInvalidMasks.count, 0, "Dropout produced values other than 0 and 1: \(collectedInvalidMasks.prefix(3))")
         
         let keptElements = collectedMasks.reduce(0) { $0 + $1.reduce(0, +) }
         let keepRate = keptElements / Float(collectedMasks.count * input.count)
@@ -179,14 +163,14 @@ final class ConcurrencyTests: XCTestCase {
         let threadCount = 8
         let layerSize = 128
         
-        let weights = ThreadSafeCollector<[Double]>()
+        let weights = Mutex<[[Double]]>([])
         
         run(threadCount: threadCount) { _ in
             let layer = Dense<Double, CPU>(inputSize: layerSize, outputSize: layerSize)
-            weights.append(layer.weights.elements)
+            weights.withLock { $0.append(layer.weights.elements) }
         }
         
-        let collected = weights.values
+        let collected = weights.withLock { $0 }
         XCTAssertEqual(collected.count, threadCount)
         
         let allValues = collected.flatMap { $0 }
@@ -212,28 +196,49 @@ final class ConcurrencyTests: XCTestCase {
         let stacked = stack([a, b])
         let iterations = 50
         
-        func backwardPass() -> [[Float]] {
+        @Sendable func backwardPass() -> [[Float]] {
             (stacked * stacked).reduceSum().gradients(of: [a, b]).map { $0.elements }
         }
         let reference = backwardPass()
         
         for threadCount in threadCounts {
-            let mismatches = ThreadSafeCollector<String>()
+            let mismatches = Mutex<[String]>([])
             
             run(threadCount: threadCount) { threadIndex in
                 for iteration in 0 ..< iterations {
                     if backwardPass() != reference {
-                        mismatches.append("thread \(threadIndex), iteration \(iteration)")
+                        mismatches.withLock { $0.append("thread \(threadIndex), iteration \(iteration)") }
                     }
                 }
             }
             
-            let collected = mismatches.values
+            let collected = mismatches.withLock { $0 }
             XCTAssertEqual(
                 collected.count, 0,
                 "\(collected.count) of \(threadCount * iterations) gradients with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")"
             )
         }
+    }
+    
+    /// A tensor and a trained model cross an `@Sendable` closure boundary.
+    ///
+    /// The test compiles without warnings only when `Tensor` and the model type are `Sendable`.
+    /// The closure runs on another thread and must produce the same result as the main thread.
+    func testTensorAndModelCrossSendableBoundary() throws {
+        let model = makeTrainedModel()
+        let input = Tensor<Float, CPU>(uniformlyDistributedWithShape: [16, 2], min: 0, max: 1)
+        let expected = model(input).elements
+        
+        let infer: @Sendable () -> [Float] = {
+            model(input).elements
+        }
+        
+        let results = Mutex<[[Float]]>([])
+        run(threadCount: 1) { _ in
+            results.withLock { $0.append(infer()) }
+        }
+        
+        XCTAssertEqual(results.withLock { $0 }, [expected])
     }
     
     #if DL4S_TRACE_ALLOCATIONS
@@ -249,10 +254,13 @@ final class ConcurrencyTests: XCTestCase {
             CPUMemoryOperators.setAllocationTracing(false)
         }
         
+        let wrongResults = Mutex<[String]>([])
         run(threadCount: threadCount) { threadIndex in
             for iteration in 0 ..< iterations {
                 let tensor = Tensor<Float, CPU>(repeating: Float(iteration), shape: [16, 16])
-                XCTAssertEqual((tensor + tensor).elements.first, Float(iteration) * 2)
+                if (tensor + tensor).elements.first != Float(iteration) * 2 {
+                    wrongResults.withLock { $0.append("thread \(threadIndex), iteration \(iteration)") }
+                }
                 
                 // The first thread switches tracing on and off while the other threads allocate and free.
                 if threadIndex == 0 && iteration % 25 == 0 {
@@ -260,6 +268,8 @@ final class ConcurrencyTests: XCTestCase {
                 }
             }
         }
+        let collectedWrongResults = wrongResults.withLock { $0 }
+        XCTAssertEqual(collectedWrongResults.count, 0, "Wrong results while tracing was switched: \(collectedWrongResults.prefix(3))")
         
         // With tracing switched on, one allocation is recorded and its record is removed by free.
         CPUMemoryOperators.setAllocationTracing(true)

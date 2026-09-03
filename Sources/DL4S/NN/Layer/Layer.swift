@@ -27,7 +27,7 @@ import Foundation
 
 /// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
 /// The layer may have parameters, which influence, how the outputs are generated.
-public protocol LayerType<Inputs, Outputs, Parameter, Device> {
+public protocol LayerType<Inputs, Outputs, Parameter, Device>: Sendable {
     /// Inputs of the layer
     associatedtype Inputs
     
@@ -40,8 +40,10 @@ public protocol LayerType<Inputs, Outputs, Parameter, Device> {
     /// Device type of a parameter tensor
     associatedtype Device: DeviceType
     
-    /// Keypaths to parameters that influence the output of the layer
-    var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>>] { get }
+    /// Keypaths to parameters that influence the output of the layer.
+    ///
+    /// Use `parameterPaths(of: layerPath)` to concatenate while retaining `Sendable`.
+    var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] { get }
     
     /// Parameters, that influence the output of the layer.
     var parameters: [Tensor<Parameter, Device>] { get }
@@ -55,3 +57,22 @@ public protocol LayerType<Inputs, Outputs, Parameter, Device> {
     func callAsFunction(_ inputs: Inputs) -> Outputs
 }
 
+public extension LayerType {
+    /// Returns the parameter key paths of a nested layer, prefixed with the key path to that layer.
+    ///
+    /// Use this to build `parameterPaths` for a layer that contains other layers.
+    ///
+    /// - Parameter layerPath: Key path from this layer to the nested layer.
+    /// - Returns: One key path per parameter of the nested layer.
+    func parameterPaths<Layer: LayerType>(of layerPath: WritableKeyPath<Self, Layer> & Sendable) -> [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] where Layer.Parameter == Parameter, Layer.Device == Device {
+        self[keyPath: layerPath].parameterPaths.map { layerPath.appendingSendable(path: $0) }
+    }
+}
+
+extension WritableKeyPath {
+    /// Appends a key path and keeps the `Sendable` conformance.
+    fileprivate func appendingSendable<AppendedValue>(path: WritableKeyPath<Value, AppendedValue> & Sendable) -> WritableKeyPath<Root, AppendedValue> & Sendable where Self: Sendable {
+        let appended: WritableKeyPath<Root, AppendedValue> = appending(path: path as WritableKeyPath<Value, AppendedValue>)
+        return unsafeBitCast(appended, to: (WritableKeyPath<Root, AppendedValue> & Sendable).self)
+    }
+}

@@ -55,14 +55,14 @@ public extension VGGBase {
         }
     }
     
-    var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>>] {
+    var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] {
         Array([
-            conv1.parameterPaths.map((\Self.conv1).appending(path:)),
-            conv2.parameterPaths.map((\Self.conv2).appending(path:)),
-            conv3.parameterPaths.map((\Self.conv3).appending(path:)),
-            conv4.parameterPaths.map((\Self.conv4).appending(path:)),
-            conv5.parameterPaths.map((\Self.conv5).appending(path:)),
-            dense.parameterPaths.map((\Self.dense).appending(path:))
+            parameterPaths(of: \.conv1),
+            parameterPaths(of: \.conv2),
+            parameterPaths(of: \.conv3),
+            parameterPaths(of: \.conv4),
+            parameterPaths(of: \.conv5),
+            parameterPaths(of: \.dense)
         ].joined())
     }
     

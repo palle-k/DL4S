@@ -48,10 +48,10 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         [outputBias]
     ].joined())}
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {Array([
-        embedding.parameterPaths.map((\Self.embedding).appending(path:)),
-        encoder.parameterPaths.map((\Self.encoder).appending(path:)),
-        decoder.parameterPaths.map((\Self.decoder).appending(path:)),
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {Array([
+        parameterPaths(of: \.embedding),
+        parameterPaths(of: \.encoder),
+        parameterPaths(of: \.decoder),
         [\Self.outputBias]
     ].joined())}
     

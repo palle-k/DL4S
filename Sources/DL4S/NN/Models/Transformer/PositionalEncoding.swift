@@ -44,7 +44,7 @@ public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>:
     }
     
     public var parameters: [Tensor<Element, Device>] {[]}
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
     
     /// Creates a positional encoding matrix
     /// - Parameter maxLen: Maximum sequence length in the current minibatch

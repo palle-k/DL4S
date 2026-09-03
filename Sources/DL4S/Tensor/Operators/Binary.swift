@@ -52,7 +52,7 @@ public extension Tensor {
         }
         
         if lhs.requiresGradient || rhs.requiresGradient {
-            func grad(a: Self, b: Self, grad: Self) -> Self {
+            @Sendable func grad(a: Self, b: Self, grad: Self) -> Self {
                 OperationGroup.capture(named: "∇+") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
@@ -112,7 +112,7 @@ public extension Tensor {
         }
         
         if lhs.requiresGradient || rhs.requiresGradient {
-            func grad(a: Self, b: Self, grad: Self) -> Self {
+            @Sendable func grad(a: Self, b: Self, grad: Self) -> Self {
                 OperationGroup.capture(named: "∇⊙") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()

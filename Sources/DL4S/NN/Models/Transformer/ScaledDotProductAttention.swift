@@ -34,7 +34,7 @@ public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType
     }
     
     public var parameters: [Tensor<Element, Device>] {[]}
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>>] {[]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
     
     /// Performs scaled dot product attention.
     /// - Parameter inputs: Tuple containing queries of shape [batchSize, heads, queryCount, keyDim], keys of shape [batchSize, heads, keyCount, keyDim] and values of shape [batchSize, heads, valueCount, valueDim]

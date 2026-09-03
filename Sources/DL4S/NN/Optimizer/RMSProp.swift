@@ -44,7 +44,7 @@ public struct RMSProp<Layer: LayerType>: Optimizer {
     
     private var gradientSums: [ParamTensor]
     
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
 
     /// Root mean square optimizer
     ///

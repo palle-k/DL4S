@@ -37,7 +37,7 @@ public struct Momentum<Layer: LayerType>: Optimizer {
     
     /// Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
     public var momentum: ParamTensor
-    private var paths: [WritableKeyPath<Layer, ParamTensor>]
+    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
     
     /// Gradient descent optimizer with momentum
     /// - Parameters:

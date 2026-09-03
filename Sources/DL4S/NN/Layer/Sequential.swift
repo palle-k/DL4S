@@ -64,13 +64,9 @@ public struct Sequential<First: LayerType, Second: LayerType>: LayerType where F
         self.second = second
     }
     
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<First.Parameter, First.Device>>] {
-        let firstPaths = first.parameterPaths.map {
-            (\Self.first).appending(path: $0)
-        }
-        let secondPaths = second.parameterPaths.map {
-            (\Self.second).appending(path: $0)
-        }
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<First.Parameter, First.Device>> & Sendable] {
+        let firstPaths = parameterPaths(of: \.first)
+        let secondPaths = parameterPaths(of: \.second)
         return firstPaths + secondPaths
     }
     
