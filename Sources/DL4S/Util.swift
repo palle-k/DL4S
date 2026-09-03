@@ -140,7 +140,7 @@ public struct ProgressBar<UserInfo> {
         let filled = String(repeating: "#", count: currentUnitCount * 30 / totalUnitCount)
         let empty = String(repeating: " ", count: 30 - (currentUnitCount * 30 / totalUnitCount))
         print("\r\u{1b}[K\(label) [\(filled)\(empty)] (\(currentUnitCount)/\(totalUnitCount) - \(remainingString)) \(formatUserInfo(userInfo))", terminator: "")
-        fflush(stdout)
+        fflush(nil)
     }
     
     public mutating func complete() {
@@ -178,7 +178,7 @@ public struct Progress<Element>: Sequence {
             let userInfo = "(\(unitString)\(currentCount)/\(totalUnitCount))"
             
             Swift.print("\r\033[K\(label)[\(filled)\(empty)] \(userInfo)", terminator: "")
-            fflush(stdout)
+            fflush(nil)
         }
         
         func printCompleted() {

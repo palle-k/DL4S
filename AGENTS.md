@@ -14,7 +14,7 @@ swift test --filter Concurrency                      # run the thread-safety str
 swift test --sanitize=thread --filter Concurrency    # run it under the thread sanitizer
 ```
 
-There is no linter or formatter configuration in this repo. CI is a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `swift test` in debug and release configuration (`-c release -Xswiftc -enable-testing`) on macOS and Ubuntu, and runs the concurrency suite under the thread sanitizer. A second workflow (`.github/workflows/tsan-full.yml`) runs the full test suite under the thread sanitizer on every push to master and on manual dispatch.
+There is no linter or formatter configuration in this repo. CI is a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `swift test` in debug and release configuration (`-c release -Xswiftc -enable-testing`) on macOS and Ubuntu, and runs the concurrency suite under the thread sanitizer. A second workflow (`.github/workflows/tsan-full.yml`) runs the full test suite under the thread sanitizer on every push to master and on manual dispatch. Both sanitizer jobs run on macOS only: on Linux, TSan does not see `Synchronization.Mutex` and reports every access under the lock as a race (verified with Swift 6.1 and 6.3.3).
 
 On Linux, acceleration comes from Intel MKL/IPP instead of Accelerate. Build with `swift build -c release -Xswiftc -DMKL_ENABLE -Xlinker -L${MKLROOT}/lib/intel64 -Xlinker -L${IPPROOT}/lib/intel64` (see README for setup). Without MKL or Accelerate, a slow generic fallback is used.
 

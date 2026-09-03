@@ -27,9 +27,11 @@ import Foundation
 
 
 /// A text output stream that writes to the standard error output.
+///
+/// `FileHandle.standardError` is used instead of the C `stderr` variable, which Glibc declares as a mutable global.
 struct StderrStream: TextOutputStream {
     mutating func write(_ string: String) {
-        fputs(string, stderr)
+        FileHandle.standardError.write(Data(string.utf8))
     }
 }
 
