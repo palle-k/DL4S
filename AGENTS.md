@@ -1,13 +1,10 @@
 # AGENTS.md
-
 Guidance for coding agents that work in this repository.
 
 ## What this is
-
 DL4S is a pure Swift deep learning library with built-in reverse-mode automatic differentiation (dynamic compute graphs, no special toolchain). It provides tensor operations, NN layers, optimizers, losses, and reference architectures (ResNet18, VGG, AlexNet, Transformer). It supports macOS, iOS, tvOS, watchOS, and Linux. It has no external dependencies.
 
 ## Commands
-
 ```bash
 swift build                                          # build
 swift test                                           # run all tests
@@ -26,22 +23,17 @@ Tests are XCTest classes in `Tests/DL4STests`. The MNIST idx files in that direc
 `ConcurrencyTests` runs inference, dropout, and weight initialization from several raw threads at the same time. It is the acceptance test for the thread-safety work. Until the fixes land, the tests run as expected failures on Darwin and are skipped on Linux unless `DL4S_CONCURRENCY_TESTS=1` is set. Run the suite under the thread sanitizer to see the data races as reports.
 
 ## Architecture
-
 Two targets: `MKL` (a C shim that only exposes Intel MKL/IPP headers through `include/module.modulemap`; `placeholder.c` is empty on purpose) and `DL4S`, which depends on it. `Package.swift` sets no build flags; all acceleration configuration happens through command-line `-Xswiftc`/`-Xlinker` flags.
 
 ### Generic core: Tensor over Element and Device
-
 Everything is generic over two parameters: `Tensor<Element: NumericType, Device: DeviceType>` (`Sources/DL4S/Tensor/Tensor.swift`). Valid elements are `Float`, `Double`, and `Int32` (`Sources/DL4S/Numerics/`).
-
 - `DeviceType` (`Sources/DL4S/Engine/Engine.swift`) bundles two associated types: `Memory: MemoryOperatorsType` (raw allocation, slicing) and `Engine: EngineType` (the full kernel catalogue: broadcast ops, gemm, conv, reductions, scatter/gather, etc.).
 - `CPU` (`Engine/CPU/`) is the only device. `CPUEngine` methods are thin shims that forward to static methods on the element type (`CPUNumeric` protocol). The per-type implementations in `Engine/CPU/Numeric/` select between three variants with conditional compilation: `#if MKL_ENABLE`, `#elseif canImport(Accelerate)`, and a generic Swift fallback (`CPUGeneric.swift`). A GPU backend can conform to the same protocols, but none exists.
 - Kernels that accumulate into an existing gradient have fused `...Add` variants (`permuteAxesAdd`, `subscriptWriteAdd`, `reverseAdd`, ...). Backward passes use these to avoid a separate add kernel.
 - `Tensor` wraps a `TensorHandle` class with copy-on-write (`ensureOwnership()`); views share the parent buffer, and only the root handle frees it.
 
 ### Automatic differentiation
-
 Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
-
 - Each differentiable operation (all in `Tensor/Operators/*.swift`) computes its forward result through the engine, then attaches a `TensorContext` (`Context.swift`) that holds the source tensors and one backpropagation closure per source. Capture only happens when an operand `requiresGradient`.
 - `tensor.gradients(of:retainBackwardsGraph:)` (`Tensor.swift`) topologically sorts the graph by `backpropID` and walks it backwards. Backward closures are written with normal tensor operations, so the backward pass builds its own graph when `retainBackwardsGraph: true`, which enables second and higher derivatives. With `false`, accumulated gradients are detached.
 - New tensor operation checklist: add the primitive to `EngineType`, implement it in `CPUEngine` (usually delegating to a `CPUNumeric` static, implemented in `CPUFloat`/`CPUDouble`/`CPUInt32`/`CPUGeneric`), then add the public `Tensor` method in the matching `Tensor/Operators/*.swift` file with its `TensorContext` gradient closures. Add a gradient check to `Tests/DL4STests/GradientTests.swift` and tick the README feature list.
@@ -49,21 +41,18 @@ Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
 - Debug-only graph tooling: `Tensor.tag`, `OperationGroup.capture(named:)`, and `tensor.graph()` (Graphviz DOT output) are gated behind `#if DEBUG`.
 
 ### NN layer system
-
 - `LayerType` (`NN/Layer/Layer.swift`) has associated `Inputs`/`Outputs` types (not fixed to tensors, which is how RNNs return tuples), `callAsFunction`, and two parameter accessors: `parameters` and `parameterPaths` (writable key paths into the layer struct).
 - Layers are value types. Optimizers (`NN/Optimizer/`) copy the model and mutate its parameters through `parameterPaths`. This is why usage code must call `optimizer.model(input)`, never the original `model` variable.
 - `Sequential` (`NN/Layer/Sequential.swift`) is a result builder that folds a block of layers into nested `Sequential<Sequential<A, B>, C>` pairs.
 - Reference architectures live in `NN/Models/`.
 
 ## Conventions
-
 - Every file starts with the MIT license header (`// <Filename>.swift / DL4S / Created by ... / Copyright ...`). New files get the same header.
 - Public APIs carry `///` doc comments with `- Parameters:` / `- Returns:`. The `docs/` directory is Jazzy output; do not hand-edit it.
 - Hot generic functions use `@inline(__always)` and `@_specialize(where Element == Float, Device == CPU)`.
 - Engine primitives use terse names (`vAdd`, `vsMul`, `gemm`, `img2col`); public tensor methods are spelled out (`matrixMultiplied(with:)`, `permuted(to:)`, `reduceSum(along:)`).
 
 ## Debugging
-
 `util/debugger_support/tensor.py` is an LLDB script that adds readable summaries for `Tensor` and `ShapedBuffer` values. Load it with `command script import` in LLDB or from `~/.lldbinit`.
 
 ## Documentation & Communication

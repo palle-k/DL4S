@@ -74,24 +74,38 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
     ///   - inputChannels: Number of input channesls. Data forwarded through the network must have [batchSize, inputChannels, height, depth] shape.
     ///   - classes: Number of classes / dimensionality of network output
     public init(inputChannels: Int, classes: Int) {
+        var generator = WyHash()
+        self.init(inputChannels: inputChannels, classes: classes, using: &generator)
+    }
+
+    /// Creates an AlexNet image classification network with the given number of input channels and classes.
+    ///
+    /// The network expects images with a resolution of 192x192 or higher.
+    ///
+    /// https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+    /// - Parameters:
+    ///   - inputChannels: Number of input channesls. Data forwarded through the network must have [batchSize, inputChannels, height, depth] shape.
+    ///   - classes: Number of classes / dimensionality of network output
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputChannels: Int, classes: Int, using generator: inout Generator) {
         featureNet = Sequential {
-            Convolution2D<Element, Device>(inputChannels: inputChannels, outputChannels: 64, kernelSize: (11, 11), padding: 2, stride: 4)
+            Convolution2D<Element, Device>(inputChannels: inputChannels, outputChannels: 64, kernelSize: (11, 11), padding: 2, stride: 4, using: &generator)
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
             
-            Convolution2D<Element, Device>(inputChannels: 64, outputChannels: 192, kernelSize: (5, 5), padding: 2, stride: 1)
+            Convolution2D<Element, Device>(inputChannels: 64, outputChannels: 192, kernelSize: (5, 5), padding: 2, stride: 1, using: &generator)
             BatchNorm<Element, Device>(inputSize: [192, 1, 1])
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
             
-            Convolution2D<Element, Device>(inputChannels: 192, outputChannels: 384, kernelSize: (3, 3), padding: 1, stride: 1)
+            Convolution2D<Element, Device>(inputChannels: 192, outputChannels: 384, kernelSize: (3, 3), padding: 1, stride: 1, using: &generator)
             Relu<Element, Device>()
             
-            Convolution2D<Element, Device>(inputChannels: 384, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1)
+            Convolution2D<Element, Device>(inputChannels: 384, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1, using: &generator)
             BatchNorm<Element, Device>(inputSize: [256, 1, 1])
             Relu<Element, Device>()
             
-            Convolution2D<Element, Device>(inputChannels: 256, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1)
+            Convolution2D<Element, Device>(inputChannels: 256, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1, using: &generator)
             BatchNorm<Element, Device>(inputSize: [256, 1, 1])
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
@@ -103,16 +117,16 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
             Flatten<Element, Device>()
             
             Dropout<Element, Device>(rate: Float(0.5))
-            Dense<Element, Device>(inputSize: 256 * 6 * 6, outputSize: 4096)
+            Dense<Element, Device>(inputSize: 256 * 6 * 6, outputSize: 4096, using: &generator)
             BatchNorm<Element, Device>(inputSize: [4096])
             Relu<Element, Device>()
             
             Dropout<Element, Device>(rate: Float(0.5))
-            Dense<Element, Device>(inputSize: 4096, outputSize: 4096)
+            Dense<Element, Device>(inputSize: 4096, outputSize: 4096, using: &generator)
             BatchNorm<Element, Device>(inputSize: [4096])
             Relu<Element, Device>()
             
-            Dense<Element, Device>(inputSize: 4096, outputSize: classes)
+            Dense<Element, Device>(inputSize: 4096, outputSize: classes, using: &generator)
             LogSoftmax<Element, Device>()
         }
     }

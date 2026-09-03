@@ -58,11 +58,28 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
     ///   - padding: Padding, that will be applied around the edges of the input
     ///   - stride: Stride, with which the convolution kernel is moved over the input tensor, >= 1.
     public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = nil, stride: Int = 1) {
+        var generator = WyHash()
+        self.init(inputChannels: inputChannels, outputChannels: outputChannels, kernelSize: kernelSize, padding: padding, stride: stride, using: &generator)
+    }
+    
+    /// Creates a 2D convolutional layer. 
+    ///
+    /// The inputs of the layer must have a shape [batchSize, channels, height, width]
+    ///
+    /// - Parameters:
+    ///   - inputChannels: Number of channels in the input
+    ///   - outputChannels: Number of channels in the output
+    ///   - kernelSize: Width and height of the convolution kernel
+    ///   - padding: Padding, that will be applied around the edges of the input
+    ///   - stride: Stride, with which the convolution kernel is moved over the input tensor, >= 1.
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), padding: Int? = nil, stride: Int = 1, using generator: inout Generator) {
         self.filters = Tensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
             mean: 0,
             stdev: 2 / Element(kernelSize.height * kernelSize.width * inputChannels).sqrt(),
-            requiresGradient: true
+            requiresGradient: true,
+            using: &generator
         )
         self.bias = Tensor(repeating: 0, shape: [1, outputChannels, 1, 1], requiresGradient: true)
         self.stride = stride
@@ -117,11 +134,28 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
     ///   - inset: Number of elements that are removed from the edges of the output.
     ///   - stride: Inverse of stride, with which the convolution kernel is moved over the input tensor, >= 1.
     public init(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), inset: Int? = nil, stride: Int = 1) {
+        var generator = WyHash()
+        self.init(inputChannels: inputChannels, outputChannels: outputChannels, kernelSize: kernelSize, inset: inset, stride: stride, using: &generator)
+    }
+    
+    /// Creates a 2D transposed (fractionally strided) convolutional layer. The filter weights come from the given generator.
+    ///
+    /// The inputs of the layer must have a shape [batchSize, channels, height, width]
+    ///
+    /// - Parameters:
+    ///   - inputChannels: Number of channels in the input
+    ///   - outputChannels: Number of channels in the output
+    ///   - kernelSize: Width and height of the convolution kernel
+    ///   - inset: Number of elements that are removed from the edges of the output.
+    ///   - stride: Inverse of stride, with which the convolution kernel is moved over the input tensor, >= 1.
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputChannels: Int, outputChannels: Int, kernelSize: (width: Int, height: Int), inset: Int? = nil, stride: Int = 1, using generator: inout Generator) {
         self.filters = Tensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
             mean: 0,
             stdev: 2 / Element(kernelSize.height * kernelSize.width * inputChannels).sqrt(),
-            requiresGradient: true
+            requiresGradient: true,
+            using: &generator
         )
         self.bias = Tensor(repeating: 0, shape: [1, outputChannels, 1, 1], requiresGradient: true)
         self.stride = stride

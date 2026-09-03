@@ -67,11 +67,28 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
     ///   - forwardDim: Size of activations in poitnwise feed forward layers
     ///   - dropout: Dropout rate
     public init(encoderLayers: Int, decoderLayers: Int, vocabSize: Int, hiddenDim: Int, heads: Int, keyDim: Int, valueDim: Int, forwardDim: Int, dropout: Float = 0.1) {
-        embedding = Embedding(inputFeatures: vocabSize, outputSize: hiddenDim, ignoreIndex: -1)
+        var generator = WyHash()
+        self.init(encoderLayers: encoderLayers, decoderLayers: decoderLayers, vocabSize: vocabSize, hiddenDim: hiddenDim, heads: heads, keyDim: keyDim, valueDim: valueDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
+    }
+    
+    /// Creates a new transformer, which follows [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// - Parameters:
+    ///   - encoderLayers: Number of encoder layers
+    ///   - decoderLayers: Number of decoder layers
+    ///   - vocabSize: Number of tokens in the vocabulary of the transformer
+    ///   - hiddenDim: Size of transformer layer outputs
+    ///   - heads: Number of attention heads in multi-head attention layers
+    ///   - keyDim: Size of key vectors in multi-head attention layers
+    ///   - valueDim: Size of value vectors in muti-head attention layers
+    ///   - forwardDim: Size of activations in poitnwise feed forward layers
+    ///   - dropout: Dropout rate
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(encoderLayers: Int, decoderLayers: Int, vocabSize: Int, hiddenDim: Int, heads: Int, keyDim: Int, valueDim: Int, forwardDim: Int, dropout: Float = 0.1, using generator: inout Generator) {
+        embedding = Embedding(inputFeatures: vocabSize, outputSize: hiddenDim, ignoreIndex: -1, using: &generator)
         self.dropout = Dropout(rate: dropout)
         positionalEncoding = PositionalEncoding(hiddenSize: hiddenDim)
-        encoder = TransformerEncoder(layerCount: encoderLayers, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: hiddenDim, forwardDim: forwardDim, dropout: dropout)
-        decoder = TransformerDecoder(layerCount: decoderLayers, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: hiddenDim, forwardDim: forwardDim, dropout: dropout)
+        encoder = TransformerEncoder(layerCount: encoderLayers, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: hiddenDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
+        decoder = TransformerDecoder(layerCount: decoderLayers, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: hiddenDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
         outputBias = Tensor(repeating: 0, shape: [vocabSize], requiresGradient: true)
         
         #if DEBUG

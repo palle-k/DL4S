@@ -34,34 +34,41 @@ extension Int32: RandomizableType {}
 extension Float: RandomizableType {}
 extension Double: RandomizableType {}
 
-struct WyHash: RandomNumberGenerator {
-    fileprivate static var shared = WyHash(seed: 0)
-    
+/// A small, fast pseudo random number generator.
+///
+/// Use `init(seed:)` together with the `using:` overloads of random tensor and layer initializers for reproducible initialization.
+///
+/// ```
+/// var generator = WyHash(seed: 42)
+/// let weights = Tensor<Float, CPU>(xavierNormalWithShape: [16, 8], using: &generator)
+/// let layer = Dense<Float, CPU>(inputSize: 16, outputSize: 8, using: &generator)
+/// ```
+public struct WyHash: RandomNumberGenerator, Sendable {
     private var state: UInt64
-
-    init(seed: UInt64) {
+    
+    /// Creates a generator that determistically generates randomness based on the provided seed.
+    /// - Parameter seed: Initial state of the generator.
+    public init(seed: UInt64) {
         state = seed
     }
-
-    mutating func next() -> UInt64 {
+    
+    /// Creates a generator with a seed from the system random number generator.
+    public init() {
+        var systemGenerator = SystemRandomNumberGenerator()
+        self.init(seed: systemGenerator.next())
+    }
+    
+    public mutating func next() -> UInt64 {
         state &+= 0xa0761d6478bd642f
         let (high, low) = state.multipliedFullWidth(by: state ^ 0xe7037ed1a0b428db)
         return high ^ low
     }
-    
-    mutating func next<T>() -> T where T : FixedWidthInteger, T : UnsignedInteger {
-        let n: UInt64 = next()
-        return T(clamping: n)
-    }
-    
-    mutating func next<T>(upperBound: T) -> T where T : FixedWidthInteger, T : UnsignedInteger {
-        return next() % upperBound
-    }
 }
 
-func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
-    let a = T.random(in: 0 ... 1, using: &WyHash.shared)
-    let b = T.random(in: 0 ... 1, using: &WyHash.shared)
+/// Draws two independent values from a normal distribution with the Box-Muller transform.
+func randNormal<T: RandomizableType, Generator: RandomNumberGenerator>(stdev: T, mean: T, using generator: inout Generator) -> (T, T) {
+    let a = T.random(in: 0 ... 1, using: &generator)
+    let b = T.random(in: 0 ... 1, using: &generator)
     
     let scale = (-2 * a.log()).sqrt() * stdev
     
@@ -72,37 +79,77 @@ func randNormal<T: RandomizableType>(stdev: T, mean: T) -> (T, T) {
     if x.isFinite && !x.isNaN && y.isFinite && !y.isNaN {
         return (x, y)
     } else {
-        return randNormal(stdev: stdev, mean: mean)
+        return randNormal(stdev: stdev, mean: mean, using: &generator)
     }
 }
 
 public enum Random {
+    /// Fills the buffer with values from a uniform distribution in `a ... b`.
+    ///
+    /// - Parameters:
+    ///   - vector: Buffer to fill
+    ///   - a: Lower bound of the distribution
+    ///   - b: Upper bound of the distribution
     @_specialize(where Element == Float, Device == CPU)
     @_specialize(where Element == Double, Device == CPU)
     @_specialize(where Element == Int32, Device == CPU)
     public static func fill<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element) {
+        var generator = WyHash()
+        fill(vector, a: a, b: b, using: &generator)
+    }
+    
+    /// Fills the buffer with values from a uniform distribution in `a ... b`.
+    /// - Parameters:
+    ///   - vector: Buffer to fill
+    ///   - a: Lower bound of the distribution
+    ///   - b: Upper bound of the distribution
+    ///   - generator: Random number generator that provides the values
+    @_specialize(where Element == Float, Device == CPU, Generator == WyHash)
+    @_specialize(where Element == Double, Device == CPU, Generator == WyHash)
+    @_specialize(where Element == Int32, Device == CPU, Generator == WyHash)
+    public static func fill<Element: RandomizableType, Device, Generator: RandomNumberGenerator>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element, using generator: inout Generator) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         let range = a ... b
         for i in 0 ..< vector.count {
-            buffer[i] = Element.random(in: range, using: &WyHash.shared)
+            buffer[i] = Element.random(in: range, using: &generator)
         }
         Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
         buffer.deallocate()
     }
     
+    /// Fills the buffer with values from a normal distribution.
+    /// - Parameters:
+    ///   - vector: Buffer to fill
+    ///   - mean: Mean of the distribution
+    ///   - stdev: Standard deviation of the distribution
     @_specialize(where Element == Float, Device == CPU)
     @_specialize(where Element == Double, Device == CPU)
     @_specialize(where Element == Int32, Device == CPU)
     public static func fillNormal<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1) {
+        var generator = WyHash()
+        fillNormal(vector, mean: mean, stdev: stdev, using: &generator)
+    }
+    
+    /// Fills the buffer with values from a normal distribution.
+    /// - Parameters:
+    ///   - vector: Buffer to fill
+    ///   - mean: Mean of the distribution
+    ///   - stdev: Standard deviation of the distribution
+    ///   - generator: Random number generator that provides the values
+    @_specialize(where Element == Float, Device == CPU, Generator == WyHash)
+    @_specialize(where Element == Double, Device == CPU, Generator == WyHash)
+    @_specialize(where Element == Int32, Device == CPU, Generator == WyHash)
+    public static func fillNormal<Element: RandomizableType, Device, Generator: RandomNumberGenerator>(_ vector: ShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1, using generator: inout Generator) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in stride(from: 0, to: vector.count - 1, by: 2) {
-            let (a, b) = randNormal(stdev: stdev, mean: mean)
+            let (a, b) = randNormal(stdev: stdev, mean: mean, using: &generator)
             buffer[i] = a
             buffer[i+1] = b
         }
         
-        if vector.count % 2 == 0 {
-            let (a, _) = randNormal(stdev: stdev, mean: mean)
+        // The Box-Muller transform yields pairs. An odd count needs one more value for the last element.
+        if vector.count % 2 == 1 {
+            let (a, _) = randNormal(stdev: stdev, mean: mean, using: &generator)
             buffer[vector.count-1] = a
         }
         Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
@@ -142,14 +189,33 @@ public enum Random {
         return (randomSamples, randomLabels)
     }
     
+    /// Fills the buffer with ones and zeros. Each element is 1 with probability `p`.
+    ///
+    /// The values come from a new generator with a random seed. Use `bernoulli(_:p:using:)` for reproducible values.
+    /// - Parameters:
+    ///   - values: Buffer to fill
+    ///   - p: Probability of a 1
     @_specialize(where Element == Float, Device == CPU)
     @_specialize(where Element == Int32, Device == CPU)
     @_specialize(where Element == Double, Device == CPU)
     public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
+        var generator = WyHash()
+        bernoulli(values, p: p, using: &generator)
+    }
+    
+    /// Fills the buffer with ones and zeros. Each element is 1 with probability `p`.
+    /// - Parameters:
+    ///   - values: Buffer to fill
+    ///   - p: Probability of a 1
+    ///   - generator: Random number generator to draw from
+    @_specialize(where Element == Float, Device == CPU, Generator == WyHash)
+    @_specialize(where Element == Int32, Device == CPU, Generator == WyHash)
+    @_specialize(where Element == Double, Device == CPU, Generator == WyHash)
+    public static func bernoulli<Element: NumericType, Device, Generator: RandomNumberGenerator>(_ values: ShapedBuffer<Element, Device>, p: Float, using generator: inout Generator) {
         let count = values.shape.reduce(1, *)
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
         for i in 0 ..< count {
-            buffer[i] = Float.random(in: 0 ... 1, using: &WyHash.shared) <= p ? 1 : 0
+            buffer[i] = Float.random(in: 0 ... 1, using: &generator) <= p ? 1 : 0
         }
         
         Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)

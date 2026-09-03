@@ -172,8 +172,18 @@ public extension Tensor where Element: RandomizableType {
     ///   - shape: Shape of the tensor, must be two dimensional
     ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(xavierNormalWithShape shape: [Int], requiresGradient: Bool = false) {
+        var generator = WyHash()
+        self.init(xavierNormalWithShape: shape, requiresGradient: requiresGradient, using: &generator)
+    }
+    
+    /// Creates a tensor and fills it with random values from the given generator, sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor, must be two dimensional
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
+    ///   - generator: Random number generator that provides the values.
+    init<Generator: RandomNumberGenerator>(xavierNormalWithShape shape: [Int], requiresGradient: Bool = false, using generator: inout Generator) {
         precondition(shape.count == 2, "Shape must be 2-dimensional")
-        self.init(normalDistributedWithShape: shape, mean: 0, stdev: (2 / Element(shape[0])).sqrt(), requiresGradient: requiresGradient)
+        self.init(normalDistributedWithShape: shape, mean: 0, stdev: (2 / Element(shape[0])).sqrt(), requiresGradient: requiresGradient, using: &generator)
     }
     
     /// Creates a tensor and fills it with random values sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
@@ -191,8 +201,20 @@ public extension Tensor where Element: RandomizableType {
     ///   - stdev: Standard deviation of the normal distribution
     ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(normalDistributedWithShape shape: [Int], mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false) {
+        var generator = WyHash()
+        self.init(normalDistributedWithShape: shape, mean: mean, stdev: stdev, requiresGradient: requiresGradient, using: &generator)
+    }
+    
+    /// Creates a tensor and fills it with random values from the given generator, sampled from a normal distribution with the given mean and variance.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor
+    ///   - mean: Mean of the normal distribution.
+    ///   - stdev: Standard deviation of the normal distribution
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
+    ///   - generator: Random number generator that provides the values.
+    init<Generator: RandomNumberGenerator>(normalDistributedWithShape shape: [Int], mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false, using generator: inout Generator) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fillNormal(self.values, mean: mean, stdev: stdev)
+        Random.fillNormal(self.values, mean: mean, stdev: stdev, using: &generator)
     }
     
     /// Creates a tensor and fills it with random values sampled from a normal distribution with the given mean and variance.
@@ -212,8 +234,20 @@ public extension Tensor where Element: RandomizableType {
     ///   - max: Maximum value of the uniform distribution
     ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false) {
+        var generator = WyHash()
+        self.init(uniformlyDistributedWithShape: shape, min: min, max: max, requiresGradient: requiresGradient, using: &generator)
+    }
+    
+    /// Creates a tensor and fills it with random values from the given generator, sampled from a uniform distribution with the given minimum and maximum.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor
+    ///   - min: Minimum value of the uniform distribution
+    ///   - max: Maximum value of the uniform distribution
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
+    ///   - generator: Random number generator that provides the values.
+    init<Generator: RandomNumberGenerator>(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false, using generator: inout Generator) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fill(self.values, a: min, b: max)
+        Random.fill(self.values, a: min, b: max, using: &generator)
     }
     
     /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
@@ -228,11 +262,32 @@ public extension Tensor where Element: RandomizableType {
 }
 
 public extension Tensor {
+    /// Creates a tensor of ones and zeros, where each element is 1 with the given probability.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor
+    ///   - probability: Probability of a 1
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(bernoulliDistributedWithShape shape: [Int], probability: Float, requiresGradient: Bool = false) {
-        self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.bernoulli(values, p: probability)
+        var generator = WyHash()
+        self.init(bernoulliDistributedWithShape: shape, probability: probability, requiresGradient: requiresGradient, using: &generator)
     }
     
+    /// Creates a tensor of ones and zeros from the given generator, where each element is 1 with the given probability.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor
+    ///   - probability: Probability of a 1
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
+    ///   - generator: Random number generator that provides the values.
+    init<Generator: RandomNumberGenerator>(bernoulliDistributedWithShape shape: [Int], probability: Float, requiresGradient: Bool = false, using generator: inout Generator) {
+        self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
+        Random.bernoulli(values, p: probability, using: &generator)
+    }
+    
+    /// Creates a tensor of ones and zeros, where each element is 1 with the given probability.
+    /// - Parameters:
+    ///   - shape: Shape of the tensor
+    ///   - probability: Probability of a 1
+    ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     init(bernoulliDistributedWithShape shape: Int..., probability: Float, requiresGradient: Bool = false) {
         self.init(bernoulliDistributedWithShape: shape, probability: probability, requiresGradient: requiresGradient)
     }

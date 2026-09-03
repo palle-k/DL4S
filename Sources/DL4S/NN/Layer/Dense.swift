@@ -52,7 +52,20 @@ public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, C
     ///   - inputSize: Number of elements in an input vector
     ///   - outputSize: Number of elements in an output vector
     public init(inputSize: Int, outputSize: Int) {
-        weights = Tensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true)
+        var generator = WyHash()
+        self.init(inputSize: inputSize, outputSize: outputSize, using: &generator)
+    }
+    
+    /// Creates a dense / linear / fully connected layer with no output activation function.
+    ///
+    /// The layer expects inputs to have a shape of [batchSize, inputSize].
+    ///
+    /// - Parameters:
+    ///   - inputSize: Number of elements in an input vector
+    ///   - outputSize: Number of elements in an output vector
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputSize: Int, outputSize: Int, using generator: inout Generator) {
+        weights = Tensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true, using: &generator)
         bias = Tensor(repeating: 0, shape: [outputSize], requiresGradient: true)
         
         #if DEBUG

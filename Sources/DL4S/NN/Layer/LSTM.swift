@@ -72,16 +72,30 @@ public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable 
     ///   - hiddenSize: Number of elements at each timestep in the output
     ///   - direction: Direction, in which the RNN consumes the input sequence.
     public init(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward) {
+        var generator = WyHash()
+        self.init(inputSize: inputSize, hiddenSize: hiddenSize, direction: direction, using: &generator)
+    }
+    
+    /// Creates a Long Short-Term Memory (LSTM) layer.
+    ///
+    /// The RNN expects inputs to have a shape of [sequence length, batch size, input size].
+    ///
+    /// - Parameters:
+    ///   - inputSize: Number of elements at each timestep of the input
+    ///   - hiddenSize: Number of elements at each timestep in the output
+    ///   - direction: Direction, in which the RNN consumes the input sequence.
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward, using generator: inout Generator) {
         self.direction = direction
         
-        Wi = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Wo = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Wf = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Wc = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true)
-        Ui = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uo = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uf = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
-        Uc = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true)
+        Wi = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        Wo = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        Wf = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        Wc = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
+        Ui = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
+        Uo = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
+        Uf = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
+        Uc = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
         bi = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         bo = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
         bf = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)

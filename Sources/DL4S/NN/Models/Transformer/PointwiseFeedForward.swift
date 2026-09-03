@@ -55,8 +55,21 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
     ///   - hiddenSize: Hidden size between dense layers of the block
     ///   - dropoutRate: Rate, with which dropout is applied between activation and the second dense layer. Can be enabled and disabled using `isDropoutActive`.
     public init(size: Int, hiddenSize: Int, dropoutRate: Float) {
-        dense1 = Dense(inputSize: size, outputSize: hiddenSize)
-        dense2 = Dense(inputSize: hiddenSize, outputSize: size)
+        var generator = WyHash()
+        self.init(size: size, hiddenSize: hiddenSize, dropoutRate: dropoutRate, using: &generator)
+    }
+    
+    /// Creates a pointwise forward layer to be used in a transformer as introduced in [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// The block sequences a dense layer, gelu activation, another dense layer, dropout, a residual connection and layer normalization.
+    ///
+    /// - Parameters:
+    ///   - size: Size of last dimension of inputs and outputs of the block
+    ///   - hiddenSize: Hidden size between dense layers of the block
+    ///   - dropoutRate: Rate, with which dropout is applied between activation and the second dense layer. Can be enabled and disabled using `isDropoutActive`.
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(size: Int, hiddenSize: Int, dropoutRate: Float, using generator: inout Generator) {
+        dense1 = Dense(inputSize: size, outputSize: hiddenSize, using: &generator)
+        dense2 = Dense(inputSize: hiddenSize, outputSize: size, using: &generator)
         norm = LayerNorm(inputSize: [size])
         dropout = Dropout(rate: dropoutRate)
     }

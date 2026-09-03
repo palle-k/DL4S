@@ -50,8 +50,24 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
     ///   - forwardDim: Size of hidden layer activations within pointwise feed forward layers
     ///   - dropout: Rate of dropout applied within pointwise feed forward and multi-head attention layers
     public init(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float) {
+        var generator = WyHash()
+        self.init(layerCount: layerCount, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: modelDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
+    }
+
+    /// Creates a transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// - Parameters:
+    ///   - vocabSize: Number of distinct tokens that can occur in input
+    ///   - layerCount: Number of transformer encoder layers
+    ///   - heads: Number of attention heads in each encoder layer
+    ///   - keyDim: Size of keys in multi-head attention layers
+    ///   - valueDim: Size of values in multi-head attention layers
+    ///   - modelDim: Size of embedding vectors as well as hidden layer activations and outputs
+    ///   - forwardDim: Size of hidden layer activations within pointwise feed forward layers
+    ///   - dropout: Rate of dropout applied within pointwise feed forward and multi-head attention layers
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float, using generator: inout Generator) {
         encoderLayers = (0 ..< layerCount).map { i in
-            TransformerEncoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
+            TransformerEncoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
         }
     }
     

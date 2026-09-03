@@ -62,8 +62,19 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Laye
     public var downsample: Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>>?
     
     public init(inputShape: [Int], outPlanes: Int, downsample: Int) {
-        conv1 = Convolution2D(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (3, 3), stride: downsample)
-        conv2 = Convolution2D(inputChannels: outPlanes, outputChannels: outPlanes, kernelSize: (3, 3))
+        var generator = WyHash()
+        self.init(inputShape: inputShape, outPlanes: outPlanes, downsample: downsample, using: &generator)
+    }
+
+    /// Creates a residual block with two convolutions. 
+    /// - Parameters:
+    ///   - inputShape: Shape of the input without the batch dimension, [channels, height, width]
+    ///   - outPlanes: Number of output channels
+    ///   - downsample: Stride of the first convolution. A value other than 1 adds a downsampling shortcut.
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputShape: [Int], outPlanes: Int, downsample: Int, using generator: inout Generator) {
+        conv1 = Convolution2D(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (3, 3), stride: downsample, using: &generator)
+        conv2 = Convolution2D(inputChannels: outPlanes, outputChannels: outPlanes, kernelSize: (3, 3), using: &generator)
         
         let convShape = ConvUtil.outputShape(for: inputShape, kernelCount: outPlanes, kernelWidth: 3, kernelHeight: 3, stride: downsample, padding: 1)
         
@@ -72,7 +83,7 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Laye
         
         if downsample != 1 {
             self.downsample = Sequential {
-                Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (1, 1), padding: 0, stride: downsample)
+                Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (1, 1), padding: 0, stride: downsample, using: &generator)
                 BatchNorm<Element, Device>(inputSize: [outPlanes, inputShape[1] / downsample, inputShape[2] / downsample])
             }
         } else {

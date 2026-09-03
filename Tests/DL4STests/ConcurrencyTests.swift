@@ -164,71 +164,65 @@ final class ConcurrencyTests: XCTestCase {
     ///
     /// The mask must only contain zeros and ones, the keep rate must be close to the configured rate, and no two passes may produce the same mask.
     ///
-    /// With a shared RNG, release builds may produce large overlap between masks.
-    /// Thread sanitizer detects a data race.
+    /// A generator that is shared between threads would produce overlapping masks.
     func testConcurrentDropoutForwardPasses() throws {
         let dropout = Dropout<Float, CPU>(rate: 0.5)
         let input = Tensor<Float, CPU>(repeating: 1, shape: [64, 64])
         let iterations = 100
         let threadCount = 8
         
-        try runExpectingKnownConcurrencyFailure {
-            let invalidMasks = ThreadSafeCollector<String>()
-            let masks = ThreadSafeCollector<[Float]>()
-            
-            run(threadCount: threadCount) { threadIndex in
-                for iteration in 0 ..< iterations {
-                    let mask = dropout(input).elements
-                    if mask.contains(where: { $0 != 0 && $0 != 1 }) {
-                        invalidMasks.append("thread \(threadIndex), iteration \(iteration)")
-                    }
-                    masks.append(mask)
+        let invalidMasks = ThreadSafeCollector<String>()
+        let masks = ThreadSafeCollector<[Float]>()
+        
+        run(threadCount: threadCount) { threadIndex in
+            for iteration in 0 ..< iterations {
+                let mask = dropout(input).elements
+                if mask.contains(where: { $0 != 0 && $0 != 1 }) {
+                    invalidMasks.append("thread \(threadIndex), iteration \(iteration)")
                 }
+                masks.append(mask)
             }
-            
-            let collectedMasks = masks.values
-            XCTAssertEqual(collectedMasks.count, threadCount * iterations)
-            XCTAssertEqual(invalidMasks.values.count, 0, "Dropout produced values other than 0 and 1: \(invalidMasks.values.prefix(3))")
-            
-            let keptElements = collectedMasks.reduce(0) { $0 + $1.reduce(0, +) }
-            let keepRate = keptElements / Float(collectedMasks.count * input.count)
-            XCTAssertEqual(keepRate, 0.5, accuracy: 0.02, "Keep rate over all passes deviates from the configured rate.")
-            
-            let distinctMasks = Set(collectedMasks.map { $0.map { UInt8($0) } })
-            XCTAssertEqual(distinctMasks.count, collectedMasks.count, "Some dropout passes produced identical masks.")
         }
+        
+        let collectedMasks = masks.values
+        XCTAssertEqual(collectedMasks.count, threadCount * iterations)
+        XCTAssertEqual(invalidMasks.values.count, 0, "Dropout produced values other than 0 and 1: \(invalidMasks.values.prefix(3))")
+        
+        let keptElements = collectedMasks.reduce(0) { $0 + $1.reduce(0, +) }
+        let keepRate = keptElements / Float(collectedMasks.count * input.count)
+        XCTAssertEqual(keepRate, 0.5, accuracy: 0.02, "Keep rate over all passes deviates from the configured rate.")
+        
+        let distinctMasks = Set(collectedMasks.map { $0.map { UInt8($0) } })
+        XCTAssertEqual(distinctMasks.count, collectedMasks.count, "Some dropout passes produced identical masks.")
     }
     
     /// Weight initialization stress test
     ///
     /// Weights of one model must be independent of another model initialized in parallel.
-    /// This fails with the shared mutable state of the RNG.
     func testConcurrentWeightInitializationProducesIndependentWeights() throws {
         let threadCount = 8
         let layerSize = 128
         
-        try runExpectingKnownConcurrencyFailure {
-            let weights = ThreadSafeCollector<[Double]>()
-            
-            run(threadCount: threadCount) { _ in
-                let layer = Dense<Double, CPU>(inputSize: layerSize, outputSize: layerSize)
-                weights.append(layer.weights.elements)
-            }
-            
-            let collected = weights.values
-            XCTAssertEqual(collected.count, threadCount)
-            
-            let allValues = collected.flatMap { $0 }
-            let duplicateCount = allValues.count - Set(allValues).count
-            let duplicateFraction = Double(duplicateCount) / Double(allValues.count)
-            XCTAssertLessThan(
-                duplicateFraction, 0.001,
-                "\(duplicateCount) of \(allValues.count) weights are duplicates across \(threadCount) independently initialized models."
-            )
-            
-            for (index, model) in collected.enumerated() {
-                XCTAssertFalse(model.contains(where: { $0.isNaN }), "Model \(index) contains NaN weights.")
-            }
+        let weights = ThreadSafeCollector<[Double]>()
+        
+        run(threadCount: threadCount) { _ in
+            let layer = Dense<Double, CPU>(inputSize: layerSize, outputSize: layerSize)
+            weights.append(layer.weights.elements)
+        }
+        
+        let collected = weights.values
+        XCTAssertEqual(collected.count, threadCount)
+        
+        let allValues = collected.flatMap { $0 }
+        let duplicateCount = allValues.count - Set(allValues).count
+        let duplicateFraction = Double(duplicateCount) / Double(allValues.count)
+        XCTAssertLessThan(
+            duplicateFraction, 0.001,
+            "\(duplicateCount) of \(allValues.count) weights are duplicates across \(threadCount) independently initialized models."
+        )
+        
+        for (index, model) in collected.enumerated() {
+            XCTAssertFalse(model.contains(where: { $0.isNaN }), "Model \(index) contains NaN weights.")
         }
     }
 }

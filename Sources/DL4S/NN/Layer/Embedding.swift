@@ -60,7 +60,21 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
     ///   - outputSize: Embedding dimensionality.
     ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
     public init(inputFeatures: Int, outputSize: Int, ignoreIndex: Int = -1) {
-        self.embeddingMatrix = Tensor<Element, Device>(xavierNormalWithShape: [inputFeatures, outputSize], requiresGradient: true)
+        var generator = WyHash()
+        self.init(inputFeatures: inputFeatures, outputSize: outputSize, ignoreIndex: ignoreIndex, using: &generator)
+    }
+    
+    /// Creates an embedding layer that has an input vocabulary of size `inputFeatures` and returns embeddings with the size `outputSize`.
+    ///
+    /// The layer expects categorial inputs with a shape of [batch size] and returns embeddings with a shape of [batch size, outputSize]
+    ///
+    /// - Parameters:
+    ///   - inputFeatures: Vocabulary size.
+    ///   - outputSize: Embedding dimensionality.
+    ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(inputFeatures: Int, outputSize: Int, ignoreIndex: Int = -1, using generator: inout Generator) {
+        self.embeddingMatrix = Tensor<Element, Device>(xavierNormalWithShape: [inputFeatures, outputSize], requiresGradient: true, using: &generator)
         #if DEBUG
         self.embeddingMatrix.tag = "W"
         #endif

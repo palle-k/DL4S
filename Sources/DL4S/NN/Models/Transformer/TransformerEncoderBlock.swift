@@ -48,8 +48,22 @@ public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceT
     ///   - valueDim: Size of value vectors within multi-head attention layer
     ///   - dropout: Dropout rate for dropout applied within self-attention and pointwise feed forward layer
     public init(hiddenDim: Int, forwardDim: Int, heads: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1) {
-        selfAttention = MultiHeadAttention(heads: heads, hiddenDim: hiddenDim, keyDim: keyDim, valueDim: valueDim, dropout: dropout)
-        pointwiseFeedForward = PointwiseFeedForward(size: hiddenDim, hiddenSize: forwardDim, dropoutRate: dropout)
+        var generator = WyHash()
+        self.init(hiddenDim: hiddenDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
+    }
+
+    /// Creates Transformer encoder layer consisting of a self-attention and a pointwise feed forward layer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// - Parameters:
+    ///   - hiddenDim: Last dimension of inputs and outputs
+    ///   - forwardDim: Size of value vectors within pointwise feed forward layer
+    ///   - heads: Number of attention heads
+    ///   - keyDim: Size of key and query vectors within multi-head attention layer
+    ///   - valueDim: Size of value vectors within multi-head attention layer
+    ///   - dropout: Dropout rate for dropout applied within self-attention and pointwise feed forward layer
+    ///   - generator: Random number generator that provides the initial weights.
+    public init<Generator: RandomNumberGenerator>(hiddenDim: Int, forwardDim: Int, heads: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1, using generator: inout Generator) {
+        selfAttention = MultiHeadAttention(heads: heads, hiddenDim: hiddenDim, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
+        pointwiseFeedForward = PointwiseFeedForward(size: hiddenDim, hiddenSize: forwardDim, dropoutRate: dropout, using: &generator)
     }
     
     /// Applies multi-head self attention and a pointwise feed forward layer to the inputs
