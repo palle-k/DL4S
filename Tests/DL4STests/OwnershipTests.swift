@@ -165,13 +165,39 @@ class OwnershipTests: XCTestCase {
             }
         }
     }
-}
 
-private extension OwnershipTests {
+    func testCopiedTensorKeepsBackpropID() {
+        let original = Tensor<Float, CPU>([1, 2, 3])
+        let copy = original
+        
+        XCTAssertEqual(copy.backpropID, original.backpropID)
+        XCTAssertNotEqual(Tensor<Float, CPU>([1, 2, 3]).backpropID, original.backpropID)
+    }
+    
+    func testEnsureOwnershipOnSharedBufferMintsNewBackpropID() {
+        let original = Tensor<Float, CPU>([1, 2, 3])
+        var copy = original
+        copy.ensureOwnership()
+        
+        XCTAssertNotEqual(copy.backpropID, original.backpropID)
+        XCTAssertNotEqual(copy.bufferAddress, original.bufferAddress)
+        XCTAssertEqual(copy, original)
+    }
+    
+    func testEnsureOwnershipOnUniqueBufferKeepsBackpropID() {
+        var tensor = Tensor<Float, CPU>([1, 2, 3])
+        let id = tensor.backpropID
+        let address = tensor.bufferAddress
+        tensor.ensureOwnership()
+        
+        XCTAssertEqual(tensor.backpropID, id)
+        XCTAssertEqual(tensor.bufferAddress, address)
+    }
 }
 
 private extension Tensor where Device == CPU {
     var bufferAddress: UnsafeMutableRawPointer? {
         values.values.memory.baseAddress
     }
+
 }

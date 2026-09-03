@@ -66,25 +66,6 @@ final class ConcurrencyTests: XCTestCase {
         group.wait()
     }
     
-    /// Runs `body` and records known concurrency failures as expected failures.
-    private func runExpectingKnownConcurrencyFailure(_ body: () throws -> Void) throws {
-        // TODO: Remove this wrapper when concurrency fixes are implemented.
-        // On Darwin, XCTest marks the failures as expected and the test does not break CI.
-        // On Linux, `XCTExpectFailure` does not exist, so the test is skipped unless
-        // `DL4S_CONCURRENCY_TESTS=1` is set.
-        #if canImport(ObjectiveC)
-        try XCTExpectFailure("Failure is expected until concurrency fixes are implemented", options: .nonStrict()) {
-            try body()
-        }
-        #else
-        try XCTSkipIf(
-            ProcessInfo.processInfo.environment["DL4S_CONCURRENCY_TESTS"] == nil,
-            "Failure is expected until concurrency fixes are implemented"
-        )
-        try body()
-        #endif
-    }
-    
     private typealias DenseTanh = Sequential<Dense<Float, CPU>, Tanh<Float, CPU>>
     private typealias TrainedModel = Sequential<Sequential<DenseTanh, DenseTanh>, Sequential<Dense<Float, CPU>, Sigmoid<Float, CPU>>>
     
@@ -126,39 +107,34 @@ final class ConcurrencyTests: XCTestCase {
     /// Parallel inference on shared model
     ///
     /// Every result must be exactly equal to a result that was computed in main. Inference has no random component, so a tolerance is not needed and would hide errors.
-    ///
-    /// Values are correct, but the thread sanitizer reports an access race on `OperationGroup.operationStack`.
-    /// The  mutating`@ThreadLocal` setter is a write access on shared state.
     func testConcurrentInferenceMatchesSerialReference() throws {
         let model = makeTrainedModel()
         let input = Tensor<Float, CPU>(uniformlyDistributedWithShape: [256, 2], min: 0, max: 1)
         let reference = model(input).elements
         let iterations = 50
         
-        try runExpectingKnownConcurrencyFailure {
-            for threadCount in threadCounts {
-                let mismatches = ThreadSafeCollector<String>()
-                
-                run(threadCount: threadCount) { threadIndex in
-                    for iteration in 0 ..< iterations {
-                        let result = model(input).elements
-                        if result != reference {
-                            let firstDifference = zip(result, reference).enumerated().first { $0.element.0 != $0.element.1 }
-                            mismatches.append(
-                                "thread \(threadIndex), iteration \(iteration), first difference at element \(firstDifference?.offset ?? -1)"
-                            )
-                        }
+        for threadCount in threadCounts {
+            let mismatches = ThreadSafeCollector<String>()
+            
+            run(threadCount: threadCount) { threadIndex in
+                for iteration in 0 ..< iterations {
+                    let result = model(input).elements
+                    if result != reference {
+                        let firstDifference = zip(result, reference).enumerated().first { $0.element.0 != $0.element.1 }
+                        mismatches.append(
+                            "thread \(threadIndex), iteration \(iteration), first difference at element \(firstDifference?.offset ?? -1)"
+                        )
                     }
                 }
-                
-                let collected = mismatches.values
-                XCTAssertEqual(
-                    collected.count, 0,
-                    "\(collected.count) of \(threadCount * iterations) results with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")"
-                )
             }
+                
+            let collected = mismatches.values
+            XCTAssertEqual(
+                collected.count, 0,
+                "\(collected.count) of \(threadCount * iterations) results with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")"
+            )
         }
-    }
+}
     
     /// Dropout layer randomness stress test.
     ///
@@ -225,4 +201,83 @@ final class ConcurrencyTests: XCTestCase {
             XCTAssertFalse(model.contains(where: { $0.isNaN }), "Model \(index) contains NaN weights.")
         }
     }
+    
+    /// Parallel backpropagation through one shared stack node.
+    ///
+    /// The stacked tensor is created once and every thread differentiates its own loss through it.
+    /// The gradients must be exactly equal to the gradients that were computed in main.
+    func testConcurrentBackpropagationThroughSharedStackNode() throws {
+        let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32], requiresGradient: true)
+        let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32], requiresGradient: true)
+        let stacked = stack([a, b])
+        let iterations = 50
+        
+        func backwardPass() -> [[Float]] {
+            (stacked * stacked).reduceSum().gradients(of: [a, b]).map { $0.elements }
+        }
+        let reference = backwardPass()
+        
+        for threadCount in threadCounts {
+            let mismatches = ThreadSafeCollector<String>()
+            
+            run(threadCount: threadCount) { threadIndex in
+                for iteration in 0 ..< iterations {
+                    if backwardPass() != reference {
+                        mismatches.append("thread \(threadIndex), iteration \(iteration)")
+                    }
+                }
+            }
+            
+            let collected = mismatches.values
+            XCTAssertEqual(
+                collected.count, 0,
+                "\(collected.count) of \(threadCount * iterations) gradients with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")"
+            )
+        }
+    }
+    
+    #if DL4S_TRACE_ALLOCATIONS
+    /// Parallel allocate and free while allocation tracing is switched on and off.
+    ///
+    /// Compile the tests with `-Xswiftc -DDL4S_TRACE_ALLOCATIONS` to include this test.
+    func testConcurrentAllocationTracing() throws {
+        let threadCount = 8
+        let iterations = 200
+        
+        CPUMemoryOperators.setAllocationTracing(true)
+        defer {
+            CPUMemoryOperators.setAllocationTracing(false)
+        }
+        
+        run(threadCount: threadCount) { threadIndex in
+            for iteration in 0 ..< iterations {
+                let tensor = Tensor<Float, CPU>(repeating: Float(iteration), shape: [16, 16])
+                XCTAssertEqual((tensor + tensor).elements.first, Float(iteration) * 2)
+                
+                // The first thread switches tracing on and off while the other threads allocate and free.
+                if threadIndex == 0 && iteration % 25 == 0 {
+                    CPUMemoryOperators.setAllocationTracing(iteration % 50 == 0)
+                }
+            }
+        }
+        
+        // With tracing switched on, one allocation is recorded and its record is removed by free.
+        CPUMemoryOperators.setAllocationTracing(true)
+        XCTAssertEqual(CPUMemoryOperators.tracedAllocationCount, 0)
+        do {
+            let tensor = Tensor<Float, CPU>(repeating: 1, shape: [4])
+            withExtendedLifetime(tensor) {
+                XCTAssertEqual(CPUMemoryOperators.tracedAllocationCount, 1)
+            }
+        }
+        XCTAssertEqual(CPUMemoryOperators.tracedAllocationCount, 0)
+        
+        // With tracing switched off, nothing is recorded.
+        CPUMemoryOperators.setAllocationTracing(false)
+        let tensor = Tensor<Float, CPU>(repeating: 1, shape: [4])
+        withExtendedLifetime(tensor) {
+            XCTAssertEqual(CPUMemoryOperators.tracedAllocationCount, 0)
+        }
+    }
+    #endif
 }

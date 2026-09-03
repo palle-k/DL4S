@@ -97,26 +97,25 @@ public extension Tensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.stack(buffers: tensors.map {$0.values}, result: resultBuffer, axis: axis)
         
-        var gradientCache: [UInt64: [Self]] = [:]
-        
         self.init(
             using: resultBuffer,
             context: requiresGradient ? TensorContext(
                 tag: "stack",
                 sources: tensors,
-                backpropagate: tensors.indices.map { i in { resultGradient in
-                    if resultGradient.requiresGradient {
-                        // caching gradients leads to retain cycles when the backwards pass is retained.
-                        // therefore, caching is disabled in this case as a workaround.
-                        return resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)[i]
-                    } else if let cache = gradientCache[resultGradient.backpropID] {
-                        return cache[i]
-                    } else {
-                        let v = resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)
-                        gradientCache[resultGradient.backpropID] = v
-                        return v[i]
+                // One closure for all sources, so the gradient is unstacked once per backward visit
+                // and the closures share no state.
+                backpropagateAll: { resultGradient, accumulators in
+                    var accumulators = accumulators
+                    let sourceGradients = resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)
+                    return sourceGradients.indices.map { i in
+                        // Taking the accumulator out of the array leaves it uniquely referenced.
+                        if let accumulator = accumulators[i].take() {
+                            return accumulator + sourceGradients[i]
+                        } else {
+                            return sourceGradients[i]
+                        }
                     }
-                }}
+                }
             ) : nil
         )
     }

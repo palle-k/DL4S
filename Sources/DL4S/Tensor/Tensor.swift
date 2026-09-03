@@ -24,7 +24,20 @@
 //  SOFTWARE.
 
 import Foundation
+import Synchronization
 
+/// Mints identifiers that are unique within one process.
+///
+/// A counter is cheaper than the system random number generator, which takes a process-wide lock on every call.
+enum UniqueID {
+    private static let counter = Atomic<UInt64>(0)
+    
+    /// Returns an identifier that no earlier call has returned.
+    @inline(__always)
+    static func next() -> UInt64 {
+        counter.wrappingAdd(1, ordering: .relaxed).newValue
+    }
+}
 
 final class TensorHandle<Element, Device: DeviceType> {
     var values: MutableBuffer<Element, Device>
@@ -51,8 +64,9 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     
     /// Identifies the tensor during backpropagation.
     ///
-    /// The id will vary across different runs and different tensors with the same values.
-    let backpropID: UInt64 = UInt64.random(in: 0 ... UInt64.max)
+    /// Copies of a tensor share the id. A tensor that `ensureOwnership` creates gets a new id.
+    /// Different tensors with the same values have different ids.
+    let backpropID: UInt64 = UniqueID.next()
     
     /// Shape of the tensor.
     ///
@@ -231,61 +245,91 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     ///   - tensors: Tensors to differentiate for
     ///   - retainGraph: Whether to store the graph for the backwards pass. If enabled, higher order gradients can be computed.
     public func gradients(of tensors: [Self], retainBackwardsGraph retainGraph: Bool = false) -> [Self] {
-        OperationGroup.push("Backpropagate")
-        
-        // self is the result of a function, which is differentiated with respect to the given tensors.
-        let result = self
-        
-        // Build the gradient tape. Each operation is represented on the tape by its result.
-        // It is not possible to just recursively walk through the compute graph, as the graph is not a tree.
-        // Therefore, some variables may be included in multiple operations. Backpropagating through each path
-        // could therefore lead to a combinatorial explosion.
-        let operationOrder = Tensor.operationOrder(from: result)
-        
-        // The derivative of the function wrt. itself is 1.
-        var grads: [UInt64: Tensor<Element, Device>] = [
-            result.backpropID: Tensor(repeating: 1, shape: result.shape, requiresGradient: retainGraph)
-        ]
-        grads.reserveCapacity(operationOrder.count)
-        
-        // Perform the actual backpropagation.
-        for tensor in operationOrder.reversed() {
-            guard let grad = grads[tensor.backpropID] else {
-                continue
-            }
-            guard let ctx = tensor.context else {
-                continue
-            }
-            // Add gradients of all tensors that directly influenced the values
-            // of the current tensor to their respective accumulators.
-            // The accumulator is removed from the dictionary and consumed by the closure,
-            // to prevent extraneous copies through the CoW mechanism.
-            for i in ctx.sources.indices {
-                let src = ctx.sources[i]
-                
-                guard src.requiresGradient else {
+        OperationGroup.capture(named: "Backpropagate") {
+            // self is the result of a function, which is differentiated with respect to the given tensors.
+            let result = self
+            
+            // Build the gradient tape. Each operation is represented on the tape by its result.
+            // It is not possible to just recursively walk through the compute graph, as the graph is not a tree.
+            // Therefore, some variables may be included in multiple operations. Backpropagating through each path
+            // could therefore lead to a combinatorial explosion.
+            let operationOrder = Tensor.operationOrder(from: result)
+            
+            // The derivative of the function wrt. itself is 1.
+            var grads: [UInt64: Tensor<Element, Device>] = [
+                result.backpropID: Tensor(repeating: 1, shape: result.shape, requiresGradient: retainGraph)
+            ]
+            grads.reserveCapacity(operationOrder.count)
+            
+            // Perform the actual backpropagation.
+            for tensor in operationOrder.reversed() {
+                guard let grad = grads[tensor.backpropID] else {
                     continue
                 }
-                
-                let accumulator = ctx.backpropagate[i](grad, grads.removeValue(forKey: src.backpropID))
-                #if DEBUG
-                assert(accumulator.shape == src.shape)
-                #endif
-                
-                if retainGraph {
-                    grads[src.backpropID] = accumulator
-                } else {
-                    grads[src.backpropID] = accumulator.detached()
+                guard let ctx = tensor.context else {
+                    continue
+                }
+                // Add gradients of all tensors that directly influenced the values
+                // of the current tensor to their respective accumulators.
+                // The accumulator is removed from the dictionary and consumed by the closure,
+                // to prevent extraneous copies through the CoW mechanism.
+                switch ctx.backpropagate {
+                case .perSource(let backpropagate):
+                    for i in ctx.sources.indices {
+                        let src = ctx.sources[i]
+                        
+                        guard src.requiresGradient else {
+                            continue
+                        }
+                        
+                        let accumulator = backpropagate[i](grad, grads.removeValue(forKey: src.backpropID))
+#if DEBUG
+                        assert(accumulator.shape == src.shape)
+#endif
+                        
+                        if retainGraph {
+                            grads[src.backpropID] = accumulator
+                        } else {
+                            grads[src.backpropID] = accumulator.detached()
+                        }
+                    }
+                case .allSources(let backpropagate):
+                    let accumulators = ctx.sources.map { src in
+                        src.requiresGradient ? grads.removeValue(forKey: src.backpropID) : nil
+                    }
+                    var accumulated = backpropagate(grad, consume accumulators).map(Optional.some)
+                    precondition(accumulated.count == ctx.sources.count, "Backpropagation must return one gradient per source.")
+                    
+                    for i in ctx.sources.indices {
+                        let src = ctx.sources[i]
+                        
+                        // Taking the gradient out of the array leaves it uniquely referenced.
+                        guard src.requiresGradient, var accumulator = accumulated[i].take() else {
+                            continue
+                        }
+#if DEBUG
+                        assert(accumulator.shape == src.shape)
+#endif
+                        
+                        // The same tensor can be a source more than once. Its accumulator was handed to the closure
+                        // in the first position only, so the gradients of the other positions are added here.
+                        if let previous = grads.removeValue(forKey: src.backpropID) {
+                            accumulator = previous + accumulator
+                        }
+                        
+                        if retainGraph {
+                            grads[src.backpropID] = accumulator
+                        } else {
+                            grads[src.backpropID] = accumulator.detached()
+                        }
+                    }
                 }
             }
+            
+            return tensors.map {
+                grads[$0.backpropID] ?? Tensor(repeating: 0, shape: $0.shape)
+            }
         }
-        
-        let targetGrads = tensors.map {
-            grads[$0.backpropID] ?? Tensor(repeating: 0, shape: $0.shape)
-        }
-        
-        OperationGroup.pop()
-        return targetGrads
     }
     
     /// Ensures storage is not shared with other tensors.

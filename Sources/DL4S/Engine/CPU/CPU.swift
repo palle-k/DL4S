@@ -24,6 +24,9 @@
 //  SOFTWARE.
 
 import Foundation
+#if DL4S_TRACE_ALLOCATIONS
+import Synchronization
+#endif
 
 
 public struct CPU: DeviceType {
@@ -34,14 +37,6 @@ public struct CPU: DeviceType {
 public struct CPUMemoryOperators: MemoryOperatorsType {
     public typealias RawBuffer = UnsafeMutableRawBufferPointer
     public typealias Device = CPU
-    
-    static var traceAllocations: Bool = false {
-        didSet {
-            allocations.removeAll()
-        }
-    }
-    private static var allocations: [UnsafeMutableRawPointer: [String]] = [:]
-    private static let sema = DispatchSemaphore(value: 1)
     
     @inline(__always)
     static func strides(from shape: [Int]) -> [Int] {
@@ -73,34 +68,16 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         let alignment = max(MemoryLayout<Element>.alignment, 16)
         
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: stride * capacity, alignment: alignment)
-        
-        if traceAllocations {
-            sema.wait()
-            let trace = Thread.callStackSymbols
-            allocations[buffer.baseAddress!] = trace
-            sema.signal()
-
-            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(5)) {
-                sema.wait()
-                if let trace = allocations[buffer.baseAddress!] {
-                    print("[ALLOC TRACE]: buffer of size \(capacity) not freed after 3 seconds.")
-                    print("[ALLOC TRACE] [begin callstack]")
-                    print(trace.joined(separator: "\n"))
-                    print("[ALLOC TRACE] [end callstack]")
-                }
-                sema.signal()
-            }
-        }
-        
+        #if DL4S_TRACE_ALLOCATIONS
+        recordAllocation(of: buffer, capacity: capacity)
+        #endif
         return MutableBuffer<Element, CPU>(memory: buffer)
     }
     
     public static func free<Element>(_ buffer: MutableBuffer<Element, CPU>) {
-        if traceAllocations {
-            sema.wait()
-            allocations.removeValue(forKey: buffer.memory.baseAddress!)
-            sema.signal()
-        }
+        #if DL4S_TRACE_ALLOCATIONS
+        recordFree(of: buffer.memory)
+        #endif
         buffer.memory.deallocate()
     }
     
@@ -229,3 +206,75 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         buffer.pointer.pointee = newValue
     }
 }
+
+#if DL4S_TRACE_ALLOCATIONS
+// MARK: Allocation tracing
+//
+// Compile with `-Xswiftc -DDL4S_TRACE_ALLOCATIONS` to enable this feature.
+
+struct AllocationTraceState: Sendable {
+    /// Whether allocate and free record call stacks.
+    var isEnabled = false
+    
+    /// Call stacks of live allocations, by the address of the buffer.
+    var callStacks: [UInt: [String]] = [:]
+}
+
+public extension CPUMemoryOperators {
+    /// Time in seconds after which a live allocation is reported as a possible leak.
+    static let allocationTraceReportDelaySeconds = 5
+    
+    internal static let allocationTraceState = Mutex(AllocationTraceState())
+    
+    /// Switches allocation tracing on or off.
+    ///
+    /// While tracing is on, every allocation records its call stack. A buffer that is not freed within
+    /// `allocationTraceReportDelaySeconds` is printed with the call stack of its allocation.
+    /// Switching tracing on or off discards the recorded call stacks.
+    ///
+    /// - Parameter enabled: Whether to trace allocations.
+    static func setAllocationTracing(_ enabled: Bool) {
+        allocationTraceState.withLock { state in
+            state.isEnabled = enabled
+            state.callStacks.removeAll()
+        }
+    }
+    
+    /// Number of allocations that are traced and not yet freed.
+    static var tracedAllocationCount: Int {
+        allocationTraceState.withLock { $0.callStacks.count }
+    }
+    
+    internal static func recordAllocation(of buffer: UnsafeMutableRawBufferPointer, capacity: Int) {
+        let address = UInt(bitPattern: buffer.baseAddress!)
+        let isEnabled = allocationTraceState.withLock { state in
+            guard state.isEnabled else {
+                return false
+            }
+            state.callStacks[address] = Thread.callStackSymbols
+            return true
+        }
+        guard isEnabled else {
+            return
+        }
+        
+        DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(allocationTraceReportDelaySeconds)) {
+            let callStack = allocationTraceState.withLock { $0.callStacks[address] }
+            guard let callStack else {
+                return
+            }
+            print("[ALLOC TRACE]: buffer of size \(capacity) not freed after \(allocationTraceReportDelaySeconds) seconds.")
+            print("[ALLOC TRACE] [begin callstack]")
+            print(callStack.joined(separator: "\n"))
+            print("[ALLOC TRACE] [end callstack]")
+        }
+    }
+    
+    internal static func recordFree(of buffer: UnsafeMutableRawBufferPointer) {
+        let address = UInt(bitPattern: buffer.baseAddress!)
+        allocationTraceState.withLock { state in
+            _ = state.callStacks.removeValue(forKey: address)
+        }
+    }
+}
+#endif

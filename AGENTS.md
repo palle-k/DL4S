@@ -18,9 +18,11 @@ There is no linter or formatter configuration in this repo. CI is a GitHub Actio
 
 On Linux, acceleration comes from Intel MKL/IPP instead of Accelerate. Build with `swift build -c release -Xswiftc -DMKL_ENABLE -Xlinker -L${MKLROOT}/lib/intel64 -Xlinker -L${IPPROOT}/lib/intel64` (see README for setup). Without MKL or Accelerate, a slow generic fallback is used.
 
+Allocation tracing is a debugging aid that is compiled in only with `-Xswiftc -DDL4S_TRACE_ALLOCATIONS`. With the flag, `CPUMemoryOperators.setAllocationTracing(true)` records the call stack of every allocation and prints the call stack of a buffer that is not freed after 5 seconds. Builds without the flag contain no tracing code. Run the tracing test with `swift test --sanitize=thread -Xswiftc -DDL4S_TRACE_ALLOCATIONS --filter Concurrency`.
+
 Tests are XCTest classes in `Tests/DL4STests`. The MNIST idx files in that directory are bundled as test resources. Tests that train real models (`MNISTTests`, `TransformerTests`, `ModelTests`) or measure performance are slow and are skipped unless the `DL4S_LONG_TESTS` environment variable is set, so CI does not run them. Run them locally with `DL4S_LONG_TESTS=1 swift test`.
 
-`ConcurrencyTests` runs inference, dropout, and weight initialization from several raw threads at the same time. It is the acceptance test for the thread-safety work. Until the fixes land, the tests run as expected failures on Darwin and are skipped on Linux unless `DL4S_CONCURRENCY_TESTS=1` is set. Run the suite under the thread sanitizer to see the data races as reports.
+`ConcurrencyTests` runs inference, backpropagation, dropout, and weight initialization from several raw threads at the same time. It is the acceptance test for the thread-safety work. Run the suite under the thread sanitizer to see data races as reports.
 
 ## Architecture
 Two targets: `MKL` (a C shim that only exposes Intel MKL/IPP headers through `include/module.modulemap`; `placeholder.c` is empty on purpose) and `DL4S`, which depends on it. `Package.swift` sets no build flags; all acceleration configuration happens through command-line `-Xswiftc`/`-Xlinker` flags.
@@ -34,11 +36,12 @@ Everything is generic over two parameters: `Tensor<Element: NumericType, Device:
 
 ### Automatic differentiation
 Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
-- Each differentiable operation (all in `Tensor/Operators/*.swift`) computes its forward result through the engine, then attaches a `TensorContext` (`Context.swift`) that holds the source tensors and one backpropagation closure per source. Capture only happens when an operand `requiresGradient`.
+- Each differentiable operation (all in `Tensor/Operators/*.swift`) computes its forward result through the engine, then attaches a `TensorContext` (`Context.swift`) that holds the source tensors and the backpropagation closures. The context has two forms: one closure per source (the default), or one closure for all sources (`backpropagateAll:`) that owns the accumulators and returns every source gradient at once. Use the second form when one kernel produces all source gradients, as `stack` does, so the kernel runs once per backward visit and the closures share no state. Capture only happens when an operand `requiresGradient`.
 - `tensor.gradients(of:retainBackwardsGraph:)` (`Tensor.swift`) topologically sorts the graph by `backpropID` and walks it backwards. Backward closures are written with normal tensor operations, so the backward pass builds its own graph when `retainBackwardsGraph: true`, which enables second and higher derivatives. With `false`, accumulated gradients are detached.
 - New tensor operation checklist: add the primitive to `EngineType`, implement it in `CPUEngine` (usually delegating to a `CPUNumeric` static, implemented in `CPUFloat`/`CPUDouble`/`CPUInt32`/`CPUGeneric`), then add the public `Tensor` method in the matching `Tensor/Operators/*.swift` file with its `TensorContext` gradient closures. Add a gradient check to `Tests/DL4STests/GradientTests.swift` and tick the README feature list.
 - Backward closures must not capture the result tensor directly (retain cycle). See `exp`/`tanh` in `Unary.swift`: they capture a copy and recompute the forward value when the backward graph itself needs gradients.
-- Debug-only graph tooling: `Tensor.tag`, `OperationGroup.capture(named:)`, and `tensor.graph()` (Graphviz DOT output) are gated behind `#if DEBUG`.
+- Debug-only graph tooling: `Tensor.tag`, `OperationGroup.capture(named:)`, and `tensor.graph()` (Graphviz DOT output) are compiled only in `#if DEBUG`. The operation stack that `capture` records is a `@TaskLocal`, so each thread or task has its own stack.
+- Each tensor gets its `backpropID` from a process-wide atomic counter (`UniqueID`). Copies keep the id. `ensureOwnership` creates a new tensor with a new id when the buffer is shared.
 
 ### NN layer system
 - `LayerType` (`NN/Layer/Layer.swift`) has associated `Inputs`/`Outputs` types (not fixed to tensors, which is how RNNs return tuples), `callAsFunction`, and two parameter accessors: `parameters` and `parameterPaths` (writable key paths into the layer struct).
