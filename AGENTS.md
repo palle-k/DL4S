@@ -61,3 +61,4 @@ Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
 - Avoid em-dashes and en-dashes in sentence constructions. Write concisely. 
 - Phrases to avoid: "load-bearing", "gated", "the X is real", "X is doing a lot of work", "it's not X, it's Y", "genuinely", "{Ticket}/{fix} lands" / "{fix} has landed"
 - Do not include ticket IDs or phases in any code, including unit tests.
+- Avoid mannered prose: writing that uses metaphor or a striking phrase where a plain statement would do. Examples: "a dial worth turning" for "a parameter worth varying"; "this point earns its keep" for "this point still matters." Such phrases draw attention to the writing rather than the idea, and they are less precise, because a metaphor carries associations the writer did not intend. When a literal phrase is available, use it.

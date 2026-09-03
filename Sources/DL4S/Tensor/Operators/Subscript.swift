@@ -58,7 +58,7 @@ public extension Tensor {
                     tag: "read",
                     sources: [self],
                     backpropagateAccumulate: [{ resultGradient, acc in
-                        var result = (acc ?? Self(repeating: 0, shape: self.shape))
+                        var result = acc ?? Self(repeating: 0, shape: self.shape)
                         result[index] = resultGradient
                         return result
                     }]
@@ -68,8 +68,6 @@ public extension Tensor {
         
         set (slice) {
             precondition(!requiresGradient, "Cannot write into tensor that requires gradient.")
-            
-            self.ensureOwnership()
             
             let index = zip(index, shape).map { idx, dim -> Int? in
                 if let idx = idx, idx < 0 {
@@ -84,7 +82,7 @@ public extension Tensor {
             
             //TODO: Proper handling of replacement when gradient is computed.
             
-            Device.Memory.set(slice: index, of: values.values, with: shape, from: slice.values.values, with: slice.shape)
+            Device.Memory.set(slice: index, of: mutableValues.values, with: shape, from: slice.values.values, with: slice.shape)
             
             if slice.requiresGradient {
                 self.requiresGradient = true
@@ -143,7 +141,7 @@ public extension Tensor {
                     tag: "SubscriptRangeRead",
                     sources: [self],
                     backpropagateAccumulate: [{ resultGradient, acc in
-                        var result = (acc ?? Self(repeating: 0, shape: self.shape))
+                        var result = acc ?? Self(repeating: 0, shape: self.shape)
                         result[index] = resultGradient
                         return result
                     }]
@@ -156,11 +154,9 @@ public extension Tensor {
                 fatalError("Assigning from a single value not supported yet.")
             }
             
-            self.ensureOwnership()
-            
             //TODO: Proper handling of replacement when gradient is computed.
             
-            Device.Memory.set(slice: index, of: values.values, with: shape, from: slice.values.values, with: slice.shape)
+            Device.Memory.set(slice: index, of: mutableValues.values, with: shape, from: slice.values.values, with: slice.shape)
             
             if slice.requiresGradient {
                 self.requiresGradient = true

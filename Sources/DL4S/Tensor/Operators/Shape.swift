@@ -168,19 +168,14 @@ public extension Tensor {
         if self.requiresGradient || other.requiresGradient {
             let original = self
             
-            ensureOwnership()
-            Device.Engine.permuteAxesAdd(values: other.values, add: self.values, result: self.values, arangement: permutation)
+            Device.Engine.permuteAxesAdd(values: other.values, add: original.values, result: self.mutableValues, arangement: permutation)
             let dim = self.dim
             self.context = TensorContext(
                 tag: "permutedAdd",
                 sources: [original, other],
                 backpropagateAccumulate: [
                     { resultGradient, acc in
-                        if let acc = acc {
-                            return acc + resultGradient
-                        } else {
-                            return resultGradient
-                        }
+                        acc.map { $0 + resultGradient } ?? resultGradient
                     }, { resultGradient, acc in
                         var invArangement = [Int](repeating: 0, count: dim)
                         for (i, j) in permutation.enumerated() {
@@ -196,8 +191,8 @@ public extension Tensor {
                 ]
             )
         } else {
-            ensureOwnership()
-            Device.Engine.permuteAxesAdd(values: other.values, add: self.values, result: self.values, arangement: permutation)
+            let target = self.mutableValues
+            Device.Engine.permuteAxesAdd(values: other.values, add: ShapedBuffer(target), result: target, arangement: permutation)
         }
     }
     

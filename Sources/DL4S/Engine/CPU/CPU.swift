@@ -68,7 +68,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         return zip(shape, strides).map { dim, str in (linearIndex / str) % dim}
     }
     
-    public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> Buffer<Element, CPU> {
+    public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> MutableBuffer<Element, CPU> {
         let stride = MemoryLayout<Element>.stride
         let alignment = max(MemoryLayout<Element>.alignment, 16)
         
@@ -92,15 +92,10 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
             }
         }
         
-        return Buffer<Element, CPU>(memory: buffer)
+        return MutableBuffer<Element, CPU>(memory: buffer)
     }
     
-    public static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> ShapedBuffer<Element, CPU> {
-        let count = shape.reduce(1, *)
-        return ShapedBuffer(values: allocateBuffer(withCapacity: count, type: Element.self), shape: shape)
-    }
-    
-    public static func free<Element>(_ buffer: Buffer<Element, CPU>) {
+    public static func free<Element>(_ buffer: MutableBuffer<Element, CPU>) {
         if traceAllocations {
             sema.wait()
             allocations.removeValue(forKey: buffer.memory.baseAddress!)
@@ -109,16 +104,12 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         buffer.memory.deallocate()
     }
     
-    public static func free<Element>(_ buffer: ShapedBuffer<Element, CPU>) {
-        free(buffer.values)
-    }
-    
-    public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: Buffer<Element, CPU>, count: Int) {
+    public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: MutableBuffer<Element, CPU>, count: Int) {
         // destination.memory.bindMemory(to: Element.self).assign(from: source, count: count)
         memcpy(destination.memory.baseAddress!, source.baseAddress!, count * MemoryLayout<Element>.stride)
     }
     
-    public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: Buffer<Element, CPU>, count: Int) {
+    public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: MutableBuffer<Element, CPU>, count: Int) {
         // destination.memory.bindMemory(to: Element.self).assign(from: source.memory.bindMemory(to: Element.self).immutable, count: count)
         memcpy(destination.memory.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
     }
@@ -132,7 +123,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     @_specialize(where Element == Float)
     @_specialize(where Element == Int32)
     @_specialize(where Element == Double)
-    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (Buffer<Element, CPU>, Bool, [Int]) {
+    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (MutableBuffer<Element, CPU>, Bool, [Int]) {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         
         // Prevent unneccessary copies when index ends with nil
@@ -152,7 +143,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
                 rebasing: bound.advanced(by: offset).prefix(resultShape.reduce(1, *))
             )
             let advancedRaw = UnsafeMutableRawBufferPointer(advanced)
-            return (Buffer<Element, CPU>(memory: advancedRaw), false, resultShape)
+            return (MutableBuffer<Element, CPU>(memory: advancedRaw), false, resultShape)
         } else {
             let padded = slice + [Int?](repeating: nil, count: shape.count - slice.count)
             
@@ -171,7 +162,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         }
     }
     
-    public static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (Buffer<Element, CPU>, Bool, [Int]) {
+    public static func get<Element>(slice: [(CountableRange<Int>)?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (MutableBuffer<Element, CPU>, Bool, [Int]) {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         
         let strides = CPUMemoryOperators.strides(from: shape)
@@ -191,7 +182,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         return (resultBuffer, true, resultShape)
     }
     
-    public static func set<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
+    public static func set<Element>(slice: [Int?], of buffer: MutableBuffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
         let countDelta = dstShape.count - slice.filter {$0 != nil}.count
         precondition(sourceShape.count == countDelta, "Dimensionality of source must be equal to dimensionality of destination minus number of knowns in slice")
         
@@ -201,7 +192,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         iterativeWrite(source: source.memory.bindMemory(to: Element.self).immutable, destination: buffer.memory.bindMemory(to: Element.self), dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
     
-    public static func set<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
+    public static func set<Element>(slice: [Range<Int>?], of buffer: MutableBuffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
         precondition(sourceShape.count == dstShape.count, "Dimensionality of source must be equal to dimensionality of destination")
         
         let padded = slice + [Range<Int>?](repeating: nil, count: dstShape.count - slice.count)
@@ -219,16 +210,22 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     }
     
     public static func advance<Element>(buffer: Buffer<Element, CPU>, by advancement: Int) -> Buffer<Element, CPU> {
-        return Buffer<Element, CPU>(
-            memory: UnsafeMutableRawBufferPointer(
-                buffer.memory
-                    .bindMemory(to: Element.self)
-                    .advanced(by: advancement)
-            )
+        return Buffer<Element, CPU>(memory: advance(memory: buffer.memory, by: advancement, type: Element.self))
+    }
+    
+    public static func advance<Element>(buffer: MutableBuffer<Element, CPU>, by advancement: Int) -> MutableBuffer<Element, CPU> {
+        return MutableBuffer<Element, CPU>(memory: advance(memory: buffer.memory, by: advancement, type: Element.self))
+    }
+    
+    private static func advance<Element>(memory: UnsafeMutableRawBufferPointer, by advancement: Int, type: Element.Type) -> UnsafeMutableRawBufferPointer {
+        return UnsafeMutableRawBufferPointer(
+            memory
+                .bindMemory(to: Element.self)
+                .advanced(by: advancement)
         )
     }
     
-    public static func setPointee<Element>(of buffer: Buffer<Element, CPU>, to newValue: Element) {
+    public static func setPointee<Element>(of buffer: MutableBuffer<Element, CPU>, to newValue: Element) {
         buffer.pointer.pointee = newValue
     }
 }

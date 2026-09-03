@@ -27,10 +27,10 @@ import Foundation
 
 
 final class TensorHandle<Element, Device: DeviceType> {
-    var values: Buffer<Element, Device>
+    var values: MutableBuffer<Element, Device>
     var parent: TensorHandle<Element, Device>?
     
-    init(values: Buffer<Element, Device>, parent: TensorHandle<Element, Device>? = nil) {
+    init(values: MutableBuffer<Element, Device>, parent: TensorHandle<Element, Device>? = nil) {
         self.values = values
         self.parent = parent
     }
@@ -85,8 +85,9 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     public var tag: String? = nil
     #endif
     
+    /// Read-only view of the storage of the tensor.
     var values: ShapedBuffer<Element, Device> {
-        ShapedBuffer(values: handle.values, shape: shape)
+        ShapedBuffer(values: Buffer(handle.values), shape: shape)
     }
     
     /// Number of elements in the tensor.
@@ -161,7 +162,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         self.init(v, shape: shape, requiresGradient: requiresGradient)
     }
     
-    init(using values: ShapedBuffer<Element, Device>, context: TensorContext<Element, Device>?) {
+    init(using values: MutableShapedBuffer<Element, Device>, context: TensorContext<Element, Device>?) {
         handle = TensorHandle(values: values.values)
         self.context = context
         self.requiresGradient = context != nil
@@ -256,24 +257,25 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
                 continue
             }
             // Add gradients of all tensors that directly influenced the values
-            // of the current tensor to their respective accumulators
+            // of the current tensor to their respective accumulators.
+            // The accumulator is removed from the dictionary and consumed by the closure,
+            // to prevent extraneous copies through the CoW mechanism.
             for i in ctx.sources.indices {
                 let src = ctx.sources[i]
-                let fn = ctx.backpropagate[i]
                 
                 guard src.requiresGradient else {
                     continue
                 }
                 
-                let srcGrad = fn(grad, grads[src.backpropID])
+                let accumulator = ctx.backpropagate[i](grad, grads.removeValue(forKey: src.backpropID))
                 #if DEBUG
-                assert(srcGrad.shape == src.shape)
+                assert(accumulator.shape == src.shape)
                 #endif
                 
                 if retainGraph {
-                    grads[src.backpropID] = srcGrad
+                    grads[src.backpropID] = accumulator
                 } else {
-                    grads[src.backpropID] = srcGrad.detached()
+                    grads[src.backpropID] = accumulator.detached()
                 }
             }
         }
@@ -286,6 +288,10 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         return targetGrads
     }
     
+    /// Ensures storage is not shared with other tensors.
+    ///
+    /// Operations like `view` avoid extraneous copies of the underlying memory.
+    /// In place mutations must ensure that no other tensors reference the same storage.
     mutating func ensureOwnership() {
         if isKnownUniquelyReferenced(&handle) && handle.parent == nil {
             return
@@ -295,16 +301,16 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         let replacementHandle = TensorHandle(values:
             Device.Memory.allocateBuffer(withShape: shape, type: Element.self).values
         )
-        Device.Memory.assign(from: handle.values, to: replacementHandle.values, count: count)
+        Device.Memory.assign(from: Buffer(handle.values), to: replacementHandle.values, count: count)
         
         self = Tensor(
             handle: replacementHandle,
             shape: shape,
-            context: TensorContext(
+            context: requiresGradient ? TensorContext(
                 tag: "identity",
                 sources: [original],
                 backpropagate: [{$0}]
-            )
+            ) : nil
         )
     }
     

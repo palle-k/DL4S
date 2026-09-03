@@ -214,7 +214,7 @@ public extension Tensor where Element: RandomizableType {
     ///   - generator: Random number generator that provides the values.
     init<Generator: RandomNumberGenerator>(normalDistributedWithShape shape: [Int], mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false, using generator: inout Generator) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fillNormal(self.values, mean: mean, stdev: stdev, using: &generator)
+        Random.fillNormal(self.mutableValues, mean: mean, stdev: stdev, using: &generator)
     }
     
     /// Creates a tensor and fills it with random values sampled from a normal distribution with the given mean and variance.
@@ -247,7 +247,7 @@ public extension Tensor where Element: RandomizableType {
     ///   - generator: Random number generator that provides the values.
     init<Generator: RandomNumberGenerator>(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false, using generator: inout Generator) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fill(self.values, a: min, b: max, using: &generator)
+        Random.fill(self.mutableValues, a: min, b: max, using: &generator)
     }
     
     /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
@@ -280,7 +280,7 @@ public extension Tensor {
     ///   - generator: Random number generator that provides the values.
     init<Generator: RandomNumberGenerator>(bernoulliDistributedWithShape shape: [Int], probability: Float, requiresGradient: Bool = false, using generator: inout Generator) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.bernoulli(values, p: probability, using: &generator)
+        Random.bernoulli(mutableValues, p: probability, using: &generator)
     }
     
     /// Creates a tensor of ones and zeros, where each element is 1 with the given probability.

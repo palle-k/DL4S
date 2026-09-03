@@ -29,7 +29,8 @@ import Foundation
 struct TensorContext<Element: NumericType, Device: DeviceType> {
     var tag: String?
     var sources: [Tensor<Element, Device>]
-    var backpropagate: [(Tensor<Element, Device>, Tensor<Element, Device>?) -> Tensor<Element, Device>]
+    /// Each closure adds the gradient of the result with respect to its source to the accumulator and returns the sum.
+    var backpropagate: [(Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>]
     #if DEBUG
     var operationStack = OperationGroup.operationStack
     #endif
@@ -37,16 +38,13 @@ struct TensorContext<Element: NumericType, Device: DeviceType> {
     init(tag: String?, sources: [Tensor<Element, Device>], backpropagate: [(Tensor<Element, Device>) -> Tensor<Element, Device>]) {
         self.init(tag: tag, sources: sources, backpropagateAccumulate: backpropagate.map { function in
             { resultGradient, accumulator in
-                if let acc = accumulator {
-                    return acc + function(resultGradient)
-                } else {
-                    return function(resultGradient)
-                }
+                let gradient = function(resultGradient)
+                return accumulator.map { $0 + gradient } ?? gradient
             }
         })
     }
     
-    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAccumulate: [(Tensor<Element, Device>, Tensor<Element, Device>?) -> Tensor<Element, Device>]) {
+    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAccumulate: [(Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>]) {
         self.tag = tag
         self.sources = sources
         self.backpropagate = backpropagateAccumulate

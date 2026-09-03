@@ -93,7 +93,7 @@ public enum Random {
     @_specialize(where Element == Float, Device == CPU)
     @_specialize(where Element == Double, Device == CPU)
     @_specialize(where Element == Int32, Device == CPU)
-    public static func fill<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element) {
+    public static func fill<Element: RandomizableType, Device>(_ vector: MutableShapedBuffer<Element, Device>, a: Element, b: Element) {
         var generator = WyHash()
         fill(vector, a: a, b: b, using: &generator)
     }
@@ -107,7 +107,7 @@ public enum Random {
     @_specialize(where Element == Float, Device == CPU, Generator == WyHash)
     @_specialize(where Element == Double, Device == CPU, Generator == WyHash)
     @_specialize(where Element == Int32, Device == CPU, Generator == WyHash)
-    public static func fill<Element: RandomizableType, Device, Generator: RandomNumberGenerator>(_ vector: ShapedBuffer<Element, Device>, a: Element, b: Element, using generator: inout Generator) {
+    public static func fill<Element: RandomizableType, Device, Generator: RandomNumberGenerator>(_ vector: MutableShapedBuffer<Element, Device>, a: Element, b: Element, using generator: inout Generator) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         let range = a ... b
         for i in 0 ..< vector.count {
@@ -125,7 +125,7 @@ public enum Random {
     @_specialize(where Element == Float, Device == CPU)
     @_specialize(where Element == Double, Device == CPU)
     @_specialize(where Element == Int32, Device == CPU)
-    public static func fillNormal<Element: RandomizableType, Device>(_ vector: ShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1) {
+    public static func fillNormal<Element: RandomizableType, Device>(_ vector: MutableShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1) {
         var generator = WyHash()
         fillNormal(vector, mean: mean, stdev: stdev, using: &generator)
     }
@@ -139,7 +139,7 @@ public enum Random {
     @_specialize(where Element == Float, Device == CPU, Generator == WyHash)
     @_specialize(where Element == Double, Device == CPU, Generator == WyHash)
     @_specialize(where Element == Int32, Device == CPU, Generator == WyHash)
-    public static func fillNormal<Element: RandomizableType, Device, Generator: RandomNumberGenerator>(_ vector: ShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1, using generator: inout Generator) {
+    public static func fillNormal<Element: RandomizableType, Device, Generator: RandomNumberGenerator>(_ vector: MutableShapedBuffer<Element, Device>, mean: Element = 0, stdev: Element = 1, using generator: inout Generator) {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: vector.count)
         for i in stride(from: 0, to: vector.count - 1, by: 2) {
             let (a, b) = randNormal(stdev: stdev, mean: mean, using: &generator)
@@ -198,7 +198,7 @@ public enum Random {
     @_specialize(where Element == Float, Device == CPU)
     @_specialize(where Element == Int32, Device == CPU)
     @_specialize(where Element == Double, Device == CPU)
-    public static func bernoulli<Element: NumericType, Device>(_ values: ShapedBuffer<Element, Device>, p: Float) {
+    public static func bernoulli<Element: NumericType, Device>(_ values: MutableShapedBuffer<Element, Device>, p: Float) {
         var generator = WyHash()
         bernoulli(values, p: p, using: &generator)
     }
@@ -211,7 +211,7 @@ public enum Random {
     @_specialize(where Element == Float, Device == CPU, Generator == WyHash)
     @_specialize(where Element == Int32, Device == CPU, Generator == WyHash)
     @_specialize(where Element == Double, Device == CPU, Generator == WyHash)
-    public static func bernoulli<Element: NumericType, Device, Generator: RandomNumberGenerator>(_ values: ShapedBuffer<Element, Device>, p: Float, using generator: inout Generator) {
+    public static func bernoulli<Element: NumericType, Device, Generator: RandomNumberGenerator>(_ values: MutableShapedBuffer<Element, Device>, p: Float, using generator: inout Generator) {
         let count = values.shape.reduce(1, *)
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
         for i in 0 ..< count {
