@@ -29,3 +29,22 @@ jobs:
       - name: Run tests (release)
         if: matrix.configuration == 'release'
         run: swift test -c release -Xswiftc -enable-testing
+
+  tsan:
+    name: thread sanitizer (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        if: runner.os == 'Linux'
+        with:
+          swift-version: "6.1"
+      - name: Show Swift version
+        run: swift --version
+      - name: Run concurrency tests under the thread sanitizer
+        run: swift test --sanitize=thread --filter Concurrency
