@@ -106,9 +106,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
             allocations.removeValue(forKey: buffer.memory.baseAddress!)
             sema.signal()
         }
-        DispatchQueue.global().async {
-            buffer.memory.deallocate()
-        }
+        buffer.memory.deallocate()
     }
     
     public static func free<Element>(_ buffer: ShapedBuffer<Element, CPU>) {
