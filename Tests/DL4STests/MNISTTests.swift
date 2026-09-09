@@ -23,304 +23,252 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Testing
 import DL4S
 
-class MNISTTests: XCTestCase {
-    static func loadMNIST<Element, Device>(type: Element.Type = Element.self, device: Device.Type = Device.self) -> (train: (Tensor<Element, Device>, Tensor<Int32, Device>), test: (Tensor<Element, Device>, Tensor<Int32, Device>)) {
-        do {
-            guard let trainingImagesURL = Bundle.module.url(forResource: "train-images", withExtension: "idx3-ubyte"),
-                  let trainingLabelsURL = Bundle.module.url(forResource: "train-labels", withExtension: "idx1-ubyte"),
-                  let testingImagesURL = Bundle.module.url(forResource: "t10k-images", withExtension: "idx3-ubyte"),
-                  let testingLabelsURL = Bundle.module.url(forResource: "t10k-labels", withExtension: "idx1-ubyte")
-            else {
-                fatalError("MNIST resources are missing from the test bundle.")
+/// Training runs on MNIST.
+///
+/// The sample tests train briefly on 5,000 images and run in CI.
+/// The full tests reproduce the original runs on all 60,000 images and need `DL4S_LONG_TESTS=1`.
+///
+/// Debug builds without an accelerated backend skip the suite, see `trainsModel`.
+@Suite(.serialized, .trainsModel)
+struct MNISTTests {
+    private typealias Classifier = any LayerType<Tensor<Float, CPU>, Tensor<Float, CPU>, Float, CPU>
+
+    /// Data set of a training run and the accuracy that the model must reach on its test images.
+    enum Scale: Sendable {
+        case sample
+        case full
+
+        var data: MNISTData {
+            switch self {
+            case .sample: MNIST.sample
+            case .full: MNIST.full
             }
-            let trainingData = try Data(contentsOf: trainingImagesURL)
-            let trainingLabelData = try Data(contentsOf: trainingLabelsURL)
-            let testingData = try Data(contentsOf: testingImagesURL)
-            let testingLabelData = try Data(contentsOf: testingLabelsURL)
-            
-            let trainImages = Tensor<Element, Device>(trainingData.dropFirst(16).prefix(28 * 28 * 60_000).map(Element.init)) / 256
-            let testImages = Tensor<Element, Device>(testingData.dropFirst(16).prefix(28 * 28 * 10_000).map(Element.init)) / 256
-            
-            let trainLabels = Tensor<Int32, Device>(trainingLabelData.dropFirst(8).prefix(60_000).map(Int32.init))
-            let testLabels = Tensor<Int32, Device>(testingLabelData.dropFirst(8).prefix(10_000).map(Int32.init))
-            
-            return (
-                train: (trainImages.view(as: [-1, 1, 28, 28]), trainLabels),
-                test: (testImages.view(as: [-1, 1, 28, 28]), testLabels)
-            )
-        } catch let error {
-            print(error)
-            fatalError()
         }
-        
+
+        var minimumAccuracy: Float {
+            switch self {
+            case .sample: 0.6
+            case .full: 0.7
+            }
+        }
     }
-    
-    func testConvNet() throws {
-        try skipUnlessLongTestsEnabled()
-        var model = Sequential {
-            Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0)
+
+    /// Number of optimizer steps, batch size, and learning rate of a training run.
+    struct TrainingRun: Sendable {
+        let steps: Int
+        let batchSize: Int
+        let learningRate: Float
+
+        /// About 3 epochs on the 5,000-image sample.
+        static let sample = TrainingRun(steps: 60, batchSize: 256, learningRate: 0.001)
+
+        /// A shorter run for the convolutional model, which is slow in debug builds. It reaches about 85 % accuracy on the sample.
+        static let convolutionalSample = TrainingRun(steps: 30, batchSize: 64, learningRate: 0.003)
+
+        /// The original run of 100 steps on the full data set.
+        static let full = TrainingRun(steps: 100, batchSize: 256, learningRate: 0.001)
+    }
+
+    /// Activation functions of the dense classifier. The `logSoftmax` case trains with the negative log likelihood loss.
+    enum DenseActivation: CaseIterable, Sendable {
+        case relu, swish, mish, gelu, lisht, logSoftmax
+    }
+
+    private func makeDenseClassifier(activation: DenseActivation, using generator: inout WyHash) -> Classifier {
+        let first = Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500, using: &generator)
+        let second = Dense<Float, CPU>(inputSize: 500, outputSize: 300, using: &generator)
+        let output = Dense<Float, CPU>(inputSize: 300, outputSize: 10, using: &generator)
+
+        switch activation {
+        case .relu:
+            return Sequential {
+                first
+                Relu<Float, CPU>()
+                second
+                Relu<Float, CPU>()
+                output
+                Softmax<Float, CPU>()
+            }
+        case .swish:
+            return Sequential {
+                first
+                Swish<Float, CPU>(trainableWithChannels: 500)
+                second
+                Swish<Float, CPU>(trainableWithChannels: 300)
+                output
+                Softmax<Float, CPU>()
+            }
+        case .mish:
+            return Sequential {
+                first
+                Mish<Float, CPU>()
+                second
+                Mish<Float, CPU>()
+                output
+                Softmax<Float, CPU>()
+            }
+        case .gelu:
+            return Sequential {
+                first
+                Gelu<Float, CPU>()
+                second
+                Gelu<Float, CPU>()
+                output
+                Softmax<Float, CPU>()
+            }
+        case .lisht:
+            return Sequential {
+                first
+                LiSHT<Float, CPU>()
+                second
+                LiSHT<Float, CPU>()
+                output
+                Softmax<Float, CPU>()
+            }
+        case .logSoftmax:
+            return Sequential {
+                first
+                LiSHT<Float, CPU>()
+                second
+                LiSHT<Float, CPU>()
+                output
+                LogSoftmax<Float, CPU>()
+            }
+        }
+    }
+
+    private func makeConvClassifier(using generator: inout WyHash) -> Classifier {
+        let firstConvolution = Convolution2D<Float, CPU>(inputChannels: 1, outputChannels: 6, kernelSize: (5, 5), padding: 0, using: &generator)
+        let secondConvolution = Convolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5), padding: 0, using: &generator)
+        let hidden = Dense<Float, CPU>(inputSize: 16 * 4 * 4, outputSize: 120, using: &generator)
+        let output = Dense<Float, CPU>(inputSize: 120, outputSize: 10, using: &generator)
+
+        return Sequential {
+            firstConvolution
             LayerNorm<Float, CPU>(inputSize: [6, 24, 24])
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
-            Convolution2D<Float, CPU>(inputChannels: 6, outputChannels: 16, kernelSize: (5, 5), padding: 0)
+            secondConvolution
             LayerNorm<Float, CPU>(inputSize: [16, 8, 8])
             Relu<Float, CPU>()
             MaxPool2D<Float, CPU>(windowSize: 2, stride: 2)
             Flatten<Float, CPU>()
-            Dense<Float, CPU>(inputSize: 16 * 4 * 4, outputSize: 120)
+            hidden
             LayerNorm<Float, CPU>(inputSize: [120])
             Relu<Float, CPU>()
-            Dense<Float, CPU>(inputSize: 120, outputSize: 10)
+            output
             Softmax<Float, CPU>()
         }
-        
-        model.tag = "Classifier"
-        var optimizer = Adam(model: model, learningRate: 0.001)
-        
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
-        
-        let epochs = 100
-        let batchSize = 256
-        
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
-        
-        for _ in 1 ... epochs {
-            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
+    }
 
-            let predicted = optimizer.model(input.view(as: [batchSize, 1, 28, 28]))
-            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
-            
-            let gradients = loss.gradients(of: optimizer.model.parameters)
-            
-            optimizer.update(along: gradients)
-            
-            bar.next(userInfo: loss.item)
-        }
-        bar.complete()
-        
-        var correctCount = 0
-        
-        for i in 0 ..< imagesVal.shape[0] {
-            let x = imagesVal[i].view(as: [1, 1, 28, 28])
-            let pred = optimizer.model(x).squeezed().argmax()
-            let actual = Int(labelsVal[i].item)
-            
-            if pred == actual {
-                correctCount += 1
+    private func makeGRUClassifier(using generator: inout WyHash) -> Classifier {
+        let gru = GRU<Float, CPU>(inputSize: 28, hiddenSize: 128, direction: .forward, using: &generator)
+        let output = Dense<Float, CPU>(inputSize: 128, outputSize: 10, using: &generator)
+
+        return Sequential {
+            gru
+            Lambda<GRU<Float, CPU>.Outputs, Tensor<Float, CPU>, Float, CPU> { outputs in
+                outputs.0
             }
-        }
-        
-        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
-        
-        print("accuracy: \(accuracy * 100)%")
-        XCTAssertGreaterThan(accuracy, 0.7)
-    }
-    
-    func testGRU() throws {
-        try skipUnlessLongTestsEnabled()
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
-        
-        print("Loaded images")
-
-        var model = Sequential {
-            GRU<Float, CPU>(inputSize: 28, hiddenSize: 128, direction: .forward)
-            Lambda<GRU<Float, CPU>.Outputs, Tensor<Float, CPU>, Float, CPU> { inputs in
-                inputs.0
-            }
-            Dense<Float, CPU>(inputSize: 128, outputSize: 10)
+            output
             Softmax<Float, CPU>()
         }
-        model.tag = "Classifier"
-        
-        let epochs = 100
-        let batchSize = 256
-        
-        var optimizer = Adam(model: model, learningRate: 0.001)
-
-        print("Created model and optimizer")
-        
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
-        
-        for _ in 1 ... epochs {
-            let (batch, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
-            let input = batch.view(as: [-1, 28, 28]).permuted(to: [1, 0, 2])
-            
-            let predicted = optimizer.model(input)
-            let loss = categoricalCrossEntropy(expected: target, actual: predicted)
-            
-            let gradients = loss.gradients(of: optimizer.model.parameters)
-            optimizer.update(along: gradients)
-            
-            bar.next(userInfo: loss.item)
-        }
-        
-        bar.complete()
-        
-        var correctCount = 0
-        
-        for i in 0 ..< imagesVal.shape[0] {
-            let x = imagesVal[i]
-                .view(as: [-1, 28, 28])
-                .permuted(to: [1, 0, 2])
-            let y = optimizer.model(x).squeezed()
-            let pred = y.argmax()
-            
-            let actual = Int(labelsVal[i].item)
-            if pred == actual {
-                correctCount += 1
-            }
-        }
-        
-        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
-        
-        print("accuracy: \(accuracy * 100)%")
-        XCTAssertGreaterThan(accuracy, 0.7)
     }
-    
-    func performAccuracyTest<L: LayerType>(_ model: L, loss: (Tensor<Int32, L.Device>, Tensor<L.Parameter, L.Device>) -> Tensor<L.Parameter, L.Device>) where L.Inputs == Tensor<Float, CPU>, L.Outputs == L.Inputs, L.Parameter == Float, L.Device == CPU {
-        var optimizer = Adam(model: model, learningRate: 0.001)
-        
-        let ((images, labels), (imagesVal, labelsVal)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
-        
-        let epochs = 100
-        let batchSize = 256
-        
-        var bar = ProgressBar<Float>(totalUnitCount: epochs, formatUserInfo: {"loss: \($0)"}, label: "training")
-        
-        for _ in 1 ... epochs {
-            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
-            
-            let predicted = optimizer.model.callAsFunction(input.view(as: [batchSize, 28 * 28]))
-            let loss = loss(target, predicted)
-            
-            let gradients = loss.gradients(of: optimizer.model.parameters)
-            optimizer.update(along: gradients)
-            
-            bar.next(userInfo: loss.item)
-        }
-        
-        bar.complete()
-        
-        var correctCount = 0
-        
-        for i in 0 ..< imagesVal.shape[0] {
-            let x = imagesVal[i].view(as: [1, 28 * 28])
-            let y = optimizer.model.callAsFunction(x).squeezed()
-            let pred = y.argmax()
-            
-            let actual = Int(labelsVal[i].item)
-            if pred == actual {
-                correctCount += 1
-            }
-        }
-        
-        let accuracy = Float(correctCount) / Float(imagesVal.shape[0])
-        
-        print("accuracy: \(accuracy * 100)%")
-        XCTAssertGreaterThan(accuracy, 0.7)
-    }
-    
-    func testReluActivation() throws {
-        try skipUnlessLongTestsEnabled()
-        var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            Relu<Float, CPU>()
-            
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            Relu<Float, CPU>()
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
-        }
-        
-        model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
-    }
-    
-    func testSwishActivation() throws {
-        try skipUnlessLongTestsEnabled()
-        var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            Swish<Float, CPU>(trainableWithChannels: 500)
-            
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            Swish<Float, CPU>(trainableWithChannels: 300)
+    /// Trains the model with Adam and returns its accuracy on the test images.
+    ///
+    /// - Parameters:
+    ///   - model: Model to train.
+    ///   - scale: Data set to train and test on.
+    ///   - run: Number of steps, batch size, and learning rate.
+    ///   - loss: Loss of a prediction, given the labels and the model output.
+    ///   - input: Maps a batch of images with the shape `[batch, 1, 28, 28]` to the input shape of the model.
+    private func trainAndEvaluate<Layer: LayerType>(
+        _ model: Layer,
+        scale: Scale,
+        run: TrainingRun,
+        loss: (Tensor<Int32, CPU>, Tensor<Float, CPU>) -> Tensor<Float, CPU>,
+        input: (Tensor<Float, CPU>) -> Tensor<Float, CPU>
+    ) -> Float where Layer.Inputs == Tensor<Float, CPU>, Layer.Outputs == Tensor<Float, CPU>, Layer.Parameter == Float, Layer.Device == CPU {
+        let data = scale.data
+        var generator = WyHash(seed: 1)
+        var optimizer = Adam(model: model, learningRate: Tensor(run.learningRate))
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
+        for _ in 0 ..< run.steps {
+            let (images, labels) = MNIST.minibatch(from: data.trainingImages, labels: data.trainingLabels, count: run.batchSize, using: &generator)
+            let predicted = optimizer.model(input(images))
+            optimizer.update(along: loss(labels, predicted).gradients(of: optimizer.model.parameters))
         }
-        model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
-    }
-    
-    func testMishActivation() throws {
-        try skipUnlessLongTestsEnabled()
-        var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            Mish<Float, CPU>()
-            
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            Mish<Float, CPU>()
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
+        let testCount = data.testImages.shape[0]
+        var correct: Float = 0
+        for start in stride(from: 0, to: testCount, by: 1000) {
+            let range = start ..< min(start + 1000, testCount)
+            let scores = optimizer.model(input(data.testImages[range]))
+            correct += MNIST.accuracy(of: scores, labels: data.testLabels[range]) * Float(range.count)
         }
-        
-        model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        return correct / Float(testCount)
     }
-    
-    func testGeluActivation() throws {
-        try skipUnlessLongTestsEnabled()
-        var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            Gelu<Float, CPU>()
-            
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            Gelu<Float, CPU>()
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
+    private func runDenseClassifier(activation: DenseActivation, scale: Scale) -> Float {
+        var generator = WyHash(seed: 42)
+        let model = makeDenseClassifier(activation: activation, using: &generator)
+        let loss: (Tensor<Int32, CPU>, Tensor<Float, CPU>) -> Tensor<Float, CPU> = switch activation {
+        case .logSoftmax: { categoricalNegativeLogLikelihood(expected: $0, actual: $1) }
+        default: { categoricalCrossEntropy(expected: $0, actual: $1) }
         }
-        
-        model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+        return trainAndEvaluate(model, scale: scale, run: scale == .sample ? .sample : .full, loss: loss) { $0.view(as: [-1, 28 * 28]) }
     }
-    
-    func testLiSHTActivation() throws {
-        try skipUnlessLongTestsEnabled()
-        var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            LiSHT<Float, CPU>()
-            
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            LiSHT<Float, CPU>()
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            Softmax<Float, CPU>()
-        }
-        
-        model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalCrossEntropy(expected:$0, actual: $1)})
+    private func runConvClassifier(scale: Scale) -> Float {
+        var generator = WyHash(seed: 42)
+        let model = makeConvClassifier(using: &generator)
+        return trainAndEvaluate(model, scale: scale, run: scale == .sample ? .convolutionalSample : .full, loss: { categoricalCrossEntropy(expected: $0, actual: $1) }) { $0 }
     }
-    
-    func testLogSoftmax() throws {
-        try skipUnlessLongTestsEnabled()
-        var model = Sequential {
-            Dense<Float, CPU>(inputSize: 28 * 28, outputSize: 500)
-            LiSHT<Float, CPU>()
-            
-            Dense<Float, CPU>(inputSize: 500, outputSize: 300)
-            LiSHT<Float, CPU>()
 
-            Dense<Float, CPU>(inputSize: 300, outputSize: 10)
-            LogSoftmax<Float, CPU>()
+    private func runGRUClassifier(scale: Scale) -> Float {
+        var generator = WyHash(seed: 42)
+        let model = makeGRUClassifier(using: &generator)
+        return trainAndEvaluate(model, scale: scale, run: scale == .sample ? .sample : .full, loss: { categoricalCrossEntropy(expected: $0, actual: $1) }) {
+            // The GRU reads one image row per time step: [sequence length, batch, features].
+            $0.view(as: [-1, 28, 28]).permuted(to: [1, 0, 2])
         }
-        
-        model.tag = "Classifier"
-        performAccuracyTest(model, loss: {categoricalNegativeLogLikelihood(expected:$0, actual: $1)})
+    }
+
+    @Test(arguments: DenseActivation.allCases)
+    func denseClassifierLearnsSample(activation: DenseActivation) {
+        let accuracy = runDenseClassifier(activation: activation, scale: .sample)
+        #expect(accuracy > Scale.sample.minimumAccuracy, "accuracy \(accuracy)")
+    }
+
+    @Test(.longRunning, arguments: DenseActivation.allCases)
+    func denseClassifierLearnsFullSet(activation: DenseActivation) {
+        let accuracy = runDenseClassifier(activation: activation, scale: .full)
+        #expect(accuracy > Scale.full.minimumAccuracy, "accuracy \(accuracy)")
+    }
+
+    @Test func convClassifierLearnsSample() {
+        let accuracy = runConvClassifier(scale: .sample)
+        #expect(accuracy > Scale.sample.minimumAccuracy, "accuracy \(accuracy)")
+    }
+
+    @Test(.longRunning)
+    func convClassifierLearnsFullSet() {
+        let accuracy = runConvClassifier(scale: .full)
+        #expect(accuracy > Scale.full.minimumAccuracy, "accuracy \(accuracy)")
+    }
+
+    @Test func gruClassifierLearnsSample() {
+        let accuracy = runGRUClassifier(scale: .sample)
+        #expect(accuracy > Scale.sample.minimumAccuracy, "accuracy \(accuracy)")
+    }
+
+    @Test(.longRunning)
+    func gruClassifierLearnsFullSet() {
+        let accuracy = runGRUClassifier(scale: .full)
+        #expect(accuracy > Scale.full.minimumAccuracy, "accuracy \(accuracy)")
     }
 }

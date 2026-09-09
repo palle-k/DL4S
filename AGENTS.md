@@ -2,16 +2,17 @@
 Guidance for coding agents that work in this repository.
 
 ## What this is
-DL4S is a pure Swift deep learning library with built-in reverse-mode automatic differentiation (dynamic compute graphs, no special toolchain). It provides tensor operations, NN layers, optimizers, losses, and reference architectures (ResNet18, VGG, AlexNet, Transformer). It supports macOS, iOS, tvOS, watchOS, and Linux. It has no external dependencies.
+DL4S is a pure Swift deep learning library with built-in reverse-mode automatic differentiation (dynamic compute graphs, no special toolchain). It provides tensor operations, NN layers, optimizers, losses, and reference architectures (ResNet18, VGG, AlexNet, Transformer). It supports macOS, iOS, tvOS, watchOS, and Linux.
 
 ## Commands
 ```bash
 swift build                                          # build
 swift test                                           # run all tests
-swift test --filter DL4STests.GradientTests          # run one test class
-swift test --filter DL4STests.GradientTests/testMul  # run one test method
+swift test --filter GradientTests                    # run one test suite
+swift test --filter GradientTests/testMatMul         # run one test function
+DL4S_LONG_TESTS=1 swift test                         # include the long training runs
 swift test --filter Concurrency                      # run the thread-safety stress suite
-swift test --sanitize=thread --filter Concurrency    # run it under the thread sanitizer
+swift test --sanitize=thread --filter Concurrency    # run it under thread sanitizer
 ```
 
 There is no linter or formatter configuration in this repo. CI is a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `swift test` in debug and release configuration (`-c release -Xswiftc -enable-testing`) on macOS and Ubuntu, and runs the concurrency suite under the thread sanitizer. A second workflow (`.github/workflows/tsan-full.yml`) runs the full test suite under the thread sanitizer on every push to master and on manual dispatch. Both sanitizer jobs run on macOS only: on Linux, TSan does not see `Synchronization.Mutex` and reports every access under the lock as a race (verified with Swift 6.1 and 6.3.3).
@@ -20,7 +21,7 @@ On Linux, acceleration comes from Intel MKL/IPP instead of Accelerate. Build wit
 
 Allocation tracing is a debugging aid that is compiled in only with `-Xswiftc -DDL4S_TRACE_ALLOCATIONS`. With the flag, `CPUMemoryOperators.setAllocationTracing(true)` records the call stack of every allocation and prints the call stack of a buffer that is not freed after 5 seconds. Builds without the flag contain no tracing code. Run the tracing test with `swift test --sanitize=thread -Xswiftc -DDL4S_TRACE_ALLOCATIONS --filter Concurrency`.
 
-Tests are XCTest classes in `Tests/DL4STests`. The MNIST idx files in that directory are bundled as test resources. Tests that train real models (`MNISTTests`, `TransformerTests`, `ModelTests`) or measure performance are slow and are skipped unless the `DL4S_LONG_TESTS` environment variable is set, so CI does not run them. Run them locally with `DL4S_LONG_TESTS=1 swift test`.
+Tests use Swift Testing (`@Suite` structs with `@Test` functions) in `Tests/DL4STests`. Tests that train real models for minutes (`ModelTests`, `TransformerTests`, and the full-set runs in `MNISTTests` and `TransformerMNISTTests`) have the `.longRunning` trait from `TestUtil.swift`, which skips them unless the `DL4S_LONG_TESTS` environment variable is set, and run `.serialized`. Run them locally with `DL4S_LONG_TESTS=1 swift test`. The short MNIST training runs in `MNISTTests` carry the `.trainsModel` trait: they run with an accelerated backend, in release builds, or with `DL4S_LONG_TESTS` set, because the generic fallback in a debug build needs more than an hour for them. The MNIST idx files in the test directory are bundled as test resources; `MNIST.sample` (5,000 training images) and `MNIST.full` in `MNIST.swift` load them once per process. `TestUtil.swift` also has `expectEqual(_:_:accuracy:)`, `expectClose(_:_:tolerance:)` for tensors, and `numericalGradient(of:at:)` for finite-difference gradient checks.
 
 `ConcurrencyTests` runs inference, backpropagation, dropout, and weight initialization from several raw threads at the same time. It is the acceptance test for the thread-safety work. Run the suite under the thread sanitizer to see data races as reports.
 

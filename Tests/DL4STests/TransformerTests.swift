@@ -23,12 +23,13 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Testing
 import DL4S
 
-class TransformerTests: XCTestCase {
-    func testTransformerConvergence() throws {
-        try skipUnlessLongTestsEnabled()
+@Suite(.serialized)
+struct TransformerTests {
+    @Test(.longRunning)
+    func testTransformerConvergence() {
         let transformer = Transformer<Float, CPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
         let samples: [[Int32]] = [
             [1, 2, 3, 0],
@@ -37,13 +38,13 @@ class TransformerTests: XCTestCase {
             [2, 1, 3, 3]
         ]
         let outputs: [[Int32]] = [[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]]
-        
+
         var optim = Adam(model: transformer, learningRate: 0.001)
-        
+
         var bar = ProgressBar<Float>(totalUnitCount: 1000, formatUserInfo: {"loss: \($0)"}, label: "training")
-        
+
         var lastLoss = Float.infinity
-        
+
         for _ in 1 ... 1000 {
             let indices = (0 ..< 4).shuffled()
             let input = indices.map {samples[$0]}
@@ -51,31 +52,31 @@ class TransformerTests: XCTestCase {
             let decoderInput = expected.map {
                 [0] + $0.dropLast()
             }
-            
+
             let prediction = optim.model((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
             let loss = categoricalNegativeLogLikelihood(expected: Tensor(expected), actual: prediction)
             let grads = loss.gradients(of: optim.model.parameters)
             optim.update(along: grads)
             bar.next(userInfo: loss.item)
-            
+
             lastLoss = loss.item
-            
+
             if loss.item < 0.01 {
                 break
             }
         }
         bar.complete()
 
-        XCTAssertLessThanOrEqual(lastLoss, 0.1)
+        #expect(lastLoss <= 0.1)
     }
 
-    func testLayerNormNormalizesEachSequenceElement() {
+    @Test func testLayerNormNormalizesEachSequenceElement() {
         let norm = LayerNorm<Float, CPU>(inputSize: [4])
         let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: [2, 3, 4], min: -10, max: 10)
 
         let perSequenceElement = norm(x)
         let flat = norm(x.view(as: [6, 4])).view(as: [2, 3, 4])
 
-        XCTAssertLessThan(((perSequenceElement - flat) * (perSequenceElement - flat)).reduceSum().item, 1e-8)
+        expectClose(perSequenceElement, flat, tolerance: 1e-8)
     }
 }

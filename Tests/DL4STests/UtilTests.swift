@@ -23,20 +23,24 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Foundation
+import Testing
 @testable import DL4S
 
-class UtilTests: XCTestCase {
-    func testFileReader() {
+struct UtilTests {
+    @Test func testFileReader() throws {
         let packageManifestURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()  // DL4STests
             .deletingLastPathComponent()  // Tests
             .deletingLastPathComponent()  // repository root
             .appendingPathComponent("Package.swift")
-        let f = File(url: packageManifestURL)
-        
-        for line in f {
-            print("### \(line)")
-        }
+
+        let lines = Array(File(url: packageManifestURL))
+
+        let expected = try String(contentsOf: packageManifestURL, encoding: .utf8)
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+        #expect(lines == expected)
+        #expect(lines.first == "// swift-tools-version:6.1")
     }
 }

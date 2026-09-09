@@ -23,21 +23,20 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Testing
 import DL4S
 
-class MemTests: XCTestCase {
-    func testSliceRead() {
+struct MemTests {
+    @Test func testSliceRead() {
         let a: Tensor<Float, CPU> = Tensor((0..<16).map(Float.init), shape: 4, 4)
-        
-        print(a[0, nil])
-        print(a[1, nil])
-        print(a[2, nil])
-        print(a[3, nil])
-        
-        print(a[nil, 0])
-        print(a[nil, 1])
-        print(a[nil, 2])
-        print(a[nil, 3])
+
+        for row in 0 ..< 4 {
+            let expectedRow: [Float] = (0 ..< 4).map { Float(row * 4 + $0) }
+            #expect(a[row, nil] == Tensor(expectedRow))
+        }
+        for column in 0 ..< 4 {
+            let expectedColumn: [Float] = (0 ..< 4).map { Float($0 * 4 + column) }
+            #expect(a[nil, column] == Tensor(expectedColumn))
+        }
     }
 }

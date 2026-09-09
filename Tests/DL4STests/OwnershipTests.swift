@@ -23,12 +23,12 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Testing
 import Synchronization
 @testable import DL4S
 
 
-class OwnershipTests: XCTestCase {
+struct OwnershipTests {
     /// A tensor with the values of `source` and one backpropagation closure that observes the gradient flow to `source`.
     ///
     /// The closure receives the gradient of the probe and the accumulated gradient of `source`, and returns the new accumulated gradient.
@@ -39,46 +39,46 @@ class OwnershipTests: XCTestCase {
             context: TensorContext(tag: "probe", sources: [source], backpropagateAccumulate: [backpropagate])
         )
     }
-    
-    func testMutableValuesCopiesSharedStorage() {
+
+    @Test func testMutableValuesCopiesSharedStorage() {
         let original = Tensor<Float, CPU>([1, 2, 3])
         var copy = original
         CPU.Engine.fill(value: 0, result: copy.mutableValues.values, count: 3)
 
-        XCTAssertEqual(original, Tensor([1, 2, 3]))
-        XCTAssertEqual(copy, Tensor([0, 0, 0]))
+        #expect(original == Tensor([1, 2, 3]))
+        #expect(copy == Tensor([0, 0, 0]))
     }
 
-    func testMutableValuesCopiesViewStorage() {
+    @Test func testMutableValuesCopiesViewStorage() {
         let matrix = Tensor<Float, CPU>([[1, 2], [3, 4]])
         var row = matrix[1]
         CPU.Engine.fill(value: 0, result: row.mutableValues.values, count: 2)
 
-        XCTAssertEqual(matrix, Tensor([[1, 2], [3, 4]]))
-        XCTAssertEqual(row, Tensor([0, 0]))
+        #expect(matrix == Tensor([[1, 2], [3, 4]]))
+        #expect(row == Tensor([0, 0]))
     }
 
-    func testAccumulationIntoSharedBufferLeavesOtherTensorUnchanged() {
+    @Test func testAccumulationIntoSharedBufferLeavesOtherTensorUnchanged() {
         let original = Tensor<Float, CPU>([[1, 2], [3, 4]])
         var accumulator = original
         accumulator.addingPermuted(Tensor([[10, 20], [30, 40]]), permutation: [1, 0])
 
-        XCTAssertEqual(original, Tensor([[1, 2], [3, 4]]))
-        XCTAssertEqual(accumulator, Tensor([[11, 32], [23, 44]]))
+        #expect(original == Tensor([[1, 2], [3, 4]]))
+        #expect(accumulator == Tensor([[11, 32], [23, 44]]))
     }
 
-    func testAccumulationIntoUniqueBufferIsInPlace() {
+    @Test func testAccumulationIntoUniqueBufferIsInPlace() {
         var accumulator = Tensor<Float, CPU>([[1, 2], [3, 4]])
         let address = accumulator.bufferAddress
         accumulator.addingPermuted(Tensor([[10, 20], [30, 40]]), permutation: [1, 0])
 
-        XCTAssertEqual(accumulator.bufferAddress, address)
-        XCTAssertEqual(accumulator, Tensor([[11, 32], [23, 44]]))
+        #expect(accumulator.bufferAddress == address)
+        #expect(accumulator == Tensor([[11, 32], [23, 44]]))
     }
 
     /// A residual connection makes the gradient of the sum and the gradient of the product share one buffer.
     /// The product must not add into that buffer, or the gradient of the weight doubles.
-    func testResidualConnectionGradient() {
+    @Test func testResidualConnectionGradient() {
         let a = Tensor<Float, CPU>([[1, 2], [3, 4]], requiresGradient: true)
         let w = Tensor<Float, CPU>([[1, 0], [0, 1]], requiresGradient: true)
         let sharedAddress = Mutex<UInt?>(nil)
@@ -90,14 +90,14 @@ class OwnershipTests: XCTestCase {
 
         let grads = s.gradients(of: [a, w])
 
-        XCTAssertEqual(grads[1], Tensor([[4, 4], [6, 6]]))
-        XCTAssertEqual(grads[0], Tensor([[2, 2], [2, 2]]))
-        XCTAssertNotNil(sharedAddress.withLock { $0 })
-        XCTAssertNotEqual(grads[0].bufferAddress, sharedAddress.withLock { $0 })
+        #expect(grads[1] == Tensor([[4, 4], [6, 6]]))
+        #expect(grads[0] == Tensor([[2, 2], [2, 2]]))
+        #expect(sharedAddress.withLock { $0 } != nil)
+        #expect(grads[0].bufferAddress != sharedAddress.withLock { $0 })
     }
 
     /// Only optimized builds accumulate without a copy. In unoptimized builds, a copy is accepted there.
-    func testWeightUsedTwiceAccumulatesGradientInPlace() {
+    @Test func testWeightUsedTwiceAccumulatesGradientInPlace() {
         let w = Tensor<Float, CPU>(uniformlyDistributedWithShape: [4, 3], requiresGradient: true)
         let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [5, 4])
         let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: [5, 4])
@@ -114,14 +114,14 @@ class OwnershipTests: XCTestCase {
         let grad = y.gradients(of: [w])[0]
 
         let expected = (a + b).transposed().matrixMultiplied(with: Tensor(repeating: 1, shape: [5, 3]))
-        XCTAssertLessThan(((grad - expected) * (grad - expected)).reduceSum().item, 1e-8)
-        XCTAssertNotNil(addressAfterFirstProduct.withLock { $0 })
+        expectClose(grad, expected, tolerance: 1e-8)
+        #expect(addressAfterFirstProduct.withLock { $0 } != nil)
         #if !DEBUG
-        XCTAssertEqual(grad.bufferAddress, addressAfterFirstProduct.withLock { $0 })
+        #expect(grad.bufferAddress == addressAfterFirstProduct.withLock { $0 })
         #endif
     }
 
-    func testTensorTransposedTwiceAccumulatesGradientInPlace() {
+    @Test func testTensorTransposedTwiceAccumulatesGradientInPlace() {
         let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [4, 3], requiresGradient: true)
         let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: [3, 4])
         let c = Tensor<Float, CPU>(uniformlyDistributedWithShape: [3, 4])
@@ -136,14 +136,14 @@ class OwnershipTests: XCTestCase {
         let grad = y.gradients(of: [a])[0]
 
         let expected = (b + c).transposed()
-        XCTAssertLessThan(((grad - expected) * (grad - expected)).reduceSum().item, 1e-8)
-        XCTAssertNotNil(addressAfterFirstTranspose.withLock { $0 })
+        expectClose(grad, expected, tolerance: 1e-8)
+        #expect(addressAfterFirstTranspose.withLock { $0 } != nil)
         #if !DEBUG
-        XCTAssertEqual(grad.bufferAddress, addressAfterFirstTranspose.withLock { $0 })
+        #expect(grad.bufferAddress == addressAfterFirstTranspose.withLock { $0 })
         #endif
     }
 
-    func testTransposedMatrixProductGradients() {
+    @Test func testTransposedMatrixProductGradients() {
         let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: [3, 4], requiresGradient: true)
         let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: [4, 5], requiresGradient: true)
         let scale = Tensor<Float, CPU>(uniformlyDistributedWithShape: [3, 5])
@@ -161,38 +161,37 @@ class OwnershipTests: XCTestCase {
             let explicitGrads = explicit.gradients(of: [lhsParameter, rhsParameter])
 
             for (fusedGrad, explicitGrad) in zip(fusedGrads, explicitGrads) {
-                XCTAssertEqual(fusedGrad.shape, explicitGrad.shape)
-                XCTAssertLessThan(((fusedGrad - explicitGrad) * (fusedGrad - explicitGrad)).reduceSum().item, 1e-8, "transposeLhs: \(transposeLhs), transposeRhs: \(transposeRhs)")
+                expectClose(fusedGrad, explicitGrad, tolerance: 1e-8)
             }
         }
     }
 
-    func testCopiedTensorKeepsBackpropID() {
+    @Test func testCopiedTensorKeepsBackpropID() {
         let original = Tensor<Float, CPU>([1, 2, 3])
         let copy = original
-        
-        XCTAssertEqual(copy.backpropID, original.backpropID)
-        XCTAssertNotEqual(Tensor<Float, CPU>([1, 2, 3]).backpropID, original.backpropID)
+
+        #expect(copy.backpropID == original.backpropID)
+        #expect(Tensor<Float, CPU>([1, 2, 3]).backpropID != original.backpropID)
     }
-    
-    func testEnsureOwnershipOnSharedBufferMintsNewBackpropID() {
+
+    @Test func testEnsureOwnershipOnSharedBufferMintsNewBackpropID() {
         let original = Tensor<Float, CPU>([1, 2, 3])
         var copy = original
         copy.ensureOwnership()
-        
-        XCTAssertNotEqual(copy.backpropID, original.backpropID)
-        XCTAssertNotEqual(copy.bufferAddress, original.bufferAddress)
-        XCTAssertEqual(copy, original)
+
+        #expect(copy.backpropID != original.backpropID)
+        #expect(copy.bufferAddress != original.bufferAddress)
+        #expect(copy == original)
     }
-    
-    func testEnsureOwnershipOnUniqueBufferKeepsBackpropID() {
+
+    @Test func testEnsureOwnershipOnUniqueBufferKeepsBackpropID() {
         var tensor = Tensor<Float, CPU>([1, 2, 3])
         let id = tensor.backpropID
         let address = tensor.bufferAddress
         tensor.ensureOwnership()
-        
-        XCTAssertEqual(tensor.backpropID, id)
-        XCTAssertEqual(tensor.bufferAddress, address)
+
+        #expect(tensor.backpropID == id)
+        #expect(tensor.bufferAddress == address)
     }
 }
 

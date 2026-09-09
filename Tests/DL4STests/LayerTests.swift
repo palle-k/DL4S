@@ -23,13 +23,14 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Foundation
+import Testing
 import Synchronization
 import DL4S
 
-final class LayerTests: XCTestCase {
+struct LayerTests {
     private typealias TensorLayer = any LayerType<Tensor<Float, CPU>, Tensor<Float, CPU>, Float, CPU>
-    
+
     /// Returns a copy of the layer with all parameters set to zero.
     ///
     /// The generic parameter opens the existential, so the writable key paths of the concrete layer type can be used.
@@ -40,34 +41,34 @@ final class LayerTests: XCTestCase {
         }
         return copy
     }
-    
-    func testExistentialLayerRunsInferenceAndCopiesIndependently() {
+
+    @Test func testExistentialLayerRunsInferenceAndCopiesIndependently() {
         let dense = Dense<Float, CPU>(inputSize: 4, outputSize: 3)
         let layer: TensorLayer = dense
         let input = Tensor<Float, CPU>(uniformlyDistributedWithShape: [2, 4])
         let expected = dense(input)
-        
-        XCTAssertEqual(layer(input), expected)
-        XCTAssertEqual(layer.parameters.count, dense.parameters.count)
-        
+
+        #expect(layer(input) == expected)
+        #expect(layer.parameters.count == dense.parameters.count)
+
         let zeroed: TensorLayer = zeroingParameters(of: layer)
-        
-        XCTAssertEqual(zeroed(input), Tensor(repeating: 0, shape: [2, 3]))
-        XCTAssertEqual(layer(input), expected)
-        XCTAssertEqual(dense(input), expected)
+
+        #expect(zeroed(input) == Tensor(repeating: 0, shape: [2, 3]))
+        #expect(layer(input) == expected)
+        #expect(dense(input) == expected)
     }
-    
+
     /// Parameter key paths of a composite layer are appended key paths. They must cross a `@Sendable` boundary
     /// and must still write to the right parameter.
-    func testAppendedParameterPathsAreSendable() {
+    @Test func testAppendedParameterPathsAreSendable() {
         let model = Sequential {
             Dense<Float, CPU>(inputSize: 3, outputSize: 2)
             Tanh<Float, CPU>()
             Dense<Float, CPU>(inputSize: 2, outputSize: 1)
         }
         let paths = model.parameterPaths
-        XCTAssertEqual(paths.count, 4)
-        
+        #expect(paths.count == 4)
+
         let zeroed: @Sendable () -> [Tensor<Float, CPU>] = {
             var copy = model
             for path in paths {
@@ -75,7 +76,7 @@ final class LayerTests: XCTestCase {
             }
             return copy.parameters
         }
-        
+
         let group = DispatchGroup()
         group.enter()
         let result = Mutex<[Tensor<Float, CPU>]>([])
@@ -84,10 +85,10 @@ final class LayerTests: XCTestCase {
             group.leave()
         }.start()
         group.wait()
-        
+
         let parameters = result.withLock { $0 }
-        XCTAssertEqual(parameters.map(\.shape), model.parameters.map(\.shape))
-        XCTAssertTrue(parameters.allSatisfy { $0.elements.allSatisfy { $0 == 0 } })
-        XCTAssertFalse(model.parameters[0].elements.allSatisfy { $0 == 0 })
+        #expect(parameters.map(\.shape) == model.parameters.map(\.shape))
+        #expect(parameters.allSatisfy { $0.elements.allSatisfy { $0 == 0 } })
+        #expect(!model.parameters[0].elements.allSatisfy { $0 == 0 })
     }
 }
