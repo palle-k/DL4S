@@ -23,31 +23,26 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Testing
 import DL4S
 
-class GradientTests: XCTestCase {
-    func testSecondDerivative() {
-        let t = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
-        
+struct GradientTests {
+    @Test func testSecondDerivative() {
+        let t = Tensor<Float, CPU>([1, 2, 3, 4], requiresGradient: true)
+
         let result = t * t * t
-        print(result)
-        print()
-        
         let grad = result.gradients(of: [t], retainBackwardsGraph: true)[0]
-        print(grad)
-        print()
-        
         let secondGrad = grad.gradients(of: [t], retainBackwardsGraph: true)[0]
-        print(secondGrad)
-        print()
-        
         let thirdGrad = secondGrad.gradients(of: [t], retainBackwardsGraph: true)[0]
-        print(thirdGrad)
+
+        expectClose(grad, 3 * t * t)
+        expectClose(secondGrad, 6 * t)
+        expectClose(thirdGrad, Tensor(repeating: 6, shape: [4]))
     }
-    
-    func testSecondDerivative2() {
-        let functions: [(Tensor<Float, CPU>) -> Tensor<Float, CPU>] = [
+
+    /// First and second derivatives of common operations must match central difference estimates.
+    @Test func testSecondDerivative2() {
+        let functions: [(Tensor<Double, CPU>) -> Tensor<Double, CPU>] = [
             DL4S.exp,
             DL4S.log,
             DL4S.sum,
@@ -64,109 +59,107 @@ class GradientTests: XCTestCase {
             {Tensor(stacking: [$0, $0], along: 1)},
             {logSoftmax($0, axis: 1)}
         ]
-        
-        for function in functions {
-            let t = Tensor<Float, CPU>([[2, 3, 4, 5]], requiresGradient: true)
+
+        for (index, function) in functions.enumerated() {
+            let t = Tensor<Double, CPU>([[2, 3, 4, 5]], requiresGradient: true)
             let result = function(t)
-            
+
             let grad = result.gradients(of: [t], retainBackwardsGraph: true)[0]
-            print(grad)
-            
-            XCTAssert(grad.requiresGradient)
-            
+            #expect(grad.requiresGradient, "function \(index)")
+            expectClose(grad, numericalGradient(of: function, at: t))
+
+            let firstDerivative: (Tensor<Double, CPU>) -> Tensor<Double, CPU> = { point in
+                var point = point
+                point.requiresGradient = true
+                return function(point).gradients(of: [point])[0]
+            }
             let secondGrad = grad.gradients(of: [t], retainBackwardsGraph: true)[0]
-            print(secondGrad)
+            expectClose(secondGrad, numericalGradient(of: firstDerivative, at: t))
         }
     }
-    
-    func testSecondDerivative3() {
-        // Note: This test should not leak memory.
-        
-        for _ in 1 ... 1 {
-            let net = Concat<Float, CPU>()
-            
-            let input1 = Tensor<Float, CPU>(uniformlyDistributedWithShape: 1, 16, requiresGradient: true)
-            let input2 = Tensor<Float, CPU>(uniformlyDistributedWithShape: 1, 16, requiresGradient: true)
-            let result = net([input1, input2])
-            let loss = meanSquaredError(expected: 1, actual: result)
-            
-            print("[result info] shape: \(result.shape), mean: \(result.reduceMean()), stdev: \(result.variance().sqrt()), max: \(result.detached().reduceMax()), min: \(-(-result).detached().reduceMax())")
-            
-            let grad = loss.gradients(of: [input1], retainBackwardsGraph: true)[0]
-            print("[grad info] shape: \(grad.shape), mean: \(grad.reduceMean()), stdev: \(grad.variance().sqrt()), max: \(grad.detached().reduceMax()), min: \(-(-grad).detached().reduceMax())")
-        }
+
+    @Test func testSecondDerivative3() {
+        let net = Concat<Float, CPU>()
+
+        let input1 = Tensor<Float, CPU>(uniformlyDistributedWithShape: 1, 16, requiresGradient: true)
+        let input2 = Tensor<Float, CPU>(uniformlyDistributedWithShape: 1, 16, requiresGradient: true)
+        let result = net([input1, input2])
+        let loss = meanSquaredError(expected: 1, actual: result)
+
+        #expect(result.shape == [1, 32])
+
+        // The loss is the sum of squared differences to 1, so the gradient of an input is 2 * (input - 1).
+        let grad = loss.gradients(of: [input1], retainBackwardsGraph: true)[0]
+        expectClose(grad, 2 * (input1 - 1))
+
+        let secondGrad = grad.reduceSum().gradients(of: [input1])[0]
+        expectClose(secondGrad, Tensor(repeating: 2, shape: [1, 16]))
     }
-    
-    func testGradient() {
-        let t2 = Tensor<Float, CPU>([1,2,3,4], requiresGradient: true)
+
+    @Test func testGradient() {
+        let t2 = Tensor<Float, CPU>([1, 2, 3, 4], requiresGradient: true)
         let r2 = 1 / t2
-        
+
         let grad = r2.gradients(of: [t2])[0]
-        print(r2)
-        print(grad)
+
+        let expectedValues: [Float] = [1, 1 / 2, 1 / 3, 1 / 4]
+        let expectedGrad: [Float] = [-1, -1 / 4, -1 / 9, -1 / 16]
+        expectClose(r2, Tensor(expectedValues))
+        expectClose(grad, Tensor(expectedGrad))
     }
-    
-    func testMatMul() {
-        var lhs = Tensor<Float, CPU>([
+
+    @Test func testMatMul() {
+        let lhs = Tensor<Float, CPU>([
             [1, 2, 3],
             [4, 5, 6]
         ], requiresGradient: true)
-        
-        var rhs = Tensor<Float, CPU>([
+
+        let rhs = Tensor<Float, CPU>([
             [1, 1],
             [2, 2],
             [3, 3]
         ], requiresGradient: true)
-        
-        #if DEBUG
-        lhs.tag = "lhs"
-        rhs.tag = "rhs"
-        #endif
-        
-        var result = lhs.matrixMultiplied(with: rhs)
-        #if DEBUG
-        result.tag = "result"
-        #endif
-        
-        var grads = result.gradients(of: [lhs, rhs], retainBackwardsGraph: true)
-        
-        #if DEBUG
-        grads[0].tag = "∇lhs"
-        grads[1].tag = "∇rhs"
-        #endif
-        
-        print(grads.map {$0.reduceSum()}.reduce(0, +).graph())
-        
+
+        let result = lhs.matrixMultiplied(with: rhs)
+        let grads = result.gradients(of: [lhs, rhs], retainBackwardsGraph: true)
+
+        let expectedLhsGrad = Tensor<Float, CPU>([[2, 4, 6], [2, 4, 6]])
+        let expectedRhsGrad = Tensor<Float, CPU>([[5, 5], [7, 7], [9, 9]])
+        #expect(grads[0] == expectedLhsGrad)
+        #expect(grads[1] == expectedRhsGrad)
+
+        // The sum of the lhs gradient is 2 * sum(rhs), so it changes with rhs only. The rhs gradient behaves the same way.
         let lhsGradGrads = grads[0].reduceSum().gradients(of: [lhs, rhs])
+        #expect(lhsGradGrads[0] == Tensor(repeating: 0, shape: [2, 3]))
+        #expect(lhsGradGrads[1] == Tensor(repeating: 2, shape: [3, 2]))
+
         let rhsGradGrads = grads[1].reduceSum().gradients(of: [lhs, rhs])
-        
-        print(grads.map {$0.detached()})
-        print(lhsGradGrads, rhsGradGrads)
+        #expect(rhsGradGrads[0] == Tensor(repeating: 2, shape: [2, 3]))
+        #expect(rhsGradGrads[1] == Tensor(repeating: 0, shape: [3, 2]))
     }
-    
-    func testXRNN() {
+
+    @Test func testXRNN() {
         let model = LSTM<Float, CPU>(inputSize: 32, hiddenSize: 32)
-        var input = Tensor<Float, CPU>(uniformlyDistributedWithShape: [1, 4, 32], requiresGradient: true)
-        input.requiresGradient = true
-        #if DEBUG
-        input.tag = "input"
-        #endif
-        
+        let input = Tensor<Float, CPU>(uniformlyDistributedWithShape: [1, 4, 32], requiresGradient: true)
+
         let result = model(input).0.hiddenState
         let inputGrad = result.gradients(of: [input], retainBackwardsGraph: true)[0]
 
-        print(inputGrad.graph())
+        #expect(inputGrad.shape == input.shape)
+        #expect(inputGrad.elements.allSatisfy { $0.isFinite })
+        #expect(inputGrad.elements.contains { $0 != 0 })
+        #expect(!inputGrad.graph().isEmpty)
     }
 
-    func testRepeatedSubscriptReadAccumulatesGradient() {
+    @Test func testRepeatedSubscriptReadAccumulatesGradient() {
         let x = Tensor<Float, CPU>([[1, 2], [3, 4]], requiresGradient: true)
         let y = (x[0] * 2 + x[0] * 3 + x[1 ..< 2] * 4 + x[1 ..< 2] * 5).reduceSum()
 
-        XCTAssertEqual(y.gradients(of: [x])[0], Tensor([[5, 5], [9, 9]]))
+        #expect(y.gradients(of: [x])[0] == Tensor([[5, 5], [9, 9]]))
     }
 
     /// Broadcasting reads the same weight slice once per batch element, so the weight gradient must sum over the batch.
-    func testBroadcastMatMulWeightGradientSumsOverBatch() {
+    @Test func testBroadcastMatMulWeightGradientSumsOverBatch() {
         let batchSize = 4
         let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: [batchSize, 3, 5])
         let w = Tensor<Float, CPU>(uniformlyDistributedWithShape: [5, 2], requiresGradient: true)
@@ -178,6 +171,6 @@ class GradientTests: XCTestCase {
             .reduce(Tensor(0), +)
             .gradients(of: [w])[0]
 
-        XCTAssertLessThan(((broadcastGrad - explicitGrad) * (broadcastGrad - explicitGrad)).reduceSum().item, 1e-8)
+        expectClose(broadcastGrad, explicitGrad, tolerance: 1e-8)
     }
 }

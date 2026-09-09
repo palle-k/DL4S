@@ -23,11 +23,10 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Testing
 import DL4S
 
 
-/// Classifies an MNIST image as a sequence of 28 rows with a Transformer encoder.
 struct RowTransformerClassifier: LayerType, Codable {
     typealias Inputs = Tensor<Float, CPU>
     typealias Outputs = Tensor<Float, CPU>
@@ -65,20 +64,20 @@ struct RowTransformerClassifier: LayerType, Codable {
     }
 }
 
-class TransformerMNISTTests: XCTestCase {
-    func testRowTransformerLearnsMNIST() throws {
-        try skipUnlessLongTestsEnabled()
-
-        let ((images, labels), (testImages, testLabels)) = MNISTTests.loadMNIST(type: Float.self, device: CPU.self)
+@Suite(.serialized)
+struct TransformerMNISTTests {
+    @Test(.longRunning)
+    func testRowTransformerLearnsMNIST() {
+        let data = MNIST.full
         var generator = WyHash(seed: 42)
-        let model = RowTransformerClassifier(hiddenDim: 32, layers: 2, heads: 4, using: &generator)
+        let model = RowTransformerClassifier(hiddenDim: 64, layers: 2, heads: 4, using: &generator)
         var optimizer = Adam(model: model, learningRate: 0.001)
         let batchSize = 64
         let steps = 600
         var bar = ProgressBar<Float>(totalUnitCount: steps, formatUserInfo: {"loss: \($0)"}, label: "training")
 
         for _ in 1 ... steps {
-            let (input, target) = Random.minibatch(from: images, labels: labels, count: batchSize)
+            let (input, target) = MNIST.minibatch(from: data.trainingImages, labels: data.trainingLabels, count: batchSize, using: &generator)
             let prediction = optimizer.model(input.view(as: [batchSize, 28, 28]))
             let loss = categoricalNegativeLogLikelihood(expected: target, actual: prediction)
             optimizer.update(along: loss.gradients(of: optimizer.model.parameters))
@@ -86,19 +85,9 @@ class TransformerMNISTTests: XCTestCase {
         }
         bar.complete()
 
-        let evaluationCount = 2000
-        let prediction = optimizer.model(testImages[0 ..< evaluationCount].view(as: [evaluationCount, 28, 28])).elements
-        let expected = testLabels[0 ..< evaluationCount].elements
-        var correct = 0
-        for i in 0 ..< evaluationCount {
-            let scores = prediction[(i * 10) ..< (i * 10 + 10)]
-            let predictedClass = scores.indices.max { scores[$0] < scores[$1] }! - i * 10
-            if Int32(predictedClass) == expected[i] {
-                correct += 1
-            }
-        }
-        let accuracy = Float(correct) / Float(evaluationCount)
-        print("test accuracy: \(accuracy)")
-        XCTAssertGreaterThan(accuracy, 0.9)
+        let prediction = optimizer.model(data.testImages.view(as: [-1, 28, 28]))
+        let accuracy = MNIST.accuracy(of: prediction, labels: data.testLabels)
+        #expect(accuracy > 0.9, "test accuracy \(accuracy)")
+        print("Accuracy: \(accuracy)")
     }
 }

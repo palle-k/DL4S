@@ -23,61 +23,61 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Foundation
+import Testing
 import DL4S
 
-class VectorXORTest: XCTestCase {
-    func testXNN() {
-        var xor_src = Tensor<Float, CPU>([
+struct VectorXORTest {
+    @Test func testXNN() {
+        let xor_src = Tensor<Float, CPU>([
             [0, 0],
             [0, 1],
             [1, 0],
             [1, 1]
         ])
-        var xor_dst = Tensor<Float, CPU>([
+        let xor_dst = Tensor<Float, CPU>([
             [0],
             [1],
             [1],
             [0]
         ])
-        
-        #if DEBUG
-        xor_src.tag = "xor_src"
-        xor_dst.tag = "xor_dst"
-        #endif
-        
+
+        var generator = WyHash(seed: 42)
         let net = Sequential {
-            Dense<Float, CPU>(inputSize: 2, outputSize: 6)
+            Dense<Float, CPU>(inputSize: 2, outputSize: 6, using: &generator)
             Tanh<Float, CPU>()
-            Dense<Float, CPU>(inputSize: 6, outputSize: 1)
+            Dense<Float, CPU>(inputSize: 6, outputSize: 1, using: &generator)
             Sigmoid<Float, CPU>()
         }
         var optim = Adam(model: net, learningRate: 0.05)
-        
+
+        var firstLoss: Float = 0
+        var lastLoss: Float = 0
         for epoch in 1 ... 100 {
             let pred = optim.model(xor_src)
             let loss = binaryCrossEntropy(expected: xor_dst, actual: pred)
             let grads = loss.gradients(of: optim.model.parameters)
-            
+
             optim.update(along: grads)
-            
-            if epoch.isMultiple(of: 10) {
-                print("[\(epoch)/\(100)] loss: \(loss.item)")
+
+            if epoch == 1 {
+                firstLoss = loss.item
             }
+            lastLoss = loss.item
         }
-        
+        #expect(lastLoss < firstLoss)
+
         let predictions = optim.model(xor_src).view(as: -1)
-        
+
         var correctCount = 0
         for i in 0 ..< 4 {
             if round(predictions[i].item) == xor_dst[i, 0].item {
                 correctCount += 1
             }
         }
-        
+
         let accuracy = Float(correctCount) / 4
-        print("Accuracy: \(accuracy)")
-        
-        XCTAssertEqual(accuracy, 1)
+
+        #expect(accuracy == 1)
     }
 }

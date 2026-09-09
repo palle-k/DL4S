@@ -23,504 +23,468 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Foundation
+import Testing
 import DL4S
 
-class VecTests: XCTestCase {
-    func testVectorWriteItem() {
+struct VecTests {
+    @Test func testVectorWriteItem() {
         var vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
-        
+
         vector[0, 0] = 2
-        print(vector)
-        
-        XCTAssertEqual(vector[0,0].item, 2)
-        
-        XCTAssertEqual(vector[0,1].item, 1)
-        XCTAssertEqual(vector[1,0].item, 2)
-        XCTAssertEqual(vector[1,1].item, 3)
-        XCTAssertEqual(vector[2,0].item, 4)
-        XCTAssertEqual(vector[2,1].item, 5)
+
+        #expect(vector[0,0].item == 2)
+
+        #expect(vector[0,1].item == 1)
+        #expect(vector[1,0].item == 2)
+        #expect(vector[1,1].item == 3)
+        #expect(vector[2,0].item == 4)
+        #expect(vector[2,1].item == 5)
     }
-    
-    func testVectorWriteItem2() {
+
+    @Test func testVectorWriteItem2() {
         var vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
-        
+
         vector[2, 1] = 10
-        print(vector)
-        
-        XCTAssertEqual(vector[2, 1].item, 10)
-        
-        XCTAssertEqual(vector[0,0].item, 0)
-        XCTAssertEqual(vector[0,1].item, 1)
-        XCTAssertEqual(vector[1,0].item, 2)
-        XCTAssertEqual(vector[1,1].item, 3)
-        XCTAssertEqual(vector[2,0].item, 4)
+
+        #expect(vector[2, 1].item == 10)
+
+        #expect(vector[0,0].item == 0)
+        #expect(vector[0,1].item == 1)
+        #expect(vector[1,0].item == 2)
+        #expect(vector[1,1].item == 3)
+        #expect(vector[2,0].item == 4)
     }
-    
-    func testVectorReadSlice() {
+
+    @Test func testVectorReadSlice() {
         let v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
-        print(v)
-        print(v[nil, 0 ..< 2])
-        print(v[nil, 0 ..< 1])
+
+        #expect(v[nil, 0 ..< 2] == v)
+        #expect(v[nil, 0 ..< 1] == Tensor([[0], [2], [4]]))
+        #expect(v[nil, 1 ..< 2] == Tensor([[1], [3], [5]]))
     }
-    
-    func testVectorWrite() {
+
+    @Test func testVectorWrite() {
         var v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
-        // v[0,0] = 10
         v[2,1] = 20
-        print(v)
+
+        #expect(v == Tensor([[0, 1], [2, 3], [4, 20]]))
     }
-    
-    func testVecOps2() {
+
+    @Test func testVecOps2() {
         var input: Tensor<Double, CPU> = 0
         input.requiresGradient = true
         let result = sigmoid(input)
-        
+
         let grad = result.gradients(of: [input])[0]
-        
-        debugPrint(result)
-        XCTAssertEqual(grad.item, 0.25)
-        XCTAssertEqual(result.item, 0.5)
+
+        #expect(grad.item == 0.25)
+        #expect(result.item == 0.5)
     }
-    
-    func testMMul1x1() {
+
+    @Test func testMMul1x1() {
         let a = Tensor<Float, CPU>([1,2,3])
         let b = Tensor<Float, CPU>([4,5,6])
-        
+
         let result = matMul(a, b)
-        
-        XCTAssertEqual(result.dim, 0)
-        XCTAssertEqual(result.item, 32)
+
+        #expect(result.dim == 0)
+        #expect(result.item == 32)
     }
-    
-    func testMMul2x1() {
+
+    @Test func testMMul2x1() {
         let a = Tensor<Float, CPU>([1,2,3])
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
-        
+
         let result = matMul(c, a)
-        
-        print(result)
-        
-        XCTAssertEqual(result.dim, 1)
-        XCTAssertEqual(result.shape[0], 2)
-        XCTAssertEqual(result[0].item, 14)
-        XCTAssertEqual(result[1].item, 32)
+
+        #expect(result.dim == 1)
+        #expect(result.shape[0] == 2)
+        #expect(result[0].item == 14)
+        #expect(result[1].item == 32)
     }
-    
-    func testMMul1x2() {
+
+    @Test func testMMul1x2() {
         let d = Tensor<Float, CPU>([1,2])
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
-        
+
         let result = matMul(d, c)
-        print(result)
-        
-        XCTAssertEqual(result.dim, 1)
-        XCTAssertEqual(result.shape[0], 3)
-        XCTAssertEqual(result[0].item, 9)
-        XCTAssertEqual(result[1].item, 12)
-        XCTAssertEqual(result[2].item, 15)
+
+        #expect(result.dim == 1)
+        #expect(result.shape[0] == 3)
+        #expect(result[0].item == 9)
+        #expect(result[1].item == 12)
+        #expect(result[2].item == 15)
     }
-    
-    func testMMul2x2() {
+
+    @Test func testMMul2x2() {
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
-        
+
         let result = matMul(c.T, c)
-        print(result)
-        
-        XCTAssertEqual(result.shape, [3, 3])
-        
+
+        #expect(result.shape == [3, 3])
+
         let expected: [[Float]] = [[17, 22, 27], [22, 29, 36], [27, 36, 45]]
-        
+
         for r in 0 ..< 3 {
             for c in 0 ..< 3 {
-                XCTAssertEqual(result[r, c].item, expected[r][c])
+                #expect(result[r, c].item == expected[r][c])
             }
         }
     }
-    
-    func testMMul2x2_2() {
+
+    @Test func testMMul2x2_2() {
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
-        
+
         let result = matMul(c, c.T)
-        print(result)
-        
-        XCTAssertEqual(result.shape, [2, 2])
-        
+
+        #expect(result.shape == [2, 2])
+
         let expected: [[Float]] = [[14, 32], [32, 77]]
-        
+
         for r in 0 ..< 2 {
             for c in 0 ..< 2 {
-                XCTAssertEqual(result[r, c].item, expected[r][c])
+                #expect(result[r, c].item == expected[r][c])
             }
         }
     }
-    
-    func testLog() {
+
+    @Test func testLog() {
         let x = Tensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, min: -5, max: 5)
-        
+
         let result = log(exp(x))
-        
+
         for r in 0 ..< 10 {
             for c in 0 ..< 10 {
-                XCTAssertEqual(result[r, c].item, x[r, c].item, accuracy: 0.0001)
+                expectEqual(result[r, c].item, x[r, c].item, accuracy: 0.0001)
             }
         }
     }
-    
-    func testGradientAddMul() {
+
+    @Test func testGradientAddMul() {
         let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([[4, 5, 6], [7, 8, 9]], requiresGradient: true)
         let c = Tensor<Float, CPU>([[1, 1, 1], [2, 2, 2]], requiresGradient: true)
-        
+
         let result = (a + b) * c
         let grads = result.gradients(of: [a, b, c])
-        
-        print(grads[0])
-        print(grads[1])
-        print(grads[2])
+
+        #expect(grads[0] == c.detached())
+        #expect(grads[1] == c.detached())
+        #expect(grads[2] == (a + b).detached())
     }
-    
-    func testGradientExp() {
+
+    @Test func testGradientExp() {
         let a = Tensor<Float, CPU>([[1, 2, 3], [0, -1, -2]], requiresGradient: true)
-        
+
         let result = exp(a) * 2
         let aGrad = result.gradients(of: [a])[0]
-        print(aGrad)
-        
+
         let e = Float(M_E)
-        
+
         let expected: [[Float]] = [
             [e * 2, e * e * 2, e * e * e * 2],
             [2, 2 / e, 2 / (e * e)]
         ]
-        
+
         for r in 0 ..< result.shape[0] {
             for c in 0 ..< result.shape[1] {
-                XCTAssertEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
+                expectEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
             }
         }
     }
-    
-    func testGradientLog() {
+
+    @Test func testGradientLog() {
         let a = Tensor<Float, CPU>([[1, 2, 3], [10, 20, 30]], requiresGradient: true)
-        
+
         let result = log(a) * 4
         let aGrad = result.gradients(of: [a])[0]
-        print(aGrad)
-        
+
         let expected: [[Float]] = [
             [4, 2, 4.0 / 3.0],
             [4.0 / 10.0, 4.0 / 20.0, 4.0 / 30.0]
         ]
-        
+
         for r in 0 ..< result.shape[0] {
             for c in 0 ..< result.shape[1] {
-                XCTAssertEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
+                expectEqual(aGrad[r, c].item, expected[r][c], accuracy: 0.0001)
             }
         }
     }
-    
-    func testGradientMatmul() {
+
+    @Test func testGradientMatmul() {
         let a = Tensor<Float, CPU>([1, 2, 3], requiresGradient: true)
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]], requiresGradient: true)
-        
+
         let result = matMul(c, a) * 2
-        print(result)
-        
+        #expect(result == Tensor([28, 64]))
+
+        // The gradient of a sums the rows of c, the gradient of c repeats a in every row. Both are scaled by 2.
         let grads = result.gradients(of: [a, c])
-        print(grads[0])
-        print(grads[1])
+        #expect(grads[0] == Tensor([10, 14, 18]))
+        #expect(grads[1] == Tensor([[2, 4, 6], [2, 4, 6]]))
     }
-    
-    func testNeg() {
+
+    @Test func testNeg() {
         let a = Tensor<Float, CPU>([1,2,3,4,5])
-        
+
         let result = -a
-        print(result)
+
+        #expect(result == Tensor([-1, -2, -3, -4, -5]))
     }
-    
-    func testSigmoid() {
+
+    @Test func testSigmoid() {
         let a = Tensor<Float, CPU>(normalDistributedWithShape: 10)
-        
+
         let elements = (0 ..< 10).map { (x: Int) in a[x].item}
-        
+
         let ref = elements.map {1 / (1 + exp(-$0))}
         let result = 1 / (1 + exp(-a))
-        
-        print(a)
 
-        print(elements.map {1 / $0})
-        print(1 / a)
-                
         for i in 0 ..< 10 {
-            XCTAssertEqual(result[i].item, ref[i], accuracy: 0.0001)
+            expectEqual(result[i].item, ref[i], accuracy: 0.0001)
         }
     }
-    
-    func testAddBackwards() {
+
+    @Test func testAddBackwards() {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = b + c
         let grads = result.gradients(of: [b, c])
-        
-        print(grads[0])
-        print(grads[1])
-        
+
         let bExpected: [Float] = [1, 1]
         let cExpected: [Float] = [1, 1]
-        
+
         for i in 0 ..< 2 {
-            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
+            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
-    
-    func testAddBackwards2() {
+
+    @Test func testAddBackwards2() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (a + b) * 2
         let grads = result.gradients(of: [a, b])
-        
-        print(grads[0])
-        print(grads[1])
-        
+
         let aExpected: [[Float]] = [[2,2],[2,2],[2,2]]
         let bExpected: [Float] = [6,6]
-        
+
         for i in 0 ..< 2 {
-            XCTAssertEqual(grads[1][i].item, bExpected[i], accuracy: 0.0001)
+            expectEqual(grads[1][i].item, bExpected[i], accuracy: 0.0001)
         }
-        
+
         for r in 0 ..< 3 {
             for c in 0 ..< 2 {
-                XCTAssertEqual(grads[0][r, c].item, aExpected[r][c])
+                #expect(grads[0][r, c].item == aExpected[r][c])
             }
         }
     }
-    
-    func testAddBackwards3() {
+
+    @Test func testAddBackwards3() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (a + b) * 2
         let aGrad = result.gradients(of: [a])[0]
-        
-        print(aGrad)
-        
+
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testAddBackwards4() {
+
+    @Test func testAddBackwards4() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (b + a) * 2
         let aGrad = result.gradients(of: [a])[0]
-        
-        print(aGrad)
-        
+
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testSubBackwards() {
+
+    @Test func testSubBackwards() {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = b - c
         let grads = result.gradients(of: [b, c])
-        
-        print(grads[0])
-        print(grads[1])
-        
+
         let bExpected: [Float] = [1, 1]
         let cExpected: [Float] = [-1, -1]
-        
+
         for i in 0 ..< 2 {
-            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
+            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
-    
-    func testSubBackwards2() {
+
+    @Test func testSubBackwards2() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (a - b) * 2
         let aGrad = result.gradients(of: [a])[0]
-        
-        print(aGrad)
-        
+
         let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testSubBackwards3() {
+
+    @Test func testSubBackwards3() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (b - a) * 2
         let aGrad = result.gradients(of: [a])[0]
-        
-        print(aGrad)
-        
+
         let refGrad: [[Float]] = [[-2.0, -2.0], [-2.0, -2.0], [-2.0, -2.0]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testMulBackwards() {
+
+    @Test func testMulBackwards() {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = b * c
-        
+
         let grads = result.gradients(of: [b, c])
-        
-        print(grads[0])
-        print(grads[1])
-        
+
         let bExpected: [Float] = [1, 2]
         let cExpected: [Float] = [1, 2]
-        
+
         for i in 0 ..< 2 {
-            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
+            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
-    
-    func testMulBackwards2() {
+
+    @Test func testMulBackwards2() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (a * b) * 2
-        
-        print(a * b)
-        
+
         let aGrad = result.gradients(of: [a])[0]
-        
-        print(aGrad)
-        
+
         let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testMulBackwards3() {
+
+    @Test func testMulBackwards3() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (b * a) * 2
-        
+
         let aGrad = result.gradients(of: [a])[0]
-        
-        print(aGrad)
-        
+
         let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testDivBackwards() {
+
+    @Test func testDivBackwards() {
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
         let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = b / c
         let grads = result.gradients(of: [b, c])
-        
-        print(grads[0])
-        print(grads[1])
-        
+
         let bExpected: [Float] = [1, 0.5]
         let cExpected: [Float] = [-1, -0.5]
-        
+
         for i in 0 ..< 2 {
-            XCTAssertEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            XCTAssertEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
+            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
+            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
         }
     }
-    
-    func testDivBackwards2() {
+
+    @Test func testDivBackwards2() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (a / b) * 2
-        
+
         let aGrad = result.gradients(of: [a])[0]
-        print(aGrad)
-        
+
         let refGrad: [[Float]] = [[2.0, 1.0], [2.0, 1.0], [2.0, 1.0]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testDivBackwards3() {
+
+    @Test func testDivBackwards3() {
         let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
         let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        
+
         let result = (b / a) * 2
-        
+
         let grads = result.gradients(of: [a, b])
-        
+
         let refGrad: [[Float]] = [[-2.0, -1.0], [-0.22222222, -0.25], [-0.08, -0.11111111]]
-        
+
         for row in 0 ..< 3 {
             for column in 0 ..< 2 {
-                XCTAssertEqual(grads[0][row, column].item, refGrad[row][column], accuracy: 0.0001)
+                expectEqual(grads[0][row, column].item, refGrad[row][column], accuracy: 0.0001)
             }
         }
     }
-    
-    func testAxisSum() {
+
+    @Test func testAxisSum() {
         let a = Tensor<Float, CPU>([[1,2,3],[4,5,6]])
-        
+
         let result = sum(a, axes: [0])
-        print(result)
+
+        #expect(result == Tensor([5, 7, 9]))
     }
-    
-    func testNegativeIndices() {
+
+    @Test func testNegativeIndices() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
-        
-        print(a[nil, -3])
+
+        #expect(a[nil, -3] == Tensor([2, 6]))
     }
-    
-    func testPadding() {
+
+    @Test func testPadding() {
         let a = Tensor<Float, CPU>(repeating: 1, shape: 1, 28, 28)
         let padded = a.padded(padding: [0, 2, 2])
-        print(padded)
+
+        #expect(padded.shape == [1, 32, 32])
+        #expect(padded.reduceSum().item == 28 * 28)
+        #expect(padded[0][0 ..< 2] == Tensor(repeating: 0, shape: [2, 32]))
+        #expect(padded[0][2 ..< 30][nil, 2 ..< 30] == Tensor(repeating: 1, shape: [28, 28]))
     }
 }

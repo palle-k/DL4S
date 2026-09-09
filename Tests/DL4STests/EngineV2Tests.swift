@@ -23,11 +23,11 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import XCTest
+import Testing
 @testable import DL4S
 
-class EngineV2Tests: XCTestCase {
-    func testScatterZeroFillsLargerResult() {
+struct EngineV2Tests {
+    @Test func testScatterZeroFillsLargerResult() {
         // The result buffer is larger than the source tensor and starts with placeholder values.
         // Scatter must zero the full result buffer.
         let values = Tensor<Double, CPU>([3, 1, 4])
@@ -46,172 +46,155 @@ class EngineV2Tests: XCTestCase {
             0, 0, 0,
             0, 0, 0
         ]
-        XCTAssertEqual(Buffer(result.values).array, expected)
+        #expect(Buffer(result.values).array == expected)
     }
 
-    func testBroadcast1() {
-        // let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
-        // let rhs = Tensor<Float, CPU>([1,2])
-        
-        // let result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
-        
-        // CPUEngine.broadcastMul(lhs: rhs.values, rhs: lhs.values, result: result.values)
-        
-        // print(result)
+    @Test func testBroadcast1() {
         let lhs = Tensor<Float, CPU>([1,2,3,4])
         let rhs = Tensor<Float, CPU>([2,4,6,8])
 
-        print(lhs + rhs)
+        #expect(lhs + rhs == Tensor([3, 6, 9, 12]))
     }
-    
-    func testBroadcast2() {
+
+    @Test func testBroadcast2() {
         let x = Tensor<Float, CPU>([1, 0.5, 0]).view(as: -1, 1)
         let result = 1 - x
-        print(result)
+
+        #expect(result == Tensor([[0], [0.5], [1]]))
     }
-    
-    func testBroadcast3() {
+
+    @Test func testBroadcast3() {
         let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
         let rhs = Tensor<Float, CPU>([1,2,3]).view(as: -1, 1)
-        
+
         var result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
-        
+
         CPUEngine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: result.mutableValues)
-        
-        print(result)
+
+        #expect(result == Tensor([[2, 3], [5, 6], [8, 9]]))
     }
-    
-    func testBroadcast4() {
+
+    @Test func testBroadcast4() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let b = Tensor<Float, CPU>([1,3,3,7])
-        
+
         let result = a.unsqueezed(at: 2) + b.view(as: -1, 1, 1)
-        
-        print(result.squeezed())
+
+        #expect(result.shape == [4, 4, 1])
+        #expect(result.squeezed() == Tensor([[2, 3, 4, 5], [8, 9, 10, 11], [12, 13, 14, 15], [20, 21, 22, 23]]))
     }
-    
-    func testBroadcast5() {
+
+    @Test func testBroadcast5() {
         let a = Tensor<Float, CPU>(repeating: 0, shape: 16, 16)
         let b = Tensor<Float, CPU>(uniformlyDistributedWithShape: 16, 1, min: 0, max: 1)
-        
+
         let result = a + b
-        
-        print(result)
+
+        #expect(result.shape == [16, 16])
+        #expect(result == b * Tensor(repeating: 1, shape: 16, 16))
     }
-    
-    func testReduceSum1() {
+
+    @Test func testReduceSum1() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
         var result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
         let r = result.mutableValues
-        
+
         CPU.Engine.reduceSum(values: v, result: r, axis: 0)
-        
-        print(result)
+
+        #expect(result == Tensor([28, 32, 36, 40]))
     }
-    
-    func testReduceSum2() {
+
+    @Test func testReduceSum2() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
         var result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
         let r = result.mutableValues
-        
+
         CPU.Engine.reduceSum(values: v, result: r, axis: 1)
-        
-        print(result)
+
+        #expect(result == Tensor([10, 26, 42, 58]))
     }
-    
-    func testReduceSum3() {
+
+    @Test func testReduceSum3() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
         let v = a.values
         var result = Tensor<Float, CPU>(repeating: Float(0), shape: [])
         let r = result.mutableValues
-        
+
         CPU.Engine.reduceSum(values: v, result: r, axes: [0, 1])
-        
-        print(result)
+
+        #expect(result.item == 136)
     }
-    
-    func testReduceOps() {
-        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2,3,4], shape: 4, 1, requiresGradient: true)
-        
-        let s = a + b
-        let d1 = a - b
-        let d2 = b - a
-        let p = a * b
-        let q1 = a / b
-        let q2 = b / a
-        
-        let st = a + b.T
-        let dt1 = a - b.T
-        let dt2 = b.T - a
-        let pt = a * b.T
-        let qt1 = a / b.T
-        let qt2 = b.T / a
-        
-        let bf = b.squeezed()
-        
-        let sf = a + bf
-        let df1 = a - bf
-        let df2 = bf - a
-        let pf = a * bf
-        let qf1 = a / bf
-        let qf2 = bf / a
-        
-        XCTAssertEqual(s.shape, [4, 4])
-        XCTAssertEqual(d1.shape, [4, 4])
-        XCTAssertEqual(d2.shape, [4, 4])
-        XCTAssertEqual(p.shape, [4, 4])
-        XCTAssertEqual(q1.shape, [4, 4])
-        XCTAssertEqual(q2.shape, [4, 4])
-        
-        XCTAssertEqual(st.shape, [4, 4])
-        XCTAssertEqual(dt1.shape, [4, 4])
-        XCTAssertEqual(dt2.shape, [4, 4])
-        XCTAssertEqual(pt.shape, [4, 4])
-        XCTAssertEqual(qt1.shape, [4, 4])
-        XCTAssertEqual(qt2.shape, [4, 4])
-        
-        XCTAssertEqual(sf.shape, [4, 4])
-        XCTAssertEqual(df1.shape, [4, 4])
-        XCTAssertEqual(df2.shape, [4, 4])
-        XCTAssertEqual(pf.shape, [4, 4])
-        XCTAssertEqual(qf1.shape, [4, 4])
-        XCTAssertEqual(qf2.shape, [4, 4])
-        
-        for x in [s, d1, d2, p, q1, q2, st, dt1, dt2, pt, qt1, qt2, sf, df1, df2, pf, qf1, qf2] {
-            let grads = x.gradients(of: [a, b])
-            
-            print(grads[0])
-            print(grads[1])
-            print()
+
+    /// Gradients of broadcast operations must have the shape of their operand and match a central difference estimate.
+    @Test func testReduceOps() {
+        let a = Tensor<Double, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], requiresGradient: true)
+        let b = Tensor<Double, CPU>([1,2,3,4], shape: 4, 1, requiresGradient: true)
+
+        let operations: [(Tensor<Double, CPU>, Tensor<Double, CPU>) -> Tensor<Double, CPU>] = [
+            { a, b in a + b },
+            { a, b in a - b },
+            { a, b in b - a },
+            { a, b in a * b },
+            { a, b in a / b },
+            { a, b in b / a },
+
+            { a, b in a + b.T },
+            { a, b in a - b.T },
+            { a, b in b.T - a },
+            { a, b in a * b.T },
+            { a, b in a / b.T },
+            { a, b in b.T / a },
+
+            { a, b in a + b.squeezed() },
+            { a, b in a - b.squeezed() },
+            { a, b in b.squeezed() - a },
+            { a, b in a * b.squeezed() },
+            { a, b in a / b.squeezed() },
+            { a, b in b.squeezed() / a }
+        ]
+
+        for (index, operation) in operations.enumerated() {
+            let result = operation(a, b)
+            #expect(result.shape == [4, 4], "operation \(index)")
+
+            let grads = result.gradients(of: [a, b])
+            #expect(grads[0].shape == a.shape, "operation \(index)")
+            #expect(grads[1].shape == b.shape, "operation \(index)")
+            expectClose(grads[0], numericalGradient(of: { operation($0, b) }, at: a))
+            expectClose(grads[1], numericalGradient(of: { operation(a, $0) }, at: b))
         }
     }
-    
-    func testScatter1() {
+
+    @Test func testScatter1() {
         let a = Tensor<Float, CPU>([1,2,3])
         let c = Tensor<Int32, CPU>([0,1,2])
 
         let result = a.scatter(using: c, alongAxis: 1, withSize: 3)
-        print(result)
-        
+        #expect(result == Tensor([[1, 0, 0], [0, 2, 0], [0, 0, 3]]))
+
         let gathered = result.gather(using: c, alongAxis: 1)
-        print(gathered)
+        #expect(gathered == a)
     }
-    
-    func testScatter2() {
+
+    @Test func testScatter2() {
         let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
         let c = Tensor<Int32, CPU>([[0,1,0,1],[1,0,1,0]])
-        
+
         let result = a.scatter(using: c, alongAxis: 1, withSize: 2)
-        print(result)
-        
+        #expect(result == Tensor([
+            [[1, 0, 3, 0],
+             [0, 2, 0, 4]],
+            [[0, 6, 0, 8],
+             [5, 0, 7, 0]]
+        ]))
+
         let gathered = result.gather(using: c, alongAxis: 1)
-        print(gathered)
+        #expect(gathered == a)
     }
-    
-    func testBroadcastMatrixMultiply() {
+
+    @Test func testBroadcastMatrixMultiply() {
         let a = Tensor<Float, CPU>([
             [[1, 2],
              [3, 4]],
@@ -222,7 +205,7 @@ class EngineV2Tests: XCTestCase {
         lhs.requiresGradient = true
         var rhs = a.view(as: 1, 2, 2, 2)
         rhs.requiresGradient = true
-        
+
         let bmm = lhs.broadcastMatrixMultiplied(with: rhs)
         let ref = Tensor(stacking: [
             lhs[0, 0].matrixMultiplied(with: rhs[0, 0]).unsqueezed(at: 0),
@@ -230,19 +213,14 @@ class EngineV2Tests: XCTestCase {
             lhs[1, 0].matrixMultiplied(with: rhs[0, 0]).unsqueezed(at: 0),
             lhs[1, 0].matrixMultiplied(with: rhs[0, 1]).unsqueezed(at: 0),
         ]).view(as: 2, 2, 2, 2)
-        
-        print(bmm, terminator: "\n\n")
-        print(ref, terminator: "\n\n")
-        
+
+        expectClose(bmm, ref)
+
         let grads = bmm.gradients(of: [lhs, rhs])
-        print("Gradients:")
-        print(grads[0], grads[1], separator: "\n", terminator: "\n\n")
-        
-        print("Reference Gradients:")
         let refGrads = ref.gradients(of: [lhs, rhs])
-        print(refGrads[0], refGrads[1], separator: "\n", terminator: "\n\n")
-        
-        print("Ref2 Gradients:")
+        expectClose(grads[0], refGrads[0])
+        expectClose(grads[1], refGrads[1])
+
         let ref2 = [
             lhs[0, 0].matrixMultiplied(with: rhs[0, 0]).unsqueezed(at: 0),
             lhs[0, 0].matrixMultiplied(with: rhs[0, 1]).unsqueezed(at: 0),
@@ -250,17 +228,17 @@ class EngineV2Tests: XCTestCase {
             lhs[1, 0].matrixMultiplied(with: rhs[0, 1]).unsqueezed(at: 0),
         ].reduce(0, +)
         let ref2Grads = ref2.gradients(of: [lhs, rhs])
-        print(ref2Grads[0], ref2Grads[1], separator: "\n", terminator: "\n\n")
-        
+        expectClose(grads[0], ref2Grads[0])
+        expectClose(grads[1], ref2Grads[1])
     }
-    
-    func testSubscriptSlice() {
+
+    @Test func testSubscriptSlice() {
         let a = Tensor<Int32, CPU>([
             [0, 1, 2],
             [3, 4, 5],
             [6, 7, 8]
         ])
-        
+
         let expected1 = Tensor<Int32, CPU>([
             [0, 1],
             [3, 4],
@@ -279,25 +257,25 @@ class EngineV2Tests: XCTestCase {
             [3, 4, 5],
             [6, 7, 8]
         ])
-        
-        XCTAssertEqual(a[nil, 0 ..< 2], expected1)
-        XCTAssertEqual(a[nil, 1 ..< 3], expected2)
-        XCTAssertEqual(a[0 ..< 2], expected3)
-        XCTAssertEqual(a[1 ..< 3], expected4)
+
+        #expect(a[nil, 0 ..< 2] == expected1)
+        #expect(a[nil, 1 ..< 3] == expected2)
+        #expect(a[0 ..< 2] == expected3)
+        #expect(a[1 ..< 3] == expected4)
     }
-    
-    func testSubscriptSliceWrite() {
+
+    @Test func testSubscriptSliceWrite() {
         var result = Tensor<Int32, CPU>(repeating: 0, shape: [3, 3])
         let src1 = Tensor<Int32, CPU>([[0, 1], [3, 4], [6, 7]])
-        
+
         result[nil, 0 ..< 2] = src1
         let expected1 = Tensor<Int32, CPU>([
             [0, 1, 0],
             [3, 4, 0],
             [6, 7, 0]
         ])
-        XCTAssertEqual(result, expected1)
-        
+        #expect(result == expected1)
+
         result = Tensor<Int32, CPU>(repeating: 0, shape: [3, 3])
         let expected2 = Tensor<Int32, CPU>([
             [0, 0, 1],
@@ -305,60 +283,62 @@ class EngineV2Tests: XCTestCase {
             [0, 6, 7]
         ])
         result[nil, 1 ..< 3] = src1
-        XCTAssertEqual(result, expected2)
+        #expect(result == expected2)
     }
-    
-    func testElementwiseMinMax() {
+
+    @Test func testElementwiseMinMax() {
         let x: Tensor<Float, CPU> = Tensor([1,2,3,4,5,6], requiresGradient: true)
         let y: Tensor<Float, CPU> = Tensor([6,5,4,3,2,1], requiresGradient: true)
-        
+
         let result1 = Tensor.max(x, y) * 2
         let grads1 = result1.gradients(of: [x, y])
-        
-        XCTAssertEqual(grads1[0], Tensor([0, 0, 0, 2, 2, 2]))
-        XCTAssertEqual(grads1[1], Tensor([2, 2, 2, 0, 0, 0]))
-        
+
+        #expect(grads1[0] == Tensor([0, 0, 0, 2, 2, 2]))
+        #expect(grads1[1] == Tensor([2, 2, 2, 0, 0, 0]))
+
         let result2 = Tensor.min(x, y) * 2
         let grads2 = result2.gradients(of: [x, y])
-        
-        XCTAssertEqual(grads2[0], Tensor([2, 2, 2, 0, 0, 0]))
-        XCTAssertEqual(grads2[1], Tensor([0, 0, 0, 2, 2, 2]))
+
+        #expect(grads2[0] == Tensor([2, 2, 2, 0, 0, 0]))
+        #expect(grads2[1] == Tensor([0, 0, 0, 2, 2, 2]))
     }
-    
-    func testTransposedMatmul() {
+
+    /// Fused transposed products must have the same gradients as products of explicitly transposed operands.
+    @Test func testTransposedMatmul() {
         let x = Tensor<Float, CPU>([
             [1, 2, 3],
             [4, 5, 6]
         ], requiresGradient: true)
-        
+
         let y = Tensor<Float, CPU>([
             [7, 8, 9],
             [9, 10, 12]
         ], requiresGradient: true)
-        
-        let result1 = x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false) + x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false)
-        _ = result1.gradients(of: [x, y])
-        
-        let result2 = x.matrixMultiplied(with: y, transposeSelf: false, transposeOther: true) + x.matrixMultiplied(with: y, transposeSelf: false, transposeOther: true)
-        _ = result2.gradients(of: [x, y])
-        
-        let result3 = x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true) + x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true)
-        _ = result3.gradients(of: [x, y])
-    }
-    
-    func testRandomPerformance() throws {
-        try skipUnlessLongTestsEnabled()
-        measure {
-            _ = Tensor<Float, CPU>(uniformlyDistributedWithShape: 30, 50, 50, 50)
+
+        let fused1 = x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false) + x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false)
+        let explicit1 = x.transposed().matrixMultiplied(with: y) + x.transposed().matrixMultiplied(with: y)
+
+        let fused2 = x.matrixMultiplied(with: y, transposeSelf: false, transposeOther: true) + x.matrixMultiplied(with: y, transposeSelf: false, transposeOther: true)
+        let explicit2 = x.matrixMultiplied(with: y.transposed()) + x.matrixMultiplied(with: y.transposed())
+
+        let fused3 = x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true) + x.matrixMultiplied(with: y.transposed(), transposeSelf: true, transposeOther: true)
+        let explicit3 = x.transposed().matrixMultiplied(with: y) + x.transposed().matrixMultiplied(with: y)
+
+        for (fused, explicit) in [(fused1, explicit1), (fused2, explicit2), (fused3, explicit3)] {
+            #expect(fused == explicit.detached())
+            let fusedGrads = fused.gradients(of: [x, y])
+            let explicitGrads = explicit.gradients(of: [x, y])
+            #expect(fusedGrads[0] == explicitGrads[0])
+            #expect(fusedGrads[1] == explicitGrads[1])
         }
     }
-    
-    func testReduce() {
+
+    @Test func testReduce() {
         let a = Tensor<Float, CPU>(uniformlyDistributedWithShape: 10, 10, requiresGradient: true)
-        XCTAssertEqual(a.reduceMax(along: 1), a.detached().reduceMax(along: 1))
+        #expect(a.reduceMax(along: 1) == a.detached().reduceMax(along: 1))
     }
-    
-    func testDiagonal() {
+
+    @Test func testDiagonal() {
         let a = Tensor<Float, CPU>([
             [1, 2, 3],
             [4, 5, 6],
@@ -366,22 +346,22 @@ class EngineV2Tests: XCTestCase {
         ])
         let diag = a.diagonalElements()
         let expected = Tensor<Float, CPU>([1, 5, 9])
-        XCTAssertEqual(diag, expected)
+        #expect(diag == expected)
     }
-    
-    func testDiagonalGeneration() {
+
+    @Test func testDiagonalGeneration() {
         let b = Tensor<Float, CPU>([1, 5, 9])
         let diag = b.diagonalMatrix()
-        
+
         let expected = Tensor<Float, CPU>([
             [1, 0, 0],
             [0, 5, 0],
             [0, 0, 9]
         ])
-        XCTAssertEqual(diag, expected)
+        #expect(diag == expected)
     }
-    
-    func testConstantDiagonal() {
+
+    @Test func testConstantDiagonal() {
         let a = Tensor<Float, CPU>(fillingDiagonalWith: 3, size: 4)
         let expected = Tensor<Float, CPU>([
             [3, 0, 0, 0],
@@ -389,6 +369,6 @@ class EngineV2Tests: XCTestCase {
             [0, 0, 3, 0],
             [0, 0, 0, 3]
         ])
-        XCTAssertEqual(a, expected)
+        #expect(a == expected)
     }
 }
