@@ -31,7 +31,7 @@ public protocol VGGBase: LayerType where Parameter: RandomizableType {
     associatedtype Conv3: LayerType where Conv3.Parameter == Parameter, Conv3.Device == Device, Conv3.Inputs == Tensor<Parameter, Device>, Conv3.Outputs == Tensor<Parameter, Device>
     associatedtype Conv4: LayerType where Conv4.Parameter == Parameter, Conv4.Device == Device, Conv4.Inputs == Tensor<Parameter, Device>, Conv4.Outputs == Tensor<Parameter, Device>
     associatedtype Conv5: LayerType where Conv5.Parameter == Parameter, Conv5.Device == Device, Conv5.Inputs == Tensor<Parameter, Device>, Conv5.Outputs == Tensor<Parameter, Device>
-    typealias DenseLayer = Sequential<Sequential<Sequential<Sequential<Dense<Self.Parameter, Self.Device>, BatchNorm<Self.Parameter, Self.Device>>, Sequential<Relu<Self.Parameter, Self.Device>, Dropout<Self.Parameter, Self.Device>>>, Sequential<Sequential<Dense<Self.Parameter, Self.Device>, BatchNorm<Self.Parameter, Self.Device>>, Sequential<Relu<Self.Parameter, Self.Device>, Dropout<Self.Parameter, Self.Device>>>>, Sequential<Dense<Self.Parameter, Self.Device>, LogSoftmax<Self.Parameter, Self.Device>>>
+    typealias DenseLayer = Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Dense<Self.Parameter, Self.Device>, BatchNorm<Self.Parameter, Self.Device>>, Relu<Self.Parameter, Self.Device>>, Dropout<Self.Parameter, Self.Device>>, Dense<Self.Parameter, Self.Device>>, BatchNorm<Self.Parameter, Self.Device>>, Relu<Self.Parameter, Self.Device>>, Dropout<Self.Parameter, Self.Device>>, Dense<Self.Parameter, Self.Device>>, LogSoftmax<Self.Parameter, Self.Device>>
     
     var conv1: Conv1 { get set }
     var conv2: Conv2 { get set }
@@ -68,11 +68,11 @@ public extension VGGBase {
     
     var isDropoutActive: Bool {
         get {
-            dense.first.first.second.second.isActive || dense.first.second.second.second.isActive
+            dense.first.first.first.first.first.first.second.isActive || dense.first.first.second.isActive
         }
         set {
-            dense.first.first.second.second.isActive = newValue
-            dense.first.second.second.second.isActive = newValue
+            dense.first.first.first.first.first.first.second.isActive = newValue
+            dense.first.first.second.isActive = newValue
         }
     }
     

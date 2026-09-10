@@ -29,11 +29,11 @@ public struct VGG19<E: RandomizableType, D: DeviceType>: VGGBase {
     public typealias Parameter = E
     public typealias Device = D
     
-    public var conv1: Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Sequential<Relu<E, D>, Convolution2D<E, D>>>, Sequential<Sequential<BatchNorm<E, D>, Relu<E, D>>, MaxPool2D<E, D>>>
-    public var conv2: Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Sequential<Relu<E, D>, Convolution2D<E, D>>>, Sequential<Sequential<BatchNorm<E, D>, Relu<E, D>>, MaxPool2D<E, D>>>
-    public var conv3: Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Sequential<Relu<E, D>, Convolution2D<E, D>>>, Sequential<Sequential<BatchNorm<E, D>, Relu<E, D>>, Sequential<Convolution2D<E, D>, BatchNorm<E, D>>>>, Sequential<Sequential<Sequential<Relu<E, D>, Convolution2D<E, D>>, BatchNorm<E, D>>, Sequential<Relu<E, D>, MaxPool2D<E, D>>>>
-    public var conv4: Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Sequential<Relu<E, D>, Convolution2D<E, D>>>, Sequential<Sequential<BatchNorm<E, D>, Relu<E, D>>, Sequential<Convolution2D<E, D>, BatchNorm<E, D>>>>, Sequential<Sequential<Sequential<Relu<E, D>, Convolution2D<E, D>>, BatchNorm<E, D>>, Sequential<Relu<E, D>, MaxPool2D<E, D>>>>
-    public var conv5: Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Sequential<Relu<E, D>, Convolution2D<E, D>>>, Sequential<Sequential<BatchNorm<E, D>, Relu<E, D>>, Sequential<Convolution2D<E, D>, BatchNorm<E, D>>>>, Sequential<Sequential<Sequential<Relu<E, D>, Convolution2D<E, D>>, BatchNorm<E, D>>, Sequential<Relu<E, D>, MaxPool2D<E, D>>>>
+    public var conv1: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, MaxPool2D<E, D>>
+    public var conv2: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, MaxPool2D<E, D>>
+    public var conv3: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, MaxPool2D<E, D>>
+    public var conv4: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, MaxPool2D<E, D>>
+    public var conv5: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<E, D>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, Convolution2D<E, D>>, BatchNorm<E, D>>, Relu<E, D>>, MaxPool2D<E, D>>
     public var dense: DenseLayer
 
     public init(inputChannels: Int, classes: Int) {

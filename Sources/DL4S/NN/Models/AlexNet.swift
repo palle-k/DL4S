@@ -47,20 +47,20 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
         ].joined())
     }
     
-    var featureNet: Sequential<Sequential<Sequential<Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>, Sequential<MaxPool2D<Element, Device>, Convolution2D<Element, Device>>>, Sequential<Sequential<BatchNorm<Element, Device>, Relu<Element, Device>>, Sequential<MaxPool2D<Element, Device>, Convolution2D<Element, Device>>>>, Sequential<Sequential<Sequential<Relu<Element, Device>, Convolution2D<Element, Device>>, Sequential<BatchNorm<Element, Device>, Relu<Element, Device>>>, Sequential<Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>>, Sequential<Relu<Element, Device>, MaxPool2D<Element, Device>>>>>
+    var featureNet: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>, MaxPool2D<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, MaxPool2D<Element, Device>>, Convolution2D<Element, Device>>, Relu<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, MaxPool2D<Element, Device>>
     
     var avgPool: AdaptiveAvgPool2D<Element, Device>
     
-    var classifier: Sequential<Sequential<Sequential<Sequential<Flatten<Element, Device>, Dropout<Element, Device>>, Sequential<Dense<Element, Device>, BatchNorm<Element, Device>>>, Sequential<Sequential<Relu<Element, Device>, Dropout<Element, Device>>, Sequential<Dense<Element, Device>, BatchNorm<Element, Device>>>>, Sequential<Sequential<Relu<Element, Device>, Dense<Element, Device>>, LogSoftmax<Element, Device>>>
+    var classifier: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Flatten<Element, Device>, Dropout<Element, Device>>, Dense<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Dropout<Element, Device>>, Dense<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Dense<Element, Device>>, LogSoftmax<Element, Device>>
     
     /// Determines whether dropout is applied in the classification block
     public var isDropoutActive: Bool {
         get {
-            classifier.first.first.first.second.isActive || classifier.first.second.first.second.isActive
+            classifier.first.first.first.first.first.first.first.first.first.second.isActive || classifier.first.first.first.first.first.second.isActive
         }
         set {
-            classifier.first.first.first.second.isActive = newValue
-            classifier.first.second.first.second.isActive = newValue
+            classifier.first.first.first.first.first.first.first.first.first.second.isActive = newValue
+            classifier.first.first.first.first.first.second.isActive = newValue
         }
     }
     

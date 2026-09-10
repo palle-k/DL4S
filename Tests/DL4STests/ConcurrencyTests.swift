@@ -52,7 +52,7 @@ struct ConcurrencyTests {
     }
 
     private typealias DenseTanh = Sequential<Dense<Float, CPU>, Tanh<Float, CPU>>
-    private typealias TrainedModel = Sequential<Sequential<DenseTanh, DenseTanh>, Sequential<Dense<Float, CPU>, Sigmoid<Float, CPU>>>
+    private typealias TrainedModel = Sequential<Sequential<Sequential<Sequential<DenseTanh, Dense<Float, CPU>>, Tanh<Float, CPU>>, Dense<Float, CPU>>, Sigmoid<Float, CPU>>
 
     /// Trains a small model on the XOR problem so the test has a model with initialized weights.
     private func makeTrainedModel() -> TrainedModel {
