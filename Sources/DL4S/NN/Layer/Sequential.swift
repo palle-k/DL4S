@@ -27,7 +27,7 @@ import Foundation
 
 /// A sequential layer that concatenates the computations of two other layers.
 ///
-/// With function builders, a sequential layer can be used to express sequential models in a type safe way.
+/// With result builders, a sequential layer can be used to express sequential models in a type safe way.
 ///
 /// Example:
 /// ```
@@ -38,7 +38,8 @@ import Foundation
 ///     Softmax<Float, CPU>()
 /// }
 /// ```
-/// `model` will have a type `Sequential<Sequential<Dense<Float, CPU>, Relu<Float, CPU>>, Sequential<Dense<Float, CPU>, Softmax<Float, CPU>>>`.
+/// The builder nests from the left: each layer is appended to the sequence of the layers before it.
+/// `model` has the type `Sequential<Sequential<Sequential<Dense<Float, CPU>, Relu<Float, CPU>>, Dense<Float, CPU>>, Softmax<Float, CPU>>`.
 public struct Sequential<First: LayerType, Second: LayerType>: LayerType where First.Outputs == Second.Inputs, First.Parameter == Second.Parameter, First.Device == Second.Device {
     /// First transform
     public var first: First
@@ -88,82 +89,24 @@ extension Sequential: Codable where First: Codable, Second: Codable {}
 public enum LayerBuilder {}
 
 public extension LayerBuilder {
+    /// Starts a sequence with its first layer.
+    ///
+    /// - Parameter first: First layer of the block.
+    /// - Returns: The layer itself.
+    static func buildPartialBlock<Layer: LayerType>(first: Layer) -> Layer {
+        first
+    }
     
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B>(_ a: A, _ b: B) -> Sequential<A, B>
-        where A.Outputs == B.Inputs, A.Parameter == B.Parameter, A.Device == B.Device
+    /// Appends a layer to the sequence.
+    ///
+    /// - Parameters:
+    ///   - accumulated: Layers of the block that come before `next`, combined into one layer.
+    ///   - next: Layer to append.
+    /// - Returns: A sequential layer that runs `accumulated` and then `next`.
+    static func buildPartialBlock<Accumulated: LayerType, Next: LayerType>(accumulated: Accumulated, next: Next) -> Sequential<Accumulated, Next>
+        where Accumulated.Outputs == Next.Inputs, Accumulated.Parameter == Next.Parameter, Accumulated.Device == Next.Device
     {
-        Sequential(first: a, second: b)
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C>(_ a: A, _ b: B, _ c: C) -> Sequential<Sequential<A, B>, C> {
-        buildBlock(buildBlock(a, b), c)
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D>(_ a: A, _ b: B, _ c: C, _ d: D) -> Sequential<Sequential<A, B>, Sequential<C, D>> {
-        buildBlock(buildBlock(a, b), buildBlock(c, d))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E) -> Sequential<Sequential<Sequential<A, B>, C>, Sequential<D, E>> {
-        buildBlock(buildBlock(a, b, c), buildBlock(d, e))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F) -> Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<E, F>> {
-        buildBlock(buildBlock(a, b, c, d), buildBlock(e, f))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G) -> Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, G>> {
-        buildBlock(buildBlock(a, b, c, d), buildBlock(e, f, g))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H) -> Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>> {
-        buildBlock(buildBlock(a, b, c, d), buildBlock(e, f, g, h))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, I> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), i)
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I, J>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I, _ j: J) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, Sequential<I, J>> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), buildBlock(i, j))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I, J, K>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I, _ j: J, _ k: K) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, Sequential<Sequential<I, J>, K>> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), buildBlock(i, j, k))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I, J, K, L>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I, _ j: J, _ k: K, _ l: L) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, Sequential<Sequential<I, J>, Sequential<K, L>>> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), buildBlock(i, j, k, l))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I, J, K, L, M>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I, _ j: J, _ k: K, _ l: L, _ m: M) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, Sequential<Sequential<Sequential<I, J>, K>, Sequential<L, M>>> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), buildBlock(i, j, k, l, m))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I, J, K, L, M, N>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I, _ j: J, _ k: K, _ l: L, _ m: M, _ n: N) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, Sequential<Sequential<Sequential<I, J>, Sequential<K, L>>, Sequential<M, N>>> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), buildBlock(i, j, k, l, m, n))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I, _ j: J, _ k: K, _ l: L, _ m: M, _ n: N, _ o: O) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, Sequential<Sequential<Sequential<I, J>, Sequential<K, L>>, Sequential<Sequential<M, N>, O>>> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), buildBlock(i, j, k, l, m, n, o))
-    }
-    
-    /// Creates a sequential layer by concatenating the forward functions of the given layers.
-    static func buildBlock<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P>(_ a: A, _ b: B, _ c: C, _ d: D, _ e: E, _ f: F, _ g: G, _ h: H, _ i: I, _ j: J, _ k: K, _ l: L, _ m: M, _ n: N, _ o: O, _ p: P) -> Sequential<Sequential<Sequential<Sequential<A, B>, Sequential<C, D>>, Sequential<Sequential<E, F>, Sequential<G, H>>>, Sequential<Sequential<Sequential<I, J>, Sequential<K, L>>, Sequential<Sequential<M, N>, Sequential<O, P>>>> {
-        buildBlock(buildBlock(a, b, c, d, e, f, g, h), buildBlock(i, j, k, l, m, n, o, p))
+        Sequential(first: accumulated, second: next)
     }
 }
 

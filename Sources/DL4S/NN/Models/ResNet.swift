@@ -63,7 +63,7 @@ public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType
     public var l2: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l3: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l4: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
-    public var classifier: Sequential<Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>>, Sequential<Dense<Element, Device>, LogSoftmax<Element, Device>>>
+    public var classifier: Sequential<Sequential<Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>>, Dense<Element, Device>>, LogSoftmax<Element, Device>>
     
     public init(inputShape: [Int], classes: Int) {
         var generator = WyHash()
