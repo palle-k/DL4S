@@ -61,25 +61,30 @@ Then add `DL4S` as a dependency to your target:
 
 #### MKL / IPP / OpenMP Support
 
-DL4S can be accelerated with Intel's Math Kernel Library, Integrated Performance Primitives and OpenMP ([Installation Instructions](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo)).
+On Apple devices, DL4S uses the vectorized functions of the builtin Accelerate framework by default.
 
-On Apple devices, DL4S uses vectorized functions provided by the builtin Accelerate framework by default.
-If no acceleration library is available, a fallback implementation is used.
+On x86_64 Linux (Intel / AMD), DL4S can use the Intel oneAPI Math Kernel Library (MKL) and Integrated Performance Primitives (IPP) through the `MKL` package trait (off by default). 
 
-Compiling with MKL/IPP:
-```bash
-# After adding the APT repository as described in the installation instructions
-sudo apt-get install intel-mkl-64bit-2019.5-075 intel-ipp-64bit-2019.5-075 libiomp-dev
+If no acceleration library is available, a slower generic fallback is used.
 
-export MKLROOT=/opt/intel/mkl
-export IPPROOT=/opt/intel/ipp
-export LD_LIBRARY_PATH=${MKLROOT}/lib/intel64:${IPPROOT}/lib/intel64:${LD_LIBRARY_PATH}
+To use MKL in a package that depends on DL4S, enable the trait in the dependency declaration:
 
-swift build -c release \
-    -Xswiftc -DMKL_ENABLE \
-    -Xlinker -L${MKLROOT}/lib/intel64 \
-    -Xlinker -L${IPPROOT}/lib/intel64
+```swift
+.package(url: "https://github.com/palle-k/DL4S.git", branch: "master", traits: ["MKL"])
 ```
+
+Make sure that oneAPI MKL and IPP are installed from the Intel apt repository following the ([installation guide](https://www.intel.com/content/www/us/en/docs/oneapi-toolkit/installation-guide-linux/latest/install-oneapi-toolkit-with-apt.html#INSTALL-ONEAPI-TOOLKIT-WITH-APT)).
+
+Then export `PKG_CONFIG_PATH` and `CPATH` so that the build process discovers MKL and IPP:
+```bash
+# Sets PKG_CONFIG_PATH
+source /opt/intel/oneapi/setvars.sh
+export CPATH=${IPPROOT}/include${CPATH:+:${CPATH}}
+
+swift build -c release --traits MKL
+swift test --traits MKL
+```
+
 
 ### TensorBoard Support
 
