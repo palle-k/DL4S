@@ -13,11 +13,12 @@ swift test --filter GradientTests/testMatMul         # run one test function
 DL4S_LONG_TESTS=1 swift test                         # include the long training runs
 swift test --filter Concurrency                      # run the thread-safety stress suite
 swift test --sanitize=thread --filter Concurrency    # run it under thread sanitizer
+swift test --traits MKL --filter VecTests            # x86_64 Linux with oneAPI: run the MKL smoke test
 ```
 
 There is no linter or formatter configuration in this repo. CI is a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `swift test` in debug and release configuration (`-c release -Xswiftc -enable-testing`) on macOS and Ubuntu, and runs the concurrency suite under the thread sanitizer. A second workflow (`.github/workflows/tsan-full.yml`) runs the full test suite under the thread sanitizer on every push to master and on manual dispatch. Both sanitizer jobs run on macOS only: on Linux, TSan does not see `Synchronization.Mutex` and reports every access under the lock as a race (verified with Swift 6.1 and 6.3.3).
 
-On Linux, acceleration comes from Intel MKL/IPP instead of Accelerate. Build with `swift build -c release -Xswiftc -DMKL_ENABLE -Xlinker -L${MKLROOT}/lib/intel64 -Xlinker -L${IPPROOT}/lib/intel64` (see README for setup). Without MKL or Accelerate, a slow generic fallback is used.
+On x86_64 Linux, acceleration comes from Intel oneAPI MKL/IPP instead of Accelerate through the `MKL` package trait (off by default): `source /opt/intel/oneapi/setvars.sh`, `export CPATH=${IPPROOT}/include:${CPATH}`, then `swift build -c release --traits MKL` (see README for setup). The trait defines `MKL_ENABLE` for the `DL4S` and `DL4STests` targets. Without MKL or Accelerate, an unoptimized generic fallback is used. A third workflow (`.github/workflows/mkl-smoke.yml`) runs `swift test --traits MKL --filter VecTests` on ubuntu-24.04 with oneAPI from the Intel apt repository; it runs on pull requests and pushes to master that touch the CPU backend, `Sources/CMKL`, or `Package.swift`, and on manual dispatch.
 
 Allocation tracing is a debugging aid that is compiled in only with `-Xswiftc -DDL4S_TRACE_ALLOCATIONS`. With the flag, `CPUMemoryOperators.setAllocationTracing(true)` records the call stack of every allocation and prints the call stack of a buffer that is not freed after 5 seconds. Builds without the flag contain no tracing code. Run the tracing test with `swift test --sanitize=thread -Xswiftc -DDL4S_TRACE_ALLOCATIONS --filter Concurrency`.
 
@@ -26,7 +27,7 @@ Tests use Swift Testing (`@Suite` structs with `@Test` functions) in `Tests/DL4S
 `ConcurrencyTests` runs inference, backpropagation, dropout, and weight initialization from several raw threads at the same time. It is the acceptance test for the thread-safety work. Run the suite under the thread sanitizer to see data races as reports.
 
 ## Architecture
-Two targets: `MKL` (a C shim that only exposes Intel MKL/IPP headers through `include/module.modulemap`; `placeholder.c` is empty on purpose) and `DL4S`, which depends on it. `Package.swift` sets no build flags; all acceleration configuration happens through command-line `-Xswiftc`/`-Xlinker` flags.
+Two targets: `CMKL` (a system library target: `module.modulemap` plus `shim.h`, which includes `mkl.h` and `ipp.h`; the MKL include path and link line come from the `mkl-dynamic-lp64-gomp` pkg-config file, the IPP libraries from `link` directives in the module map) and `DL4S`, which depends on `CMKL` only when the `MKL` trait is on. `Package.swift` declares `CMKL` only on x86_64 Linux hosts, so builds on other hosts do not look for the pkg-config file. Accelerate needs no configuration.
 
 ### Generic core: Tensor over Element and Device
 Everything is generic over two parameters: `Tensor<Element: NumericType, Device: DeviceType>` (`Sources/DL4S/Tensor/Tensor.swift`). Valid elements are `Float`, `Double`, and `Int32` (`Sources/DL4S/Numerics/`).

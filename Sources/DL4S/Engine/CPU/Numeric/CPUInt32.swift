@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 #if MKL_ENABLE
-import MKL
+import CMKL
 #elseif canImport(Accelerate)
 import Accelerate
 #endif

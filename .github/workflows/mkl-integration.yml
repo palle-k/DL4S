@@ -1,0 +1,79 @@
+name: MKL integration test
+
+# Builds the CPU backend against Intel oneAPI MKL and IPP on x86_64 Linux.
+on:
+  pull_request:
+    paths:
+      - "Sources/DL4S/Engine/CPU/**"
+      - "Sources/CMKL/**"
+      - "Package.swift"
+      - ".github/workflows/mkl-integration.yml"
+  push:
+    branches: [master]
+    paths:
+      - "Sources/DL4S/Engine/CPU/**"
+      - "Sources/CMKL/**"
+      - "Package.swift"
+      - ".github/workflows/mkl-integration.yml"
+  workflow_dispatch:
+
+jobs:
+  mkl:
+    name: MKL trait
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.1"
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Add the Intel oneAPI apt repository
+        run: |
+          wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+            | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+            | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+
+      # The cache key follows the candidate package versions, so a new oneAPI release refreshes the cache.
+      - name: Read the oneAPI package versions
+        id: versions
+        run: |
+          key=$(apt-cache policy intel-oneapi-mkl-devel intel-oneapi-ipp-devel | awk '/Candidate:/ { printf "%s-", $2 }')
+          echo "key=${key}" >> "$GITHUB_OUTPUT"
+      - name: Restore the downloaded packages
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-cache
+          key: oneapi-debs-${{ steps.versions.outputs.key }}
+      - name: Install oneAPI MKL and IPP
+        run: |
+          mkdir -p ~/apt-cache/partial
+          sudo apt-get install -y -o Dir::Cache::archives="$HOME/apt-cache" intel-oneapi-mkl-devel intel-oneapi-ipp-devel
+          sudo chown -R "$USER" ~/apt-cache
+          rm -rf ~/apt-cache/partial ~/apt-cache/lock
+
+      # setvars.sh sets PKG_CONFIG_PATH (used by SwiftPM to find MKL) and the library search paths.
+      # IPP ships no pkg-config file, so its include directory goes into CPATH.
+      - name: Export the oneAPI environment
+        run: |
+          set +e
+          source /opt/intel/oneapi/setvars.sh
+          set -e
+          echo "CPATH=${IPPROOT}/include${CPATH:+:${CPATH}}" >> "$GITHUB_ENV"
+          for name in PKG_CONFIG_PATH LIBRARY_PATH LD_LIBRARY_PATH MKLROOT IPPROOT; do
+            echo "${name}=${!name}" >> "$GITHUB_ENV"
+          done
+
+      - name: Run VecTests with the MKL trait
+        run: swift test --traits MKL --filter VecTests
+
+      # The threaded MKL variant links GNU OpenMP. The Intel OpenMP runtime must not be pulled in.
+      - name: Check the linked runtime libraries
+        run: |
+          ldd .build/debug/DL4SPackageTests.xctest | grep -E "mkl|gomp|ipp"
+          ldd .build/debug/DL4SPackageTests.xctest | grep -q libmkl_gnu_thread
+          ! ldd .build/debug/DL4SPackageTests.xctest | grep -q libiomp5

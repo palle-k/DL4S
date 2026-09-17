@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 #if MKL_ENABLE
-import MKL
+import CMKL
 #elseif canImport(Accelerate)
 import Accelerate
 #else
@@ -190,7 +190,7 @@ extension Float: CPUNumeric {
         let dst = result.pointer(capacity: count)
         
         #if MKL_ENABLE
-        MKL.vsMul(Int32(count), lhs, rhs, dst)
+        CMKL.vsMul(Int32(count), lhs, rhs, dst)
         #elseif canImport(Accelerate)
         vDSP_vmul(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
@@ -206,7 +206,7 @@ extension Float: CPUNumeric {
         let dst = result.pointer(capacity: count)
         
         #if MKL_ENABLE
-        MKL.vsDiv(Int32(count), lhs, rhs, dst)
+        CMKL.vsDiv(Int32(count), lhs, rhs, dst)
         #elseif canImport(Accelerate)
         vDSP_vdiv(rhs, 1, lhs, 1, dst, 1, UInt(count))
         #else

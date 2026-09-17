@@ -1,0 +1,9 @@
+module CMKL [system] {
+    header "shim.h"
+
+    link "ippcore"
+    link "ippvm"
+    link "ipps"
+
+    export *
+}

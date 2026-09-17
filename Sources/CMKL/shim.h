@@ -1,5 +1,5 @@
 //
-//  mkl.h
+//  shim.h
 //  DL4S
 //
 //  Created by Palle Klewitz on 31.10.19.
@@ -23,9 +23,13 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-#ifndef mkl_h
-#define mkl_h
+#ifndef cmkl_shim_h
+#define cmkl_shim_h
 
-// void foo();
+// The MKL include path comes from the pkg-config file of Intel oneAPI MKL.
+// oneAPI IPP has no pkg-config file, so its include path must be in CPATH.
+// See "MKL / IPP / OpenMP Support" in the README.
+#include <mkl.h>
+#include <ipp.h>
 
-#endif /* mkl_h */
+#endif /* cmkl_shim_h */

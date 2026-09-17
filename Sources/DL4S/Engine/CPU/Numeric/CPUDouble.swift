@@ -24,7 +24,7 @@
 //  SOFTWARE.
 
 #if MKL_ENABLE
-import MKL
+import CMKL
 #elseif canImport(Accelerate)
 import Accelerate
 #endif
@@ -185,7 +185,7 @@ extension Double: CPUNumeric {
         let dst = result.pointer(capacity: count)
         
         #if MKL_ENABLE
-        MKL.vdMul(Int32(count), lhs, rhs, dst)
+        CMKL.vdMul(Int32(count), lhs, rhs, dst)
         #elseif canImport(Accelerate)
         vDSP_vmulD(lhs, 1, rhs, 1, dst, 1, UInt(count))
         #else
@@ -201,7 +201,7 @@ extension Double: CPUNumeric {
         let dst = result.pointer(capacity: count)
         
         #if MKL_ENABLE
-        MKL.vdDiv(Int32(count), lhs, rhs, dst)
+        CMKL.vdDiv(Int32(count), lhs, rhs, dst)
         #elseif canImport(Accelerate)
         vDSP_vdivD(rhs, 1, lhs, 1, dst, 1, UInt(count))
         #else
