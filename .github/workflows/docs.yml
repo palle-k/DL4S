@@ -8,14 +8,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: gh-pages
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  docs:
+  build:
     name: DocC
     runs-on: macos-latest
     timeout-minutes: 20
