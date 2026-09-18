@@ -1,5 +1,5 @@
 //
-//  Norm.swift
+//  BatchNorm.swift
 //  DL4S
 //
 //  Created by Palle Klewitz on 16.10.19.
@@ -30,19 +30,20 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         [\.shift, \.scale]
     }
+
     public var parameters: [Tensor<Element, Device>] {
-        get {[shift, scale]}
+        [shift, scale]
     }
-    
+
     /// Whether the layer is training, currently ignored.
     public var isTraining = true
-    
+
     /// Learned shift vector
     public var shift: Tensor<Element, Device>
-    
+
     /// Learned scale vector
     public var scale: Tensor<Element, Device>
-    
+
     /// Momentum with which to update mean and variance. Currently ignored
     public var momentum: Element
 
@@ -50,15 +51,15 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
     public init(inputSize: [Int], momentum: Element = Element(0.9)) {
         shift = Tensor(repeating: 0, shape: inputSize, requiresGradient: true)
         scale = Tensor(repeating: 1, shape: inputSize, requiresGradient: true)
-        
+
         self.momentum = momentum
-        
+
         #if DEBUG
         shift.tag = "shift"
         scale.tag = "scale"
         #endif
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "BatchNorm") {
             let x = inputs

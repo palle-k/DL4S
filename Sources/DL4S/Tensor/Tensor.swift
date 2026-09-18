@@ -31,7 +31,7 @@ import Synchronization
 /// A counter is cheaper than the system random number generator, which takes a process-wide lock on every call.
 enum UniqueID {
     private static let counter = Atomic<UInt64>(0)
-    
+
     /// Returns an identifier that no earlier call has returned.
     @inline(__always)
     static func next() -> UInt64 {
@@ -44,12 +44,12 @@ final class TensorHandle<Element, Device: DeviceType>: @unchecked Sendable {
     // `@unchecked Sendable`: True `Sendable` conformance is achieved through CoW semantics on Tensor that prevents concurrent access.
     let values: MutableBuffer<Element, Device>
     let parent: TensorHandle<Element, Device>?
-    
+
     init(values: MutableBuffer<Element, Device>, parent: TensorHandle<Element, Device>? = nil) {
         self.values = values
         self.parent = parent
     }
-    
+
     deinit {
         if parent == nil {
             Device.Memory.free(self.values)
@@ -57,26 +57,26 @@ final class TensorHandle<Element, Device: DeviceType>: @unchecked Sendable {
     }
 }
 
-//MARK: Core Tensor functionality
+// MARK: Core Tensor functionality
 
 /// A tensor is an n-dimensional array of numbers with a given shape.
 public struct Tensor<Element: NumericType, Device: DeviceType> {
     var handle: TensorHandle<Element, Device>
-    var context: TensorContext<Element, Device>? = nil
-    
+    var context: TensorContext<Element, Device>?
+
     /// Identifies the tensor during backpropagation.
     ///
     /// Copies of a tensor share the id. A tensor that `ensureOwnership` creates gets a new id.
     /// Different tensors with the same values have different ids.
     let backpropID: UInt64 = UniqueID.next()
-    
+
     /// Shape of the tensor.
     ///
     /// A tensor with an empty shape is a scalar.
     /// When shape.count == 1, the tensor is a vector.
     /// When shape.count == 2, the tensor is a matrix, etc.
     public let shape: [Int]
-    
+
     /// Whether the compute graph of operations originating from this tensor should be captured.
     /// If the compute graph is captured, the resources associated with this tensor are only released
     /// after all tensors that have been derived from this tensor are released.
@@ -95,17 +95,17 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     ///
     /// To detach a tensor from the compute graph, use `tensor.detached()`.
     public var requiresGradient: Bool
-    
+
     #if DEBUG
     /// Debug tag for the tensor. If you use `tensor.graph()` to visualize the compute graph, the tensor is labelled with the appropriate tag.
-    public var tag: String? = nil
+    public var tag: String?
     #endif
-    
+
     /// Read-only view of the storage of the tensor.
     var values: ShapedBuffer<Element, Device> {
         ShapedBuffer(values: Buffer(handle.values), shape: shape)
     }
-    
+
     /// Number of elements in the tensor.
     public var count: Int {
         values.count
@@ -115,7 +115,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     public var dim: Int {
         shape.count
     }
-    
+
     /// Creates a tensor with the given shape and fills it with `value`
     /// - Parameters:
     ///   - value: Value to fill tensor with
@@ -124,7 +124,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     public init(repeating value: Element, shape: Int..., requiresGradient: Bool = false) {
         self.init(repeating: value, shape: shape, requiresGradient: requiresGradient)
     }
-    
+
     /// Creates a tensor with the given shape and fills it with `value`
     /// - Parameters:
     ///   - value: Value to fill tensor with
@@ -137,7 +137,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         self.requiresGradient = requiresGradient
         self.shape = shape
     }
-    
+
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Value to fill tensor with
@@ -149,9 +149,9 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         }
         handle = TensorHandle(values: values.values)
         self.requiresGradient = requiresGradient
-        self.shape = [v.count]
+        shape = [v.count]
     }
-    
+
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Value to fill tensor with
@@ -159,7 +159,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     ///   - requiresGradient: Whether it is desired to compute gradients of the tensor.
     public init(_ v: [Element], shape: [Int], requiresGradient: Bool = false) {
         precondition(v.count == shape.reduce(1, *), "Number of elements must match number of elements specified by shape")
-        
+
         let values = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         v.withUnsafeBufferPointer { ptr in
             Device.Memory.assign(from: ptr, to: values.values, count: v.count)
@@ -168,7 +168,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         self.requiresGradient = requiresGradient
         self.shape = shape
     }
-    
+
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Value to fill tensor with
@@ -177,36 +177,36 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     public init(_ v: [Element], shape: Int..., requiresGradient: Bool = false) {
         self.init(v, shape: shape, requiresGradient: requiresGradient)
     }
-    
+
     init(using values: MutableShapedBuffer<Element, Device>, context: TensorContext<Element, Device>?) {
         handle = TensorHandle(values: values.values)
         self.context = context
-        self.requiresGradient = context != nil
-        self.shape = values.shape
+        requiresGradient = context != nil
+        shape = values.shape
     }
-    
+
     init(handle: TensorHandle<Element, Device>, shape: [Int], context: TensorContext<Element, Device>?) {
         self.handle = handle
         self.context = context
-        self.requiresGradient = context != nil
+        requiresGradient = context != nil
         self.shape = shape
     }
-    
+
     @_specialize(where Element == Float, Device == CPU)
     @inline(__always)
     static func operationOrder(from initialTensor: Self) -> [Self] {
         var stack: [(Tensor<Element, Device>, Int)] = []
         var sorting: [Tensor<Element, Device>] = []
         var visited: Set<UInt64> = []
-        
+
         stack.append((initialTensor, 0))
-        
+
         while let (current, idx) = stack.last {
             if visited.contains(current.backpropID) {
                 stack.removeLast()
                 continue
             }
-            
+
             if let context = current.context, context.sources.indices ~= idx {
                 stack.removeLast()
                 stack.append((current, idx + 1))
@@ -217,11 +217,10 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
                 stack.removeLast()
             }
         }
-        
+
         return sorting
     }
-    
-    
+
     /// Performs backpropagation and returns the gradients for the given tensors.
     ///
     /// Tensors for which it is desired to compute gradients must have `requiresGradient` set to `true`.
@@ -250,19 +249,19 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         OperationGroup.capture(named: "Backpropagate") {
             // self is the result of a function, which is differentiated with respect to the given tensors.
             let result = self
-            
+
             // Build the gradient tape. Each operation is represented on the tape by its result.
             // It is not possible to just recursively walk through the compute graph, as the graph is not a tree.
             // Therefore, some variables may be included in multiple operations. Backpropagating through each path
             // could therefore lead to a combinatorial explosion.
             let operationOrder = Tensor.operationOrder(from: result)
-            
+
             // The derivative of the function wrt. itself is 1.
             var grads: [UInt64: Tensor<Element, Device>] = [
-                result.backpropID: Tensor(repeating: 1, shape: result.shape, requiresGradient: retainGraph)
+                result.backpropID: Tensor(repeating: 1, shape: result.shape, requiresGradient: retainGraph),
             ]
             grads.reserveCapacity(operationOrder.count)
-            
+
             // Perform the actual backpropagation.
             for tensor in operationOrder.reversed() {
                 guard let grad = grads[tensor.backpropID] else {
@@ -276,49 +275,49 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
                 // The accumulator is removed from the dictionary and consumed by the closure,
                 // to prevent extraneous copies through the CoW mechanism.
                 switch ctx.backpropagate {
-                case .perSource(let backpropagate):
+                case let .perSource(backpropagate):
                     for i in ctx.sources.indices {
                         let src = ctx.sources[i]
-                        
+
                         guard src.requiresGradient else {
                             continue
                         }
-                        
+
                         let accumulator = backpropagate[i](grad, grads.removeValue(forKey: src.backpropID))
-#if DEBUG
+                        #if DEBUG
                         assert(accumulator.shape == src.shape)
-#endif
-                        
+                        #endif
+
                         if retainGraph {
                             grads[src.backpropID] = accumulator
                         } else {
                             grads[src.backpropID] = accumulator.detached()
                         }
                     }
-                case .allSources(let backpropagate):
+                case let .allSources(backpropagate):
                     let accumulators = ctx.sources.map { src in
                         src.requiresGradient ? grads.removeValue(forKey: src.backpropID) : nil
                     }
                     var accumulated = backpropagate(grad, consume accumulators).map(Optional.some)
                     precondition(accumulated.count == ctx.sources.count, "Backpropagation must return one gradient per source.")
-                    
+
                     for i in ctx.sources.indices {
                         let src = ctx.sources[i]
-                        
+
                         // Taking the gradient out of the array leaves it uniquely referenced.
                         guard src.requiresGradient, var accumulator = accumulated[i].take() else {
                             continue
                         }
-#if DEBUG
+                        #if DEBUG
                         assert(accumulator.shape == src.shape)
-#endif
-                        
+                        #endif
+
                         // The same tensor can be a source more than once. Its accumulator was handed to the closure
                         // in the first position only, so the gradients of the other positions are added here.
                         if let previous = grads.removeValue(forKey: src.backpropID) {
                             accumulator = previous + accumulator
                         }
-                        
+
                         if retainGraph {
                             grads[src.backpropID] = accumulator
                         } else {
@@ -327,44 +326,43 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
                     }
                 }
             }
-            
+
             return tensors.map {
                 grads[$0.backpropID] ?? Tensor(repeating: 0, shape: $0.shape)
             }
         }
     }
-    
+
     /// Ensures storage is not shared with other tensors.
     ///
     /// Operations like `view` avoid extraneous copies of the underlying memory.
     /// In place mutations must ensure that no other tensors reference the same storage.
     mutating func ensureOwnership() {
-        if isKnownUniquelyReferenced(&handle) && handle.parent == nil {
+        if isKnownUniquelyReferenced(&handle), handle.parent == nil {
             return
         }
-        
+
         let original = self
         let replacementHandle = TensorHandle(values:
-            Device.Memory.allocateBuffer(withShape: shape, type: Element.self).values
-        )
+            Device.Memory.allocateBuffer(withShape: shape, type: Element.self).values)
         Device.Memory.assign(from: Buffer(handle.values), to: replacementHandle.values, count: count)
-        
+
         self = Tensor(
             handle: replacementHandle,
             shape: shape,
             context: requiresGradient ? TensorContext(
                 tag: "identity",
                 sources: [original],
-                backpropagate: [{$0}]
-            ) : nil
+                backpropagate: [{ $0 }],
+            ) : nil,
         )
     }
-    
+
     /// In-place detaches the tensor from the compute graph.
     public mutating func discardContext() {
-        self.context = nil
+        context = nil
     }
-    
+
     /// Detaches the tensor from the compute graph. No gradients can be computed for the resulting tensor.
     public func detached() -> Self {
         Tensor(handle: handle, shape: shape, context: nil)

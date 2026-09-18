@@ -25,7 +25,6 @@
 
 import Foundation
 
-
 /// A text output stream that writes to the standard error output.
 ///
 /// `FileHandle.standardError` is used instead of the C `stderr` variable, which Glibc declares as a mutable global.

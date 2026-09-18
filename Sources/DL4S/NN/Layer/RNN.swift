@@ -25,12 +25,10 @@
 
 import Foundation
 
-
 public enum RNNDirection: String, Codable, Sendable {
     case forward
     case backward
 }
-
 
 /// Base protocol for recurrent neural networks.
 public protocol RNN: LayerType where Outputs == (State, () -> StateSequence) {
@@ -38,37 +36,37 @@ public protocol RNN: LayerType where Outputs == (State, () -> StateSequence) {
     associatedtype StateSequence
     associatedtype PreparedInput
     associatedtype StepInput
-    
+
     var direction: RNNDirection { get }
-    
+
     /// Number of steps to perform given the inputs of the RNN
     /// - Parameter inputs: Inputs of the RNN
     func numberOfSteps(for inputs: Inputs) -> Int
-    
+
     /// Creates the initial state of the RNN for processing the given sequence
     /// - Parameter inputs: Sequence to process
     func initialState(for inputs: Inputs) -> State
-    
+
     /// Performs the input transformation on all timesteps of the input at once
     /// - Parameter inputs: Sequence to process
     func prepare(inputs: Inputs) -> PreparedInput
-    
+
     /// Concatenates the given array of states into a state sequence
     /// - Parameter states: States to concatenate
     func concatenate(_ states: [State]) -> StateSequence
-    
+
     /// Extracts the inputs of the RNN at a given timestep from the preprocessed input sequence
     /// - Parameters:
     ///   - step: Timestep
     ///   - preparedInput: Prepared input sequence
     func input(at step: Int, using preparedInput: PreparedInput) -> StepInput
-    
+
     /// Performs a single RNN timestep
     /// - Parameters:
     ///   - preparedInput: Preprocessed input for the current timestep
     ///   - previousState: Previous hidden state
     func step(_ preparedInput: StepInput, previousState: State) -> State
-    
+
     /// Applies the RNN to the given input sequence using the provided initial state
     /// - Parameters:
     ///   - inputs: Input sequence
@@ -76,38 +74,37 @@ public protocol RNN: LayerType where Outputs == (State, () -> StateSequence) {
     func callAsFunction(_ inputs: Inputs, state: State?) -> (State, () -> StateSequence)
 }
 
-extension RNN {
-    public func callAsFunction(_ inputs: Inputs) -> Outputs {
+public extension RNN {
+    func callAsFunction(_ inputs: Inputs) -> Outputs {
         callAsFunction(inputs, state: initialState(for: inputs))
     }
-    
-    public func callAsFunction(_ inputs: Inputs, state: State? = nil) -> Outputs {
+
+    func callAsFunction(_ inputs: Inputs, state: State? = nil) -> Outputs {
         OperationGroup.capture(named: "RNN") {
             let initState = state ?? initialState(for: inputs)
             let prepared = prepare(inputs: inputs)
-            
+
             var currentState = initState
             var stateSequence: [State] = []
-            
-            let range: AnySequence<Int>
-            switch direction {
+
+            let range: AnySequence<Int> = switch direction {
             case .forward:
-                range = AnySequence(0 ..< numberOfSteps(for: inputs))
+                AnySequence(0 ..< numberOfSteps(for: inputs))
             case .backward:
-                range = AnySequence((0 ..< numberOfSteps(for: inputs)).reversed())
+                AnySequence((0 ..< numberOfSteps(for: inputs)).reversed())
             }
-            
+
             for i in range {
                 let stepInput = input(at: i, using: prepared)
                 currentState = step(stepInput, previousState: currentState)
                 stateSequence.append(currentState)
             }
-            
+
             if direction == .backward {
                 stateSequence.reverse()
             }
-            
-            return (currentState, {self.concatenate(stateSequence)})
+
+            return (currentState, { self.concatenate(stateSequence) })
         }
     }
 }

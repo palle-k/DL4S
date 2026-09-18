@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  ScaledDotProductAttention.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - 2020 - Palle Klewitz
@@ -28,14 +28,19 @@ import Foundation
 /// Computes Scaled Multi-Head Dot Product Attention as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType>: LayerType, Codable {
     public var temperature: Element
-    
+
     public init(temperature: Element) {
         self.temperature = temperature
     }
-    
-    public var parameters: [Tensor<Element, Device>] {[]}
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
     /// Performs scaled dot product attention.
     /// - Parameter inputs: Tuple containing queries of shape [batchSize, heads, queryCount, keyDim], keys of shape [batchSize, heads, keyCount, keyDim] and values of shape [batchSize, heads, valueCount, valueDim]
     ///       as well as an optional mask that may be used to prevent attention to certain elements outside of the batch or in future timesteps. Mask must be broadcastable to shape [batchSize, heads, queryCount, keyCount]
@@ -44,22 +49,21 @@ public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType
         OperationGroup.capture(named: "ScaledDotProductAttention") {
             let (q, k, v, mask) = inputs
             precondition(k.dim == 4)
-            
+
             // q: [batchSize, heads, queryCount, keyDim]
             // k: [batchSize, heads, keyCount, keyDim]
             // v: [batchSize, heads, valueCount, valueDim]
-            
+
             // [batchSize, heads, queryCount, keyDim] x [batchSize, heads, [keyCount, keyDim]^T] -> [batchSize, heads, queryCount, keyCount]
             var attn = (q / Tensor(temperature)).broadcastMatrixMultiplied(with: k, transposeSelf: false, transposeOther: true)
-            
-            if let mask = mask {
-                attn = attn - mask * 1e9 // mask contains 1 for all entries that should be masked away ==> softmax zeros them out.
+
+            if let mask {
+                attn -= mask * 1e9 // mask contains 1 for all entries that should be masked away ==> softmax zeros them out.
             }
-            
+
             attn = softmax(attn, axis: 3) // softmax over last axis (keyCount)
             // [batchSize, heads, queryCount, keyCount] x [batchSize, heads, valueCount, valueDim] -> [batchSize, heads, queryCount, valueDim] (constraint: keyCount == valueCount]
-            let output = attn.broadcastMatrixMultiplied(with: v)
-            return output // [batchSize, heads, queryCount, valueDim]
+            return attn.broadcastMatrixMultiplied(with: v)
         }
     }
 }

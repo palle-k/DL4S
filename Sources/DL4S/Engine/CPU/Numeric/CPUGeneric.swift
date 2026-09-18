@@ -31,6 +31,10 @@ import CMKL
 import Accelerate
 #endif
 
+// `Self.self == Float.self` is used as a test before buffers are force cast.
+// This is safe.
+// swiftlint:disable force_cast
+
 struct D4Img2ColSetup {
     let batch_size: Int
     let channels: Int
@@ -49,7 +53,7 @@ public extension CPUNumeric {
     static func img2col(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
         let src = values.baseAddress!
         let dst = result.baseAddress!
-        
+
         let setup = D4Img2ColSetup(
             batch_size: batchSize,
             channels: channels,
@@ -58,35 +62,33 @@ public extension CPUNumeric {
             kernel_height: kernelHeight,
             kernel_width: kernelWidth,
             padding: padding,
-            stride: stride
+            stride: stride,
         )
-        
-        let depth_stride = setup.width * setup.height;
-        let featuremap_stride = depth_stride * setup.channels;
-        
-        let output_height = (setup.height + 2 * setup.padding - setup.kernel_height) / setup.stride + 1;
-        let output_width = (setup.width + 2 * setup.padding - setup.kernel_width) / setup.stride + 1;
-        let dst_batch_stride = output_width * output_height;
-        let dst_full_stride = dst_batch_stride * setup.batch_size;
-        
+
+        let depth_stride = setup.width * setup.height
+        let featuremap_stride = depth_stride * setup.channels
+
+        let output_height = (setup.height + 2 * setup.padding - setup.kernel_height) / setup.stride + 1
+        let output_width = (setup.width + 2 * setup.padding - setup.kernel_width) / setup.stride + 1
+        let dst_batch_stride = output_width * output_height
+        let dst_full_stride = dst_batch_stride * setup.batch_size
+
         for k in 0 ..< setup.kernel_width &* setup.kernel_height &* setup.channels {
             let kx = k % setup.kernel_width
             let kyz = k / setup.kernel_width
             let ky = kyz % setup.kernel_height
             let kz = kyz / setup.kernel_height
             for b in 0 ..< setup.batch_size {
-                
                 for y in 0 ..< output_height {
                     let in_y = y &* setup.stride &- setup.padding &+ ky
-                    
-                    if in_y >= 0 && in_y < setup.height {
+
+                    if in_y >= 0, in_y < setup.height {
                         for x in 0 ..< output_width {
                             let in_x = x &* setup.stride &- setup.padding &+ kx
-                            let input: Self
-                            if (in_x >= 0 && in_x < setup.width) {
-                                input = src[in_x &+ in_y &* setup.width &+ kz * depth_stride &+ b &* featuremap_stride]
+                            let input: Self = if in_x >= 0, in_x < setup.width {
+                                src[in_x &+ in_y &* setup.width &+ kz * depth_stride &+ b &* featuremap_stride]
                             } else {
-                                input = Self.zero
+                                Self.zero
                             }
                             dst[dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width &+ x] = input
                         }
@@ -100,7 +102,7 @@ public extension CPUNumeric {
                             #else
                             let dst_offset = dst_float.advanced(by: dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width)
                             for i in 0 ..< output_width {
-                                dst_offset[i] = 0;
+                                dst_offset[i] = 0
                             }
                             #endif
                         } else {
@@ -113,14 +115,14 @@ public extension CPUNumeric {
             }
         }
     }
-    
+
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
     static func col2img(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
         let src = values.baseAddress!
         let dst = result.baseAddress!
-        
+
         let setup = D4Img2ColSetup(
             batch_size: batchSize,
             channels: channels,
@@ -129,64 +131,63 @@ public extension CPUNumeric {
             kernel_height: kernelHeight,
             kernel_width: kernelWidth,
             padding: padding,
-            stride: stride
+            stride: stride,
         )
-        
+
         let depth_stride = setup.width * setup.height
         let featuremap_stride = depth_stride * setup.channels
-        
+
         let input_height = (setup.height + 2 * setup.padding - setup.kernel_height) / setup.stride + 1
         let input_width = (setup.width + 2 * setup.padding - setup.kernel_width) / setup.stride + 1
         let src_batch_stride = input_width * input_height
         let src_full_stride = src_batch_stride * setup.batch_size
-        
+
         if Self.self == Float.self {
             #if MKL_ENABLE
-            ippsSet_32f(0, (dst as! UnsafeMutablePointer<Float>), Int32(setup.width * setup.height * setup.channels * setup.batch_size))
+            ippsSet_32f(0, dst as! UnsafeMutablePointer<Float>, Int32(setup.width * setup.height * setup.channels * setup.batch_size))
             #elseif canImport(Accelerate)
-            vDSP_vfill([0], (dst as! UnsafeMutablePointer<Float>), 1, UInt(setup.width * setup.height * setup.channels * setup.batch_size))
+            vDSP_vfill([0], dst as! UnsafeMutablePointer<Float>, 1, UInt(setup.width * setup.height * setup.channels * setup.batch_size))
             #else
             for i in 0 ..< setup.width * setup.height * setup.channels * setup.batch_size {
-                dst[i] = 0;
+                dst[i] = 0
             }
             #endif
         } else {
             Self.fill(value: 0, result: UnsafeMutableBufferPointer<Self>(start: dst, count: setup.width * setup.height * setup.channels * setup.batch_size), count: setup.width * setup.height * setup.channels * setup.batch_size)
         }
-        
+
         for k in 0 ..< setup.kernel_width * setup.kernel_height * setup.channels {
-            let kx = k % setup.kernel_width;
-            let kyz = k / setup.kernel_width;
-            let ky = kyz % setup.kernel_height;
-            let kz = kyz / setup.kernel_height;
-            
+            let kx = k % setup.kernel_width
+            let kyz = k / setup.kernel_width
+            let ky = kyz % setup.kernel_height
+            let kz = kyz / setup.kernel_height
+
             for b in 0 ..< setup.batch_size {
-                
                 for y in 0 ..< input_height {
-                    let in_y = y &* setup.stride &- setup.padding &+ ky;
-                    
+                    let in_y = y &* setup.stride &- setup.padding &+ ky
+
                     for x in 0 ..< input_width {
-                        let in_x = x &* setup.stride &- setup.padding &+ kx;
-                        
-                        if (in_x >= 0 && in_x < setup.width && in_y >= 0 && in_y < setup.height) {
-                            let input = src[src_full_stride &* k &+ b &* src_batch_stride &+ y &* input_width &+ x];
-                            dst[in_x &+ in_y &* setup.width &+ kz &* depth_stride &+ b &* featuremap_stride] += input;
+                        let in_x = x &* setup.stride &- setup.padding &+ kx
+
+                        if in_x >= 0, in_x < setup.width, in_y >= 0, in_y < setup.height {
+                            let input = src[src_full_stride &* k &+ b &* src_batch_stride &+ y &* input_width &+ x]
+                            dst[in_x &+ in_y &* setup.width &+ kz &* depth_stride &+ b &* featuremap_stride] += input
                         }
                     }
                 }
             }
         }
     }
-    
+
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
     internal static func gemm_generic(_ transA: Bool, _ transB: Bool, _ __M: Int, _ __N: Int, _ __K: Int, _ alpha: Self, _ __A: UnsafePointer<Self>, _ lda: Int, _ __B: UnsafePointer<Self>, _ ldb: Int, _ beta: Self, _ __C: UnsafeMutablePointer<Self>, _ ldc: Int) {
-        if (__M == 0 || __N == 0 || ((alpha == 0 || __K == 0) && beta == 1)) {
+        if __M == 0 || __N == 0 || ((alpha == 0 || __K == 0) && beta == 1) {
             return
         }
-        
-        if (beta == 0) {
+
+        if beta == 0 {
             for i in 0 ..< __M * __N {
                 __C[i] = 0
             }
@@ -195,13 +196,13 @@ public extension CPUNumeric {
                 __C[i] *= beta
             }
         }
-        
-        if (alpha == 0) {
+
+        if alpha == 0 {
             return
         }
-        
-        if (transA) {
-            if (transB) {
+
+        if transA {
+            if transB {
                 for r in 0 ..< __M {
                     for c in 0 ..< __N {
                         var tmp: Self = 0
@@ -223,7 +224,7 @@ public extension CPUNumeric {
                 }
             }
         } else {
-            if (transB) {
+            if transB {
                 for r in 0 ..< __M {
                     for c in 0 ..< __N {
                         var tmp: Self = 0
@@ -246,7 +247,7 @@ public extension CPUNumeric {
             }
         }
     }
-    
+
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
@@ -254,9 +255,9 @@ public extension CPUNumeric {
         let src = values.baseAddress!
         let target = result.baseAddress!
         let context = context.baseAddress!
-        
+
         let dst_dim = dst_shape.count
-        
+
         let src_strides = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim - 1)
         let src_shape = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim - 1)
         let dst_strides = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim)
@@ -266,29 +267,29 @@ public extension CPUNumeric {
             src_shape.deallocate()
             dst_strides.deallocate()
         }
-        
+
         dst_strides[dst_dim - 1] = 1
         src_strides[dst_dim - 2] = 1
-        
+
         for i in (0 ... (dst_dim - 2)).reversed() {
             dst_strides[i] = dst_shape[i &+ 1] &* dst_strides[i &+ 1]
         }
         for i in (0 ... (dst_dim - 2)).reversed() {
             src_shape[i] = dst_shape[i >= axis ? i &+ 1 : i]
-            if (i < dst_dim - 2) {
+            if i < dst_dim - 2 {
                 src_strides[i] = src_shape[i &+ 1] &* src_strides[i &+ 1]
             } else {
                 src_strides[i] = 1
             }
         }
         let count = src_shape[0] * src_strides[0]
-        
+
         let dst_count = dst_strides[0] * dst_shape[0]
         if Self.self == Float.self {
             #if MKL_ENABLE
-            ippsSet_32f(0, (target as! UnsafeMutablePointer<Float>), Int32(dst_count))
+            ippsSet_32f(0, target as! UnsafeMutablePointer<Float>, Int32(dst_count))
             #elseif canImport(Accelerate)
-            vDSP_vfill([0], (target as! UnsafeMutablePointer<Float>), 1, UInt(dst_count))
+            vDSP_vfill([0], target as! UnsafeMutablePointer<Float>, 1, UInt(dst_count))
             #else
             for i in 0 ..< dst_count {
                 target[i] = 0
@@ -299,7 +300,7 @@ public extension CPUNumeric {
                 target[i] = 0
             }
         }
-        
+
         for i in 0 ..< count {
             let src_idx = i
             let c = context[i]
@@ -307,7 +308,7 @@ public extension CPUNumeric {
                 continue
             }
             var dst_idx = Int(c) &* dst_strides[axis]
-            
+
             for a in 0 ..< dst_dim - 1 {
                 let src_dim_idx = (i / src_strides[a]) % src_shape[a]
                 dst_idx = dst_idx &+ src_dim_idx &* dst_strides[a >= axis ? a &+ 1 : a]
@@ -315,17 +316,17 @@ public extension CPUNumeric {
             target[dst_idx] = src[src_idx]
         }
     }
-    
+
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
     static func gather(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, src_shape: [Int], axis: Int, ignoreIndex: Int32) {
         let src_dim = src_shape.count
-        
+
         let src = values.baseAddress!
         let target = result.baseAddress!
         let context = context.baseAddress!
-        
+
         let dst_strides = UnsafeMutablePointer<Int>.allocate(capacity: src_dim - 1)
         let dst_shape = UnsafeMutablePointer<Int>.allocate(capacity: src_dim - 1)
         let src_strides = UnsafeMutablePointer<Int>.allocate(capacity: src_dim)
@@ -335,24 +336,24 @@ public extension CPUNumeric {
             dst_shape.deallocate()
             src_strides.deallocate()
         }
-        
+
         src_strides[src_dim - 1] = 1
         dst_strides[src_dim - 2] = 1
-        
-        for i  in (0 ... (src_dim - 2)).reversed() {
+
+        for i in (0 ... (src_dim - 2)).reversed() {
             src_strides[i] = src_shape[i &+ 1] * src_strides[i &+ 1]
         }
         for i in (0 ... (src_dim - 2)).reversed() {
             dst_shape[i] = src_shape[i >= axis ? i &+ 1 : i]
-            if (i < src_dim &- 2) {
+            if i < src_dim &- 2 {
                 dst_strides[i] = dst_shape[i &+ 1] &* dst_strides[i &+ 1]
             } else {
                 dst_strides[i] = 1
             }
         }
-        
+
         let count = dst_shape[0] &* dst_strides[0]
-        
+
         for i in 0 ..< count {
             let dst_idx = i
             let c = context[i]
@@ -360,9 +361,9 @@ public extension CPUNumeric {
                 target[dst_idx] = 0
                 continue
             }
-            
+
             var src_idx = Int(c) &* src_strides[axis]
-            
+
             for a in 0 ..< src_dim - 1 {
                 let dst_dim_idx = (i / dst_strides[a]) % dst_shape[a]
                 src_idx = src_idx &+ dst_dim_idx &* src_strides[a >= axis ? a &+ 1 : a]
@@ -370,7 +371,7 @@ public extension CPUNumeric {
             target[dst_idx] = src[src_idx]
         }
     }
-    
+
     @_specialize(where Self == Int32)
     @_specialize(where Self == Float)
     @_specialize(where Self == Double)
@@ -379,7 +380,7 @@ public extension CPUNumeric {
         let rhsPtr = rhs.baseAddress!
         let resultPtr = result.baseAddress!
         let contextPtr = context.baseAddress!
-        
+
         var i = 0
         while i < count {
             let l = lhsPtr[i]
@@ -391,11 +392,11 @@ public extension CPUNumeric {
                 resultPtr[i] = r
                 contextPtr[i] = 1
             }
-            
+
             i &+= 1
         }
     }
-    
+
     @_specialize(where Self == Int32)
     @_specialize(where Self == Float)
     @_specialize(where Self == Double)
@@ -404,7 +405,7 @@ public extension CPUNumeric {
         let rhsPtr = rhs.baseAddress!
         let resultPtr = result.baseAddress!
         let contextPtr = context.baseAddress!
-        
+
         var i = 0
         while i < count {
             let l = lhsPtr[i]
@@ -416,8 +417,10 @@ public extension CPUNumeric {
                 resultPtr[i] = r
                 contextPtr[i] = 1
             }
-            
+
             i &+= 1
         }
     }
 }
+
+// swiftlint:enable force_cast

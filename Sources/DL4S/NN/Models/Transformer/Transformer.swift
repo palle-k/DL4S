@@ -31,30 +31,34 @@ import Foundation
 /// Outputs of the transformer are normalized using log softmax.
 public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public typealias Outputs = Tensor<Element, Device> // disambiguates callAsFunction protocol requirement
-    
+
     public var embedding: Embedding<Element, Device>
     public var positionalEncoding: PositionalEncoding<Element, Device>
     public var dropout: Dropout<Element, Device>
-    
+
     public var encoder: TransformerEncoder<Element, Device>
     public var decoder: TransformerDecoder<Element, Device>
-    
+
     public var outputBias: Tensor<Element, Device>
-    
-    public var parameters: [Tensor<Element, Device>] {Array([
-        embedding.parameters,
-        encoder.parameters,
-        decoder.parameters,
-        [outputBias]
-    ].joined())}
-    
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {Array([
-        parameterPaths(of: \.embedding),
-        parameterPaths(of: \.encoder),
-        parameterPaths(of: \.decoder),
-        [\Self.outputBias]
-    ].joined())}
-    
+
+    public var parameters: [Tensor<Element, Device>] {
+        Array([
+            embedding.parameters,
+            encoder.parameters,
+            decoder.parameters,
+            [outputBias],
+        ].joined())
+    }
+
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        Array([
+            parameterPaths(of: \.embedding),
+            parameterPaths(of: \.encoder),
+            parameterPaths(of: \.decoder),
+            [\Self.outputBias],
+        ].joined())
+    }
+
     /// Creates a new transformer, which follows [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
     ///   - encoderLayers: Number of encoder layers
@@ -70,7 +74,7 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         var generator = WyHash()
         self.init(encoderLayers: encoderLayers, decoderLayers: decoderLayers, vocabSize: vocabSize, hiddenDim: hiddenDim, heads: heads, keyDim: keyDim, valueDim: valueDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
     }
-    
+
     /// Creates a new transformer, which follows [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
     ///   - encoderLayers: Number of encoder layers
@@ -90,20 +94,20 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
         encoder = TransformerEncoder(layerCount: encoderLayers, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: hiddenDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
         decoder = TransformerDecoder(layerCount: decoderLayers, heads: heads, keyDim: keyDim, valueDim: valueDim, modelDim: hiddenDim, forwardDim: forwardDim, dropout: dropout, using: &generator)
         outputBias = Tensor(repeating: 0, shape: [vocabSize], requiresGradient: true)
-        
+
         #if DEBUG
         outputBias.tag = "outBias"
         #endif
     }
-    
+
     private func prepareInputs(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         let embedded = embedding(inputs.flattened())
             .view(as: inputs.shape[0], inputs.shape[1], -1) // [batchSize, maxLen, embedDim]
         let encoderPositions = positionalEncoding(inputs.shape[1]) // [maxLen, embedDim]
-        
+
         return dropout(embedded * Tensor(Element(embedded.shape[2]).sqrt()) + encoderPositions) // [batchSize, maxLen, embedDim]
     }
-    
+
     /// Computes the outputs of the decoder given the inputs for the encoder and decoder.
     /// - Parameter inputs: Tuple containing:
     ///         - Padded encoder inputs using -1 as a padding token.
@@ -112,19 +116,19 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
     /// - Returns: Batch of sequences of log-softmax normalized distributions over the vocabulary of the transformer with shape [batchSize, seqlen, vocabDim]
     public func callAsFunction(_ inputs: (encoderInput: Tensor<Int32, Device>, decoderInput: Tensor<Int32, Device>, encoderInputLengths: [Int], decoderInputLengths: [Int])) -> Tensor<Element, Device> {
         let (encoderInput, decoderInput, encInLens, decInLens) = inputs
-        
+
         let embeddedEncoderInput = prepareInputs(encoderInput)
         let embeddedDecoderInput = prepareInputs(decoderInput)
-        
+
         let encoderStates = encoder((embeddedEncoderInput, encInLens))
         let decoded = decoder((embeddedDecoderInput, encoderStates, encInLens, decInLens)) // [batchSize, maxLen, hiddenSize]
-        
+
         // [batchSize, maxLen, hiddenSize] x [vocabSize, hiddenSize]^T --> [batchSize, maxLen, vocabSize]
         let deembedded = decoded.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true) + outputBias
-        
+
         return logSoftmax(deembedded, axis: 2)
     }
-    
+
     /// Greedily decodes the most probable sequence of output symbols given a sequence of input tokens
     /// - Parameters:
     ///   - inputSequence: Input tokens
@@ -135,21 +139,21 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
     public func callAsFunction(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
         let encIn = prepareInputs(Tensor([inputSequence]))
         let encoded = encoder((encIn, [inputSequence.count]))
-        
+
         var tokens: [Int32] = []
         for _ in 0 ..< maxLength {
             let tokenInput = [[startToken] + tokens]
             let decIn = prepareInputs(Tensor(tokenInput))
             let output = decoder((decIn, encoded, [inputSequence.count], [tokenInput[0].count]))
             let deembedded = output.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true)
-            
+
             let nextToken = deembedded[0, -1].argmax()
             tokens.append(Int32(nextToken))
             if nextToken == endToken {
                 break
             }
         }
-        
+
         return tokens
     }
 }

@@ -28,11 +28,11 @@ import Foundation
 /// 'Vanilla' stochastic gradient descent optimizer
 public struct SGD<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
-    
+
     public private(set) var model: Layer
     public var learningRate: ParamTensor
     private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
-    
+
     /// 'Vanilla' stochastic gradient descent optimizer
     /// - Parameters:
     ///   - model: Model to optimize
@@ -41,9 +41,9 @@ public struct SGD<Layer: LayerType>: Optimizer {
         self.model = model
         self.learningRate = learningRate
         // paths are only queried once, as creating keypaths is a major performance bottleneck
-        self.paths = model.parameterPaths
+        paths = model.parameterPaths
     }
-    
+
     public mutating func update(along gradients: [ParamTensor]) {
         for (keyPath, grad) in zip(paths, gradients) {
             model[keyPath: keyPath] -= learningRate * grad
@@ -55,20 +55,20 @@ public struct SGD<Layer: LayerType>: Optimizer {
 extension SGD: Codable where Layer: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         model = try container.decode(Layer.self, forKey: .model)
         learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
-        
+
         paths = model.parameterPaths
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(model, forKey: .model)
         try container.encode(learningRate, forKey: .learningRate)
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case model
         case learningRate

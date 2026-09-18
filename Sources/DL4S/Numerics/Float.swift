@@ -25,70 +25,68 @@
 
 import Foundation
 
-
 extension Float: NumericType {
     public func format(maxDecimals: Int) -> String {
-        return String(format: "%.\(maxDecimals)f", self)
+        String(format: "%.\(maxDecimals)f", self)
     }
-    
+
     public func toUInt8() -> UInt8 {
-        return UInt8(Swift.max(Swift.min(self, 255), 0))
+        UInt8(Swift.max(Swift.min(self, 255), 0))
     }
-    
+
     public static var one: Float {
-        return 1.0
+        1.0
     }
-    
+
     public func toInt() -> Int {
-        return Int(self)
+        Int(self)
     }
-    
+
     public var floatValue: Float {
-        return self
+        self
     }
-    
+
     public var doubleValue: Double {
-        return Double(self)
+        Double(self)
     }
-    
+
     public var intValue: Int32 {
-        return Int32(self)
+        Int32(self)
     }
-    
+
     public func sqrt() -> Float {
-        return Foundation.sqrt(self)
+        Foundation.sqrt(self)
     }
-    
+
     public func exp() -> Float {
-        return Foundation.exp(self)
+        Foundation.exp(self)
     }
-    
+
     public func log() -> Float {
-        return Foundation.log(self)
+        Foundation.log(self)
     }
-    
+
     public func sin() -> Float {
-        return Foundation.sin(self)
+        Foundation.sin(self)
     }
-    
+
     public func cos() -> Float {
-        return Foundation.cos(self)
+        Foundation.cos(self)
     }
-    
+
     public func tan() -> Float {
-        return Foundation.tanh(self)
+        Foundation.tanh(self)
     }
-    
+
     public func sinh() -> Float {
-        return Foundation.sinh(self)
+        Foundation.sinh(self)
     }
-    
+
     public func cosh() -> Float {
-        return Foundation.cosh(self)
+        Foundation.cosh(self)
     }
-    
+
     public func tanh() -> Float {
-        return Foundation.tanh(self)
+        Foundation.tanh(self)
     }
-    
 }

@@ -23,9 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
+import DL4S
 import Foundation
 import Testing
-import DL4S
 
 extension Trait where Self == ConditionTrait {
     /// Runs the test only when the `DL4S_LONG_TESTS` environment variable is set.

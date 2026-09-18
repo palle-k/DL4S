@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Foundation
 import DL4S
+import Foundation
 
 /// MNIST images and labels for training and testing.
 ///
@@ -41,17 +41,17 @@ struct MNISTData: Sendable {
 /// Each data set is parsed once per process, on first use, and shared between tests.
 enum MNIST {
     /// 5,000 training and 1,000 test images. Enough for a quick convergence check.
-    static let sample = load(trainingCount: 5_000, testCount: 1_000)
+    static let sample = load(trainingCount: 5000, testCount: 1000)
 
     /// The full data set for the long-running training tests.
-    static let full = load(trainingCount: 60_000, testCount: 10_000)
+    static let full = load(trainingCount: 60000, testCount: 10000)
 
     private static func load(trainingCount: Int, testCount: Int) -> MNISTData {
         MNISTData(
             trainingImages: loadImages(named: "train-images", count: trainingCount),
             trainingLabels: loadLabels(named: "train-labels", count: trainingCount),
             testImages: loadImages(named: "t10k-images", count: testCount),
-            testLabels: loadLabels(named: "t10k-labels", count: testCount)
+            testLabels: loadLabels(named: "t10k-labels", count: testCount),
         )
     }
 
@@ -85,7 +85,7 @@ enum MNIST {
         let indices = (0 ..< count).map { _ in Int(generator.next(upperBound: UInt(images.shape[0]))) }
         return (
             images: Tensor(stacking: indices.map { images[$0].unsqueezed(at: 0) }),
-            labels: Tensor(indices.map { labels[$0].item })
+            labels: Tensor(indices.map { labels[$0].item }),
         )
     }
 

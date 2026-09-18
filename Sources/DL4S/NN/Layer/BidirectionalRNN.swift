@@ -25,28 +25,27 @@
 
 import Foundation
 
-
 /// A bidirectional RNN
 public struct Bidirectional<RNNLayer: RNN>: LayerType {
     public typealias Inputs = RNNLayer.Inputs
     public typealias Outputs = (forward: RNNLayer.Outputs, backward: RNNLayer.Outputs)
-    
+
     public var parameterPaths: [WritableKeyPath<Self, Tensor<RNNLayer.Parameter, RNNLayer.Device>> & Sendable] {
         let forwardPaths = parameterPaths(of: \.forwardLayer)
         let backwardPaths = parameterPaths(of: \.backwardLayer)
         return forwardPaths + backwardPaths
     }
-    
+
     public var parameters: [Tensor<RNNLayer.Parameter, RNNLayer.Device>] {
-        get {forwardLayer.parameters + backwardLayer.parameters}
+        forwardLayer.parameters + backwardLayer.parameters
     }
-    
+
     /// RNN for forwards direction
     public var forwardLayer: RNNLayer
-    
+
     /// RNN for backwards direction
     public var backwardLayer: RNNLayer
-    
+
     /// Creates a bidirectional RNN with the given RNNs for the forward and backward pass.
     /// - Parameters:
     ///   - forward: RNN for forward pass. Must have `direction == .forward`.
@@ -54,11 +53,11 @@ public struct Bidirectional<RNNLayer: RNN>: LayerType {
     public init(forward: RNNLayer, backward: RNNLayer) {
         precondition(forward.direction == .forward, "Forward RNN layer must have forward direction")
         precondition(backward.direction == .backward, "Backward RNN layer must have backward direction")
-                
-        self.forwardLayer = forward
-        self.backwardLayer = backward
+
+        forwardLayer = forward
+        backwardLayer = backward
     }
-    
+
     public func callAsFunction(_ inputs: RNNLayer.Inputs) -> (forward: (RNNLayer.State, () -> RNNLayer.StateSequence), backward: (RNNLayer.State, () -> RNNLayer.StateSequence)) {
         OperationGroup.capture(named: "BidirectionalRNN") {
             (forwardLayer.callAsFunction(inputs), backwardLayer.callAsFunction(inputs))

@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  Momentum.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - Palle Klewitz
@@ -28,17 +28,17 @@ import Foundation
 /// Gradient descent optimizer with momentum
 public struct Momentum<Layer: LayerType>: Optimizer {
     public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
-    
+
     public private(set) var model: Layer
     private var velocities: [ParamTensor]
-    
+
     /// Learning rate with which to move along the gradient
     public var learningRate: ParamTensor
-    
+
     /// Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
     public var momentum: ParamTensor
     private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
-    
+
     /// Gradient descent optimizer with momentum
     /// - Parameters:
     ///   - model: Model to optimize
@@ -48,20 +48,20 @@ public struct Momentum<Layer: LayerType>: Optimizer {
         self.model = model
         self.learningRate = learningRate
         self.momentum = momentum
-        
-        self.velocities = model.parameters.map {
+
+        velocities = model.parameters.map {
             Tensor(repeating: 0, shape: $0.shape)
         }
-        self.paths = model.parameterPaths
+        paths = model.parameterPaths
     }
-    
+
     /// Resets the state of the optimizer
     public mutating func reset() {
-        self.velocities = model.parameters.map {
+        velocities = model.parameters.map {
             Tensor(repeating: 0, shape: $0.shape)
         }
     }
-    
+
     public mutating func update(along gradients: [ParamTensor]) {
         for i in paths.indices {
             let keyPath = paths[i]
@@ -75,24 +75,24 @@ public struct Momentum<Layer: LayerType>: Optimizer {
 extension Momentum: Codable where Layer: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         model = try container.decode(Layer.self, forKey: .model)
         momentum = try container.decode(ParamTensor.self, forKey: .momentum)
         learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
         velocities = try container.decode([ParamTensor].self, forKey: .velocities)
-        
+
         paths = model.parameterPaths
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(model, forKey: .model)
         try container.encode(momentum, forKey: .momentum)
         try container.encode(learningRate, forKey: .learningRate)
         try container.encode(velocities, forKey: .velocities)
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case model
         case velocities

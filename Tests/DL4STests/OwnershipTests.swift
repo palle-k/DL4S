@@ -23,10 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
-import Synchronization
 @testable import DL4S
-
+import Synchronization
+import Testing
 
 struct OwnershipTests {
     /// A tensor with the values of `source` and one backpropagation closure that observes the gradient flow to `source`.
@@ -36,7 +35,7 @@ struct OwnershipTests {
         Tensor(
             handle: source.handle,
             shape: source.shape,
-            context: TensorContext(tag: "probe", sources: [source], backpropagateAccumulate: [backpropagate])
+            context: TensorContext(tag: "probe", sources: [source], backpropagateAccumulate: [backpropagate]),
         )
     }
 
@@ -200,5 +199,4 @@ private extension Tensor where Device == CPU {
     var bufferAddress: UInt? {
         values.values.memory.baseAddress.map { UInt(bitPattern: $0) }
     }
-
 }

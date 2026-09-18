@@ -23,12 +23,12 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 import DL4S
+import Testing
 
 struct MemTests {
     @Test func testSliceRead() {
-        let a: Tensor<Float, CPU> = Tensor((0..<16).map(Float.init), shape: 4, 4)
+        let a: Tensor<Float, CPU> = Tensor((0 ..< 16).map(Float.init), shape: 4, 4)
 
         for row in 0 ..< 4 {
             let expectedRow: [Float] = (0 ..< 4).map { Float(row * 4 + $0) }

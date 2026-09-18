@@ -25,33 +25,30 @@
 
 import Foundation
 
-//MARK: Tensor extensions
+// MARK: Tensor extensions
 
 extension Tensor: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         values.description
     }
-    
+
     public var debugDescription: String {
-        let contextDescription: String
-        if let ctx = self.context?.tag {
-            contextDescription = ", context: \(ctx) "
+        let contextDescription = if let ctx = context?.tag {
+            ", context: \(ctx) "
         } else {
-            contextDescription = " "
+            " "
         }
-        let elementString: String
-        if count == 1 {
-            elementString = "\(count) element"
+        let elementString = if count == 1 {
+            "\(count) element"
         } else {
-            elementString = "\(count) elements"
+            "\(count) elements"
         }
-        let shapeString: String
-        if shape == [] {
-            shapeString = "scalar"
+        let shapeString = if shape == [] {
+            "scalar"
         } else {
-            shapeString = "\(shape)"
+            "\(shape)"
         }
-        
+
         return """
         \(elementString) (\(shapeString))\(contextDescription){
             \(values.description.replacingOccurrences(of: "\n", with: "\n    "))
@@ -72,13 +69,13 @@ extension Tensor: Equatable where Element: Equatable {
 
 extension Tensor: ExpressibleByFloatLiteral {
     public init(floatLiteral value: Double) {
-        self.init([Element.init(value)], shape: [])
+        self.init([Element(value)], shape: [])
     }
 }
 
 extension Tensor: ExpressibleByIntegerLiteral {
     public init(integerLiteral value: Int) {
-        self.init([Element.init(value)], shape: [])
+        self.init([Element(value)], shape: [])
     }
 }
 
@@ -97,9 +94,9 @@ public extension Tensor {
     }
 }
 
-//MARK: Tensor - array conversion
+// MARK: Tensor - array conversion
+
 public extension Tensor {
-    
     /// Creates a tensor value holding the provided scalar. The tensor will have an empty shape.
     /// - Parameters:
     ///   - e: Element
@@ -107,7 +104,7 @@ public extension Tensor {
     init(_ e: Element, requiresGradient: Bool = false) {
         self.init([e], shape: [], requiresGradient: requiresGradient)
     }
-    
+
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Values to fill tensor with
@@ -115,7 +112,7 @@ public extension Tensor {
     init(_ v: [[Element]], requiresGradient: Bool = false) {
         self.init(Array(v.joined()), shape: [v.count, v.first?.count ?? 0], requiresGradient: requiresGradient)
     }
-    
+
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Values to fill tensor with
@@ -124,10 +121,10 @@ public extension Tensor {
         self.init(
             Array(v.joined().joined()),
             shape: [v.count, v.first?.count ?? 0, v.first?.first?.count ?? 0],
-            requiresGradient: requiresGradient
+            requiresGradient: requiresGradient,
         )
     }
-    
+
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Values to fill tensor with
@@ -139,12 +136,12 @@ public extension Tensor {
                 v.count,
                 v.first?.count ?? 0,
                 v.first?.first?.count ?? 0,
-                v.first?.first?.first?.count ?? 0
+                v.first?.first?.first?.count ?? 0,
             ],
-            requiresGradient: requiresGradient
+            requiresGradient: requiresGradient,
         )
     }
-    
+
     /// Creates a tensor with the given shape and fills it with the given array of elements
     /// - Parameters:
     ///   - v: Values to fill tensor with
@@ -157,14 +154,14 @@ public extension Tensor {
                 v.first?.count ?? 0,
                 v.first?.first?.count ?? 0,
                 v.first?.first?.first?.count ?? 0,
-                v.first?.first?.first?.first?.count ?? 0
+                v.first?.first?.first?.first?.count ?? 0,
             ],
-            requiresGradient: requiresGradient
+            requiresGradient: requiresGradient,
         )
     }
 }
 
-//MARK: Tensor initialization
+// MARK: Tensor initialization
 
 public extension Tensor where Element: RandomizableType {
     /// Creates a tensor and fills it with random values sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
@@ -175,7 +172,7 @@ public extension Tensor where Element: RandomizableType {
         var generator = WyHash()
         self.init(xavierNormalWithShape: shape, requiresGradient: requiresGradient, using: &generator)
     }
-    
+
     /// Creates a tensor and fills it with random values from the given generator, sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
     /// - Parameters:
     ///   - shape: Shape of the tensor, must be two dimensional
@@ -185,7 +182,7 @@ public extension Tensor where Element: RandomizableType {
         precondition(shape.count == 2, "Shape must be 2-dimensional")
         self.init(normalDistributedWithShape: shape, mean: 0, stdev: (2 / Element(shape[0])).sqrt(), requiresGradient: requiresGradient, using: &generator)
     }
-    
+
     /// Creates a tensor and fills it with random values sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / shape[0])`.
     /// - Parameters:
     ///   - shape: Shape of the tensor, must be two dimensional
@@ -193,7 +190,7 @@ public extension Tensor where Element: RandomizableType {
     init(xavierNormalWithShape shape: Int..., requiresGradient: Bool = false) {
         self.init(xavierNormalWithShape: shape, requiresGradient: requiresGradient)
     }
-    
+
     /// Creates a tensor and fills it with random values sampled from a normal distribution with the given mean and variance.
     /// - Parameters:
     ///   - shape: Shape of the tensor, must be two dimensional
@@ -204,7 +201,7 @@ public extension Tensor where Element: RandomizableType {
         var generator = WyHash()
         self.init(normalDistributedWithShape: shape, mean: mean, stdev: stdev, requiresGradient: requiresGradient, using: &generator)
     }
-    
+
     /// Creates a tensor and fills it with random values from the given generator, sampled from a normal distribution with the given mean and variance.
     /// - Parameters:
     ///   - shape: Shape of the tensor
@@ -214,9 +211,9 @@ public extension Tensor where Element: RandomizableType {
     ///   - generator: Random number generator that provides the values.
     init<Generator: RandomNumberGenerator>(normalDistributedWithShape shape: [Int], mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false, using generator: inout Generator) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fillNormal(self.mutableValues, mean: mean, stdev: stdev, using: &generator)
+        Random.fillNormal(mutableValues, mean: mean, stdev: stdev, using: &generator)
     }
-    
+
     /// Creates a tensor and fills it with random values sampled from a normal distribution with the given mean and variance.
     /// - Parameters:
     ///   - shape: Shape of the tensor, must be two dimensional
@@ -226,7 +223,7 @@ public extension Tensor where Element: RandomizableType {
     init(normalDistributedWithShape shape: Int..., mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false) {
         self.init(normalDistributedWithShape: shape, mean: mean, stdev: stdev, requiresGradient: requiresGradient)
     }
-    
+
     /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
     /// - Parameters:
     ///   - shape: Shape of the tensor, must be two dimensional
@@ -237,7 +234,7 @@ public extension Tensor where Element: RandomizableType {
         var generator = WyHash()
         self.init(uniformlyDistributedWithShape: shape, min: min, max: max, requiresGradient: requiresGradient, using: &generator)
     }
-    
+
     /// Creates a tensor and fills it with random values from the given generator, sampled from a uniform distribution with the given minimum and maximum.
     /// - Parameters:
     ///   - shape: Shape of the tensor
@@ -247,9 +244,9 @@ public extension Tensor where Element: RandomizableType {
     ///   - generator: Random number generator that provides the values.
     init<Generator: RandomNumberGenerator>(uniformlyDistributedWithShape shape: [Int], min: Element = 0, max: Element = 1, requiresGradient: Bool = false, using generator: inout Generator) {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
-        Random.fill(self.mutableValues, a: min, b: max, using: &generator)
+        Random.fill(mutableValues, a: min, b: max, using: &generator)
     }
-    
+
     /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
     /// - Parameters:
     ///   - shape: Shape of the tensor, must be two dimensional
@@ -271,7 +268,7 @@ public extension Tensor {
         var generator = WyHash()
         self.init(bernoulliDistributedWithShape: shape, probability: probability, requiresGradient: requiresGradient, using: &generator)
     }
-    
+
     /// Creates a tensor of ones and zeros from the given generator, where each element is 1 with the given probability.
     /// - Parameters:
     ///   - shape: Shape of the tensor
@@ -282,7 +279,7 @@ public extension Tensor {
         self.init(repeating: 0, shape: shape, requiresGradient: requiresGradient)
         Random.bernoulli(mutableValues, p: probability, using: &generator)
     }
-    
+
     /// Creates a tensor of ones and zeros, where each element is 1 with the given probability.
     /// - Parameters:
     ///   - shape: Shape of the tensor
@@ -296,7 +293,7 @@ public extension Tensor {
 extension Tensor: Codable where Element: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         requiresGradient = try container.decode(Bool.self, forKey: .requiresGradient)
         shape = try container.decode([Int].self, forKey: .shape)
         let buffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
@@ -306,18 +303,18 @@ extension Tensor: Codable where Element: Codable {
             Device.Memory.assign(from: bytes.bindMemory(to: Element.self), to: buffer.values, count: count)
         }
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         let buffer = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
         Device.Memory.assign(from: values.values, to: buffer, count: count)
         let data = Data(buffer: buffer)
-        
+
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(requiresGradient, forKey: .requiresGradient)
         try container.encode(data, forKey: .data)
         try container.encode(shape, forKey: .shape)
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case requiresGradient
         case data
@@ -339,18 +336,18 @@ public extension Tensor {
 public extension Tensor {
     /// Indicates whether any element of the tensor is not a number.
     var containsNaN: Bool {
-        elements.contains(where: {$0.isNaN})
+        elements.contains(where: \.isNaN)
     }
-    
-    
+
     /// Indicates whether all elements of the tensor are finite.
     var isFinite: Bool {
-        let abs = self.detached().rectifiedLinear() + (-self.detached()).rectifiedLinear()
+        let abs = detached().rectifiedLinear() + (-detached()).rectifiedLinear()
         return abs.reduceMax().item.isFinite
     }
 }
 
-//MARK: Tensor - Image conversion
+// MARK: Tensor - Image conversion
+
 #if canImport(CoreGraphics)
 import CoreGraphics
 
@@ -367,23 +364,23 @@ private func copy<Element: NumericType>(from image: CGImage, to buffer: UnsafeMu
         bitsPerComponent: image.bitsPerComponent,
         bytesPerRow: image.bytesPerRow,
         space: image.colorSpace ?? CGColorSpaceCreateDeviceRGB(),
-        bitmapInfo: image.bitmapInfo.rawValue
+        bitmapInfo: image.bitmapInfo.rawValue,
     ) else {
         return false
     }
-    
+
     ctx.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
     ctx.flush()
-    
+
     let shape = [
         (image.colorSpace ?? CGColorSpaceCreateDeviceRGB()).numberOfComponents,
         image.height,
-        image.width
+        image.width,
     ]
     let strides = CPU.Memory.strides(from: shape)
-    
+
     let pixels = data.assumingMemoryBound(to: UInt8.self)
-    
+
     for idx in iterate(shape) {
         let (ch, row, col) = (idx[0], idx[1], idx[2])
         let val = pixels[col * image.bytesPerRow + row * image.bitsPerPixel / 8 + ch]
@@ -401,7 +398,7 @@ public extension Tensor {
         let shape = [
             (image.colorSpace ?? CGColorSpaceCreateDeviceRGB()).numberOfComponents,
             image.height,
-            image.width
+            image.width,
         ]
         let imgBuffer = CPU.Memory.allocateBuffer(withShape: shape, type: Element.self)
         defer {
@@ -414,20 +411,20 @@ public extension Tensor {
         Device.Memory.assign(from: imgBuffer.immutable, to: buffer.values, count: buffer.count)
         self.init(using: buffer, context: nil)
     }
-    
+
     func cgImage(normalizeFrom tensorRange: ClosedRange<Element> = 0 ... 1) -> CGImage? {
         let tensor = self
-        
+
         let pixels = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: tensor.count)
         defer {
             pixels.deallocate()
         }
-        
+
         let width = tensor.shape[2]
         let height = tensor.shape[1]
         let bytesPerRow = tensor.shape[2] * tensor.shape[0]
         let bytesPerPixel = tensor.shape[0]
-        
+
         let colorSpace: CGColorSpace
         let bitmapInfo: UInt32
         switch bytesPerPixel {
@@ -443,7 +440,7 @@ public extension Tensor {
         default:
             return nil
         }
-        
+
         for chan in 0 ..< tensor.shape[0] {
             for row in 0 ..< tensor.shape[1] {
                 for col in 0 ..< tensor.shape[2] {
@@ -452,7 +449,7 @@ public extension Tensor {
                 }
             }
         }
-        
+
         guard let ctx = CGContext(
             data: UnsafeMutableRawPointer(pixels.baseAddress!),
             width: width,
@@ -460,9 +457,9 @@ public extension Tensor {
             bitsPerComponent: 8,
             bytesPerRow: bytesPerRow,
             space: colorSpace,
-            bitmapInfo: bitmapInfo
-            ) else {
-                return nil
+            bitmapInfo: bitmapInfo,
+        ) else {
+            return nil
         }
         return ctx.makeImage()
     }

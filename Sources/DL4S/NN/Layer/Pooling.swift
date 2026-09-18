@@ -25,21 +25,25 @@
 
 import Foundation
 
-
 /// A 2D max pooling layer
 public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Pooling window size
     public let windowSize: Int
-    
+
     /// Pooling window stride
     public let stride: Int
-    
+
     /// Padding applied around the edges of the input of the layer.
     public let padding: Int?
-    
+
     /// Creates a 2D max pooling layer.
     /// - Parameters:
     ///   - windowSize: Size of the window
@@ -50,7 +54,7 @@ public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
         self.stride = stride
         self.padding = padding
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.maxPooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
@@ -58,18 +62,23 @@ public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
 
 /// A 2D average pooling layer
 public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Pooling window size
     public let windowSize: Int
-    
+
     /// Pooling window stride
     public let stride: Int
-    
+
     /// Padding applied around the edges of the input of the layer.
     public let padding: Int?
-    
+
     /// Creates a 2D average pooling layer.
     /// - Parameters:
     ///   - windowSize: Size of the window
@@ -80,7 +89,7 @@ public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
         self.stride = stride
         self.padding = padding
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.averagePooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
@@ -88,18 +97,23 @@ public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
 
 /// A 2D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
 public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Width and height of the output tensor
     public let targetSize: Int
-    
+
     /// A 2D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
     /// - Parameter targetSize: Width and height of the output tensor
     public init(targetSize: Int) {
         self.targetSize = targetSize
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         let height = inputs.shape[2]
         let windowSize = height / targetSize
@@ -109,18 +123,23 @@ public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Layer
 
 /// A 2D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
 public struct AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] { get {[]} }
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
 
     /// Width and height of the output tensor
     public let targetSize: Int
-    
+
     /// A 2D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
     /// - Parameter targetSize: Width and height of the output tensor
     public init(targetSize: Int) {
         self.targetSize = targetSize
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         let height = inputs.shape[2]
         let windowSize = height / targetSize

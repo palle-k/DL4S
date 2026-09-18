@@ -27,9 +27,9 @@ import Foundation
 
 extension UnsafeMutableBufferPointer {
     var immutable: UnsafeBufferPointer<Element> {
-        return UnsafeBufferPointer(self)
+        UnsafeBufferPointer(self)
     }
-    
+
     var pointee: Element {
         get {
             precondition(count > 0, "Out of bounds access")
@@ -40,19 +40,19 @@ extension UnsafeMutableBufferPointer {
             self[0] = newValue
         }
     }
-    
+
     func advanced(by offset: Int) -> UnsafeMutableBufferPointer<Element> {
         precondition(offset < count, "Out of bounds access")
         return UnsafeMutableBufferPointer(start: baseAddress!.advanced(by: offset), count: count - offset)
     }
-    
+
     func assign(from ptr: UnsafeBufferPointer<Element>, count: Int) {
         precondition(ptr.count >= count, "Out of bounds access")
         precondition(self.count >= count, "Out of bounds write")
-        //memcpy(self.baseAddress!, ptr.baseAddress!, count * MemoryLayout<Element>.stride)
-        self.baseAddress!.assign(from: ptr.baseAddress!, count: count)
+        // memcpy(self.baseAddress!, ptr.baseAddress!, count * MemoryLayout<Element>.stride)
+        baseAddress!.assign(from: ptr.baseAddress!, count: count)
     }
-    
+
     func pointer(capacity: Int) -> UnsafeMutablePointer<Element> {
         precondition(capacity <= count, "Out of bounds access")
         return baseAddress!
@@ -61,17 +61,15 @@ extension UnsafeMutableBufferPointer {
 
 extension UnsafeBufferPointer {
     var pointee: Element {
-        get {
-            precondition(count > 0, "Out of bounds memory access")
-            return self[0]
-        }
+        precondition(count > 0, "Out of bounds memory access")
+        return self[0]
     }
-    
+
     func advanced(by offset: Int) -> UnsafeBufferPointer<Element> {
         precondition(offset < count, "Out of bounds access")
         return UnsafeBufferPointer(start: baseAddress!.advanced(by: offset), count: count - offset)
     }
-    
+
     func pointer(capacity: Int) -> UnsafePointer<Element> {
         precondition(capacity <= count, "Out of bounds access")
         return baseAddress!

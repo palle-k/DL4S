@@ -25,64 +25,59 @@
 
 import Foundation
 
-
 /// A read-only view of a region of device memory with a given length.
 public struct Buffer<Element, Device: DeviceType> {
     let memory: Device.Memory.RawBuffer
-    
+
     init(memory: Device.Memory.RawBuffer) {
         self.memory = memory
     }
-    
+
     init(_ buffer: MutableBuffer<Element, Device>) {
-        self.memory = buffer.memory
+        memory = buffer.memory
     }
-    
+
     var count: Int {
-        return Device.Memory.getSize(of: self)
+        Device.Memory.getSize(of: self)
     }
-    
+
     var pointee: Element {
-        return Device.Memory.getValue(from: self)
+        Device.Memory.getValue(from: self)
     }
-    
+
     func advanced(by offset: Int) -> Buffer<Element, Device> {
-        return Device.Memory.advance(buffer: self, by: offset)
+        Device.Memory.advance(buffer: self, by: offset)
     }
-    
+
     subscript(index: Int) -> Element {
-        return advanced(by: index).pointee
+        advanced(by: index).pointee
     }
 }
 
 /// A writable region of device memory with a given length.
 public struct MutableBuffer<Element, Device: DeviceType> {
     let memory: Device.Memory.RawBuffer
-    
-    init(memory: Device.Memory.RawBuffer) {
-        self.memory = memory
-    }
-    
+
     var count: Int {
-        return Buffer(self).count
+        Buffer(self).count
     }
-    
+
     var pointee: Element {
         get {
-            return Buffer(self).pointee
+            Buffer(self).pointee
         }
-        nonmutating set (newValue) {
+        nonmutating set(newValue) {
             Device.Memory.setPointee(of: self, to: newValue)
         }
     }
-    
+
     func advanced(by offset: Int) -> MutableBuffer<Element, Device> {
-        return Device.Memory.advance(buffer: self, by: offset)
+        Device.Memory.advance(buffer: self, by: offset)
     }
-    
+
     subscript(index: Int) -> Element {
         get {
-            return advanced(by: index).pointee
+            advanced(by: index).pointee
         }
         nonmutating set {
             advanced(by: index).pointee = newValue
@@ -92,18 +87,18 @@ public struct MutableBuffer<Element, Device: DeviceType> {
 
 extension Buffer {
     var array: [Element] {
-        let b = UnsafeMutableBufferPointer<Element>.allocate(capacity: self.count)
+        let b = UnsafeMutableBufferPointer<Element>.allocate(capacity: count)
         defer {
             b.deallocate()
         }
-        Device.Memory.assign(from: self, to: b, count: self.count)
+        Device.Memory.assign(from: self, to: b, count: count)
         return Array(b)
     }
 }
 
 extension Buffer: CustomLeafReflectable {
     public var customMirror: Mirror {
-        return Mirror(self, unlabeledChildren: array, displayStyle: .collection)
+        Mirror(self, unlabeledChildren: array, displayStyle: .collection)
     }
 }
 
@@ -111,28 +106,28 @@ extension Buffer: CustomLeafReflectable {
 public struct ShapedBuffer<Element, Device: DeviceType> {
     var shape: [Int]
     var values: Buffer<Element, Device>
-    
+
     var dim: Int {
-        return shape.count
+        shape.count
     }
-    
+
     var count: Int {
-        return values.count
+        values.count
     }
-    
+
     init(values: Buffer<Element, Device>, shape: [Int]) {
         self.shape = shape
         self.values = values
     }
-    
+
     init(_ buffer: MutableShapedBuffer<Element, Device>) {
-        self.shape = buffer.shape
-        self.values = Buffer(buffer.values)
+        shape = buffer.shape
+        values = Buffer(buffer.values)
     }
-    
+
     func reshaped(to shape: [Int]) -> ShapedBuffer<Element, Device> {
         precondition(shape.reduce(1, *) == self.shape.reduce(1, *))
-        
+
         return ShapedBuffer(values: values, shape: shape)
     }
 }
@@ -141,15 +136,15 @@ public struct ShapedBuffer<Element, Device: DeviceType> {
 public struct MutableShapedBuffer<Element, Device: DeviceType> {
     let shape: [Int]
     let values: MutableBuffer<Element, Device>
-    
+
     var dim: Int {
-        return shape.count
+        shape.count
     }
-    
+
     var count: Int {
-        return values.count
+        values.count
     }
-    
+
     fileprivate init(values: MutableBuffer<Element, Device>, shape: [Int]) {
         self.shape = shape
         self.values = values
@@ -162,9 +157,9 @@ public extension MemoryOperatorsType {
     ///   - shape: Shape of the buffer to allocate
     ///   - type: Type of elements in the buffer
     static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> MutableShapedBuffer<Element, Device> {
-        return MutableShapedBuffer(values: allocateBuffer(withCapacity: shape.reduce(1, *), type: type), shape: shape)
+        MutableShapedBuffer(values: allocateBuffer(withCapacity: shape.reduce(1, *), type: type), shape: shape)
     }
-    
+
     /// Releases all resources associated with the given buffer
     /// - Parameter buffer: Buffer to release
     static func free<Element>(_ buffer: MutableShapedBuffer<Element, Device>) {
@@ -185,45 +180,45 @@ extension Tensor {
 
 extension Buffer: CustomStringConvertible {
     public var description: String {
-        return "Buffer(\(generateDescription()))"
+        "Buffer(\(generateDescription()))"
     }
-    
+
     func generateDescription() -> String {
-        return "[\(array.map {"\($0)"}.joined(separator: ", "))]"
+        "[\(array.map { "\($0)" }.joined(separator: ", "))]"
     }
 }
 
 extension ShapedBuffer: CustomStringConvertible {
     public var description: String {
-        return generateDescription()
+        generateDescription()
     }
-    
+
     private func formatElement(_ element: Element) -> String {
         if let f = element as? Float {
-            return f.format(maxDecimals: 3)
+            f.format(maxDecimals: 3)
         } else if let d = element as? Double {
-            return d.format(maxDecimals: 3)
+            d.format(maxDecimals: 3)
         } else {
-            return "\(element)"
+            "\(element)"
         }
     }
-    
+
     func generateDescription() -> String {
         if dim == 0 {
             return "\(formatElement(values.pointee))"
         } else if dim == 1 {
-            let dim = self.shape[0]
-            return "[\((0 ..< dim).map {"\(formatElement(values[$0]))"}.joined(separator: ", "))]"
+            let dim = shape[0]
+            return "[\((0 ..< dim).map { "\(formatElement(values[$0]))" }.joined(separator: ", "))]"
         } else {
             let firstDim = shape.first!
             let restDim = Array(shape.dropFirst())
-            
+
             let stride = restDim.reduce(1, *)
-            
+
             let slices = (0 ..< firstDim).map {
                 ShapedBuffer(values: values.advanced(by: stride * $0), shape: restDim).generateDescription()
             }
-            
+
             return "[\(slices.joined(separator: ",\n").replacingOccurrences(of: "\n", with: "\n "))]"
         }
     }
@@ -231,7 +226,7 @@ extension ShapedBuffer: CustomStringConvertible {
 
 extension ShapedBuffer: CustomDebugStringConvertible {
     public var debugDescription: String {
-        return """
+        """
         \(count) elements (\(shape)) {
             \(description.replacingOccurrences(of: "\n", with: "\n    "))
         }

@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  PointwiseFeedForward.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - 2020 - Palle Klewitz
@@ -34,19 +34,19 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
     public var dense2: Dense<Element, Device>
     public var norm: LayerNorm<Element, Device>
     public var dropout: Dropout<Element, Device>
-    
+
     public var parameters: [Tensor<Element, Device>] {
         Array([dense1.parameters, dense2.parameters, norm.parameters].joined())
     }
-    
+
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         Array([
             parameterPaths(of: \.dense1),
             parameterPaths(of: \.dense2),
-            parameterPaths(of: \.norm)
+            parameterPaths(of: \.norm),
         ].joined())
     }
-    
+
     /// Creates a pointwise forward layer to be used in a transformer as introduced in [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// The block sequences a dense layer, gelu activation, another dense layer, dropout, a residual connection and layer normalization.
     ///
@@ -58,7 +58,7 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
         var generator = WyHash()
         self.init(size: size, hiddenSize: hiddenSize, dropoutRate: dropoutRate, using: &generator)
     }
-    
+
     /// Creates a pointwise forward layer to be used in a transformer as introduced in [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// The block sequences a dense layer, gelu activation, another dense layer, dropout, a residual connection and layer normalization.
     ///
@@ -73,7 +73,7 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
         norm = LayerNorm(inputSize: [size])
         dropout = Dropout(rate: dropoutRate)
     }
-    
+
     /// Applies the pointwise feed forward layer to the provided inputs
     /// - Parameter inputs: tensor of shape [batch size, sequence length, size]
     /// - Returns: tensor of shape [batch size, sequence length, size]
@@ -83,7 +83,7 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
             let batchSize = inputs.shape[0]
             let seqlen = inputs.shape[1]
             let size = inputs.shape[2]
-            
+
             let denseInputs = inputs.view(as: batchSize * seqlen, size)
             let tmp1 = dense1(denseInputs)
             let tmp2 = tmp1.gaussianErrorLinear()
@@ -94,4 +94,3 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
         }
     }
 }
-

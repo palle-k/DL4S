@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 import DL4S
+import Testing
 
 struct RandomTests {
     @Test func testSameSeedProducesIdenticalTensors() {
@@ -33,19 +33,19 @@ struct RandomTests {
 
         #expect(
             Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32], min: -1, max: 1, using: &first).elements ==
-            Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32], min: -1, max: 1, using: &second).elements
+                Tensor<Float, CPU>(uniformlyDistributedWithShape: [64, 32], min: -1, max: 1, using: &second).elements,
         )
         #expect(
             Tensor<Double, CPU>(normalDistributedWithShape: [33], mean: 1, stdev: 2, using: &first).elements ==
-            Tensor<Double, CPU>(normalDistributedWithShape: [33], mean: 1, stdev: 2, using: &second).elements
+                Tensor<Double, CPU>(normalDistributedWithShape: [33], mean: 1, stdev: 2, using: &second).elements,
         )
         #expect(
             Tensor<Float, CPU>(xavierNormalWithShape: [16, 8], using: &first).elements ==
-            Tensor<Float, CPU>(xavierNormalWithShape: [16, 8], using: &second).elements
+                Tensor<Float, CPU>(xavierNormalWithShape: [16, 8], using: &second).elements,
         )
         #expect(
             Tensor<Float, CPU>(bernoulliDistributedWithShape: [256], probability: 0.3, using: &first).elements ==
-            Tensor<Float, CPU>(bernoulliDistributedWithShape: [256], probability: 0.3, using: &second).elements
+                Tensor<Float, CPU>(bernoulliDistributedWithShape: [256], probability: 0.3, using: &second).elements,
         )
     }
 
@@ -101,7 +101,7 @@ struct RandomTests {
         var second = WyHash(seed: 2)
         #expect(
             Tensor<Float, CPU>(uniformlyDistributedWithShape: [128], using: &first).elements !=
-            Tensor<Float, CPU>(uniformlyDistributedWithShape: [128], using: &second).elements
+                Tensor<Float, CPU>(uniformlyDistributedWithShape: [128], using: &second).elements,
         )
     }
 

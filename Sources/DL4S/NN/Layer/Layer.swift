@@ -30,25 +30,24 @@ import Foundation
 public protocol LayerType<Inputs, Outputs, Parameter, Device>: Sendable {
     /// Inputs of the layer
     associatedtype Inputs
-    
+
     /// Outputs of the layer
     associatedtype Outputs
-    
+
     /// Element type of a parameter tensor
     associatedtype Parameter: NumericType
-    
+
     /// Device type of a parameter tensor
     associatedtype Device: DeviceType
-    
+
     /// Keypaths to parameters that influence the output of the layer.
     ///
     /// Use `parameterPaths(of: layerPath)` to concatenate while retaining `Sendable`.
     var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] { get }
-    
+
     /// Parameters, that influence the output of the layer.
     var parameters: [Tensor<Parameter, Device>] { get }
-    
-    
+
     /// Performs a transformation determined by the type of the layer.
     ///
     /// The transformation may use parameters that the layer has.
@@ -69,9 +68,9 @@ public extension LayerType {
     }
 }
 
-extension WritableKeyPath {
+private extension WritableKeyPath {
     /// Appends a key path and keeps the `Sendable` conformance.
-    fileprivate func appendingSendable<AppendedValue>(path: WritableKeyPath<Value, AppendedValue> & Sendable) -> WritableKeyPath<Root, AppendedValue> & Sendable where Self: Sendable {
+    func appendingSendable<AppendedValue>(path: WritableKeyPath<Value, AppendedValue> & Sendable) -> WritableKeyPath<Root, AppendedValue> & Sendable where Self: Sendable {
         let appended: WritableKeyPath<Root, AppendedValue> = appending(path: path as WritableKeyPath<Value, AppendedValue>)
         return unsafeBitCast(appended, to: (WritableKeyPath<Root, AppendedValue> & Sendable).self)
     }

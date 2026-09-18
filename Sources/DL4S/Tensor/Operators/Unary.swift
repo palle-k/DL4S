@@ -28,13 +28,12 @@ import Foundation
 // MARK: Element-wise operations
 
 public extension Tensor {
-    
     /// Element-wise exponentiates the tensor
     func exp() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.exp(values: values, result: resultBuffer)
         var result = Tensor(using: resultBuffer, context: nil)
-        
+
         if requiresGradient {
             let resultCopy = result
             result.context = TensorContext(
@@ -44,43 +43,43 @@ public extension Tensor {
                     // reusing result would lead to retain cycle
                     // Using resultCopy when retaining the backwards graph doesn't work, because resultCopy does not have a compute graph attached.
                     if resultGradient.requiresGradient {
-                        return resultGradient * self.exp()
+                        resultGradient * self.exp()
                     } else {
-                        return resultGradient * resultCopy
+                        resultGradient * resultCopy
                     }
-                }]
+                }],
             )
             result.requiresGradient = true
         }
-        
+
         return result
     }
-    
+
     /// Computes the element-wise logarithm of the tensor.
     func log() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.log(values: values, result: resultBuffer)
         var result = Tensor(using: resultBuffer, context: nil)
-        
+
         if requiresGradient {
             result.context = TensorContext(
                 tag: "log",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient / self
-                }]
+                }],
             )
             result.requiresGradient = true
         }
         return result
     }
-    
+
     /// Computes the element-wise hyperbolic tangent of the tensor.
     func tanh() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.tanh(values: values, result: resultBuffer)
         var result = Tensor(using: resultBuffer, context: nil)
-        
+
         if requiresGradient {
             let resultCopy = result
             result.context = TensorContext(
@@ -93,19 +92,19 @@ public extension Tensor {
                     } else {
                         return (1 - resultCopy * resultCopy) * resultGradient
                     }
-                }]
+                }],
             )
             result.requiresGradient = true
         }
         return result
     }
-    
+
     /// Computes the element-wise square root of the tensor.
     func sqrt() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sqrt(values: values, result: resultBuffer)
         var result = Tensor(using: resultBuffer, context: nil)
-        
+
         if requiresGradient {
             let resultCopy = result
             result.context = TensorContext(
@@ -113,50 +112,50 @@ public extension Tensor {
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     if resultGradient.requiresGradient {
-                        return 0.5 / self.sqrt() * resultGradient
+                        0.5 / self.sqrt() * resultGradient
                     } else {
-                        return 0.5 / resultCopy * resultGradient
+                        0.5 / resultCopy * resultGradient
                     }
-                }]
+                }],
             )
             result.requiresGradient = true
         }
-        
+
         return result
     }
-    
+
     /// Computes the element-wise heaviside step function of the tensor.
     ///
     /// The heaviside step function is defined as `value > 0 ? 1 : 0`
     func heaviside() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.heaviside(values: values, result: resultBuffer)
-        
+
         var result = Tensor(using: resultBuffer, context: nil)
-        
+
         if requiresGradient {
             result.context = TensorContext(
                 tag: "heaviside",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     Tensor(repeating: 0, shape: resultGradient.shape)
-                }]
+                }],
             )
             result.requiresGradient = true
         }
-        
+
         return result
     }
-    
+
     /// Computes the element-wise relu function.
     ///
     /// The relu function is defined as `max(value, 0)`
     func rectifiedLinear() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.relu(values: values, result: resultBuffer)
-        
+
         var result = Tensor(using: resultBuffer, context: nil)
-        
+
         if requiresGradient {
             result.context = TensorContext(
                 tag: "relu",
@@ -165,26 +164,26 @@ public extension Tensor {
                     OperationGroup.capture(named: "RectifiedLinearGrad") {
                         self.heaviside() * resultGradient
                     }
-                }]
+                }],
             )
             result.requiresGradient = true
         }
-        
+
         return result
     }
-    
+
     /// Computes the element-wise leaky relu function.
     ///
     /// The leaky relu function is defined as `max(value, leakage * value)`
     func leakyRectifiedLinear(leakage: Self) -> Self {
         rectifiedLinear() - leakage * (-self).rectifiedLinear()
     }
-    
+
     /// Computes the element-wise sigmoid function.
     func sigmoid() -> Self {
         0.5 * (self * 0.5).tanh() + 0.5
     }
-    
+
     /// Computes the softmax function along the given axis.
     /// If no axis is provided, the softmax is computed along axis 1.
     func softmax(axis: Int = 1) -> Self {
@@ -192,7 +191,7 @@ public extension Tensor {
         let exponentiated = (self - normalizer).exp()
         return exponentiated / exponentiated.reduceSum(along: [axis]).unsqueezed(at: axis)
     }
-    
+
     /// Computes the logarithm of the softmax function along the given axis.
     /// If no axis is provided, the softmax is computed along axis 1.
     func logSoftmax(axis: Int = 1) -> Self {
@@ -202,7 +201,7 @@ public extension Tensor {
         let logSumExp = exponentiated.reduceSum(along: [axis]).log().unsqueezed(at: axis)
         return norm - logSumExp
     }
-    
+
     /// Computes the element-wise sine.
     func sine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
@@ -214,13 +213,13 @@ public extension Tensor {
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     self.cosine() * resultGradient
-                }]
+                }],
             )
             result.requiresGradient = true
         }
         return result
     }
-    
+
     /// Computes the element-wise cosine.
     func cosine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
@@ -232,42 +231,39 @@ public extension Tensor {
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     -self.sine() * resultGradient
-                }]
+                }],
             )
             result.requiresGradient = true
         }
         return result
     }
-    
+
     /// Computes the element-wise GeLU activation
     ///
     /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
     func gaussianErrorLinear() -> Self {
         self * (self * 1.702).sigmoid()
     }
-    
-    
+
     /// Computes the element-wise Swish activation
     ///
     /// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
     func swishActivated(beta: Self = 1) -> Self {
         self * (beta * self).sigmoid()
     }
-    
-    
+
     /// Computes the element-wise Mish activation
     ///
     /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
     func mishActivated() -> Self {
         self * (1 + DL4S.exp(self)).log().tanh()
     }
-    
-    
+
     /// Computes the element-wise LiSHT activation
     ///
     /// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
     func lishtActivated() -> Self {
-        self * self.tanh()
+        self * tanh()
     }
 
     /// Element-wise exponential linear unit activation
@@ -275,18 +271,18 @@ public extension Tensor {
     /// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf
     /// - Parameter alpha: Scale applied to exponential part
     func exponentialLinearActivated(alpha: Self = 1) -> Self {
-        Tensor.min(alpha * (self.exp() - 1), self)
+        Tensor.min(alpha * (exp() - 1), self)
     }
-    
+
     /// Element-wise softplus activation.
     ///
     /// This function is similar to a rectified linear unit but is smooth and has a continuous gradient.
     ///
     /// See [Dugas et al. - Incorporating Second-Order Functional Knowledge for Better Option Pricing](https://proceedings.neurips.cc/paper/2000/file/44968aece94f667e4095002d140b5896-Paper.pdf)
     func softplus() -> Self {
-        return (self.exp() + 1).log()
+        (exp() + 1).log()
     }
-    
+
     /// Element-wise squareplus activation.
     ///
     /// This activation function is similar to softplus but does not use exponentiation and logarithms.
@@ -386,14 +382,12 @@ public func swishActivated<Element, Device>(_ tensor: Tensor<Element, Device>, b
     tensor.swishActivated(beta: beta)
 }
 
-
 /// Computes the element-wise Mish activation
 ///
 /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
 public func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.mishActivated()
 }
-
 
 /// Computes the element-wise LiSHT activation
 ///

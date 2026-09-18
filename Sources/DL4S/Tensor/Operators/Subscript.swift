@@ -25,7 +25,7 @@
 
 import Foundation
 
-//MARK: Subscripting
+// MARK: Subscripting
 
 public extension Tensor {
     /// Gets or sets a subtensor at the given index.
@@ -42,15 +42,15 @@ public extension Tensor {
     subscript(index: [Int?]) -> Self {
         get {
             let index = zip(index, shape).map { idx, dim -> Int? in
-                if let idx = idx, idx < 0 {
-                    return dim + idx
+                if let idx, idx < 0 {
+                    dim + idx
                 } else {
-                    return idx
+                    idx
                 }
             }
-            let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: self.shape)
-            let handle = TensorHandle(values: val, parent: isCopy ? nil : self.handle)
-            
+            let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
+            let handle = TensorHandle(values: val, parent: isCopy ? nil : handle)
+
             return Tensor(
                 handle: handle,
                 shape: shape,
@@ -63,42 +63,42 @@ public extension Tensor {
                         let slice = result[index] + resultGradient
                         result[index] = slice
                         return result
-                    }]
-                ) : nil
+                    }],
+                ) : nil,
             )
         }
-        
-        set (slice) {
+
+        set(slice) {
             precondition(!requiresGradient, "Cannot write into tensor that requires gradient.")
-            
+
             let index = zip(index, shape).map { idx, dim -> Int? in
-                if let idx = idx, idx < 0 {
-                    return dim + idx
+                if let idx, idx < 0 {
+                    dim + idx
                 } else {
-                    return idx
+                    idx
                 }
             }
-            if slice.dim == 0 && dim - index.filter({$0 != nil}).count > 0 {
+            if slice.dim == 0, dim - index.filter({ $0 != nil }).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }
-            
-            //TODO: Proper handling of replacement when gradient is computed.
-            
+
+            // TODO: Proper handling of replacement when gradient is computed.
+
             Device.Memory.set(slice: index, of: mutableValues.values, with: shape, from: slice.values.values, with: slice.shape)
-            
+
             if slice.requiresGradient {
-                self.requiresGradient = true
-                self.context = TensorContext(
+                requiresGradient = true
+                context = TensorContext(
                     tag: "write",
                     sources: [slice],
                     backpropagate: [{ resultGradient in
                         resultGradient[index]
-                    }]
+                    }],
                 )
             }
         }
     }
-    
+
     /// Gets or sets a subtensor at the given index.
     ///
     /// When an element of the index is nil, all elements along the corresponding axis are read or written.
@@ -111,10 +111,10 @@ public extension Tensor {
     /// print(a[1, nil] == a[1]) // true
     /// ```
     subscript(index: Int?...) -> Self {
-        get {self[index]}
-        set (slice) {self[index] = slice}
+        get { self[index] }
+        set(slice) { self[index] = slice }
     }
-    
+
     /// Gets or sets a subtensor at the given window.
     ///
     /// When an element of the index is nil, all elements along the corresponding axis are read or written.
@@ -127,15 +127,14 @@ public extension Tensor {
     /// ```
     subscript(index: [Range<Int>?]) -> Self {
         get {
-            let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: self.shape)
-            
-            let handle: TensorHandle<Element, Device>
-            if isCopy {
-                handle = TensorHandle(values: val)
+            let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
+
+            let handle: TensorHandle<Element, Device> = if isCopy {
+                TensorHandle(values: val)
             } else {
-                handle = TensorHandle(values: val, parent: self.handle)
+                TensorHandle(values: val, parent: self.handle)
             }
-            
+
             return Tensor(
                 handle: handle,
                 shape: shape,
@@ -148,33 +147,33 @@ public extension Tensor {
                         let slice = result[index] + resultGradient
                         result[index] = slice
                         return result
-                    }]
-                ) : nil
+                    }],
+                ) : nil,
             )
         }
-        
-        set (slice) {
-            if slice.dim == 0 && dim - index.filter({$0 != nil}).count > 0 {
+
+        set(slice) {
+            if slice.dim == 0, dim - index.filter({ $0 != nil }).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }
-            
-            //TODO: Proper handling of replacement when gradient is computed.
-            
+
+            // TODO: Proper handling of replacement when gradient is computed.
+
             Device.Memory.set(slice: index, of: mutableValues.values, with: shape, from: slice.values.values, with: slice.shape)
-            
+
             if slice.requiresGradient {
-                self.requiresGradient = true
-                self.context = TensorContext(
+                requiresGradient = true
+                context = TensorContext(
                     tag: "SubscriptRangeWrite",
                     sources: [slice],
                     backpropagate: [{ resultGradient in
                         resultGradient[index]
-                    }]
+                    }],
                 )
             }
         }
     }
-    
+
     /// Gets or sets a subtensor at the given window.
     ///
     /// When an element of the index is nil, all elements along the corresponding axis are read or written.
@@ -186,7 +185,7 @@ public extension Tensor {
     /// print(a[nil, 0 ..< 1]) // [[1, 2, 3]]
     /// ```
     subscript(index: Range<Int>?...) -> Self {
-        get {self[index]}
-        set (slice) {self[index] = slice}
+        get { self[index] }
+        set(slice) { self[index] = slice }
     }
 }

@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  TransformerEncoder.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - 2020 - Palle Klewitz
@@ -28,17 +28,21 @@ import Foundation
 /// Transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var encoderLayers: [TransformerEncoderBlock<Element, Device>]
-    
-    public var parameters: [Tensor<Element, Device>] {Array([
-        encoderLayers.flatMap {$0.parameters},
-    ].joined())}
-    
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {Array([
-        encoderLayers.enumerated().flatMap { (idx, layer) in
-            parameterPaths(of: \.encoderLayers[idx])
-        }
-    ].joined())}
-    
+
+    public var parameters: [Tensor<Element, Device>] {
+        Array([
+            encoderLayers.flatMap(\.parameters),
+        ].joined())
+    }
+
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        Array([
+            encoderLayers.indices.flatMap { idx in
+                parameterPaths(of: \.encoderLayers[idx])
+            },
+        ].joined())
+    }
+
     /// Creates a transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
     ///   - vocabSize: Number of distinct tokens that can occur in input
@@ -66,23 +70,21 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
     ///   - dropout: Rate of dropout applied within pointwise feed forward and multi-head attention layers
     ///   - generator: Random number generator that provides the initial weights.
     public init<Generator: RandomNumberGenerator>(layerCount: Int, heads: Int, keyDim: Int, valueDim: Int, modelDim: Int, forwardDim: Int, dropout: Float, using generator: inout Generator) {
-        encoderLayers = (0 ..< layerCount).map { i in
+        encoderLayers = (0 ..< layerCount).map { _ in
             TransformerEncoderBlock(hiddenDim: modelDim, forwardDim: forwardDim, heads: heads, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
         }
     }
-    
+
     /// Forwards the given batch of token sequences through the encoder.
     /// - Parameter inputs: Token sequences
     /// - Returns: Batch of encoder outputs with shape [inputs.count, maxLen, hiddenSize]
     public func callAsFunction(_ inputs: (input: Tensor<Element, Device>, sequenceLengths: [Int])) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Encoder") {
             let mask: Tensor<Element, Device> = makeEncoderMasks(sequenceLengths: inputs.sequenceLengths)
-            
-            let encoderOutput = encoderLayers.reduce(inputs.input) { acc, layer in
+
+            return encoderLayers.reduce(inputs.input) { acc, layer in
                 layer((inputs: acc, mask: mask))
             } // [batchSize, maxLen, hiddenDim]
-            
-            return encoderOutput // [batchSize, maxLen, hiddenDim]
         }
     }
 }

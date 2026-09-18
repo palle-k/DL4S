@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 @testable import DL4S
+import Testing
 
 struct EngineV2Tests {
     @Test func testScatterZeroFillsLargerResult() {
@@ -44,14 +44,14 @@ struct EngineV2Tests {
             0, 1, 0,
             0, 0, 4,
             0, 0, 0,
-            0, 0, 0
+            0, 0, 0,
         ]
         #expect(Buffer(result.values).array == expected)
     }
 
     @Test func testBroadcast1() {
-        let lhs = Tensor<Float, CPU>([1,2,3,4])
-        let rhs = Tensor<Float, CPU>([2,4,6,8])
+        let lhs = Tensor<Float, CPU>([1, 2, 3, 4])
+        let rhs = Tensor<Float, CPU>([2, 4, 6, 8])
 
         #expect(lhs + rhs == Tensor([3, 6, 9, 12]))
     }
@@ -64,8 +64,8 @@ struct EngineV2Tests {
     }
 
     @Test func testBroadcast3() {
-        let lhs = Tensor<Float, CPU>([[1,2],[3,4],[5,6]])
-        let rhs = Tensor<Float, CPU>([1,2,3]).view(as: -1, 1)
+        let lhs = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]])
+        let rhs = Tensor<Float, CPU>([1, 2, 3]).view(as: -1, 1)
 
         var result = Tensor<Float, CPU>(repeating: 0, shape: 3, 2)
 
@@ -75,8 +75,8 @@ struct EngineV2Tests {
     }
 
     @Test func testBroadcast4() {
-        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
-        let b = Tensor<Float, CPU>([1,3,3,7])
+        let a = Tensor<Float, CPU>([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+        let b = Tensor<Float, CPU>([1, 3, 3, 7])
 
         let result = a.unsqueezed(at: 2) + b.view(as: -1, 1, 1)
 
@@ -95,7 +95,7 @@ struct EngineV2Tests {
     }
 
     @Test func testReduceSum1() {
-        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        let a = Tensor<Float, CPU>([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
         let v = a.values
         var result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
         let r = result.mutableValues
@@ -106,7 +106,7 @@ struct EngineV2Tests {
     }
 
     @Test func testReduceSum2() {
-        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        let a = Tensor<Float, CPU>([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
         let v = a.values
         var result = Tensor<Float, CPU>(repeating: Float(0), shape: 4)
         let r = result.mutableValues
@@ -117,7 +117,7 @@ struct EngineV2Tests {
     }
 
     @Test func testReduceSum3() {
-        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        let a = Tensor<Float, CPU>([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
         let v = a.values
         var result = Tensor<Float, CPU>(repeating: Float(0), shape: [])
         let r = result.mutableValues
@@ -129,8 +129,8 @@ struct EngineV2Tests {
 
     /// Gradients of broadcast operations must have the shape of their operand and match a central difference estimate.
     @Test func testReduceOps() {
-        let a = Tensor<Double, CPU>([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], requiresGradient: true)
-        let b = Tensor<Double, CPU>([1,2,3,4], shape: 4, 1, requiresGradient: true)
+        let a = Tensor<Double, CPU>([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], requiresGradient: true)
+        let b = Tensor<Double, CPU>([1, 2, 3, 4], shape: 4, 1, requiresGradient: true)
 
         let operations: [(Tensor<Double, CPU>, Tensor<Double, CPU>) -> Tensor<Double, CPU>] = [
             { a, b in a + b },
@@ -152,7 +152,7 @@ struct EngineV2Tests {
             { a, b in b.squeezed() - a },
             { a, b in a * b.squeezed() },
             { a, b in a / b.squeezed() },
-            { a, b in b.squeezed() / a }
+            { a, b in b.squeezed() / a },
         ]
 
         for (index, operation) in operations.enumerated() {
@@ -168,8 +168,8 @@ struct EngineV2Tests {
     }
 
     @Test func testScatter1() {
-        let a = Tensor<Float, CPU>([1,2,3])
-        let c = Tensor<Int32, CPU>([0,1,2])
+        let a = Tensor<Float, CPU>([1, 2, 3])
+        let c = Tensor<Int32, CPU>([0, 1, 2])
 
         let result = a.scatter(using: c, alongAxis: 1, withSize: 3)
         #expect(result == Tensor([[1, 0, 0], [0, 2, 0], [0, 0, 3]]))
@@ -179,15 +179,15 @@ struct EngineV2Tests {
     }
 
     @Test func testScatter2() {
-        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
-        let c = Tensor<Int32, CPU>([[0,1,0,1],[1,0,1,0]])
+        let a = Tensor<Float, CPU>([[1, 2, 3, 4], [5, 6, 7, 8]])
+        let c = Tensor<Int32, CPU>([[0, 1, 0, 1], [1, 0, 1, 0]])
 
         let result = a.scatter(using: c, alongAxis: 1, withSize: 2)
         #expect(result == Tensor([
             [[1, 0, 3, 0],
              [0, 2, 0, 4]],
             [[0, 6, 0, 8],
-             [5, 0, 7, 0]]
+             [5, 0, 7, 0]],
         ]))
 
         let gathered = result.gather(using: c, alongAxis: 1)
@@ -199,7 +199,7 @@ struct EngineV2Tests {
             [[1, 2],
              [3, 4]],
             [[5, 6],
-             [7, 8]]
+             [7, 8]],
         ])
         var lhs = a.view(as: 2, 1, 2, 2)
         lhs.requiresGradient = true
@@ -236,26 +236,26 @@ struct EngineV2Tests {
         let a = Tensor<Int32, CPU>([
             [0, 1, 2],
             [3, 4, 5],
-            [6, 7, 8]
+            [6, 7, 8],
         ])
 
         let expected1 = Tensor<Int32, CPU>([
             [0, 1],
             [3, 4],
-            [6, 7]
+            [6, 7],
         ])
         let expected2 = Tensor<Int32, CPU>([
             [1, 2],
             [4, 5],
-            [7, 8]
+            [7, 8],
         ])
         let expected3 = Tensor<Int32, CPU>([
             [0, 1, 2],
-            [3, 4, 5]
+            [3, 4, 5],
         ])
         let expected4 = Tensor<Int32, CPU>([
             [3, 4, 5],
-            [6, 7, 8]
+            [6, 7, 8],
         ])
 
         #expect(a[nil, 0 ..< 2] == expected1)
@@ -272,7 +272,7 @@ struct EngineV2Tests {
         let expected1 = Tensor<Int32, CPU>([
             [0, 1, 0],
             [3, 4, 0],
-            [6, 7, 0]
+            [6, 7, 0],
         ])
         #expect(result == expected1)
 
@@ -280,15 +280,15 @@ struct EngineV2Tests {
         let expected2 = Tensor<Int32, CPU>([
             [0, 0, 1],
             [0, 3, 4],
-            [0, 6, 7]
+            [0, 6, 7],
         ])
         result[nil, 1 ..< 3] = src1
         #expect(result == expected2)
     }
 
     @Test func testElementwiseMinMax() {
-        let x: Tensor<Float, CPU> = Tensor([1,2,3,4,5,6], requiresGradient: true)
-        let y: Tensor<Float, CPU> = Tensor([6,5,4,3,2,1], requiresGradient: true)
+        let x: Tensor<Float, CPU> = Tensor([1, 2, 3, 4, 5, 6], requiresGradient: true)
+        let y: Tensor<Float, CPU> = Tensor([6, 5, 4, 3, 2, 1], requiresGradient: true)
 
         let result1 = Tensor.max(x, y) * 2
         let grads1 = result1.gradients(of: [x, y])
@@ -307,12 +307,12 @@ struct EngineV2Tests {
     @Test func testTransposedMatmul() {
         let x = Tensor<Float, CPU>([
             [1, 2, 3],
-            [4, 5, 6]
+            [4, 5, 6],
         ], requiresGradient: true)
 
         let y = Tensor<Float, CPU>([
             [7, 8, 9],
-            [9, 10, 12]
+            [9, 10, 12],
         ], requiresGradient: true)
 
         let fused1 = x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false) + x.matrixMultiplied(with: y, transposeSelf: true, transposeOther: false)
@@ -342,7 +342,7 @@ struct EngineV2Tests {
         let a = Tensor<Float, CPU>([
             [1, 2, 3],
             [4, 5, 6],
-            [7, 8, 9]
+            [7, 8, 9],
         ])
         let diag = a.diagonalElements()
         let expected = Tensor<Float, CPU>([1, 5, 9])
@@ -356,7 +356,7 @@ struct EngineV2Tests {
         let expected = Tensor<Float, CPU>([
             [1, 0, 0],
             [0, 5, 0],
-            [0, 0, 9]
+            [0, 0, 9],
         ])
         #expect(diag == expected)
     }
@@ -367,7 +367,7 @@ struct EngineV2Tests {
             [3, 0, 0, 0],
             [0, 3, 0, 0],
             [0, 0, 3, 0],
-            [0, 0, 0, 3]
+            [0, 0, 0, 3],
         ])
         #expect(a == expected)
     }

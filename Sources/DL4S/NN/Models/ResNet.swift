@@ -27,26 +27,24 @@ import Foundation
 
 extension Optional {
     var forceUnwrapped: Wrapped {
-        get {self!}
-        set {self = newValue}
+        get { self! }
+        set { self = newValue }
     }
 }
 
 /// Residual neural network with 18 layers (17 convolutional, 1 dense)
 public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType {
     public var parameters: [Tensor<Parameter, Self.Device>] {
-        get {
-            Array([
-                start.parameters,
-                l1.parameters,
-                l2.parameters,
-                l3.parameters,
-                l4.parameters,
-                classifier.parameters
-            ].joined())
-        }
+        Array([
+            start.parameters,
+            l1.parameters,
+            l2.parameters,
+            l3.parameters,
+            l4.parameters,
+            classifier.parameters,
+        ].joined())
     }
-    
+
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         Array([
             parameterPaths(of: \.start),
@@ -54,17 +52,17 @@ public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType
             parameterPaths(of: \.l2),
             parameterPaths(of: \.l3),
             parameterPaths(of: \.l4),
-            parameterPaths(of: \.classifier)
+            parameterPaths(of: \.classifier),
         ].joined())
     }
-    
+
     public var start: Sequential<Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>>, Relu<Element, Device>>
     public var l1: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l2: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l3: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l4: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var classifier: Sequential<Sequential<Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>>, Dense<Element, Device>>, LogSoftmax<Element, Device>>
-    
+
     public init(inputShape: [Int], classes: Int) {
         var generator = WyHash()
         self.init(inputShape: inputShape, classes: classes, using: &generator)
@@ -77,33 +75,33 @@ public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType
     ///   - generator: Random number generator that provides the initial weights.
     public init<Generator: RandomNumberGenerator>(inputShape: [Int], classes: Int, using generator: inout Generator) {
         let startOut = ConvUtil.outputShape(for: inputShape, kernelCount: 64, kernelWidth: 7, kernelHeight: 7, stride: 2, padding: 3)
-        
+
         start = Sequential {
             Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: 64, kernelSize: (7, 7), padding: 3, stride: 2, using: &generator)
             BatchNorm<Element, Device>(inputSize: startOut)
             Relu<Element, Device>()
         }
-        
+
         l1 = Sequential {
             ResidualBlock<Element, Device>(inputShape: startOut, outPlanes: 64, downsample: 1, using: &generator)
             ResidualBlock<Element, Device>(inputShape: startOut, outPlanes: 64, downsample: 1, using: &generator)
         }
-        
+
         l2 = Sequential {
             ResidualBlock<Element, Device>(inputShape: [64, startOut[1], startOut[2]], outPlanes: 128, downsample: 2, using: &generator)
             ResidualBlock<Element, Device>(inputShape: [128, startOut[1] / 2, startOut[2] / 2], outPlanes: 128, downsample: 1, using: &generator)
         }
-        
+
         l3 = Sequential {
             ResidualBlock<Element, Device>(inputShape: [128, startOut[1] / 2, startOut[2] / 2], outPlanes: 256, downsample: 2, using: &generator)
             ResidualBlock<Element, Device>(inputShape: [256, startOut[1] / 4, startOut[2] / 4], outPlanes: 256, downsample: 1, using: &generator)
         }
-        
+
         l4 = Sequential {
             ResidualBlock<Element, Device>(inputShape: [256, startOut[1] / 4, startOut[2] / 4], outPlanes: 512, downsample: 2, using: &generator)
             ResidualBlock<Element, Device>(inputShape: [512, startOut[1] / 8, startOut[2] / 8], outPlanes: 512, downsample: 1, using: &generator)
         }
-        
+
         classifier = Sequential {
             AdaptiveAvgPool2D<Element, Device>(targetSize: 1)
             Flatten<Element, Device>()
@@ -111,18 +109,18 @@ public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType
             LogSoftmax<Element, Device>()
         }
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "ResNet18") {
             var x = inputs
-            
+
             x = start(x)
             x = l1(x)
             x = l2(x)
             x = l3(x)
             x = l4(x)
             x = classifier(x)
-            
+
             return x
         }
     }

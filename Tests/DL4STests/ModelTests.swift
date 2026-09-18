@@ -1,5 +1,5 @@
 //
-//  ResNet.swift
+//  ModelTests.swift
 //  DL4STests
 //
 //  Created by Palle Klewitz on 21.04.19.
@@ -23,9 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 @testable import DL4S
-
+import Testing
 
 @Suite(.serialized)
 struct ModelTests {

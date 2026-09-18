@@ -27,12 +27,17 @@ import Foundation
 
 /// Element-wise hyperbolic tangent activation layer.
 public struct Tanh<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Element-wise hyperbolic tangent activation layer.
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.tanh()
     }
@@ -40,12 +45,17 @@ public struct Tanh<Element: NumericType, Device: DeviceType>: LayerType, Codable
 
 /// Element-wise sigmoid activation layer.
 public struct Sigmoid<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Element-wise sigmoid activation layer.
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Sigmoid") {
             inputs.sigmoid()
@@ -55,12 +65,17 @@ public struct Sigmoid<Element: NumericType, Device: DeviceType>: LayerType, Coda
 
 /// Element-wise rectified linear unit activation layer.
 public struct Relu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
 
     /// Element-wise rectified linear unit activation layer.
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.rectifiedLinear()
     }
@@ -68,15 +83,21 @@ public struct Relu<Element: NumericType, Device: DeviceType>: LayerType, Codable
 
 /// Element-wise leaky linear rectified unit activation layer.
 public struct LeakyRelu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     public var leakage: Element
-    
+
     /// Element-wise leaky rectified linear unit activation layer.
     public init(leakage: Element) {
         self.leakage = leakage
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "LeakyRelu") {
             inputs.leakyRectifiedLinear(leakage: Tensor(leakage))
@@ -86,12 +107,17 @@ public struct LeakyRelu<Element: NumericType, Device: DeviceType>: LayerType, Co
 
 /// Log Softmax activation layer
 public struct LogSoftmax<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Softmax activation layer
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "LogSoftmax") {
             inputs.logSoftmax()
@@ -101,12 +127,17 @@ public struct LogSoftmax<Element: NumericType, Device: DeviceType>: LayerType, C
 
 /// Softmax activation layer
 public struct Softmax<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Softmax activation layer
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Softmax") {
             inputs.softmax()
@@ -116,12 +147,17 @@ public struct Softmax<Element: NumericType, Device: DeviceType>: LayerType, Coda
 
 /// Element-wise gaussian error linear unit activation layer.
 public struct Gelu<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] { get {[]} }
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
 
     /// Element-wise Gaussian error linear unit activation layer.
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "gelu") {
             inputs.gaussianErrorLinear()
@@ -134,22 +170,23 @@ public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codabl
     public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
         beta.requiresGradient ? [\.beta] : []
     }
+
     public var parameters: [Tensor<Element, Device>] {
         beta.requiresGradient ? [beta] : []
     }
-    
+
     public var beta: Tensor<Element, Device>
 
     /// Element-wise Swish activation layer with learnable beta parameter
     public init(trainableWithChannels channels: Int) {
         beta = Tensor(repeating: 1, shape: [channels], requiresGradient: true)
     }
-    
+
     /// Element-wise Swish activation layer with fixed beta parameter
     public init(fixedWithBeta beta: Element = 1) {
         self.beta = Tensor(beta)
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "swish") {
             inputs.swishActivated(beta: beta)
@@ -159,12 +196,17 @@ public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codabl
 
 /// Element-wise Mish activation layer.
 public struct Mish<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
 
     /// Element-wise Mish activation layer.
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "mish") {
             inputs.mishActivated()
@@ -174,12 +216,17 @@ public struct Mish<Element: NumericType, Device: DeviceType>: LayerType, Codable
 
 /// Element-wise LiSHT activation layer.
 public struct LiSHT<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
 
     /// Element-wise LiSHT activation layer.
     public init() {}
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "lisht") {
             inputs.lishtActivated()
@@ -189,18 +236,23 @@ public struct LiSHT<Element: NumericType, Device: DeviceType>: LayerType, Codabl
 
 /// Layer wrapping an arbitrary transform provided by a closure.
 public struct Lambda<Inputs, Outputs, Element: NumericType, Device: DeviceType>: LayerType {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] {[]}
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Transformation performed by the layer
     public var transform: @Sendable (Inputs) -> Outputs
-    
+
     /// Creates a layer that performs the given transformation on its inputs
     /// - Parameter transform: Transformation to perform
     public init(_ transform: @escaping @Sendable (Inputs) -> Outputs) {
         self.transform = transform
     }
-    
+
     public func callAsFunction(_ inputs: Inputs) -> Outputs {
         transform(inputs)
     }

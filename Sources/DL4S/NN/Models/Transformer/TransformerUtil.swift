@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  TransformerUtil.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - 2020 - Palle Klewitz
@@ -23,13 +23,12 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-
 import Foundation
 
 func makeEncoderMasks<Element, Device>(sequenceLengths: [Int]) -> Tensor<Element, Device> {
     let maxInLen = sequenceLengths.reduce(0, max)
     let batchSize = sequenceLengths.count
-    
+
     return Tensor<Element, Device>(sequenceLengths.map {
         Array(repeating: 0, count: $0) + Array(repeating: 1, count: maxInLen - $0)
     }).view(as: batchSize, 1, 1, maxInLen) // TODO: Check if maxLen in 3rd or 4th position
@@ -38,13 +37,13 @@ func makeEncoderMasks<Element, Device>(sequenceLengths: [Int]) -> Tensor<Element
 func makeDecoderMasks<Element, Device>(sequenceLengths: [Int]) -> Tensor<Element, Device> {
     let batchSize = sequenceLengths.count
     let maxLen = sequenceLengths.reduce(0, max)
-    
+
     let decoderSeqMask = Tensor<Element, Device>(sequenceLengths.map {
         Array(repeating: 0, count: $0) + Array(repeating: 1, count: maxLen - $0)
     })
-    
+
     let decoderCausalMask = Tensor<Element, Device>(repeating: 1, shape: maxLen, maxLen)
         .bandMatrix(belowDiagonal: -1, aboveDiagonal: nil) // [maxLen, maxLen]
-    
+
     return 1 - relu(1 - decoderSeqMask.view(as: batchSize, 1, 1, maxLen) - decoderCausalMask)
 }

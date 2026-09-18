@@ -1,0 +1,17 @@
+--swiftversion 6.1
+--languagemode 6
+--exclude .build,.build-linux,.swiftpm
+
+--indent 4
+--ifdef no-indent
+--trimwhitespace always
+--header ignore
+--wrapenumcases with-values
+--stripunusedargs closure-only
+
+# docComments turns explanatory comments before declarations into documentation comments.
+# enumNamespaces changes public structs without instance members into enums, which would be API changing.
+# opaqueGenericParameters replaces generic parameters with `some`, which also changes the public API.
+# preferKeyPath breaks Swift Testing: a key path inside #expect makes rethrowing calls like allSatisfy fail to compile.
+# swiftTestingTestCaseNames renames test functions, which breaks the `swift test --filter` commands in use.
+--disable docComments,enumNamespaces,opaqueGenericParameters,preferKeyPath,swiftTestingTestCaseNames

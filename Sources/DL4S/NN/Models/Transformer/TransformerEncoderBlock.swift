@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  TransformerEncoderBlock.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - 2020 - Palle Klewitz
@@ -29,16 +29,20 @@ import Foundation
 public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
     public var selfAttention: MultiHeadAttention<Element, Device>
     public var pointwiseFeedForward: PointwiseFeedForward<Element, Device>
-    
-    public var parameters: [Tensor<Element, Device>] {Array([
-        selfAttention.parameters, pointwiseFeedForward.parameters
-    ].joined())}
-    
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {Array([
-        parameterPaths(of: \.selfAttention),
-        parameterPaths(of: \.pointwiseFeedForward)
-    ].joined())}
-    
+
+    public var parameters: [Tensor<Element, Device>] {
+        Array([
+            selfAttention.parameters, pointwiseFeedForward.parameters,
+        ].joined())
+    }
+
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        Array([
+            parameterPaths(of: \.selfAttention),
+            parameterPaths(of: \.pointwiseFeedForward),
+        ].joined())
+    }
+
     /// Creates Transformer encoder layer consisting of a self-attention and a pointwise feed forward layer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
     ///   - hiddenDim: Last dimension of inputs and outputs
@@ -65,7 +69,7 @@ public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceT
         selfAttention = MultiHeadAttention(heads: heads, hiddenDim: hiddenDim, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
         pointwiseFeedForward = PointwiseFeedForward(size: hiddenDim, hiddenSize: forwardDim, dropoutRate: dropout, using: &generator)
     }
-    
+
     /// Applies multi-head self attention and a pointwise feed forward layer to the inputs
     /// - Parameter inputs: Layer input with shape [batchSize, maxLen, hiddenSize] and padding mask broadcastable to [batchSize, heads, queryCount, keyCount] with 1 entries for all elements that should be blocked.
     /// - Returns: Result of layer operations with shape [batchSize, maxLen, hiddenSize]

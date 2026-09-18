@@ -23,16 +23,16 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
+@testable import DL4S
 import Foundation
 import Testing
-@testable import DL4S
 
 struct UtilTests {
     @Test func testFileReader() throws {
         let packageManifestURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()  // DL4STests
-            .deletingLastPathComponent()  // Tests
-            .deletingLastPathComponent()  // repository root
+            .deletingLastPathComponent() // DL4STests
+            .deletingLastPathComponent() // Tests
+            .deletingLastPathComponent() // repository root
             .appendingPathComponent("Package.swift")
 
         let lines = Array(File(url: packageManifestURL))

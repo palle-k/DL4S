@@ -27,30 +27,32 @@ import Foundation
 
 /// Transforms discrete values, such as word indices, into a lower dimensional embedding.
 public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
-        \.embeddingMatrix
-    ]}
-    
-    public var parameters: [Tensor<Element, Device>] {
-        get {[embeddingMatrix]}
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        [
+            \.embeddingMatrix,
+        ]
     }
-    
+
+    public var parameters: [Tensor<Element, Device>] {
+        [embeddingMatrix]
+    }
+
     /// Matrix of embedding vectors, shape [inputFeatures, outputSize]
     public var embeddingMatrix: Tensor<Element, Device>
-    
+
     /// Number of input features
     public var inputFeatures: Int {
         embeddingMatrix.shape[0]
     }
-    
+
     /// Size of embedded feature vectors
     public var outputSize: Int {
         embeddingMatrix.shape[1]
     }
-    
+
     /// Index for padding that is ignored in inputs to the layer
     public let ignoreIndex: Int
-    
+
     /// Creates an embedding layer that has an input vocabulary of size `inputFeatures` and returns embeddings with the size `outputSize`.
     ///
     /// The layer expects categorial inputs with a shape of [batch size] and returns embeddings with a shape of [batch size, outputSize]
@@ -63,7 +65,7 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
         var generator = WyHash()
         self.init(inputFeatures: inputFeatures, outputSize: outputSize, ignoreIndex: ignoreIndex, using: &generator)
     }
-    
+
     /// Creates an embedding layer that has an input vocabulary of size `inputFeatures` and returns embeddings with the size `outputSize`.
     ///
     /// The layer expects categorial inputs with a shape of [batch size] and returns embeddings with a shape of [batch size, outputSize]
@@ -74,13 +76,13 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
     ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
     ///   - generator: Random number generator that provides the initial weights.
     public init<Generator: RandomNumberGenerator>(inputFeatures: Int, outputSize: Int, ignoreIndex: Int = -1, using generator: inout Generator) {
-        self.embeddingMatrix = Tensor<Element, Device>(xavierNormalWithShape: [inputFeatures, outputSize], requiresGradient: true, using: &generator)
+        embeddingMatrix = Tensor<Element, Device>(xavierNormalWithShape: [inputFeatures, outputSize], requiresGradient: true, using: &generator)
         #if DEBUG
-        self.embeddingMatrix.tag = "W"
+        embeddingMatrix.tag = "W"
         #endif
         self.ignoreIndex = ignoreIndex
     }
-    
+
     /// Loads pretrained word embeddings from the space / tab separated values file at the given path
     /// and arranges them according to the order of words provided.
     ///
@@ -98,20 +100,20 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
     ///   - verbose: If set to true, print out loading progress
     ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
     public init?(words: [String], embeddingsURL: URL, verbose: Bool = false, ignoreIndex: Int = -1) {
-        let wordToIndex = Dictionary(uniqueKeysWithValues: words.enumerated().map{($1, $0)})
-        
+        let wordToIndex = Dictionary(uniqueKeysWithValues: words.enumerated().map { ($1, $0) })
+
         var tensors: [Tensor<Element, Device>?] = Array(repeating: nil, count: words.count)
-        
-        var embedDim: Int? = nil
-        
-        var progress = verbose ? ProgressBar<()>(totalUnitCount: words.count, formatUserInfo: {""}, label: "loading embeddings") : nil
-        
+
+        var embedDim: Int?
+
+        var progress = verbose ? ProgressBar<Void>(totalUnitCount: words.count, formatUserInfo: { "" }, label: "loading embeddings") : nil
+
         var completedCount = 0
-        
+
         for line in File(url: embeddingsURL) {
             autoreleasepool {
-                let components = line.split(whereSeparator: {$0.isWhitespace})
-                
+                let components = line.split(whereSeparator: { $0.isWhitespace })
+
                 guard components.count >= 2 else {
                     return
                 }
@@ -119,50 +121,50 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
                 guard let index = wordToIndex[word] else {
                     return
                 }
-                
+
                 let values = Tensor<Element, Device>(components[1...].compactMap(Double.init).map(Element.init))
                 tensors[index] = values.unsqueezed(at: 0)
                 embedDim = values.count
-                
+
                 completedCount += 1
-                
+
                 progress?.next(userInfo: ())
             }
-            
+
             if completedCount == words.count {
                 break
             }
         }
-        
+
         progress?.complete()
-        
+
         if verbose {
-            let unknownCount = tensors.count(where: {$0 == nil})
+            let unknownCount = tensors.count(where: { $0 == nil })
             print("Unknown: \(unknownCount) of \(words.count)")
             print("Embedding size: \(embedDim ?? -1)")
         }
-        
+
         guard let shape = embedDim else {
             print("No word from wordlist found in embedding file.")
             return nil
         }
-        self.embeddingMatrix = Tensor(
+        embeddingMatrix = Tensor(
             stacking: tensors.map { t in
-                if let t = t {
-                    return t
+                if let t {
+                    t
                 } else {
-                    return Tensor<Element, Device>(xavierNormalWithShape: [1, shape])
+                    Tensor<Element, Device>(xavierNormalWithShape: [1, shape])
                 }
             },
-            along: 0
+            along: 0,
         )
-        self.embeddingMatrix.requiresGradient = true
+        embeddingMatrix.requiresGradient = true
         #if DEBUG
-        self.embeddingMatrix.tag = "W"
+        embeddingMatrix.tag = "W"
         #endif
         self.ignoreIndex = ignoreIndex
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Embedding") {
             let embedded = (0 ..< inputs.shape[0]).map { i -> Tensor<Element, Device> in
@@ -173,9 +175,8 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: LayerTyp
                     return embeddingMatrix[idx].unsqueezed(at: 0)
                 }
             }
-            
+
             return Tensor(stacking: embedded, along: 0)
         }
     }
 }
-
