@@ -1,0 +1,59 @@
+name: Documentation
+
+# Builds the DocC documentation for the DL4S target and publishes it to the gh-pages branch.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
+jobs:
+  docs:
+    name: DocC
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Swift version
+        run: swift --version
+
+      # Rewrite readme for DocC compatibility
+      - name: Generate the landing page from the README
+        run: python3 util/docc_landing_page.py DL4S README.md Sources/DL4S/DL4S.docc/DL4S.md
+      - name: Build documentation
+        run: |
+          swift package -Xswiftc -DDL4S_SKIP_MKL_PLATFORM_CHECK \
+            --allow-writing-to-directory .build/docs \
+            generate-documentation --target DL4S \
+            --disable-indexing \
+            --transform-for-static-hosting \
+            --hosting-base-path DL4S \
+            --output-path .build/docs
+      - name: Redirect the site root to the module page
+        run: |
+          cat > .build/docs/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta http-equiv="refresh" content="0; url=documentation/dl4s/">
+          <link rel="canonical" href="https://palle-k.github.io/DL4S/documentation/dl4s/">
+          <title>DL4S Documentation</title>
+          </head>
+          <body>
+          <a href="documentation/dl4s/">DL4S Documentation</a>
+          </body>
+          </html>
+          HTML
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .build/docs
+          force_orphan: true
