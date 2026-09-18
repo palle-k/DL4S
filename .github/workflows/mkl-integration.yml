@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: swift-actions/setup-swift@v2
         with:
           swift-version: "6.1"
@@ -45,7 +45,7 @@ jobs:
           key=$(apt-cache policy intel-oneapi-mkl-devel intel-oneapi-ipp-devel | awk '/Candidate:/ { printf "%s-", $2 }')
           echo "key=${key}" >> "$GITHUB_OUTPUT"
       - name: Restore the downloaded packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/apt-cache
           key: oneapi-debs-${{ steps.versions.outputs.key }}

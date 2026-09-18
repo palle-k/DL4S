@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: swift-actions/setup-swift@v2
         if: runner.os == 'Linux'
         with:
@@ -38,7 +38,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Show Swift version
         run: swift --version
       - name: Run concurrency tests under the thread sanitizer

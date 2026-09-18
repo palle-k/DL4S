@@ -13,7 +13,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Show Swift version
         run: swift --version
       - name: Run all tests under the thread sanitizer
