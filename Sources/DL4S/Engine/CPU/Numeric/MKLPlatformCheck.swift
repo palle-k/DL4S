@@ -23,7 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-// Prevent oneAPI traits / enable-flags from being active on unsupported platforms
-#if MKL_UNSUPPORTED_PLATFORM || (MKL_ENABLE && !(os(Linux) && arch(x86_64)))
+// Prevent oneAPI traits / enable-flags from being active on unsupported platforms.
+// The DocC plugin builds the symbol graph with all package traits enabled, so a documentation
+// build passes -DDL4S_SKIP_MKL_PLATFORM_CHECK to compile the Accelerate or generic variant instead.
+#if (MKL_UNSUPPORTED_PLATFORM || (MKL_ENABLE && !(os(Linux) && arch(x86_64)))) && !DL4S_SKIP_MKL_PLATFORM_CHECK
 #error("Intel oneAPI MKL and IPP are unsupported on this platform. Use Accelerate on Apple platforms.")
 #endif

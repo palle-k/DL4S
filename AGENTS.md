@@ -14,11 +14,12 @@ DL4S_LONG_TESTS=1 swift test                         # include the long training
 swift test --filter Concurrency                      # run the thread-safety stress suite
 swift test --sanitize=thread --filter Concurrency    # run it under thread sanitizer
 swift test --traits MKL --filter VecTests            # x86_64 Linux with oneAPI: run the MKL smoke test
+swift package -Xswiftc -DDL4S_SKIP_MKL_PLATFORM_CHECK generate-documentation --target DL4S   # build the DocC documentation
 ```
 
 There is no linter or formatter configuration in this repo. CI is a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `swift test` in debug and release configuration (`-c release -Xswiftc -enable-testing`) on macOS and Ubuntu, and runs the concurrency suite under the thread sanitizer. A second workflow (`.github/workflows/tsan-full.yml`) runs the full test suite under the thread sanitizer on every push to master and on manual dispatch. Both sanitizer jobs run on macOS only: on Linux, TSan does not see `Synchronization.Mutex` and reports every access under the lock as a race (verified with Swift 6.1 and 6.3.3).
 
-On x86_64 Linux, acceleration comes from Intel oneAPI MKL/IPP instead of Accelerate through the `MKL` package trait (off by default): `source /opt/intel/oneapi/setvars.sh`, `export CPATH=${IPPROOT}/include:${CPATH}`, then `swift build -c release --traits MKL` (see README for setup). The trait defines `MKL_ENABLE` for the `DL4S` and `DL4STests` targets. Without MKL or Accelerate, an unoptimized generic fallback is used. A third workflow (`.github/workflows/mkl-smoke.yml`) runs `swift test --traits MKL --filter VecTests` on ubuntu-24.04 with oneAPI from the Intel apt repository; it runs on pull requests and pushes to master that touch the CPU backend, `Sources/CMKL`, or `Package.swift`, and on manual dispatch.
+On x86_64 Linux, acceleration comes from Intel oneAPI MKL/IPP instead of Accelerate through the `MKL` package trait (off by default): `source /opt/intel/oneapi/setvars.sh`, `export CPATH=${IPPROOT}/include:${CPATH}`, then `swift build -c release --traits MKL` (see README for setup). The trait defines `MKL_ENABLE` for the `DL4S` and `DL4STests` targets. Without MKL or Accelerate, an unoptimized generic fallback is used. A third workflow (`.github/workflows/mkl-integration.yml`) runs `swift test --traits MKL --filter VecTests` on ubuntu-24.04 with oneAPI from the Intel apt repository; it runs on pull requests and pushes to master that touch the CPU backend, `Sources/CMKL`, or `Package.swift`, and on manual dispatch. A fourth workflow (`.github/workflows/docs.yml`) builds the DocC documentation with the plugin flag from the Commands block on every push to master and on manual dispatch, and publishes it to the `gh-pages` branch. 
 
 Allocation tracing is a debugging aid that is compiled in only with `-Xswiftc -DDL4S_TRACE_ALLOCATIONS`. With the flag, `CPUMemoryOperators.setAllocationTracing(true)` records the call stack of every allocation and prints the call stack of a buffer that is not freed after 5 seconds. Builds without the flag contain no tracing code. Run the tracing test with `swift test --sanitize=thread -Xswiftc -DDL4S_TRACE_ALLOCATIONS --filter Concurrency`.
 
@@ -53,7 +54,7 @@ Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
 
 ## Conventions
 - Every file starts with the MIT license header (`// <Filename>.swift / DL4S / Created by ... / Copyright ...`). New files get the same header.
-- Public APIs carry `///` doc comments with `- Parameters:` / `- Returns:`. The `docs/` directory is Jazzy output; do not hand-edit it.
+- Public APIs carry `///` doc comments with `- Parameters:` / `- Returns:`. The reference documentation is DocC output published from CI.
 - The package builds in Swift 6 language mode (`swiftLanguageModes: [.v6]` in `Package.swift`), so concurrency diagnostics are errors.
 - Hot generic functions use `@inline(__always)` and `@_specialize(where Element == Float, Device == CPU)`.
 - Engine primitives use terse names (`vAdd`, `vsMul`, `gemm`, `img2col`); public tensor methods are spelled out (`matrixMultiplied(with:)`, `permuted(to:)`, `reduceSum(along:)`).

@@ -53,7 +53,9 @@ let package = Package(
             description: "Accelerates the CPU backend with Intel oneAPI MKL and IPP. Requires x86_64 Linux and the oneAPI environment (source the setvars.sh script of oneAPI before you build)."
         )
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.5.0")
+    ],
     targets: mklTargets + [
         .target(
             name: "DL4S",
