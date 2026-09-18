@@ -1,6 +1,7 @@
 name: Documentation
 
-# Builds the DocC documentation for the DL4S target and publishes it to the gh-pages branch.
+# Builds the DocC documentation for the DL4S target and publishes it to GitHub Pages.
+# The repository setting "Build and deployment" of GitHub Pages must be "GitHub Actions".
 on:
   push:
     branches: [master]
@@ -51,9 +52,20 @@ jobs:
           </body>
           </html>
           HTML
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .build/docs
-          force_orphan: true
+          path: .build/docs
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
