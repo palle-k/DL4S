@@ -132,6 +132,7 @@ To contribute code:
 
 * [Set up the project](#project-setup).
 * Make any necessary changes to the source code.
+* Ensure source files are linted and formatted using `swift package plugin --allow-writing-to-package-directory swiftformat` and `swift package plugin --allow-writing-to-package-directory swiftlint lint --strict`.
 * Include any [additional documentation](#contribute-documentation) the changes might need.
 * Write tests that verify that your contribution works as expected.
 * Write clear, concise commit message(s) using [conventional-changelog format](https://github.com/conventional-changelog/conventional-changelog-angular/blob/master/convention.md).

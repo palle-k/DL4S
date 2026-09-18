@@ -25,32 +25,35 @@
 
 import Foundation
 
-
 /// A dropout layer
 public struct Dropout<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[]}
-    public var parameters: [Tensor<Element, Device>] { get {[]} }
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        []
+    }
+
+    public var parameters: [Tensor<Element, Device>] {
+        []
+    }
+
     /// Rate, with which dropout is applied.
     public var rate: Float
-    
+
     /// Whether dropout is active. If dropout is deactivated, this layer performs the identity mapping.
     public var isActive: Bool = true
-    
-    
+
     /// Creates a layer, that drops elements with the given probability.
     /// - Parameter rate: Dropout probability.
     public init(rate: Float) {
         self.rate = rate
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         if isActive {
-            return OperationGroup.capture(named: "Dropout") {
-                inputs * Tensor(bernoulliDistributedWithShape: inputs.shape, probability: (1 - rate))
+            OperationGroup.capture(named: "Dropout") {
+                inputs * Tensor(bernoulliDistributedWithShape: inputs.shape, probability: 1 - rate)
             }
         } else {
-            return inputs
+            inputs
         }
     }
 }

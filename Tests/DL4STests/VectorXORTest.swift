@@ -23,9 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
+import DL4S
 import Foundation
 import Testing
-import DL4S
 
 struct VectorXORTest {
     @Test func testXNN() {
@@ -33,13 +33,13 @@ struct VectorXORTest {
             [0, 0],
             [0, 1],
             [1, 0],
-            [1, 1]
+            [1, 1],
         ])
         let xor_dst = Tensor<Float, CPU>([
             [0],
             [1],
             [1],
-            [0]
+            [0],
         ])
 
         var generator = WyHash(seed: 42)
@@ -70,10 +70,8 @@ struct VectorXORTest {
         let predictions = optim.model(xor_src).view(as: -1)
 
         var correctCount = 0
-        for i in 0 ..< 4 {
-            if round(predictions[i].item) == xor_dst[i, 0].item {
-                correctCount += 1
-            }
+        for i in 0 ..< 4 where round(predictions[i].item) == xor_dst[i, 0].item {
+            correctCount += 1
         }
 
         let accuracy = Float(correctCount) / 4

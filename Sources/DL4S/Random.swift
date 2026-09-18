@@ -25,7 +25,6 @@
 
 import Foundation
 
-
 public protocol RandomizableType: NumericType {
     static func random<Generator: RandomNumberGenerator>(in range: ClosedRange<Self>, using rng: inout Generator) -> Self
 }
@@ -45,22 +44,22 @@ extension Double: RandomizableType {}
 /// ```
 public struct WyHash: RandomNumberGenerator, Sendable {
     private var state: UInt64
-    
+
     /// Creates a generator that determistically generates randomness based on the provided seed.
     /// - Parameter seed: Initial state of the generator.
     public init(seed: UInt64) {
         state = seed
     }
-    
+
     /// Creates a generator with a seed from the system random number generator.
     public init() {
         var systemGenerator = SystemRandomNumberGenerator()
         self.init(seed: systemGenerator.next())
     }
-    
+
     public mutating func next() -> UInt64 {
-        state &+= 0xa0761d6478bd642f
-        let (high, low) = state.multipliedFullWidth(by: state ^ 0xe7037ed1a0b428db)
+        state &+= 0xA076_1D64_78BD_642F
+        let (high, low) = state.multipliedFullWidth(by: state ^ 0xE703_7ED1_A0B4_28DB)
         return high ^ low
     }
 }
@@ -69,14 +68,14 @@ public struct WyHash: RandomNumberGenerator, Sendable {
 func randNormal<T: RandomizableType, Generator: RandomNumberGenerator>(stdev: T, mean: T, using generator: inout Generator) -> (T, T) {
     let a = T.random(in: 0 ... 1, using: &generator)
     let b = T.random(in: 0 ... 1, using: &generator)
-    
+
     let scale = (-2 * a.log()).sqrt() * stdev
-    
+
     let twoPiB = T(2 * 3.141592653589) * b
-    
+
     let (x, y) = (scale * twoPiB.sin() + mean, scale * twoPiB.cos() + mean)
-    
-    if x.isFinite && !x.isNaN && y.isFinite && !y.isNaN {
+
+    if x.isFinite, !x.isNaN, y.isFinite, !y.isNaN {
         return (x, y)
     } else {
         return randNormal(stdev: stdev, mean: mean, using: &generator)
@@ -97,7 +96,7 @@ public enum Random {
         var generator = WyHash()
         fill(vector, a: a, b: b, using: &generator)
     }
-    
+
     /// Fills the buffer with values from a uniform distribution in `a ... b`.
     /// - Parameters:
     ///   - vector: Buffer to fill
@@ -116,7 +115,7 @@ public enum Random {
         Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
         buffer.deallocate()
     }
-    
+
     /// Fills the buffer with values from a normal distribution.
     /// - Parameters:
     ///   - vector: Buffer to fill
@@ -129,7 +128,7 @@ public enum Random {
         var generator = WyHash()
         fillNormal(vector, mean: mean, stdev: stdev, using: &generator)
     }
-    
+
     /// Fills the buffer with values from a normal distribution.
     /// - Parameters:
     ///   - vector: Buffer to fill
@@ -144,35 +143,35 @@ public enum Random {
         for i in stride(from: 0, to: vector.count - 1, by: 2) {
             let (a, b) = randNormal(stdev: stdev, mean: mean, using: &generator)
             buffer[i] = a
-            buffer[i+1] = b
+            buffer[i + 1] = b
         }
-        
+
         // The Box-Muller transform yields pairs. An odd count needs one more value for the last element.
         if vector.count % 2 == 1 {
             let (a, _) = randNormal(stdev: stdev, mean: mean, using: &generator)
-            buffer[vector.count-1] = a
+            buffer[vector.count - 1] = a
         }
         Device.Memory.assign(from: buffer.immutable, to: vector.values, count: vector.count)
         buffer.deallocate()
     }
-    
+
     /// Samples a random minibatch of tensors from the given data set with shape [sample count, sample_dim1, ..., sample_dim_n]
     /// - Parameters:
     ///   - dataset: Dataset to sample a batch from
     ///   - count: Number of elements to include in the batch
     public static func minibatch<Element: NumericType, Device: DeviceType>(from dataset: Tensor<Element, Device>, count: Int) -> Tensor<Element, Device> {
         let n = dataset.shape[0]
-        
+
         let sampleShape = [1] + Array(dataset.shape.dropFirst())
-        
+
         return Tensor(
             stacking: (0 ..< count)
-                .map {_ in Int.random(in: 0 ..< n)}
-                .map {dataset[$0].view(as: sampleShape)},
-            along: 0
+                .map { _ in Int.random(in: 0 ..< n) }
+                .map { dataset[$0].view(as: sampleShape) },
+            along: 0,
         )
     }
-    
+
     /// Samples a random minibatch of tensors from the given data set with shape [sample count, sample_dim1, ..., sample_dim_n] and their corresponding expected output vectors.
     /// - Parameters:
     ///   - dataset: Dataset to sample a batch from
@@ -180,15 +179,15 @@ public enum Random {
     ///   - count: Number of elements to include in the batch
     public static func minibatch<E1: NumericType, E2: NumericType, D1: DeviceType, D2: DeviceType>(from dataset: Tensor<E1, D1>, labels: Tensor<E2, D2>, count: Int) -> (Tensor<E1, D1>, Tensor<E2, D2>) {
         let n = dataset.shape[0]
-        
-        let indices = (0 ..< count).map {_ in Int.random(in: 0 ..< n)}
-        
-        let randomSamples = Tensor(stacking: indices.map {dataset[$0].unsqueezed(at: 0)}, along: 0)
-        let randomLabels = Tensor(stacking: indices.map {labels[$0].unsqueezed(at: 0)}, along: 0)
-        
+
+        let indices = (0 ..< count).map { _ in Int.random(in: 0 ..< n) }
+
+        let randomSamples = Tensor(stacking: indices.map { dataset[$0].unsqueezed(at: 0) }, along: 0)
+        let randomLabels = Tensor(stacking: indices.map { labels[$0].unsqueezed(at: 0) }, along: 0)
+
         return (randomSamples, randomLabels)
     }
-    
+
     /// Fills the buffer with ones and zeros. Each element is 1 with probability `p`.
     ///
     /// The values come from a new generator with a random seed. Use `bernoulli(_:p:using:)` for reproducible values.
@@ -202,7 +201,7 @@ public enum Random {
         var generator = WyHash()
         bernoulli(values, p: p, using: &generator)
     }
-    
+
     /// Fills the buffer with ones and zeros. Each element is 1 with probability `p`.
     /// - Parameters:
     ///   - values: Buffer to fill
@@ -217,7 +216,7 @@ public enum Random {
         for i in 0 ..< count {
             buffer[i] = Float.random(in: 0 ... 1, using: &generator) <= p ? 1 : 0
         }
-        
+
         Device.Memory.assign(from: buffer.immutable, to: values.values, count: count)
         buffer.deallocate()
     }

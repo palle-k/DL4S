@@ -23,10 +23,10 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Foundation
-import Testing
-import Synchronization
 import DL4S
+import Foundation
+import Synchronization
+import Testing
 
 /// Stress tests that run DL4S with several threads at the same time.
 ///
@@ -61,13 +61,13 @@ struct ConcurrencyTests {
             [0, 0],
             [0, 1],
             [1, 0],
-            [1, 1]
+            [1, 1],
         ])
         let expected = Tensor<Float, CPU>([
             [0],
             [1],
             [1],
-            [0]
+            [0],
         ])
 
         let model = Sequential {
@@ -107,9 +107,9 @@ struct ConcurrencyTests {
                 for iteration in 0 ..< iterations {
                     let result = model(input).elements
                     if result != reference {
-                        let firstDifference = zip(result, reference).enumerated().first { $0.element.0 != $0.element.1 }
+                        let firstDifference = result.indices.first { result[$0] != reference[$0] }
                         mismatches.withLock {
-                            $0.append("thread \(threadIndex), iteration \(iteration), first difference at element \(firstDifference?.offset ?? -1)")
+                            $0.append("thread \(threadIndex), iteration \(iteration), first difference at element \(firstDifference ?? -1)")
                         }
                     }
                 }
@@ -118,7 +118,7 @@ struct ConcurrencyTests {
             let collected = mismatches.withLock { $0 }
             #expect(
                 collected.isEmpty,
-                "\(collected.count) of \(threadCount * iterations) results with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")"
+                "\(collected.count) of \(threadCount * iterations) results with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")",
             )
         }
     }
@@ -177,12 +177,12 @@ struct ConcurrencyTests {
         let collected = weights.withLock { $0 }
         #expect(collected.count == threadCount)
 
-        let allValues = collected.flatMap { $0 }
+        let allValues = collected.flatMap(\.self)
         let duplicateCount = allValues.count - Set(allValues).count
         let duplicateFraction = Double(duplicateCount) / Double(allValues.count)
         #expect(
             duplicateFraction < 0.001,
-            "\(duplicateCount) of \(allValues.count) weights are duplicates across \(threadCount) independently initialized models."
+            "\(duplicateCount) of \(allValues.count) weights are duplicates across \(threadCount) independently initialized models.",
         )
 
         for (index, model) in collected.enumerated() {
@@ -201,7 +201,7 @@ struct ConcurrencyTests {
         let iterations = 50
 
         @Sendable func backwardPass() -> [[Float]] {
-            (stacked * stacked).reduceSum().gradients(of: [a, b]).map { $0.elements }
+            (stacked * stacked).reduceSum().gradients(of: [a, b]).map(\.elements)
         }
         let reference = backwardPass()
 
@@ -210,7 +210,8 @@ struct ConcurrencyTests {
 
             run(threadCount: threadCount) { threadIndex in
                 for iteration in 0 ..< iterations {
-                    if backwardPass() != reference {
+                    let gradient = backwardPass()
+                    if gradient != reference {
                         mismatches.withLock { $0.append("thread \(threadIndex), iteration \(iteration)") }
                     }
                 }
@@ -219,7 +220,7 @@ struct ConcurrencyTests {
             let collected = mismatches.withLock { $0 }
             #expect(
                 collected.isEmpty,
-                "\(collected.count) of \(threadCount * iterations) gradients with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")"
+                "\(collected.count) of \(threadCount * iterations) gradients with \(threadCount) threads differ from reference. First: \(collected.first ?? "none")",
             )
         }
     }
@@ -267,7 +268,7 @@ struct ConcurrencyTests {
                 }
 
                 // The first thread switches tracing on and off while the other threads allocate and free.
-                if threadIndex == 0 && iteration % 25 == 0 {
+                if threadIndex == 0, iteration % 25 == 0 {
                     CPUMemoryOperators.setAllocationTracing(iteration % 50 == 0)
                 }
             }

@@ -23,9 +23,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
+import DL4S
 import Foundation
 import Testing
-import DL4S
 
 struct VecTests {
     @Test func testVectorWriteItem() {
@@ -33,13 +33,13 @@ struct VecTests {
 
         vector[0, 0] = 2
 
-        #expect(vector[0,0].item == 2)
+        #expect(vector[0, 0].item == 2)
 
-        #expect(vector[0,1].item == 1)
-        #expect(vector[1,0].item == 2)
-        #expect(vector[1,1].item == 3)
-        #expect(vector[2,0].item == 4)
-        #expect(vector[2,1].item == 5)
+        #expect(vector[0, 1].item == 1)
+        #expect(vector[1, 0].item == 2)
+        #expect(vector[1, 1].item == 3)
+        #expect(vector[2, 0].item == 4)
+        #expect(vector[2, 1].item == 5)
     }
 
     @Test func testVectorWriteItem2() {
@@ -49,15 +49,15 @@ struct VecTests {
 
         #expect(vector[2, 1].item == 10)
 
-        #expect(vector[0,0].item == 0)
-        #expect(vector[0,1].item == 1)
-        #expect(vector[1,0].item == 2)
-        #expect(vector[1,1].item == 3)
-        #expect(vector[2,0].item == 4)
+        #expect(vector[0, 0].item == 0)
+        #expect(vector[0, 1].item == 1)
+        #expect(vector[1, 0].item == 2)
+        #expect(vector[1, 1].item == 3)
+        #expect(vector[2, 0].item == 4)
     }
 
     @Test func testVectorReadSlice() {
-        let v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
+        let v: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
 
         #expect(v[nil, 0 ..< 2] == v)
         #expect(v[nil, 0 ..< 1] == Tensor([[0], [2], [4]]))
@@ -65,8 +65,8 @@ struct VecTests {
     }
 
     @Test func testVectorWrite() {
-        var v: Tensor<Float, CPU> = Tensor([0,1,2,3,4,5], shape:3,2)
-        v[2,1] = 20
+        var v: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
+        v[2, 1] = 20
 
         #expect(v == Tensor([[0, 1], [2, 3], [4, 20]]))
     }
@@ -83,8 +83,8 @@ struct VecTests {
     }
 
     @Test func testMMul1x1() {
-        let a = Tensor<Float, CPU>([1,2,3])
-        let b = Tensor<Float, CPU>([4,5,6])
+        let a = Tensor<Float, CPU>([1, 2, 3])
+        let b = Tensor<Float, CPU>([4, 5, 6])
 
         let result = matMul(a, b)
 
@@ -93,7 +93,7 @@ struct VecTests {
     }
 
     @Test func testMMul2x1() {
-        let a = Tensor<Float, CPU>([1,2,3])
+        let a = Tensor<Float, CPU>([1, 2, 3])
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
 
         let result = matMul(c, a)
@@ -105,7 +105,7 @@ struct VecTests {
     }
 
     @Test func testMMul1x2() {
-        let d = Tensor<Float, CPU>([1,2])
+        let d = Tensor<Float, CPU>([1, 2])
         let c = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
 
         let result = matMul(d, c)
@@ -184,7 +184,7 @@ struct VecTests {
 
         let expected: [[Float]] = [
             [e * 2, e * e * 2, e * e * e * 2],
-            [2, 2 / e, 2 / (e * e)]
+            [2, 2 / e, 2 / (e * e)],
         ]
 
         for r in 0 ..< result.shape[0] {
@@ -202,7 +202,7 @@ struct VecTests {
 
         let expected: [[Float]] = [
             [4, 2, 4.0 / 3.0],
-            [4.0 / 10.0, 4.0 / 20.0, 4.0 / 30.0]
+            [4.0 / 10.0, 4.0 / 20.0, 4.0 / 30.0],
         ]
 
         for r in 0 ..< result.shape[0] {
@@ -226,7 +226,7 @@ struct VecTests {
     }
 
     @Test func testNeg() {
-        let a = Tensor<Float, CPU>([1,2,3,4,5])
+        let a = Tensor<Float, CPU>([1, 2, 3, 4, 5])
 
         let result = -a
 
@@ -236,9 +236,9 @@ struct VecTests {
     @Test func testSigmoid() {
         let a = Tensor<Float, CPU>(normalDistributedWithShape: 10)
 
-        let elements = (0 ..< 10).map { (x: Int) in a[x].item}
+        let elements = (0 ..< 10).map { (x: Int) in a[x].item }
 
-        let ref = elements.map {1 / (1 + exp(-$0))}
+        let ref = elements.map { 1 / (1 + exp(-$0)) }
         let result = 1 / (1 + exp(-a))
 
         for i in 0 ..< 10 {
@@ -247,8 +247,8 @@ struct VecTests {
     }
 
     @Test func testAddBackwards() {
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = b + c
         let grads = result.gradients(of: [b, c])
@@ -263,14 +263,14 @@ struct VecTests {
     }
 
     @Test func testAddBackwards2() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (a + b) * 2
         let grads = result.gradients(of: [a, b])
 
-        let aExpected: [[Float]] = [[2,2],[2,2],[2,2]]
-        let bExpected: [Float] = [6,6]
+        let aExpected: [[Float]] = [[2, 2], [2, 2], [2, 2]]
+        let bExpected: [Float] = [6, 6]
 
         for i in 0 ..< 2 {
             expectEqual(grads[1][i].item, bExpected[i], accuracy: 0.0001)
@@ -284,8 +284,8 @@ struct VecTests {
     }
 
     @Test func testAddBackwards3() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (a + b) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -300,8 +300,8 @@ struct VecTests {
     }
 
     @Test func testAddBackwards4() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (b + a) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -316,8 +316,8 @@ struct VecTests {
     }
 
     @Test func testSubBackwards() {
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = b - c
         let grads = result.gradients(of: [b, c])
@@ -332,8 +332,8 @@ struct VecTests {
     }
 
     @Test func testSubBackwards2() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (a - b) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -348,8 +348,8 @@ struct VecTests {
     }
 
     @Test func testSubBackwards3() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (b - a) * 2
         let aGrad = result.gradients(of: [a])[0]
@@ -364,8 +364,8 @@ struct VecTests {
     }
 
     @Test func testMulBackwards() {
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = b * c
 
@@ -381,8 +381,8 @@ struct VecTests {
     }
 
     @Test func testMulBackwards2() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (a * b) * 2
 
@@ -398,8 +398,8 @@ struct VecTests {
     }
 
     @Test func testMulBackwards3() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (b * a) * 2
 
@@ -415,8 +415,8 @@ struct VecTests {
     }
 
     @Test func testDivBackwards() {
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
+        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = b / c
         let grads = result.gradients(of: [b, c])
@@ -431,8 +431,8 @@ struct VecTests {
     }
 
     @Test func testDivBackwards2() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (a / b) * 2
 
@@ -448,8 +448,8 @@ struct VecTests {
     }
 
     @Test func testDivBackwards3() {
-        let a = Tensor<Float, CPU>([[1,2],[3,4],[5,6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1,2], requiresGradient: true)
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
+        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
 
         let result = (b / a) * 2
 
@@ -465,7 +465,7 @@ struct VecTests {
     }
 
     @Test func testAxisSum() {
-        let a = Tensor<Float, CPU>([[1,2,3],[4,5,6]])
+        let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
 
         let result = sum(a, axes: [0])
 
@@ -473,7 +473,7 @@ struct VecTests {
     }
 
     @Test func testNegativeIndices() {
-        let a = Tensor<Float, CPU>([[1,2,3,4],[5,6,7,8]])
+        let a = Tensor<Float, CPU>([[1, 2, 3, 4], [5, 6, 7, 8]])
 
         #expect(a[nil, -3] == Tensor([2, 6]))
     }

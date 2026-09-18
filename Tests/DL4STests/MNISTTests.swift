@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 import DL4S
+import Testing
 
 /// Training runs on MNIST.
 ///
@@ -191,7 +191,7 @@ struct MNISTTests {
         scale: Scale,
         run: TrainingRun,
         loss: (Tensor<Int32, CPU>, Tensor<Float, CPU>) -> Tensor<Float, CPU>,
-        input: (Tensor<Float, CPU>) -> Tensor<Float, CPU>
+        input: (Tensor<Float, CPU>) -> Tensor<Float, CPU>,
     ) -> Float where Layer.Inputs == Tensor<Float, CPU>, Layer.Outputs == Tensor<Float, CPU>, Layer.Parameter == Float, Layer.Device == CPU {
         let data = scale.data
         var generator = WyHash(seed: 1)
@@ -226,16 +226,16 @@ struct MNISTTests {
     private func runConvClassifier(scale: Scale) -> Float {
         var generator = WyHash(seed: 42)
         let model = makeConvClassifier(using: &generator)
-        return trainAndEvaluate(model, scale: scale, run: scale == .sample ? .convolutionalSample : .full, loss: { categoricalCrossEntropy(expected: $0, actual: $1) }) { $0 }
+        return trainAndEvaluate(model, scale: scale, run: scale == .sample ? .convolutionalSample : .full, loss: { categoricalCrossEntropy(expected: $0, actual: $1) }, input: { $0 })
     }
 
     private func runGRUClassifier(scale: Scale) -> Float {
         var generator = WyHash(seed: 42)
         let model = makeGRUClassifier(using: &generator)
-        return trainAndEvaluate(model, scale: scale, run: scale == .sample ? .sample : .full, loss: { categoricalCrossEntropy(expected: $0, actual: $1) }) {
+        return trainAndEvaluate(model, scale: scale, run: scale == .sample ? .sample : .full, loss: { categoricalCrossEntropy(expected: $0, actual: $1) }, input: {
             // The GRU reads one image row per time step: [sequence length, batch, features].
             $0.view(as: [-1, 28, 28]).permuted(to: [1, 0, 2])
-        }
+        })
     }
 
     @Test(arguments: DenseActivation.allCases)

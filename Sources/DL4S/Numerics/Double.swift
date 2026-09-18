@@ -27,67 +27,66 @@ import Foundation
 
 extension Double: NumericType {
     public func format(maxDecimals: Int) -> String {
-        return String(format: "%.\(maxDecimals)f", self)
+        String(format: "%.\(maxDecimals)f", self)
     }
-    
+
     public func toUInt8() -> UInt8 {
-        return UInt8(self)
+        UInt8(self)
     }
-    
+
     public func toInt() -> Int {
-        return Int(self)
+        Int(self)
     }
-    
+
     public var floatValue: Float {
-        return Float(self)
+        Float(self)
     }
-    
+
     public var doubleValue: Double {
-        return self
+        self
     }
-    
+
     public var intValue: Int32 {
-        return Int32(self)
+        Int32(self)
     }
-    
+
     public static var one: Double {
-        return 1.0
+        1.0
     }
-    
+
     public func sqrt() -> Double {
-        return Foundation.sqrt(self)
+        Foundation.sqrt(self)
     }
-    
+
     public func exp() -> Double {
-        return Foundation.exp(self)
+        Foundation.exp(self)
     }
-    
+
     public func log() -> Double {
-        return Foundation.log(self)
+        Foundation.log(self)
     }
-    
+
     public func sin() -> Double {
-        return Foundation.sin(self)
+        Foundation.sin(self)
     }
-    
+
     public func cos() -> Double {
-        return Foundation.cos(self)
+        Foundation.cos(self)
     }
-    
+
     public func tan() -> Double {
-        return Foundation.tanh(self)
+        Foundation.tanh(self)
     }
-    
+
     public func sinh() -> Double {
-        return Foundation.sinh(self)
+        Foundation.sinh(self)
     }
-    
+
     public func cosh() -> Double {
-        return Foundation.cosh(self)
+        Foundation.cosh(self)
     }
-    
+
     public func tanh() -> Double {
-        return Foundation.tanh(self)
+        Foundation.tanh(self)
     }
 }
-

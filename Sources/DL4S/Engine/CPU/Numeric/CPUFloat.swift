@@ -41,18 +41,18 @@ extension Float: CPUNumeric {
             ippsSet_32f(value, dst, Int32(count))
         } else {
             for i in 0 ..< count {
-                dst[i &* stride] = value;
+                dst[i &* stride] = value
             }
         }
         #elseif canImport(Accelerate)
         vDSP_vfill([value], dst, stride, UInt(count))
         #else
         for i in 0 ..< count {
-            dst[i &* stride] = value;
+            dst[i &* stride] = value
         }
         #endif
     }
-    
+
     public static func fill(value: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let dst = result.pointer(capacity: count)
         #if MKL_ENABLE
@@ -61,11 +61,11 @@ extension Float: CPUNumeric {
         vDSP_vfill([value], dst, 1, UInt(count))
         #else
         for i in 0 ..< count {
-            dst[i] = value;
+            dst[i] = value
         }
         #endif
     }
-    
+
     public static func relu(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -75,12 +75,12 @@ extension Float: CPUNumeric {
         vDSP_vthres(src, 1, [0], dst, 1, UInt(count))
         #else
         for i in 0 ..< count {
-            let s = src[i];
-            dst[i] = s > 0 ? s : 0;
+            let s = src[i]
+            dst[i] = s > 0 ? s : 0
         }
         #endif
     }
-    
+
     public static func transpose(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, srcRows: Int, srcCols: Int) {
         let src = val.pointer(capacity: srcRows * srcCols)
         let dst = result.pointer(capacity: srcRows * srcCols)
@@ -91,12 +91,12 @@ extension Float: CPUNumeric {
         #else
         for x in 0 ..< srcCols {
             for y in 0 ..< srcRows {
-                dst[y &+ x &* srcRows] = src[y &* srcCols &+ x];
+                dst[y &+ x &* srcRows] = src[y &* srcCols &+ x]
             }
         }
         #endif
     }
-    
+
     public static func vNeg(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -110,7 +110,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func vsAdd(lhs: UnsafeBufferPointer<Float>, rhs: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = lhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -120,11 +120,11 @@ extension Float: CPUNumeric {
         vDSP_vsadd(src, 1, [rhs], dst, 1, UInt(count))
         #else
         for i in 0 ..< count {
-            dst[i] = lhs[i] + rhs;
+            dst[i] = lhs[i] + rhs
         }
         #endif
     }
-    
+
     public static func vsMul(lhs: UnsafeBufferPointer<Float>, rhs: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let lhs = lhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -134,11 +134,11 @@ extension Float: CPUNumeric {
         vDSP_vsmul(lhs, 1, [rhs], dst, 1, UInt(count))
         #else
         for i in 0 ..< count {
-            dst[i] = lhs[i] * rhs;
+            dst[i] = lhs[i] * rhs
         }
         #endif
     }
-    
+
     public static func svDiv(lhs: Float, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -152,7 +152,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func vAdd(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
@@ -167,12 +167,12 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func vSub(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        
+
         #if MKL_ENABLE
         vsSub(Int32(count), lhs, rhs, dst)
         #elseif canImport(Accelerate)
@@ -183,12 +183,12 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func vMul(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        
+
         #if MKL_ENABLE
         CMKL.vsMul(Int32(count), lhs, rhs, dst)
         #elseif canImport(Accelerate)
@@ -199,12 +199,12 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func vDiv(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
-        
+
         #if MKL_ENABLE
         CMKL.vsDiv(Int32(count), lhs, rhs, dst)
         #elseif canImport(Accelerate)
@@ -215,11 +215,11 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func sum(val: UnsafeBufferPointer<Float>, count: Int) -> Float {
         let src = val.pointer(capacity: count)
         var dst: Float = 0
-        
+
         #if MKL_ENABLE
         ippsSum_32f(src, Int32(count), &dst, ippAlgHintFast)
         #elseif canImport(Accelerate)
@@ -231,11 +231,11 @@ extension Float: CPUNumeric {
         #endif
         return dst
     }
-    
+
     public static func sum(val: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> Float {
         let src = val.pointer(capacity: (count - 1) * stride + 1)
         var dst: Float = 0
-        
+
         #if MKL_ENABLE
         if stride == 1 {
             ippsSum_32f(src, Int32(count), &dst, ippAlgHintFast)
@@ -255,7 +255,7 @@ extension Float: CPUNumeric {
         return dst
         #endif
     }
-    
+
     public static func gemm(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), alpha: Self, beta: Self, transposeFirst: Bool, transposeSecond: Bool) {
         precondition((transposeFirst ? lhsShape.1 : lhsShape.0) == resultShape.0)
         precondition((transposeSecond ? rhsShape.0 : rhsShape.1) == resultShape.1)
@@ -271,7 +271,7 @@ extension Float: CPUNumeric {
             lhs.pointer(capacity: lhsShape.0 * lhsShape.1), Int32(lhsShape.1),
             rhs.pointer(capacity: rhsShape.0 * rhsShape.1), Int32(rhsShape.1),
             beta,
-            result.pointer(capacity: resultShape.0 * resultShape.1), Int32(resultShape.1)
+            result.pointer(capacity: resultShape.0 * resultShape.1), Int32(resultShape.1),
         )
         #else
         gemm_generic(
@@ -282,16 +282,16 @@ extension Float: CPUNumeric {
             lhs.pointer(capacity: lhsShape.0 * lhsShape.1), lhsShape.1,
             rhs.pointer(capacity: rhsShape.0 * rhsShape.1), rhsShape.1,
             beta,
-            result.pointer(capacity: resultShape.0 * resultShape.1), resultShape.1
+            result.pointer(capacity: resultShape.0 * resultShape.1), resultShape.1,
         )
         #endif
     }
-    
+
     public static func argmax(values: UnsafeBufferPointer<Float>, count: Int) -> (Int, Float) {
-        var maxI: Int = 0
+        var maxI = 0
         var maxV: Float = 0
         let src = values.pointer(capacity: count)
-        
+
         #if MKL_ENABLE
         var maxI32: Int32 = 0
         ippsMaxIndx_32f(src, Int32(count), &maxV, &maxI32)
@@ -301,7 +301,7 @@ extension Float: CPUNumeric {
         vDSP_maxvi(src, 1, &maxV, &maxIU, UInt(count))
         maxI = Int(maxIU)
         #else
-        maxV = -Float.infinity;
+        maxV = -Float.infinity
         for i in 0 ..< count {
             let v = src[i]
             if v > maxV {
@@ -312,12 +312,12 @@ extension Float: CPUNumeric {
         #endif
         return (Int(maxI), maxV)
     }
-    
+
     public static func argmin(values: UnsafeBufferPointer<Float>, count: Int) -> (Int, Float) {
-        var minI: Int = 0
+        var minI = 0
         var minV: Float = 0
         let src = values.pointer(capacity: count)
-        
+
         #if MKL_ENABLE
         var minI32: Int32 = 0
         ippsMinIndx_32f(src, Int32(count), &minV, &minI32)
@@ -327,7 +327,7 @@ extension Float: CPUNumeric {
         vDSP_minvi(src, 1, &minV, &minIU, UInt(count))
         minI = Int(minIU)
         #else
-        minV = Float.infinity;
+        minV = Float.infinity
         for i in 0 ..< count {
             let v = src[i]
             if v < minV {
@@ -338,19 +338,19 @@ extension Float: CPUNumeric {
         #endif
         return (Int(minI), minV)
     }
-    
+
     public static func argmax(values: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> (Int, Float) {
         if stride == 1 {
             return argmax(values: values, count: count)
         }
-        
+
         #if canImport(Accelerate) && !MKL_ENABLE
         var maxI: UInt = 0
         var maxV: Float = 0
         vDSP_maxvi(values.pointer(capacity: (count - 1) * stride + 1), stride, &maxV, &maxI, UInt(count))
         return (Int(maxI) / stride, maxV)
         #else
-        var maxI: Int = 0
+        var maxI = 0
         var maxV: Float = -Float.infinity
         let src = values.pointer(capacity: stride * (count - 1) + 1)
         for i in 0 ..< count {
@@ -363,20 +363,20 @@ extension Float: CPUNumeric {
         return (maxI, maxV)
         #endif
     }
-    
+
     public static func argmin(values: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> (Int, Float) {
         if stride == 1 {
             return argmin(values: values, count: count)
         }
-        
+
         #if canImport(Accelerate) && !MKL_ENABLE
         var minI: UInt = 0
         var minV: Float = 0
         vDSP_minvi(values.pointer(capacity: (count - 1) * stride + 1), stride, &minV, &minI, UInt(count))
         return (Int(minI) / stride, minV)
         #else
-        var minI: Int = 0
-        var minV: Float = Float.infinity
+        var minI = 0
+        var minV = Float.infinity
         let src = values.pointer(capacity: stride * count)
         for i in 0 ..< count {
             let v = src[i &* stride]
@@ -388,11 +388,11 @@ extension Float: CPUNumeric {
         return (minI, minV)
         #endif
     }
-    
+
     public static func copy(values: UnsafeBufferPointer<Float>, srcStride: Int, result: UnsafeMutableBufferPointer<Float>, dstStride: Int, count: Int) {
         let src = values.pointer(capacity: count * srcStride)
         let dst = result.pointer(capacity: count * dstStride)
-        
+
         #if MKL_ENABLE || canImport(Accelerate)
         cblas_scopy(Int32(count), src, Int32(srcStride), dst, Int32(dstStride))
         #else
@@ -401,7 +401,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func arange(start: Float, end: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let dst = result.pointer(capacity: count)
         let increment = end / Float(count)
@@ -415,7 +415,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func max(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
@@ -432,7 +432,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func min(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let lhs = lhs.pointer(capacity: count)
         let rhs = rhs.pointer(capacity: count)
@@ -449,7 +449,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func exp(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -463,7 +463,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func log(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -477,7 +477,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func tanh(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -491,7 +491,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func sqrt(val: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = val.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -505,7 +505,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func heaviside(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -513,7 +513,7 @@ extension Float: CPUNumeric {
             dst[i] = src[i] > 0 ? 1 : 0
         }
     }
-    
+
     public static func sin(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -527,7 +527,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func cos(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -541,7 +541,7 @@ extension Float: CPUNumeric {
         }
         #endif
     }
-    
+
     public static func tan(values: UnsafeBufferPointer<Float>, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
@@ -556,6 +556,3 @@ extension Float: CPUNumeric {
         #endif
     }
 }
-
-
-

@@ -1,5 +1,5 @@
 //
-//  VectorNumerics.swift
+//  NumericType.swift
 //  DL4S
 //
 //  Created by Palle Klewitz on 25.02.19.
@@ -30,7 +30,6 @@ import Foundation
 /// - x * .zero = .zero
 /// - x + .zero = x
 public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
-    
     /// Zero value
     ///
     /// - x * .zero = .zero
@@ -40,27 +39,26 @@ public protocol ZeroableType: Hashable, Codable, ExpressibleByIntegerLiteral {
 
 /// A type that can be used as a number in a Tensor.
 public protocol NumericType: ZeroableType, CPUNumeric, Sendable {
-    
     /// Formats the number with the given amount of decimal places
     /// - Parameter maxDecimals: Maximum amount of decimal places
     func format(maxDecimals: Int) -> String
-    
+
     init(_ floatValue: Double)
     init(_ integerValue: Int32)
-    
+
     static var zero: Self { get }
     static var one: Self { get }
-    
+
     var floatValue: Float { get }
     var doubleValue: Double { get }
     var intValue: Int32 { get }
-    
+
     static prefix func - (value: Self) -> Self
     static func + (lhs: Self, rhs: Self) -> Self
     static func - (lhs: Self, rhs: Self) -> Self
     static func / (lhs: Self, rhs: Self) -> Self
     static func * (lhs: Self, rhs: Self) -> Self
-    
+
     func sqrt() -> Self
     func log() -> Self
     func exp() -> Self
@@ -70,18 +68,17 @@ public protocol NumericType: ZeroableType, CPUNumeric, Sendable {
     func sinh() -> Self
     func cosh() -> Self
     func tanh() -> Self
-    
+
     var isFinite: Bool { get }
     var isNaN: Bool { get }
-    
+
     init(_ float: Float)
     init(_ int: Int)
     init(_ uint: UInt)
     init(_ uint8: UInt8)
-    
+
     func toUInt8() -> UInt8
     func toInt() -> Int
-    
 }
 
 public extension UInt8 {
@@ -116,7 +113,7 @@ public extension NumericType {
     static func += (lhs: inout Self, rhs: Self) {
         lhs = lhs + rhs
     }
-    
+
     @inline(__always)
     @_specialize(where Self == Float)
     @_specialize(where Self == Double)
@@ -124,7 +121,7 @@ public extension NumericType {
     static func -= (lhs: inout Self, rhs: Self) {
         lhs = lhs - rhs
     }
-    
+
     @inline(__always)
     @_specialize(where Self == Float)
     @_specialize(where Self == Double)
@@ -132,7 +129,7 @@ public extension NumericType {
     static func *= (lhs: inout Self, rhs: Self) {
         lhs = lhs * rhs
     }
-    
+
     @inline(__always)
     @_specialize(where Self == Float)
     @_specialize(where Self == Double)

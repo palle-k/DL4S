@@ -16,21 +16,21 @@ let mklTargets: [Target] = [
         name: "CMKL",
         pkgConfig: "mkl-dynamic-lp64-gomp",
         providers: [
-            .apt(["intel-oneapi-mkl-devel", "intel-oneapi-ipp-devel"])
-        ]
-    )
+            .apt(["intel-oneapi-mkl-devel", "intel-oneapi-ipp-devel"]),
+        ],
+    ),
 ]
 let mklDependencies: [Target.Dependency] = [
-    .target(name: "CMKL", condition: .when(traits: ["MKL"]))
+    .target(name: "CMKL", condition: .when(traits: ["MKL"])),
 ]
 let mklSwiftSettings: [SwiftSetting] = [
-    .define("MKL_ENABLE", .when(traits: ["MKL"]))
+    .define("MKL_ENABLE", .when(traits: ["MKL"])),
 ]
 #else
 let mklTargets: [Target] = []
 let mklDependencies: [Target.Dependency] = []
 let mklSwiftSettings: [SwiftSetting] = [
-    .define("MKL_UNSUPPORTED_PLATFORM", .when(traits: ["MKL"]))
+    .define("MKL_UNSUPPORTED_PLATFORM", .when(traits: ["MKL"])),
 ]
 #endif
 
@@ -40,27 +40,30 @@ let package = Package(
         .macOS(.v15),
         .iOS(.v18),
         .tvOS(.v18),
-        .watchOS(.v11)
+        .watchOS(.v11),
     ],
     products: [
         .library(
             name: "DL4S",
-            targets: ["DL4S"]),
+            targets: ["DL4S"],
+        ),
     ],
     traits: [
         .trait(
             name: "MKL",
-            description: "Accelerates the CPU backend with Intel oneAPI MKL and IPP. Requires x86_64 Linux and the oneAPI environment (source the setvars.sh script of oneAPI before you build)."
-        )
+            description: "Accelerates the CPU backend with Intel oneAPI MKL and IPP. Requires x86_64 Linux and the oneAPI environment (source the setvars.sh script of oneAPI before you build).",
+        ),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.5.0")
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.5.0"),
+        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.65.1"),
+        .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.63.0"),
     ],
     targets: mklTargets + [
         .target(
             name: "DL4S",
             dependencies: mklDependencies,
-            swiftSettings: mklSwiftSettings
+            swiftSettings: mklSwiftSettings,
         ),
         .testTarget(
             name: "DL4STests",
@@ -69,10 +72,10 @@ let package = Package(
                 .copy("t10k-images.idx3-ubyte"),
                 .copy("t10k-labels.idx1-ubyte"),
                 .copy("train-images.idx3-ubyte"),
-                .copy("train-labels.idx1-ubyte")
+                .copy("train-labels.idx1-ubyte"),
             ],
-            swiftSettings: mklSwiftSettings
-        )
+            swiftSettings: mklSwiftSettings,
+        ),
     ],
-    swiftLanguageModes: [.v6]
+    swiftLanguageModes: [.v6],
 )

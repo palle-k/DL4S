@@ -23,9 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 import DL4S
-
+import Testing
 
 struct RowTransformerClassifier: LayerType, Codable {
     typealias Inputs = Tensor<Float, CPU>
@@ -44,7 +43,7 @@ struct RowTransformerClassifier: LayerType, Codable {
         Array([
             parameterPaths(of: \.project),
             parameterPaths(of: \.encoder),
-            parameterPaths(of: \.classify)
+            parameterPaths(of: \.classify),
         ].joined())
     }
 
@@ -74,7 +73,7 @@ struct TransformerMNISTTests {
         var optimizer = Adam(model: model, learningRate: 0.001)
         let batchSize = 64
         let steps = 600
-        var bar = ProgressBar<Float>(totalUnitCount: steps, formatUserInfo: {"loss: \($0)"}, label: "training")
+        var bar = ProgressBar<Float>(totalUnitCount: steps, formatUserInfo: { "loss: \($0)" }, label: "training")
 
         for _ in 1 ... steps {
             let (input, target) = MNIST.minibatch(from: data.trainingImages, labels: data.trainingLabels, count: batchSize, using: &generator)

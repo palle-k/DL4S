@@ -32,17 +32,17 @@ public protocol LearningRateScheduler: Sendable {
 public struct NoamScheduler: LearningRateScheduler {
     public let warmupSteps: Int
     public let modelDim: Int
-    
+
     public init(warmupSteps: Int, modelDim: Int) {
         self.warmupSteps = warmupSteps
         self.modelDim = modelDim
     }
-    
+
     public func learningRate<Element: NumericType>(atStep step: Int) -> Element {
         let step = Float(step)
-        let warmupSteps = Float(self.warmupSteps)
-        let modelDim = Float(self.modelDim)
-        
+        let warmupSteps = Float(warmupSteps)
+        let modelDim = Float(modelDim)
+
         return Element(1 / sqrt(modelDim) * min(1 / sqrt(step), step * pow(warmupSteps, -1.5)))
     }
 }

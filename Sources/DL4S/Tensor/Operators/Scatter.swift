@@ -25,12 +25,12 @@
 
 import Foundation
 
-//MARK: Indexing
+// MARK: Indexing
+
 public extension Tensor {
-    
     /// Gathers elements at indices determined by the context along the specified axis.
     ///
-    ///```
+    /// ```
     /// Example: Gathering from Tensor [[1,2,3], [4,5,6], [7,8,9]]
     /// Context: [0, 1, 2], axis: 0
     /// => [1,5,9]
@@ -46,10 +46,10 @@ public extension Tensor {
         var resultShape = shape
         resultShape.remove(at: axis)
         let originalAxisSize = shape[axis]
-        
+
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        
-        Device.Engine.gather(expanded: self.values, context: context.values, result: resultBuffer, axis: axis, ignoreIndex: ignoreIndex)
+
+        Device.Engine.gather(expanded: values, context: context.values, result: resultBuffer, axis: axis, ignoreIndex: ignoreIndex)
         return Tensor(
             using: resultBuffer,
             context: requiresGradient ? TensorContext(
@@ -57,15 +57,14 @@ public extension Tensor {
                 sources: [self],
                 backpropagate: [{ resultGradient -> Self in
                     resultGradient.scatter(using: context, alongAxis: axis, withSize: originalAxisSize, ignoreIndex: ignoreIndex)
-                }]
-            ) : nil
+                }],
+            ) : nil,
         )
     }
-    
-    
+
     /// Scatters elements to indices determined by the context along the specified axis.
     ///
-    ///```
+    /// ```
     /// Example: Scattering Tensor [3, 1, 4]
     /// Context: [0, 1, 2], axis: 0, axisSize: 3
     /// => [[3, 0, 0], [0, 1, 0], [0, 0, 4]]
@@ -90,8 +89,8 @@ public extension Tensor {
                 sources: [self],
                 backpropagate: [{ resultGradient -> Self in
                     resultGradient.gather(using: context, alongAxis: axis, ignoreIndex: ignoreIndex)
-                }]
-            ) : nil
+                }],
+            ) : nil,
         )
     }
 }

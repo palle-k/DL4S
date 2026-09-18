@@ -35,7 +35,7 @@ func autoreleasepool<Result>(_ function: () -> Result) -> Result {
 
 extension Sequence {
     func count(where predicate: (Element) throws -> Bool) rethrows -> Int {
-        return try lazy.filter(predicate).count
+        try lazy.filter(predicate).count
     }
 }
 
@@ -49,22 +49,21 @@ func shapeForBroadcastedOperands(_ lhs: [Int], _ rhs: [Int]) -> [Int] {
 @inline(__always)
 func iterate(_ shape: [Int]) -> [[Int]] {
     var result: [[Int]] = []
-    
+
     let count = shape.reduce(1, *)
     result.reserveCapacity(count)
-    
+
     let strides = MemoryOps.strides(from: shape)
-    
-    
+
     for i in 0 ..< count {
         var next: [Int] = Array(repeating: 0, count: shape.count)
         for axis in 0 ..< shape.count {
             next[axis] = (i / strides[axis]) % shape[axis]
         }
-        
+
         result.append(next)
     }
-    
+
     return result
 }
 
@@ -72,30 +71,30 @@ func iterate(_ shape: [Int]) -> [[Int]] {
 func flatIterate(_ shape: [Int]) -> [Int] {
     let count = shape.reduce(1, *)
     let dim = shape.count
-    
+
     let strides = MemoryOps.strides(from: shape)
     var result = [Int](repeating: 0, count: count * dim)
-    
+
     for i in 0 ..< count {
         let b = i * dim
         for axis in 0 ..< dim {
             result[b + axis] = (i / strides[axis]) % shape[axis]
         }
     }
-    
+
     return result
 }
 
 prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parameters) -> Bool {
-    return { params in
+    { params in
         !predicate(params)
     }
 }
 
 extension Collection {
     func minIndex(by comparator: (Element, Element) throws -> Bool) rethrows -> Index? {
-        var minIndex: Index? = nil
-        var minValue: Element? = nil
+        var minIndex: Index?
+        var minValue: Element?
         for index in indices {
             if let mv = minValue, try !comparator(mv, self[index]) {
                 minIndex = index
@@ -106,24 +105,23 @@ extension Collection {
     }
 }
 
-
 public struct ProgressBar<UserInfo> {
     public let totalUnitCount: Int
     public private(set) var currentUnitCount: Int
     public let formatUserInfo: (UserInfo) -> String
     public let label: String
     private var startTime = Date()
-    
+
     public init(totalUnitCount: Int, formatUserInfo: @escaping (UserInfo) -> String, label: String) {
         self.totalUnitCount = totalUnitCount
         self.formatUserInfo = formatUserInfo
         self.label = label
-        self.currentUnitCount = 0
+        currentUnitCount = 0
     }
-    
+
     private static func formatRemainingTime(_ interval: TimeInterval) -> String {
         let remaining = Duration.seconds(interval).formatted(
-            .units(allowed: [.days, .hours, .minutes, .seconds], width: .narrow)
+            .units(allowed: [.days, .hours, .minutes, .seconds], width: .narrow),
         )
         return "About \(remaining) remaining"
     }
@@ -135,20 +133,18 @@ public struct ProgressBar<UserInfo> {
         let perUnitDuration = interval / Double(currentUnitCount)
         let remainingDuration = perUnitDuration * Double(totalUnitCount - currentUnitCount)
         let remainingString = Self.formatRemainingTime(remainingDuration)
-        
-        
+
         let filled = String(repeating: "#", count: currentUnitCount * 30 / totalUnitCount)
         let empty = String(repeating: " ", count: 30 - (currentUnitCount * 30 / totalUnitCount))
         print("\r\u{1b}[K\(label) [\(filled)\(empty)] (\(currentUnitCount)/\(totalUnitCount) - \(remainingString)) \(formatUserInfo(userInfo))", terminator: "")
         fflush(nil)
     }
-    
+
     public mutating func complete() {
-        self.currentUnitCount = self.totalUnitCount
+        currentUnitCount = totalUnitCount
         print("\r\u{1b}[K\(label): Done.")
     }
 }
-
 
 public struct Progress<Element>: Sequence {
     private struct ProgressIterator: IteratorProtocol {
@@ -157,7 +153,7 @@ public struct Progress<Element>: Sequence {
         var currentCount: Int
         let label: String?
         let unit: String?
-        
+
         mutating func next() -> Element? {
             if let next = baseIterator.next() {
                 currentCount += 1
@@ -168,38 +164,38 @@ public struct Progress<Element>: Sequence {
                 return nil
             }
         }
-        
+
         func print(completed: Int, total: Int) {
             let filled = String(repeating: "#", count: currentCount * 30 / totalUnitCount)
             let empty = String(repeating: " ", count: 30 - (currentCount * 30 / totalUnitCount))
-            
-            let label = self.label.map {"\($0) "} ?? ""
-            let unitString = unit.map {"\($0) "} ?? ""
+
+            let label = label.map { "\($0) " } ?? ""
+            let unitString = unit.map { "\($0) " } ?? ""
             let userInfo = "(\(unitString)\(currentCount)/\(totalUnitCount))"
-            
+
             Swift.print("\r\033[K\(label)[\(filled)\(empty)] \(userInfo)", terminator: "")
             fflush(nil)
         }
-        
+
         func printCompleted() {
             Swift.print("\r\033[K", terminator: "")
-            if let label = self.label {
+            if let label {
                 Swift.print("\(label): ", terminator: "")
             }
             Swift.print("Done.")
         }
     }
-    
+
     private let base: AnySequence<Element>
     public var label: String?
     public var unit: String?
-    
+
     public init<S: Sequence>(_ sequence: S, label: String? = nil, unit: String? = nil) where S.Element == Element {
-        self.base = AnySequence(sequence)
+        base = AnySequence(sequence)
         self.label = label
         self.unit = unit
     }
-    
+
     public consuming func makeIterator() -> AnyIterator<Element> {
         let baseIterator = base.makeIterator()
         let progressIterator = ProgressIterator(
@@ -207,33 +203,33 @@ public struct Progress<Element>: Sequence {
             totalUnitCount: base.underestimatedCount,
             currentCount: 0,
             label: label,
-            unit: unit
+            unit: unit,
         )
         return AnyIterator(progressIterator)
     }
 }
 
-extension Collection {
+public extension Collection {
     // @_specialize(where Self == Array<Int>)
-    public func dropLast(`while` predicate: (Element) throws -> Bool) rethrows -> SubSequence {
-        var index = self.index(self.endIndex, offsetBy: -1)
-        
-        while index > self.startIndex {
+    func dropLast(while predicate: (Element) throws -> Bool) rethrows -> SubSequence {
+        var index = index(endIndex, offsetBy: -1)
+
+        while index > startIndex {
             if try predicate(self[index]) {
                 index = self.index(index, offsetBy: -1)
             } else {
                 return self[...index]
             }
         }
-        
+
         return self[..<index]
     }
-    
+
     // @_specialize(where Self == Array<Int>)
-    public func suffix(`while` predicate: (Element) throws -> Bool) rethrows -> SubSequence {
-        var index = self.endIndex
-        
-        while index > self.startIndex {
+    func suffix(while predicate: (Element) throws -> Bool) rethrows -> SubSequence {
+        var index = endIndex
+
+        while index > startIndex {
             let nextIndex = self.index(index, offsetBy: -1)
             if try predicate(self[nextIndex]) {
                 index = nextIndex
@@ -241,30 +237,29 @@ extension Collection {
                 return self[index...]
             }
         }
-        
+
         return self[...]
     }
 }
 
-extension Sequence {
+public extension Sequence {
     @inline(__always)
-    public func suffix(`while` predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
-        return try Array(self).suffix(while: predicate)
+    func suffix(while predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
+        try Array(self).suffix(while: predicate)
     }
-    
+
     @inline(__always)
-    public func dropLast(`while` predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
-        return try Array(self).dropLast(while: predicate)
+    func dropLast(while predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
+        try Array(self).dropLast(while: predicate)
     }
 }
 
-
 public enum ConvUtil {
     public static func outputShape(for inputShape: [Int], kernelCount: Int, kernelWidth: Int, kernelHeight: Int, stride: Int, padding: Int) -> [Int] {
-        return [
+        [
             kernelCount,
             (inputShape[1] + 2 * padding - kernelHeight) / stride + 1,
-            (inputShape[2] + 2 * padding - kernelWidth) / stride + 1
+            (inputShape[2] + 2 * padding - kernelWidth) / stride + 1,
         ]
     }
 }
@@ -274,48 +269,44 @@ struct File: Sequence {
         private var buffer: Data?
         private let handle: FileHandle?
         private var isCompleted = false
-        
+
         init(handle: FileHandle?) {
             self.handle = handle
-            self.buffer = nil
+            buffer = nil
         }
-        
+
         mutating func next() -> String? {
-            return autoreleasepool { () -> String? in
-                guard let handle = self.handle, !isCompleted else {
+            autoreleasepool { () -> String? in
+                guard let handle, !isCompleted else {
                     return nil
                 }
-                
+
                 let chunkSize = 4096
-                
-                if let buffer = self.buffer, let index = buffer.firstIndex(of: Character("\n").asciiValue!) {
+
+                if let buffer, let index = buffer.firstIndex(of: Character("\n").asciiValue!) {
                     let line = String(data: buffer.prefix(upTo: index), encoding: .utf8)
                     self.buffer = Data(buffer.dropFirst(index + 1)) // creating a copy resets the indexing, otherwise index points to the wrong position
                     return line
                 } else {
                     let nextChunk = handle.readData(ofLength: chunkSize)
-                    
-                    let buffer = (self.buffer ?? Data()) + nextChunk
+
+                    let buffer = (buffer ?? Data()) + nextChunk
                     self.buffer = buffer
-                    
+
                     if nextChunk.count == 0 {
                         isCompleted = true
                         return String(data: buffer, encoding: .utf8)
                     }
-                    
-                    return self.next()
+
+                    return next()
                 }
             }
         }
     }
-    
+
     let url: URL
-    
-    init(url: URL) {
-        self.url = url
-    }
-    
+
     consuming func makeIterator() -> LineIterator {
-        return LineIterator(handle: try? FileHandle(forReadingFrom: self.url))
+        LineIterator(handle: try? FileHandle(forReadingFrom: url))
     }
 }

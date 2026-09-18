@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  LayerNorm.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2020 - Palle Klewitz
@@ -33,8 +33,9 @@ public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: LayerTyp
     public var parameterPaths: [WritableKeyPath<LayerNorm<Element, Device>, Tensor<Element, Device>> & Sendable] {
         [\.shift, \.scale]
     }
+
     public var parameters: [Tensor<Element, Device>] {
-        get {[shift, scale]}
+        [shift, scale]
     }
 
     /// Learned shift vector

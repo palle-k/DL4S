@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 import DL4S
+import Testing
 
 struct GradientTests {
     @Test func testSecondDerivative() {
@@ -52,12 +52,12 @@ struct GradientTests {
             DL4S.cos,
             DL4S.relu,
             DL4S.sqrt,
-            {DL4S.softmax($0, axis: 1)},
-            {$0 * 2},
-            {$0 * $0},
-            {1 / $0},
-            {Tensor(stacking: [$0, $0], along: 1)},
-            {logSoftmax($0, axis: 1)}
+            { DL4S.softmax($0, axis: 1) },
+            { $0 * 2 },
+            { $0 * $0 },
+            { 1 / $0 },
+            { Tensor(stacking: [$0, $0], along: 1) },
+            { logSoftmax($0, axis: 1) },
         ]
 
         for (index, function) in functions.enumerated() {
@@ -111,13 +111,13 @@ struct GradientTests {
     @Test func testMatMul() {
         let lhs = Tensor<Float, CPU>([
             [1, 2, 3],
-            [4, 5, 6]
+            [4, 5, 6],
         ], requiresGradient: true)
 
         let rhs = Tensor<Float, CPU>([
             [1, 1],
             [2, 2],
-            [3, 3]
+            [3, 3],
         ], requiresGradient: true)
 
         let result = lhs.matrixMultiplied(with: rhs)

@@ -25,7 +25,7 @@
 
 import Foundation
 
-//MARK: Losses
+// MARK: Losses
 
 /// Computes the (element-wise) binary cross entropy loss on the given and expected probabilities and
 /// uses the mean as a reduction.
@@ -44,7 +44,7 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
     OperationGroup.capture(named: "BinaryCrossEntropy") {
         let e = expected.view(as: [-1])
         let a = actual.view(as: [-1])
-        
+
         let p1 = e * a.log()
         let p2 = (1 - e) * (1 - a).log()
         return (-(p1 + p2)).reduceMean()
@@ -68,7 +68,7 @@ public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(ex
     OperationGroup.capture(named: "CategoricalCrossEntropy") {
         precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
         precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
-        
+
         let expectedFlat = expected.flattened()
         let actualFlat = actual.view(as: expectedFlat.count, -1)
         return -log(actualFlat.gather(using: expectedFlat, alongAxis: 1, ignoreIndex: ignoreIndex)).reduceMean()
@@ -93,13 +93,12 @@ public func categoricalNegativeLogLikelihood<Element: NumericType, Device: Devic
     OperationGroup.capture(named: "NLLLoss") {
         precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
         precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
-        
+
         let expectedFlat = expected.flattened()
         let actualFlat = actual.view(as: expectedFlat.count, -1)
         return -actualFlat.gather(using: expectedFlat, alongAxis: 1, ignoreIndex: ignoreIndex).reduceMean()
     }
 }
-
 
 /// Computes the element-wise mean squared error between the given predicted and expected values
 ///
@@ -110,7 +109,7 @@ public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>,
     OperationGroup.capture(named: "MeanSquaredError") {
         let diff = expected - actual
         let s = sum(diff * diff)
-        return s  / Tensor(Element(expected.dim > 1 ? expected.shape[0] : 1))
+        return s / Tensor(Element(expected.dim > 1 ? expected.shape[0] : 1))
     }
 }
 
@@ -119,7 +118,7 @@ public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>,
 ///   - vector: Tensor to apply weight decay on
 ///   - loss: Weight decay importance scaling factor
 public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
-    return mean(vector * vector) * Tensor(loss)
+    mean(vector * vector) * Tensor(loss)
 }
 
 /// Computes the L1 loss of the given tensor.
@@ -128,5 +127,5 @@ public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Ele
 ///   - loss: Weight decay importance scaling factor
 public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
     // max(x, -x)
-    return leakyRelu(vector, leakage: -1).reduceMean() * Tensor(loss)
+    leakyRelu(vector, leakage: -1).reduceMean() * Tensor(loss)
 }

@@ -38,21 +38,21 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
             parameterPaths(of: \.classifier),
         ].joined())
     }
-    
+
     public var parameters: [Tensor<Element, Device>] {
         Array([
             featureNet.parameters,
             avgPool.parameters,
-            classifier.parameters
+            classifier.parameters,
         ].joined())
     }
-    
+
     var featureNet: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>, MaxPool2D<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, MaxPool2D<Element, Device>>, Convolution2D<Element, Device>>, Relu<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, MaxPool2D<Element, Device>>
-    
+
     var avgPool: AdaptiveAvgPool2D<Element, Device>
-    
+
     var classifier: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Flatten<Element, Device>, Dropout<Element, Device>>, Dense<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Dropout<Element, Device>>, Dense<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Dense<Element, Device>>, LogSoftmax<Element, Device>>
-    
+
     /// Determines whether dropout is applied in the classification block
     public var isDropoutActive: Bool {
         get {
@@ -63,8 +63,7 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
             classifier.first.first.first.first.first.second.isActive = newValue
         }
     }
-    
-    
+
     /// Creates an AlexNet image classification network with the given number of input channels and classes.
     ///
     /// The network expects images with a resolution of 192x192 or higher.
@@ -92,46 +91,46 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType,
             Convolution2D<Element, Device>(inputChannels: inputChannels, outputChannels: 64, kernelSize: (11, 11), padding: 2, stride: 4, using: &generator)
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
-            
+
             Convolution2D<Element, Device>(inputChannels: 64, outputChannels: 192, kernelSize: (5, 5), padding: 2, stride: 1, using: &generator)
             BatchNorm<Element, Device>(inputSize: [192, 1, 1])
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
-            
+
             Convolution2D<Element, Device>(inputChannels: 192, outputChannels: 384, kernelSize: (3, 3), padding: 1, stride: 1, using: &generator)
             Relu<Element, Device>()
-            
+
             Convolution2D<Element, Device>(inputChannels: 384, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1, using: &generator)
             BatchNorm<Element, Device>(inputSize: [256, 1, 1])
             Relu<Element, Device>()
-            
+
             Convolution2D<Element, Device>(inputChannels: 256, outputChannels: 256, kernelSize: (3, 3), padding: 1, stride: 1, using: &generator)
             BatchNorm<Element, Device>(inputSize: [256, 1, 1])
             Relu<Element, Device>()
             MaxPool2D<Element, Device>(windowSize: 3, stride: 2)
         }
-        
+
         avgPool = AdaptiveAvgPool2D(targetSize: 6)
-        
+
         classifier = Sequential {
             Flatten<Element, Device>()
-            
+
             Dropout<Element, Device>(rate: Float(0.5))
             Dense<Element, Device>(inputSize: 256 * 6 * 6, outputSize: 4096, using: &generator)
             BatchNorm<Element, Device>(inputSize: [4096])
             Relu<Element, Device>()
-            
+
             Dropout<Element, Device>(rate: Float(0.5))
             Dense<Element, Device>(inputSize: 4096, outputSize: 4096, using: &generator)
             BatchNorm<Element, Device>(inputSize: [4096])
             Relu<Element, Device>()
-            
+
             Dense<Element, Device>(inputSize: 4096, outputSize: classes, using: &generator)
             LogSoftmax<Element, Device>()
         }
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        return classifier(avgPool(featureNet(inputs)))
+        classifier(avgPool(featureNet(inputs)))
     }
 }

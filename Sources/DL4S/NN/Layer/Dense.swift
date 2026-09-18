@@ -27,23 +27,23 @@ import Foundation
 
 /// Dense (Linear, Fully connected) layer with no activation function.
 public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
-        \.weights,
-        \.bias
-    ]}
-    
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        [
+            \.weights,
+            \.bias,
+        ]
+    }
+
     /// Weights, shape [inputSize, outputSize]
     public var weights: Tensor<Element, Device>
-    
+
     /// Bias, shape [outputSize]
     public var bias: Tensor<Element, Device>
-    
+
     public var parameters: [Tensor<Element, Device>] {
-        get {
-            [weights, bias]
-        }
+        [weights, bias]
     }
-    
+
     /// Creates a dense / linear / fully connected layer with no output activation function.
     ///
     /// The layer expects inputs to have a shape of [batchSize, inputSize].
@@ -55,7 +55,7 @@ public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, C
         var generator = WyHash()
         self.init(inputSize: inputSize, outputSize: outputSize, using: &generator)
     }
-    
+
     /// Creates a dense / linear / fully connected layer with no output activation function.
     ///
     /// The layer expects inputs to have a shape of [batchSize, inputSize].
@@ -67,13 +67,13 @@ public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, C
     public init<Generator: RandomNumberGenerator>(inputSize: Int, outputSize: Int, using generator: inout Generator) {
         weights = Tensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true, using: &generator)
         bias = Tensor(repeating: 0, shape: [outputSize], requiresGradient: true)
-        
+
         #if DEBUG
         weights.tag = "W"
         bias.tag = "b"
         #endif
     }
-    
+
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Dense") {
             inputs.matrixMultiplied(with: weights) + bias

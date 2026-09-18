@@ -32,7 +32,7 @@ public protocol VGGBase: LayerType where Parameter: RandomizableType {
     associatedtype Conv4: LayerType where Conv4.Parameter == Parameter, Conv4.Device == Device, Conv4.Inputs == Tensor<Parameter, Device>, Conv4.Outputs == Tensor<Parameter, Device>
     associatedtype Conv5: LayerType where Conv5.Parameter == Parameter, Conv5.Device == Device, Conv5.Inputs == Tensor<Parameter, Device>, Conv5.Outputs == Tensor<Parameter, Device>
     typealias DenseLayer = Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Dense<Self.Parameter, Self.Device>, BatchNorm<Self.Parameter, Self.Device>>, Relu<Self.Parameter, Self.Device>>, Dropout<Self.Parameter, Self.Device>>, Dense<Self.Parameter, Self.Device>>, BatchNorm<Self.Parameter, Self.Device>>, Relu<Self.Parameter, Self.Device>>, Dropout<Self.Parameter, Self.Device>>, Dense<Self.Parameter, Self.Device>>, LogSoftmax<Self.Parameter, Self.Device>>
-    
+
     var conv1: Conv1 { get set }
     var conv2: Conv2 { get set }
     var conv3: Conv3 { get set }
@@ -43,18 +43,16 @@ public protocol VGGBase: LayerType where Parameter: RandomizableType {
 
 public extension VGGBase {
     var parameters: [Tensor<Parameter, Self.Device>] {
-        get {
-            Array([
-                conv1.parameters,
-                conv2.parameters,
-                conv3.parameters,
-                conv4.parameters,
-                conv5.parameters,
-                dense.parameters
-            ].joined())
-        }
+        Array([
+            conv1.parameters,
+            conv2.parameters,
+            conv3.parameters,
+            conv4.parameters,
+            conv5.parameters,
+            dense.parameters,
+        ].joined())
     }
-    
+
     var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] {
         Array([
             parameterPaths(of: \.conv1),
@@ -62,10 +60,10 @@ public extension VGGBase {
             parameterPaths(of: \.conv3),
             parameterPaths(of: \.conv4),
             parameterPaths(of: \.conv5),
-            parameterPaths(of: \.dense)
+            parameterPaths(of: \.dense),
         ].joined())
     }
-    
+
     var isDropoutActive: Bool {
         get {
             dense.first.first.first.first.first.first.second.isActive || dense.first.first.second.isActive
@@ -75,7 +73,7 @@ public extension VGGBase {
             dense.first.first.second.isActive = newValue
         }
     }
-    
+
     func callAsFunction(_ inputs: Tensor<Parameter, Device>) -> Tensor<Parameter, Device> {
         var x = inputs
         x = conv1.callAsFunction(x)
@@ -86,13 +84,13 @@ public extension VGGBase {
         x = dense.callAsFunction(x.view(as: x.shape[0], -1))
         return x
     }
-    
+
     static func makeDense(classes: Int) -> DenseLayer {
         var generator = WyHash()
         return makeDense(classes: classes, using: &generator)
     }
 
-    /// Creates the dense classifier that follows the convolutional blocks. 
+    /// Creates the dense classifier that follows the convolutional blocks.
     /// - Parameters:
     ///   - classes: Number of classes / dimensionality of network output
     ///   - generator: Random number generator that provides the initial weights.
@@ -102,12 +100,12 @@ public extension VGGBase {
             BatchNorm<Parameter, Device>(inputSize: [4096])
             Relu<Parameter, Device>()
             Dropout<Parameter, Device>(rate: 0.5)
-            
+
             Dense<Parameter, Device>(inputSize: 4096, outputSize: 4096, using: &generator)
             BatchNorm<Parameter, Device>(inputSize: [4096])
             Relu<Parameter, Device>()
             Dropout<Parameter, Device>(rate: 0.5)
-            
+
             Dense<Parameter, Device>(inputSize: 4096, outputSize: classes, using: &generator)
             LogSoftmax<Parameter, Device>()
         }

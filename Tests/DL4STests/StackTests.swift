@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 @testable import DL4S
+import Testing
 
 /// Holds a weak reference, so a test can check that an object was released.
 private final class WeakReference<Object: AnyObject> {

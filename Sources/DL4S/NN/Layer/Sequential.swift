@@ -43,19 +43,17 @@ import Foundation
 public struct Sequential<First: LayerType, Second: LayerType>: LayerType where First.Outputs == Second.Inputs, First.Parameter == Second.Parameter, First.Device == Second.Device {
     /// First transform
     public var first: First
-    
+
     /// Second transform
     public var second: Second
-    
+
     /// Tag for debugging purposes
-    public var tag: String? = nil
-    
+    public var tag: String?
+
     public var parameters: [Tensor<First.Parameter, First.Device>] {
-        get {
-            first.parameters + second.parameters
-        }
+        first.parameters + second.parameters
     }
-    
+
     /// A sequential layer that concatenates the computations of two other layers.
     /// - Parameters:
     ///   - first: First transform
@@ -64,20 +62,20 @@ public struct Sequential<First: LayerType, Second: LayerType>: LayerType where F
         self.first = first
         self.second = second
     }
-    
+
     public var parameterPaths: [WritableKeyPath<Self, Tensor<First.Parameter, First.Device>> & Sendable] {
         let firstPaths = parameterPaths(of: \.first)
         let secondPaths = parameterPaths(of: \.second)
         return firstPaths + secondPaths
     }
-    
+
     public func callAsFunction(_ inputs: First.Inputs) -> Second.Outputs {
-        if let tag = self.tag {
-            return OperationGroup.capture(named: tag) {
+        if let tag {
+            OperationGroup.capture(named: tag) {
                 second.callAsFunction(first.callAsFunction(inputs))
             }
         } else {
-            return second.callAsFunction(first.callAsFunction(inputs))
+            second.callAsFunction(first.callAsFunction(inputs))
         }
     }
 }
@@ -96,7 +94,7 @@ public extension LayerBuilder {
     static func buildPartialBlock<Layer: LayerType>(first: Layer) -> Layer {
         first
     }
-    
+
     /// Appends a layer to the sequence.
     ///
     /// - Parameters:

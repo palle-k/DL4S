@@ -25,10 +25,9 @@
 
 import Foundation
 
-//MARK: Broadcasting Operators
+// MARK: Broadcasting Operators
 
 public extension Tensor {
-    
     /// Element-wise broadcast adds the given tensors
     ///
     /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
@@ -44,33 +43,32 @@ public extension Tensor {
     static func + (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        
+
         if lhs.shape == rhs.shape {
             Device.Engine.vAdd(lhs: lhs.values.values, rhs: rhs.values.values, result: resultValues.values, count: lhs.count)
         } else {
             Device.Engine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: resultValues)
         }
-        
+
         if lhs.requiresGradient || rhs.requiresGradient {
             @Sendable func grad(a: Self, b: Self, grad: Self) -> Self {
                 OperationGroup.capture(named: "∇+") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                    
+                        .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
+
                     var tmpReducedShape = aPadded
-                    
+
                     for a in aReducedAxes.reversed() {
                         tmpReducedShape.remove(at: a)
                     }
-                    
-                    let reduced = grad
+
+                    return grad
                         .reduceSum(along: aReducedAxes)
                         .view(as: a.shape)
-                    return reduced
                 }
             }
-            
+
             let resultContext = TensorContext<Element, Device>(
                 tag: "+",
                 sources: [lhs, rhs],
@@ -79,16 +77,16 @@ public extension Tensor {
                         grad(a: lhs, b: rhs, grad: vectorGradient)
                     }, { vectorGradient in
                         grad(a: rhs, b: lhs, grad: vectorGradient)
-                    }
-                ]
+                    },
+                ],
             )
-            
+
             return Tensor(using: resultValues, context: resultContext)
         } else {
             return Tensor(using: resultValues, context: nil)
         }
     }
-    
+
     /// Element-wise broadcast multiplies the given tensors
     ///
     /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
@@ -104,30 +102,30 @@ public extension Tensor {
     static func * (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        
+
         if lhs.shape == rhs.shape {
             Device.Engine.vMul(lhs: lhs.values.values, rhs: rhs.values.values, result: resultValues.values, count: lhs.count)
         } else {
             Device.Engine.broadcastMul(lhs: lhs.values, rhs: rhs.values, result: resultValues)
         }
-        
+
         if lhs.requiresGradient || rhs.requiresGradient {
             @Sendable func grad(a: Self, b: Self, grad: Self) -> Self {
                 OperationGroup.capture(named: "∇⊙") {
                     let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
                     let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                        .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                    
+                        .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
+
                     var tmp1reducedShape = aPadded
-                    
+
                     for a in aReducedAxes.reversed() {
                         tmp1reducedShape.remove(at: a)
                     }
-                    
+
                     return (b * grad).reduceSum(along: aReducedAxes).view(as: a.shape)
                 }
             }
-            
+
             let resultContext = TensorContext<Element, Device>(
                 tag: "⊙",
                 sources: [lhs, rhs],
@@ -136,16 +134,16 @@ public extension Tensor {
                         grad(a: lhs, b: rhs, grad: vectorGradient)
                     }, { vectorGradient in
                         grad(a: rhs, b: lhs, grad: vectorGradient)
-                    }
-                ]
+                    },
+                ],
             )
-            
+
             return Tensor(using: resultValues, context: resultContext)
         } else {
             return Tensor(using: resultValues, context: nil)
         }
     }
-    
+
     /// Element-wise broadcast subtracts the given tensors
     ///
     /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
@@ -161,13 +159,13 @@ public extension Tensor {
     static func - (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        
+
         if lhs.shape == rhs.shape {
             Device.Engine.vSub(lhs: lhs.values.values, rhs: rhs.values.values, result: resultBuffer.values, count: lhs.count)
         } else {
             Device.Engine.broadcastSub(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
         }
-        
+
         if lhs.requiresGradient || rhs.requiresGradient {
             let resultContext = TensorContext(
                 tag: "-",
@@ -177,43 +175,42 @@ public extension Tensor {
                         OperationGroup.capture(named: "∇₁-") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                            
+                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
+
                             var tmpReducedShape = lhsPadded
-                            
+
                             for a in lhsReducedAxes.reversed() {
                                 tmpReducedShape.remove(at: a)
                             }
-                            
+
                             let gradient = resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
                             return acc.map { $0 + gradient } ?? gradient
-                            
                         }
                     }, { resultGradient, acc in
                         OperationGroup.capture(named: "∇₂-") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                            
+                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
+
                             var tmpReducedShape = rhsPadded
-                            
+
                             for a in rhsReducedAxes.reversed() {
                                 tmpReducedShape.remove(at: a)
                             }
-                            
+
                             let gradient = resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
                             return acc.map { $0 - gradient } ?? -gradient
                         }
-                    }
-                ]
+                    },
+                ],
             )
-             
+
             return Tensor(using: resultBuffer, context: resultContext)
         } else {
             return Tensor(using: resultBuffer, context: nil)
         }
     }
-    
+
     /// Element-wise broadcast divides the given tensors
     ///
     /// lhs and rhs must have matching shapes, such that dimensions of the shape are either equal or 1.
@@ -229,13 +226,13 @@ public extension Tensor {
     static func / (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        
+
         if lhs.shape == rhs.shape {
             Device.Engine.vDiv(lhs: lhs.values.values, rhs: rhs.values.values, result: resultBuffer.values, count: lhs.count)
         } else {
             Device.Engine.broadcastDiv(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
         }
-        
+
         if lhs.requiresGradient || rhs.requiresGradient {
             let context = TensorContext(
                 tag: "÷",
@@ -245,47 +242,45 @@ public extension Tensor {
                         OperationGroup.capture(named: "∇₁÷") {
                             let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
                             let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                            
+                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
+
                             var tmp1reducedShape = lhsPadded
-                            
+
                             for a in lhsReducedAxes.reversed() {
                                 tmp1reducedShape.remove(at: a)
                             }
-                            
+
                             let d = resultGradient / rhs
                             let gradient = d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
                             return acc.map { $0 + gradient } ?? gradient
-                            
                         }
                     }, { resultGradient, acc in
                         OperationGroup.capture(named: "∇₂÷") {
                             let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
                             let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                                .filter {$1.0 == 1 && $1.1 > 1}.map {$0.offset}
-                            
+                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
+
                             var tmp1reducedShape = rhsPadded
-                            
+
                             for a in rhsReducedAxes.reversed() {
                                 tmp1reducedShape.remove(at: a)
                             }
-                            
+
                             let m = resultGradient * lhs
                             let d = m / (rhs * rhs)
                             let gradient = d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
                             return acc.map { $0 - gradient } ?? -gradient
                         }
-                    }
-                ]
+                    },
+                ],
             )
-            
+
             return Tensor(using: resultBuffer, context: context)
         } else {
             return Tensor(using: resultBuffer, context: nil)
         }
     }
-    
-    
+
     /// Negates every element of the given tensor.
     ///
     /// - Parameter value: Tensor to negate
@@ -293,7 +288,7 @@ public extension Tensor {
     static prefix func - (value: Self) -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: value.shape, type: Element.self)
         Device.Engine.vNeg(val: value.values.values, result: resultBuffer.values, count: value.count)
-        
+
         return Tensor(
             using: resultBuffer,
             context: value.requiresGradient ? TensorContext(
@@ -301,11 +296,11 @@ public extension Tensor {
                 sources: [value],
                 backpropagate: [{ resultGradient in
                     -resultGradient
-                }]
-            ) : nil
+                }],
+            ) : nil,
         )
     }
-    
+
     /// In-place broadcast adds the given tensors.
     /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
     ///
@@ -325,7 +320,7 @@ public extension Tensor {
         #endif
         assert(originalShape == lhs.shape, "In-place addition has modified shape.")
     }
-    
+
     /// In-place broadcast subtracts the given tensors.
     /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
     ///
@@ -345,7 +340,7 @@ public extension Tensor {
         #endif
         assert(originalShape == lhs.shape, "In-place subtraction has modified shape.")
     }
-    
+
     /// In-place broadcast multiplies the given tensors.
     /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
     ///
@@ -365,7 +360,7 @@ public extension Tensor {
         #endif
         assert(originalShape == lhs.shape, "In-place multiplication has modified shape.")
     }
-    
+
     /// In-place broadcast divides the given tensors.
     /// This operation requires the resulting broadcast shape to be equivalent to the shape of lhs.
     ///
@@ -385,7 +380,7 @@ public extension Tensor {
         #endif
         assert(originalShape == lhs.shape, "In-place division has modified shape.")
     }
-    
+
     /// Performs a broadcasted exponentiation between self (base) and power (exponent).
     ///
     /// For detailed broadcasting rules, follow the [numpy documentation](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
@@ -394,9 +389,9 @@ public extension Tensor {
     ///   - power: Exponent
     /// - Returns: self broadcast exponentiated by power
     func raised(toPowerOf power: Self) -> Self {
-        (self.log() * power).exp()
+        (log() * power).exp()
     }
-    
+
     /// Computes the elementwise maxima between the given tensors
     ///
     /// - Parameters:
@@ -406,12 +401,12 @@ public extension Tensor {
     static func max(_ first: Self, _ second: Self) -> Self {
         precondition(first.shape == second.shape, "Shapes must be equal")
         let resultBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
-        
+
         if first.requiresGradient || second.requiresGradient {
             let contextBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
             Device.Engine.max(first.values, second.values, result: resultBuffer, context: contextBuffer)
             let contextTensor = Tensor(using: contextBuffer, context: nil)
-            
+
             let context = TensorContext(
                 tag: "max",
                 sources: [first, second],
@@ -421,17 +416,17 @@ public extension Tensor {
                     },
                     { targetGrad in
                         targetGrad * contextTensor
-                    }
-                ]
+                    },
+                ],
             )
-            
+
             return Tensor(using: resultBuffer, context: context)
         } else {
             Device.Engine.max(first.values, second.values, result: resultBuffer)
             return Tensor(using: resultBuffer, context: nil)
         }
     }
-    
+
     /// Computes the elementwise minima between the given tensors
     ///
     /// - Parameters:
@@ -441,12 +436,12 @@ public extension Tensor {
     static func min(_ first: Self, _ second: Self) -> Self {
         precondition(first.shape == second.shape, "Shapes must be equal")
         let resultBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
-        
+
         if first.requiresGradient || second.requiresGradient {
             let contextBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
             Device.Engine.min(first.values, second.values, result: resultBuffer, context: contextBuffer)
             let contextTensor = Tensor(using: contextBuffer, context: nil)
-            
+
             let context = TensorContext(
                 tag: "max",
                 sources: [first, second],
@@ -456,10 +451,10 @@ public extension Tensor {
                     },
                     { targetGrad in
                         targetGrad * contextTensor
-                    }
-                ]
+                    },
+                ],
             )
-            
+
             return Tensor(using: resultBuffer, context: context)
         } else {
             Device.Engine.min(first.values, second.values, result: resultBuffer)

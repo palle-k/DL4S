@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  MultiHeadAttention.swift
+//  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
 //  Copyright (c) 2019 - 2020 - Palle Klewitz
@@ -38,7 +38,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     public var attn: ScaledDotProductAttention<Element, Device>
     public var norm: LayerNorm<Element, Device>
     public var dropout: Dropout<Element, Device>
-    
+
     /// Number of attention heads
     public let heads: Int
     /// Dimensionality of query and key vectors
@@ -47,17 +47,21 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     public let valueDim: Int
     /// Lat dimension of keys, queries and values before matrix multiplication
     public let hiddenDim: Int
-    
-    public var parameters: [Tensor<Element, Device>] {Array([
-        [qDense, kDense, vDense, fc],
-        norm.parameters
-    ].joined())}
-    
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {Array([
-        [\.qDense, \.kDense, \.vDense, \.fc],
-        parameterPaths(of: \.norm)
-    ].joined())}
-    
+
+    public var parameters: [Tensor<Element, Device>] {
+        Array([
+            [qDense, kDense, vDense, fc],
+            norm.parameters,
+        ].joined())
+    }
+
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        Array([
+            [\.qDense, \.kDense, \.vDense, \.fc],
+            parameterPaths(of: \.norm),
+        ].joined())
+    }
+
     /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
     ///   - heads: Number of attention heads
@@ -69,7 +73,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         var generator = WyHash()
         self.init(heads: heads, hiddenDim: hiddenDim, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
     }
-    
+
     /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
     ///   - heads: Number of attention heads
@@ -83,7 +87,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         self.keyDim = keyDim
         self.valueDim = valueDim
         self.hiddenDim = hiddenDim
-        
+
         attn = ScaledDotProductAttention(temperature: Element(keyDim).sqrt())
         qDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
         kDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
@@ -91,7 +95,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         fc = Tensor(xavierNormalWithShape: [valueDim * heads, hiddenDim], requiresGradient: true, using: &generator)
         self.dropout = Dropout(rate: dropout)
         norm = LayerNorm(inputSize: [hiddenDim])
-        
+
         #if DEBUG
         qDense.tag = "qDense"
         kDense.tag = "kDense"
@@ -99,7 +103,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         fc.tag = "FC"
         #endif
     }
-    
+
     /// Computes multi-head scaled dot product attention using the provided query, key and value vector as well as the provided mask.
     ///
     /// Additionally applies dropout, a residual connection and layer normalization.
@@ -110,32 +114,31 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     public func callAsFunction(_ inputs: (q: Tensor<Element, Device>, k: Tensor<Element, Device>, v: Tensor<Element, Device>, mask: Tensor<Element, Device>?)) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "MultiHeadAttention") {
             let (q, k, v, mask) = inputs // q, k, v: [batchSize, maxLen, hiddenDim]
-            
+
             let batchSize = q.shape[0]
             let queryCount = q.shape[1] // == maxLen
             let keyCount = k.shape[1]
             let valueCount = v.shape[1]
-            
+
             let res = q
-            
+
             // [batchSize, queryCount, hiddenDim] x [hiddenDim, keyDim * heads] --> [batchSize, maxLen, keyDim * heads]
             let q_prep = q.broadcastMatrixMultiplied(with: qDense).view(as: batchSize, queryCount, heads, keyDim) // [batchSize, queryCount
             let k_prep = k.broadcastMatrixMultiplied(with: kDense).view(as: batchSize, keyCount, heads, keyDim)
             let v_prep = v.broadcastMatrixMultiplied(with: vDense).view(as: batchSize, valueCount, heads, valueDim)
-            
+
             let q_trans = q_prep.permuted(to: 0, 2, 1, 3) // [batchSize, heads, queryCount, keyDim]
             let k_trans = k_prep.permuted(to: 0, 2, 1, 3) // [batchSize, heads, keyCount, keyDim]
             let v_trans = v_prep.permuted(to: 0, 2, 1, 3) // [batchSize, heads, valueCount, valueDim]
-            
-            let q_attn = self.attn((q: q_trans, k: k_trans, v: v_trans, mask: mask)) // [batchSize, heads, queryCount, valueDim]
-            
+
+            let q_attn = attn((q: q_trans, k: k_trans, v: v_trans, mask: mask)) // [batchSize, heads, queryCount, valueDim]
+
             let out = q_attn.permuted(to: 0, 2, 1, 3) // [batchSize, queryCount, heads, valueDim]
                 .view(as: batchSize, queryCount, -1) // [batchSize, queryCount, heads * valueDim]
                 .broadcastMatrixMultiplied(with: fc) // [batchSize, queryCount, heads * valueDim] x [valueDim * heads, hiddenDim] --> [batchSize, queryCount, hiddenDim]
             let out_drop = dropout(out)
             let q_res = out_drop + res
-            let normalized = norm(q_res)
-            return normalized // [batchSize, queryCount, hiddenDim]
+            return norm(q_res)
         }
     }
 }

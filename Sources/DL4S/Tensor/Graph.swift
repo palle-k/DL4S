@@ -25,10 +25,10 @@
 
 import Foundation
 
-//MARK: Compute Graph Debugging
+// MARK: Compute Graph Debugging
 
-extension String {
-    fileprivate func escaped() -> String {
+private extension String {
+    func escaped() -> String {
         replacingOccurrences(of: "\"", with: "\\\"")
     }
 }
@@ -38,34 +38,34 @@ struct Digraph: Hashable, Codable {
         var id: String
         var label: String?
         var shape: String = "box"
-        var attributes: Dictionary<String, String> = [:]
+        var attributes: [String: String] = [:]
     }
-    
+
     struct Edge: Hashable, Codable {
         var source: String
         var destination: String
         var label: String?
-        var attributes: Dictionary<String, String> = [:]
+        var attributes: [String: String] = [:]
     }
-    
-    var id: String? = nil
-    var name: String? = nil
+
+    var id: String?
+    var name: String?
     var nodes: Set<Node> = []
     var edges: Set<Edge> = []
     var subgraphs: [String: Digraph] = [:]
-    
-    mutating func addNode(id: String, label: String? = nil, shape: String = "box", attributes: Dictionary<String, String> = [:]) {
+
+    mutating func addNode(id: String, label: String? = nil, shape: String = "box", attributes: [String: String] = [:]) {
         nodes.insert(Node(id: id, label: label, shape: shape, attributes: attributes))
     }
-    
-    mutating func addEdge(from source: String, to destination: String, label: String? = nil, attributes: Dictionary<String, String> = [:]) {
+
+    mutating func addEdge(from source: String, to destination: String, label: String? = nil, attributes: [String: String] = [:]) {
         edges.insert(Edge(source: source, destination: destination, label: label, attributes: attributes))
     }
-    
+
     mutating func join(with other: Digraph) {
-        self.nodes.formUnion(other.nodes)
-        self.edges.formUnion(other.edges)
-        self.subgraphs.merge(other.subgraphs, uniquingKeysWith: { a, b in
+        nodes.formUnion(other.nodes)
+        edges.formUnion(other.edges)
+        subgraphs.merge(other.subgraphs, uniquingKeysWith: { a, b in
             var m = a
             m.join(with: b)
             return m
@@ -76,14 +76,14 @@ struct Digraph: Hashable, Codable {
 extension Digraph.Node {
     var dot: String {
         let repr = "\(id)"
-        
-        var attrs = self.attributes
-        if let label = self.label {
+
+        var attrs = attributes
+        if let label {
             attrs["label"] = "\"\(label.escaped())\""
         }
         attrs["shape"] = shape
-        
-        let pairs = attrs.map {"\($0.key)=\($0.value)"}
+
+        let pairs = attrs.map { "\($0.key)=\($0.value)" }
         return "\(repr) [\(pairs.joined(separator: " "))];"
     }
 }
@@ -91,15 +91,15 @@ extension Digraph.Node {
 extension Digraph.Edge {
     var dot: String {
         let repr = "\(source) -> \(destination)"
-        
-        var attrs = self.attributes
-        if let label = self.label {
+
+        var attrs = attributes
+        if let label {
             attrs["label"] = "\"\(label.escaped())\""
         }
         if attrs.isEmpty {
             return "\(repr);"
         } else {
-            let pairs = attrs.map {"\($0.key)=\($0.value)"}
+            let pairs = attrs.map { "\($0.key)=\($0.value)" }
             return "\(repr) [\(pairs.joined(separator: " "))];"
         }
     }
@@ -113,26 +113,25 @@ extension Digraph: CustomStringConvertible {
         \(isRoot ? "    node [fontname=\"helvetica\" fontsize=10 margin=0.03 width=0.2 height=0 color=\"#A0A0A0\"];\n" : "")\
         \(isRoot ? "    edge [fontname=\"helvetica\" fontsize=8 arrowsize=0.5 color=\"#A0A0A0\" fontcolor=\"#A0A0A0\"];\n" : "")\
         \(isRoot ? "    splines=true;\n    ranksep=0.2;\n    nodesep=0.15;\n" : "")\
-        \(nodes.isEmpty ? "" : "    \(nodes.map {$0.dot}.joined(separator: "\n    "))\n")\
-        \(edges.isEmpty ? "" : "    \(edges.map {$0.dot}.joined(separator: "\n    "))\n")\
-        \(subgraphs.isEmpty ? "" : "    \(subgraphs.values.map {$0.dot(type: "subgraph").split(separator: "\n").joined(separator: "\n    ")}.joined(separator: "\n    "))\n")\
-        \(name.map {"    label=\"\($0.escaped())\";\n    labeljust=\"l\";\n"} ?? "")\
+        \(nodes.isEmpty ? "" : "    \(nodes.map(\.dot).joined(separator: "\n    "))\n")\
+        \(edges.isEmpty ? "" : "    \(edges.map(\.dot).joined(separator: "\n    "))\n")\
+        \(subgraphs.isEmpty ? "" : "    \(subgraphs.values.map { $0.dot(type: "subgraph").split(separator: "\n").joined(separator: "\n    ") }.joined(separator: "\n    "))\n")\
+        \(name.map { "    label=\"\($0.escaped())\";\n    labeljust=\"l\";\n" } ?? "")\
         }
         """
     }
-    
+
     var description: String {
-        return dot(isRoot: true)
+        dot(isRoot: true)
     }
 }
-
 
 #if DEBUG
 /// One level of the operation stack that `OperationGroup.capture(named:_:)` records.
 struct OperationGroupEntry: Sendable, Hashable {
     /// Distinguishes captures with the same name.
     let id: UInt64
-    
+
     /// Name that `Tensor.graph()` shows for the group.
     let name: String
 }
@@ -149,7 +148,7 @@ public enum OperationGroup {
     /// Task-local, so parallel tasks and threads have their own stack.
     @TaskLocal static var operationStack: [OperationGroupEntry] = []
     #endif
-    
+
     /// Captures a group of operations that is displayed within a box in the compute graph, when using `result.graph()`.
     /// Only applicable for debug builds. In release builds, the operation closure is executed but otherwise, the operation group has no effect.
     /// - Parameters:
@@ -168,46 +167,45 @@ public enum OperationGroup {
     }
 }
 
-
 public extension Tensor {
     private func follow(visited: inout Set<UInt64>) -> Digraph {
-        guard !visited.contains(self.backpropID) else {
+        guard !visited.contains(backpropID) else {
             return Digraph()
         }
-        
-        visited.insert(self.backpropID)
-        
+
+        visited.insert(backpropID)
+
         var graph = Digraph()
-        if let ctx = self.context {
-            graph.addNode(id: "\(self.backpropID)\(abs(ctx.tag.hashValue))", label: ctx.tag ?? "op", attributes: ["style": "rounded"])
-            
+        if let ctx = context {
+            graph.addNode(id: "\(backpropID)\(abs(ctx.tag.hashValue))", label: ctx.tag ?? "op", attributes: ["style": "rounded"])
+
             for src in ctx.sources {
                 if let srcCtx = src.context {
                     #if DEBUG
-                    if srcCtx.operationStack.map({$0.id}) == ctx.operationStack.map({$0.id}) && !ctx.operationStack.isEmpty {
+                    if srcCtx.operationStack.map(\.id) == ctx.operationStack.map(\.id), !ctx.operationStack.isEmpty {
                         graph.addEdge(
                             from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))",
-                            to: "\(self.backpropID)\(abs(ctx.tag.hashValue))",
-                            attributes: [:]
+                            to: "\(backpropID)\(abs(ctx.tag.hashValue))",
+                            attributes: [:],
                         )
                     } else {
-                        graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))")
+                        graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(backpropID)\(abs(ctx.tag.hashValue))")
                     }
                     #else
-                    graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))")
+                    graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(backpropID)\(abs(ctx.tag.hashValue))")
                     #endif
                 } else {
-                    graph.addEdge(from: "\(src.backpropID)", to: "\(self.backpropID)\(abs(ctx.tag.hashValue))")
+                    graph.addEdge(from: "\(src.backpropID)", to: "\(backpropID)\(abs(ctx.tag.hashValue))")
                 }
                 graph.join(with: src.follow(visited: &visited))
             }
         } else {
             let label: String
-            
+
             #if DEBUG
             if shape == [] {
                 label = "\(item)"
-            } else if let tag = self.tag {
+            } else if let tag {
                 label = tag
             } else {
                 label = "shape: \(shape)"
@@ -219,46 +217,46 @@ public extension Tensor {
                 label = "shape: \(shape)"
             }
             #endif
-            
-            graph.addNode(id: "\(self.backpropID)", label: label, shape: "box", attributes: requiresGradient ? ["style": "filled", "fillcolor": "\"#99ccff\""] : [:])
+
+            graph.addNode(id: "\(backpropID)", label: label, shape: "box", attributes: requiresGradient ? ["style": "filled", "fillcolor": "\"#99ccff\""] : [:])
         }
         return graph
     }
-    
+
     #if DEBUG
     private func followGroups(visited: inout Set<UInt64>) -> Digraph {
-        guard !visited.contains(self.backpropID) else {
+        guard !visited.contains(backpropID) else {
             return Digraph()
         }
         visited.insert(backpropID)
-        
-        guard let ctx = self.context else {
+
+        guard let ctx = context else {
             return Digraph()
         }
-        
-        let opID = "\(self.backpropID)\(abs(ctx.tag.hashValue))"
+
+        let opID = "\(backpropID)\(abs(ctx.tag.hashValue))"
 
         var ctxGraph = Digraph()
-        
+
         if let last = ctx.operationStack.last {
             var initial = Digraph(id: "cluster_\(last.id)", name: last.name, nodes: [Digraph.Node(id: opID)])
-            
+
             for node in ctx.sources where node.context == nil {
                 initial.addNode(id: "\(node.backpropID)", shape: "box")
             }
-            
+
             let g = ctx.operationStack.dropLast().reversed().reduce(initial) { acc, item in
                 Digraph(id: "cluster_\(item.id)", name: item.name, subgraphs: [acc.id!: acc])
             }
             ctxGraph.subgraphs[g.id!] = g
         }
-        
+
         return ctx.sources.reduce(into: ctxGraph) { acc, src in
             acc.join(with: src.followGroups(visited: &visited))
         }
     }
     #endif
-    
+
     /// Prints the compute graph, from which the tensor has been derived.
     ///
     /// The graph is in graphviz format and can be rendered with command line tools such as `dot`.

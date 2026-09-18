@@ -25,9 +25,9 @@
 
 import Foundation
 
-//MARK: Img2col
+// MARK: Img2col
+
 public extension Tensor {
-    
     /// Performs an img2col transformation, which allows convolutions to be performed by matrix multiplication.
     ///
     /// The source tensor is expected to have a shape of [batchSize, channels, height, width].
@@ -46,12 +46,12 @@ public extension Tensor {
     func img2col(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) -> Tensor<Element, Device> {
         let resultHeight = (shape[2] + 2 * padding - kernelHeight) / stride + 1
         let resultWidth = (shape[3] + 2 * padding - kernelWidth) / stride + 1
-        
+
         let resultShape = [
             shape[1] * kernelWidth * kernelHeight,
-            resultHeight * resultWidth * shape[0]
+            resultHeight * resultWidth * shape[0],
         ]
-        
+
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.img2col(
             values: values,
@@ -59,9 +59,9 @@ public extension Tensor {
             kernelWidth: kernelWidth,
             kernelHeight: kernelHeight,
             padding: padding,
-            stride: stride
+            stride: stride,
         )
-        
+
         return Tensor(
             using: resultBuffer,
             context: requiresGradient ? TensorContext(
@@ -69,11 +69,11 @@ public extension Tensor {
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient.col2img(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride, resultShape: self.shape)
-                }]
-            ) : nil
+                }],
+            ) : nil,
         )
     }
-    
+
     /// Computes the inverse of the img2col operation.
     ///
     /// The source tensor is expected to be a tensor with shape [window_size, window_count].
@@ -88,14 +88,14 @@ public extension Tensor {
     func col2img(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int, resultShape: [Int]) -> Tensor<Element, Device> {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.col2img(
-            matrix: self.values,
+            matrix: values,
             image: resultBuffer,
             kernelWidth: kernelWidth,
             kernelHeight: kernelHeight,
             padding: padding,
-            stride: stride
+            stride: stride,
         )
-        
+
         return Tensor(
             using: resultBuffer,
             context: TensorContext(
@@ -103,13 +103,14 @@ public extension Tensor {
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient.img2col(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
-                }]
-            )
+                }],
+            ),
         )
     }
 }
 
-//MARK: Convolution
+// MARK: Convolution
+
 public extension Tensor {
     /// Performs a 2d convolution
     ///
@@ -123,16 +124,16 @@ public extension Tensor {
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
     func convolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let padding = padding ?? ((filters.shape[2] - 1) / 2)
-        
+
         let outputShape = [
             shape[0],
             filters.shape[0],
             (shape[2] + 2 * padding - filters.shape[2]) / stride + 1,
-            (shape[3] + 2 * padding - filters.shape[3]) / stride + 1
+            (shape[3] + 2 * padding - filters.shape[3]) / stride + 1,
         ]
-        
+
         // => [channels * kernelWidth * kernelHeight, outputWidth * outputHeight * batchSize]
-        let cols = self.img2col(kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
+        let cols = img2col(kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
         let conv = filters
             .view(as: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]]) // [outputChannels, inputChannels * kernelWidth * kernelHeight]
             // [outputChannels, inputChannels * kernelWidth * kernelHeight] x [inputChannels * kernelWidth * kernelHeight, outputWidth * outputHeight * batchSize]
@@ -140,10 +141,10 @@ public extension Tensor {
             .matrixMultiplied(with: cols)
             // => [batchSize, outputChannels, outputHeight, outputWidth]
             .view(as: [outputShape[1], outputShape[0], outputShape[2], outputShape[3]])
-        
+
         return conv.permuted(to: [1, 0, 2, 3])
     }
-    
+
     /// Performs a transposed 2d convolution (also called fractionally strided convolution).
     ///
     /// The source tensor is expected to have a shape of [batchSize, channels, width, height]
@@ -163,28 +164,27 @@ public extension Tensor {
             (shape[2] - 1) * stride - 2 * padding + filters.shape[2],
             (shape[3] - 1) * stride - 2 * padding + filters.shape[3],
         ]
-        let permuted = self.permuted(to: [1, 0, 2, 3])
+        let permuted = permuted(to: [1, 0, 2, 3])
         let preMulView = permuted.view(as: [shape[1], shape[0] * shape[2] * shape[3]])
-        
+
         let filterView = filters.view(as: [filters.shape[1], filters.shape[0] * filters.shape[2] * filters.shape[3]])
         let multiplied = filterView
             .transposed()
             .matrixMultiplied(with: preMulView)
-        
-        let img = multiplied.col2img(
+
+        return multiplied.col2img(
             kernelWidth: filters.shape[3],
             kernelHeight: filters.shape[2],
             padding: padding,
             stride: stride,
-            resultShape: outputShape
+            resultShape: outputShape,
         )
-        return img
     }
 }
 
-//MARK: Pooling
+// MARK: Pooling
+
 public extension Tensor {
-    
     /// Performs max pooling on the tensor. Max pooling selects the maximum value for every given window of a tensor.
     ///
     /// The source tensor is expected to have a shape of [batchSize, channels, width, height].
@@ -198,21 +198,21 @@ public extension Tensor {
         OperationGroup.capture(named: "MaxPool2D") {
             let padding = padding ?? ((windowSize - 1) / 2)
             let stride = stride ?? windowSize
-            
+
             let outputShape = [
                 shape[0],
                 shape[1],
                 (shape[2] + 2 * padding - windowSize) / stride + 1,
-                (shape[3] + 2 * padding - windowSize) / stride + 1
+                (shape[3] + 2 * padding - windowSize) / stride + 1,
             ]
-            
+
             let cols = self
                 .view(as: [shape[0] * shape[1], 1, shape[2], shape[3]])
                 .img2col(
                     kernelWidth: windowSize,
                     kernelHeight: windowSize,
                     padding: padding,
-                    stride: stride
+                    stride: stride,
                 )
             let pooled = cols.reduceMax(along: [0])
             return pooled.view(as: outputShape)
@@ -232,21 +232,21 @@ public extension Tensor {
         OperationGroup.capture(named: "AveragePool2D") {
             let padding = padding ?? ((windowSize - 1) / 2)
             let stride = stride ?? windowSize
-            
+
             let outputShape = [
                 shape[0],
                 shape[1],
                 (shape[2] + 2 * padding - windowSize) / stride + 1,
-                (shape[3] + 2 * padding - windowSize) / stride + 1
+                (shape[3] + 2 * padding - windowSize) / stride + 1,
             ]
-            
+
             let cols = self
                 .view(as: [shape[0] * shape[1], 1, shape[2], shape[3]])
                 .img2col(
                     kernelWidth: windowSize,
                     kernelHeight: windowSize,
                     padding: padding,
-                    stride: stride
+                    stride: stride,
                 )
             let pooled = cols.reduceMean(along: [0])
             return pooled.view(as: outputShape)

@@ -25,8 +25,8 @@
 
 import Foundation
 
+// MARK: Summation
 
-//MARK: Summation
 public extension Tensor {
     /// Sums up elements along the given axes.
     ///
@@ -36,15 +36,15 @@ public extension Tensor {
         if axes.isEmpty {
             return self
         }
-        
+
         var resultShape = shape
         for a in axes.reversed() {
             resultShape.remove(at: a)
         }
-        
+
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        Device.Engine.reduceSum(values: self.values, result: resultBuffer, axes: axes)
-        
+        Device.Engine.reduceSum(values: values, result: resultBuffer, axes: axes)
+
         if requiresGradient {
             return Tensor(
                 using: resultBuffer,
@@ -53,20 +53,20 @@ public extension Tensor {
                     sources: [self],
                     backpropagateAccumulate: [{ resultGradient, acc in
                         var broadcastShape = self.shape
-                        
+
                         for a in axes {
                             broadcastShape[a] = 1
                         }
-                        
+
                         return (acc ?? Tensor(repeating: 0, shape: self.shape)) + resultGradient.view(as: broadcastShape)
-                    }]
-                )
+                    }],
+                ),
             )
         } else {
             return Tensor(using: resultBuffer, context: nil)
         }
     }
-    
+
     /// Sums up elements along the given axes
     /// - Parameter axes: Axes to sum
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
@@ -74,41 +74,41 @@ public extension Tensor {
     func reduceSum(along axes: Int...) -> Self {
         reduceSum(along: axes)
     }
-    
+
     /// Computes the sum of all elements of the tensor
     /// - Returns: Scalar, sum of all elements
     func reduceSum() -> Self {
         reduceSum(along: Array(0 ..< dim))
     }
-    
+
     /// Computes the mean of the elements along the given axes
     /// - Parameter axes: Axes to compute the mean of
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func reduceMean(along axes: [Int]) -> Self {
-        reduceSum(along: axes) / Tensor(integerLiteral: axes.map {shape[$0]}.reduce(1, *))
+        reduceSum(along: axes) / Tensor(integerLiteral: axes.map { shape[$0] }.reduce(1, *))
     }
-    
+
     /// Computes the mean of the elements along the given axes
     /// - Parameter axes: Tensor with shape equal to self.shape without the given reduction axes.
     func reduceMean(along axes: Int...) -> Self {
         reduceMean(along: axes)
     }
-    
+
     /// Computes the mean of all elements of the tensor
     /// - Returns: Scalar, mean of all elements
     func reduceMean() -> Self {
         reduceMean(along: Array(0 ..< dim))
     }
-    
+
     /// Computes the variance of the tensor along the given axes.
     ///
     /// - Parameter axes: Axes to compute the variance along.
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func variance(along axes: [Int]) -> Self {
-        let m = self.reduceMean(along: axes)
+        let m = reduceMean(along: axes)
         return (self * self).reduceMean(along: axes) - m * m
     }
-    
+
     /// Computes the variance of the tensor along the given axes.
     ///
     /// - Parameter axes: Axes to compute the variance along.
@@ -116,14 +116,14 @@ public extension Tensor {
     func variance(along axes: Int...) -> Self {
         variance(along: axes)
     }
-    
+
     /// Computes the variance of all elements in the tensor.
     ///
     /// - Returns: Scalar, variance of all elements
     func variance() -> Self {
         variance(along: Array(0 ..< dim))
     }
-    
+
     /// Returns the index of the largest element in the tensor.
     func argmax() -> Int {
         Device.Engine.argmax(values: values.values, count: count).0
@@ -207,9 +207,9 @@ public func variance<Element, Device>(_ tensor: Tensor<Element, Device>, axes: I
     tensor.variance(along: axes)
 }
 
-//MARK: Min/Max
+// MARK: Min/Max
+
 public extension Tensor {
-    
     /// Computes the maximum values along the given axes of the tensor.
     /// - Parameter axes: Axes to reduce along
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
@@ -218,31 +218,31 @@ public extension Tensor {
         for a in axes.reversed() {
             resultShape.remove(at: a)
         }
-        
+
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         if requiresGradient {
             precondition(axes.count == 1, "Scattering (reduceMax backpropagation) is only available along a single axis.")
-            
+
             let contextBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
             if let axis = axes.first, axes.count == 1 {
                 Device.Engine.reduceMax(values: values, result: resultBuffer, context: contextBuffer, axis: axis)
             } else {
                 Device.Engine.reduceMax(values: values, result: resultBuffer, context: contextBuffer, axes: axes)
             }
-            
+
             let context = Tensor<Int32, Device>(using: contextBuffer, context: nil)
-            
-            let axisShape = self.shape[axes[0]]
-            
+
+            let axisShape = shape[axes[0]]
+
             return Tensor(
                 using: resultBuffer,
                 context: TensorContext(
                     tag: "max\(axes)",
                     sources: [self],
                     backpropagate: [{ resultGradient in
-                        return resultGradient.scatter(using: context, alongAxis: axes[0], withSize: axisShape)
-                    }]
-                )
+                        resultGradient.scatter(using: context, alongAxis: axes[0], withSize: axisShape)
+                    }],
+                ),
             )
         } else {
             if let axis = axes.first, axes.count == 1 {
@@ -250,20 +250,18 @@ public extension Tensor {
             } else {
                 Device.Engine.reduceMax(values: values, result: resultBuffer, context: nil, axes: axes)
             }
-            
+
             return Tensor(using: resultBuffer, context: nil)
         }
     }
-    
-    
+
     /// Computes the maximum values along the given axes of the tensor.
     /// - Parameter axes: Axes to reduce along
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func reduceMax(along axes: Int...) -> Self {
         reduceMax(along: axes)
     }
-    
-    
+
     /// Computes the maximum of all values in the tensor
     /// - Returns: Scalar, maximum of all elements.
     func reduceMax() -> Self {

@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Testing
 import DL4S
+import Testing
 
 struct ConvTests {
     /// Convolution with plain loops, as a reference for the img2col-based kernel.
@@ -131,11 +131,11 @@ struct ConvTests {
         let images = makeScaledRamps()
         let filters = Tensor<Float, CPU>([
             [
-                [[1]]
+                [[1]],
             ],
             [
-                [[-1]]
-            ]
+                [[-1]],
+            ],
         ])
 
         let result = images.convolved2d(filters: filters)
@@ -150,13 +150,13 @@ struct ConvTests {
             [
                 [[1, 2, 1],
                  [2, 4, 2],
-                 [1, 2, 1]]
+                 [1, 2, 1]],
             ],
             [
                 [[-1, 0, 1],
-                [-2, 0, 2],
-                [-1, 0, 1]]
-            ]
+                 [-2, 0, 2],
+                 [-1, 0, 1]],
+            ],
         ]) / Tensor<Float, CPU>([16, 4]).view(as: -1, 1, 1, 1)
         let batch = MNIST.sample.trainingImages[0 ..< 8]
 
@@ -171,13 +171,13 @@ struct ConvTests {
             [
                 [[1, 2, 1],
                  [2, 4, 2],
-                 [1, 2, 1]]
+                 [1, 2, 1]],
             ],
             [
                 [[-1, 0, 1],
-                [-2, 0, 2],
-                [-1, 0, 1]]
-            ]
+                 [-2, 0, 2],
+                 [-1, 0, 1]],
+            ],
         ]) / Tensor<Float, CPU>([4, 1]).view(as: -1, 1, 1, 1)
         let batch = MNIST.sample.trainingImages[0 ..< 8]
 

@@ -43,3 +43,19 @@ jobs:
         run: swift --version
       - name: Run concurrency tests under the thread sanitizer
         run: swift test --sanitize=thread --filter Concurrency
+
+  lint:
+    name: lint (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.1"
+      - name: Show Swift version
+        run: swift --version
+      - name: Check formatting
+        run: swift package plugin --allow-writing-to-package-directory swiftformat --lint
+      - name: Lint
+        run: swift package plugin --allow-writing-to-package-directory swiftlint lint --strict

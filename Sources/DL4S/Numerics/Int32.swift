@@ -25,78 +25,76 @@
 
 import Foundation
 
-
 extension Int32: NumericType {
     public func format(maxDecimals: Int) -> String {
-        return "\(self)"
+        "\(self)"
     }
-    
+
     public var isFinite: Bool {
-        return true
+        true
     }
-    
+
     public var isNaN: Bool {
-        return false
+        false
     }
-    
+
     public func toUInt8() -> UInt8 {
-        return UInt8(self)
+        UInt8(self)
     }
-    
+
     public func toInt() -> Int {
-        return Int(self)
+        Int(self)
     }
-    
+
     public var floatValue: Float {
-        return Float(self)
+        Float(self)
     }
-    
+
     public var doubleValue: Double {
-        return Double(self)
+        Double(self)
     }
-    
+
     public var intValue: Int32 {
-        return self
+        self
     }
-    
+
     public static var one: Int32 {
-        return 1
+        1
     }
-    
+
     public func sqrt() -> Int32 {
-        return Int32(Foundation.sqrt(Float(self)))
+        Int32(Foundation.sqrt(Float(self)))
     }
-    
+
     public func log() -> Int32 {
-        return Int32(Foundation.log(Float(self)))
+        Int32(Foundation.log(Float(self)))
     }
-    
+
     public func exp() -> Int32 {
-        return Int32(Foundation.exp(Float(self)))
+        Int32(Foundation.exp(Float(self)))
     }
-    
+
     public func sin() -> Int32 {
-        return Int32(round(Float(Foundation.sin(Float(self)))))
+        Int32(round(Float(Foundation.sin(Float(self)))))
     }
-    
+
     public func cos() -> Int32 {
-        return Int32(round(Float(Foundation.cos(Float(self)))))
+        Int32(round(Float(Foundation.cos(Float(self)))))
     }
-    
+
     public func tan() -> Int32 {
-        return Int32(round(Float(Foundation.tan(Float(self)))))
+        Int32(round(Float(Foundation.tan(Float(self)))))
     }
-    
+
     public func sinh() -> Int32 {
-        return Int32(round(Float(Foundation.sinh(Float(self)))))
+        Int32(round(Float(Foundation.sinh(Float(self)))))
     }
-    
+
     public func cosh() -> Int32 {
-        return Int32(round(Float(Foundation.cosh(Float(self)))))
+        Int32(round(Float(Foundation.cosh(Float(self)))))
     }
-    
+
     public func tanh() -> Int32 {
-        return Int32(round(Float(Foundation.tanh(Float(self)))))
+        Int32(round(Float(Foundation.tanh(Float(self)))))
     }
-    
 }

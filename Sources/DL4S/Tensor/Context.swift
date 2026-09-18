@@ -1,5 +1,5 @@
 //
-//  XContext.swift
+//  Context.swift
 //  DL4S
 //
 //  Created by Palle Klewitz on 19.10.19.
@@ -36,7 +36,8 @@ struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
         /// Each closure receives the gradient of the result and the accumulated gradient of its source.
         /// It adds the gradient of the result with respect to its source to the accumulator and returns the sum.
         case perSource([@Sendable (Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>])
-        
+
+        // swiftformat:disable spaceAroundBrackets
         /// One closure for all sources.
         ///
         /// The closure receives the gradient of the result and one accumulator per source.
@@ -44,15 +45,16 @@ struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
         /// Operations use this form when one kernel produces the gradients of all sources at once,
         /// so the kernel runs once per backward pass and no state needs to be shared between closures.
         case allSources(@Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>])
+        // swiftformat:enable spaceAroundBrackets
     }
-    
+
     var tag: String?
     var sources: [Tensor<Element, Device>]
     var backpropagate: BackpropagateFunction
     #if DEBUG
     let operationStack = OperationGroup.operationStack
     #endif
-    
+
     init(tag: String?, sources: [Tensor<Element, Device>], backpropagate: [@Sendable (Tensor<Element, Device>) -> Tensor<Element, Device>]) {
         self.init(tag: tag, sources: sources, backpropagateAccumulate: backpropagate.map { function in
             { resultGradient, accumulator in
@@ -61,13 +63,14 @@ struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
             }
         })
     }
-    
+
     init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAccumulate: [@Sendable (Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>]) {
         self.tag = tag
         self.sources = sources
-        self.backpropagate = .perSource(backpropagateAccumulate)
+        backpropagate = .perSource(backpropagateAccumulate)
     }
-    
+
+    // swiftformat:disable spaceAroundBrackets
     /// Creates a context with one backpropagation closure for all sources.
     ///
     /// - Parameters:
@@ -77,6 +80,7 @@ struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
     init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAll: @escaping @Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>]) {
         self.tag = tag
         self.sources = sources
-        self.backpropagate = .allSources(backpropagateAll)
+        backpropagate = .allSources(backpropagateAll)
     }
+    // swiftformat:enable spaceAroundBrackets
 }

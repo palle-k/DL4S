@@ -30,26 +30,29 @@ import Foundation
 public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (Tensor<Element, Device>, () -> Tensor<Element, Device>)
-    
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {[
-        \.W, \.U, \.b
-    ]}
-    
+
+    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
+        [
+            \.W, \.U, \.b,
+        ]
+    }
+
     public let direction: RNNDirection
-    
+
     public var W: Tensor<Element, Device>
     public var U: Tensor<Element, Device>
     public var b: Tensor<Element, Device>
-    
+
     public var inputSize: Int {
-        return W.shape[0]
+        W.shape[0]
     }
+
     public var hiddenSize: Int {
-        return W.shape[1]
+        W.shape[1]
     }
-    
+
     public var parameters: [Tensor<Element, Device>] {
-        get {[W, U, b]}
+        [W, U, b]
     }
 
     /// A 'vanilla' RNN.
@@ -62,7 +65,7 @@ public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Coda
         var generator = WyHash()
         self.init(inputSize: inputSize, hiddenSize: hiddenSize, direction: direction, using: &generator)
     }
-    
+
     /// A 'vanilla' RNN.
     /// In each step, the RNN performs the transformation matMul(x\_t, W) + matMul(h\_t-1, U) + b.
     ///
@@ -73,44 +76,44 @@ public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Coda
     ///  - generator: Random number generator that provides the initial weights.
     public init<Generator: RandomNumberGenerator>(inputSize: Int, hiddenSize: Int, direction: RNNDirection = .forward, using generator: inout Generator) {
         self.direction = direction
-        
+
         W = Tensor(normalDistributedWithShape: [inputSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(inputSize)).sqrt(), requiresGradient: true, using: &generator)
         U = Tensor(normalDistributedWithShape: [hiddenSize, hiddenSize], mean: 0, stdev: (Element(1) / Element(hiddenSize)).sqrt(), requiresGradient: true, using: &generator)
         b = Tensor(repeating: 0, shape: [hiddenSize], requiresGradient: true)
     }
-    
+
     public func initialState(for inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         Tensor(repeating: 0, shape: [inputs.shape[1], hiddenSize]) // [batchSize, hiddenSize]
     }
-    
+
     public func prepare(inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "BasicRNNPrepare") {
             let seqlen = inputs.shape[0]
             let batchSize = inputs.shape[1]
-            
+
             let multiplied = inputs
                 .view(as: [seqlen * batchSize, inputSize])
                 .matrixMultiplied(with: W)
                 .view(as: [seqlen, batchSize, hiddenSize])
-            
+
             return multiplied + b
         }
     }
-    
+
     public func input(at step: Int, using preparedInput: Tensor<Element, Device>) -> Tensor<Element, Device> {
         preparedInput[step]
     }
-    
+
     public func step(_ preparedInput: Tensor<Element, Device>, previousState: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "BasicRNNCell") {
             tanh(preparedInput + previousState.matrixMultiplied(with: U))
         }
     }
-    
+
     public func concatenate(_ states: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
-        Tensor(stacking: states.map {$0.unsqueezed(at: 0)}, along: 0)
+        Tensor(stacking: states.map { $0.unsqueezed(at: 0) }, along: 0)
     }
-    
+
     public func numberOfSteps(for inputs: Tensor<Element, Device>) -> Int {
         inputs.shape[0]
     }
