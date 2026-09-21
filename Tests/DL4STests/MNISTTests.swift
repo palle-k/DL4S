@@ -195,19 +195,23 @@ struct MNISTTests {
     ) -> Float where Layer.Inputs == Tensor<Float, CPU>, Layer.Outputs == Tensor<Float, CPU>, Layer.Parameter == Float, Layer.Device == CPU {
         let data = scale.data
         var generator = WyHash(seed: 1)
-        var optimizer = Adam(model: model, learningRate: Tensor(run.learningRate))
+        var model = model
+        var optimizer = Adam<Float, CPU>(learningRate: Tensor(run.learningRate))
 
         for _ in 0 ..< run.steps {
             let (images, labels) = MNIST.minibatch(from: data.trainingImages, labels: data.trainingLabels, count: run.batchSize, using: &generator)
-            let predicted = optimizer.model(input(images))
-            optimizer.update(along: loss(labels, predicted).gradients(of: optimizer.model.parameters))
+            let predicted = model(input(images))
+            let batchLoss = loss(labels, predicted)
+            model.update { parameters in
+                optimizer.update(&parameters, along: batchLoss.gradients(of: parameters))
+            }
         }
 
         let testCount = data.testImages.shape[0]
         var correct: Float = 0
         for start in stride(from: 0, to: testCount, by: 1000) {
             let range = start ..< min(start + 1000, testCount)
-            let scores = optimizer.model(input(data.testImages[range]))
+            let scores = model(input(data.testImages[range]))
             correct += MNIST.accuracy(of: scores, labels: data.testLabels[range]) * Float(range.count)
         }
         return correct / Float(testCount)

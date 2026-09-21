@@ -31,7 +31,18 @@ public protocol VGGBase: LayerType where Parameter: RandomizableType {
     associatedtype Conv3: LayerType where Conv3.Parameter == Parameter, Conv3.Device == Device, Conv3.Inputs == Tensor<Parameter, Device>, Conv3.Outputs == Tensor<Parameter, Device>
     associatedtype Conv4: LayerType where Conv4.Parameter == Parameter, Conv4.Device == Device, Conv4.Inputs == Tensor<Parameter, Device>, Conv4.Outputs == Tensor<Parameter, Device>
     associatedtype Conv5: LayerType where Conv5.Parameter == Parameter, Conv5.Device == Device, Conv5.Inputs == Tensor<Parameter, Device>, Conv5.Outputs == Tensor<Parameter, Device>
-    typealias DenseLayer = Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Dense<Self.Parameter, Self.Device>, BatchNorm<Self.Parameter, Self.Device>>, Relu<Self.Parameter, Self.Device>>, Dropout<Self.Parameter, Self.Device>>, Dense<Self.Parameter, Self.Device>>, BatchNorm<Self.Parameter, Self.Device>>, Relu<Self.Parameter, Self.Device>>, Dropout<Self.Parameter, Self.Device>>, Dense<Self.Parameter, Self.Device>>, LogSoftmax<Self.Parameter, Self.Device>>
+    typealias DenseLayer = Sequential<
+        Dense<Self.Parameter, Self.Device>,
+        BatchNorm<Self.Parameter, Self.Device>,
+        Relu<Self.Parameter, Self.Device>,
+        Dropout<Self.Parameter, Self.Device>,
+        Dense<Self.Parameter, Self.Device>,
+        BatchNorm<Self.Parameter, Self.Device>,
+        Relu<Self.Parameter, Self.Device>,
+        Dropout<Self.Parameter, Self.Device>,
+        Dense<Self.Parameter, Self.Device>,
+        LogSoftmax<Self.Parameter, Self.Device>,
+    >
 
     var conv1: Conv1 { get set }
     var conv2: Conv2 { get set }
@@ -42,35 +53,24 @@ public protocol VGGBase: LayerType where Parameter: RandomizableType {
 }
 
 public extension VGGBase {
-    var parameters: [Tensor<Parameter, Self.Device>] {
-        Array([
-            conv1.parameters,
-            conv2.parameters,
-            conv3.parameters,
-            conv4.parameters,
-            conv5.parameters,
-            dense.parameters,
-        ].joined())
+    mutating func visitTensors(_ visitor: inout TensorVisitor<Parameter, Device>) {
+        visitor.sublayer(&conv1, named: "conv1")
+        visitor.sublayer(&conv2, named: "conv2")
+        visitor.sublayer(&conv3, named: "conv3")
+        visitor.sublayer(&conv4, named: "conv4")
+        visitor.sublayer(&conv5, named: "conv5")
+        visitor.sublayer(&dense, named: "dense")
     }
 
-    var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] {
-        Array([
-            parameterPaths(of: \.conv1),
-            parameterPaths(of: \.conv2),
-            parameterPaths(of: \.conv3),
-            parameterPaths(of: \.conv4),
-            parameterPaths(of: \.conv5),
-            parameterPaths(of: \.dense),
-        ].joined())
-    }
-
+    /// Whether the dropout layers of the classifier are active
     var isDropoutActive: Bool {
         get {
-            dense.first.first.first.first.first.first.second.isActive || dense.first.first.second.isActive
+            dense.layers(of: Dropout<Parameter, Device>.self).contains { $0.isActive }
         }
         set {
-            dense.first.first.first.first.first.first.second.isActive = newValue
-            dense.first.first.second.isActive = newValue
+            dense.modifyLayers(of: Dropout<Parameter, Device>.self) { dropout in
+                dropout.isActive = newValue
+            }
         }
     }
 

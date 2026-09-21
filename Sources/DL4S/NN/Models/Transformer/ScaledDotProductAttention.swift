@@ -26,19 +26,12 @@
 import Foundation
 
 /// Computes Scaled Multi-Head Dot Product Attention as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
-public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType>: LayerType, Codable {
+@Layer
+public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType>: Codable, Sendable {
     public var temperature: Element
 
     public init(temperature: Element) {
         self.temperature = temperature
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        []
-    }
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        []
     }
 
     /// Performs scaled dot product attention.

@@ -51,8 +51,7 @@ struct ConcurrencyTests {
         group.wait()
     }
 
-    private typealias DenseTanh = Sequential<Dense<Float, CPU>, Tanh<Float, CPU>>
-    private typealias TrainedModel = Sequential<Sequential<Sequential<Sequential<DenseTanh, Dense<Float, CPU>>, Tanh<Float, CPU>>, Dense<Float, CPU>>, Sigmoid<Float, CPU>>
+    private typealias TrainedModel = Sequential<Dense<Float, CPU>, Tanh<Float, CPU>, Dense<Float, CPU>, Tanh<Float, CPU>, Dense<Float, CPU>, Sigmoid<Float, CPU>>
 
     /// Trains a small model on the XOR problem so the test has a model with initialized weights.
     private func makeTrainedModel() -> TrainedModel {
@@ -70,7 +69,7 @@ struct ConcurrencyTests {
             [0],
         ])
 
-        let model = Sequential {
+        var model = Sequential {
             Dense<Float, CPU>(inputSize: 2, outputSize: 64, using: &generator)
             Tanh<Float, CPU>()
             Dense<Float, CPU>(inputSize: 64, outputSize: 64, using: &generator)
@@ -78,16 +77,17 @@ struct ConcurrencyTests {
             Dense<Float, CPU>(inputSize: 64, outputSize: 1, using: &generator)
             Sigmoid<Float, CPU>()
         }
-        var optimizer = Adam(model: model, learningRate: 0.05)
+        var optimizer = Adam<Float, CPU>(learningRate: 0.05)
 
         for _ in 1 ... 50 {
-            let prediction = optimizer.model(inputs)
+            let prediction = model(inputs)
             let loss = binaryCrossEntropy(expected: expected, actual: prediction)
-            let gradients = loss.gradients(of: optimizer.model.parameters)
-            optimizer.update(along: gradients)
+            model.update { parameters in
+                optimizer.update(&parameters, along: loss.gradients(of: parameters))
+            }
         }
 
-        return optimizer.model
+        return model
     }
 
     /// Parallel inference on shared model

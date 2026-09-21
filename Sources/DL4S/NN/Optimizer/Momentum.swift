@@ -3,7 +3,7 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 20.09.20.
-//  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - 2026 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -26,77 +26,38 @@
 import Foundation
 
 /// Gradient descent optimizer with momentum
-public struct Momentum<Layer: LayerType>: Optimizer {
-    public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
-
-    public private(set) var model: Layer
-    private var velocities: [ParamTensor]
+public struct Momentum<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+    public typealias ParamTensor = Tensor<Element, Device>
 
     /// Learning rate with which to move along the gradient
     public var learningRate: ParamTensor
 
     /// Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
     public var momentum: ParamTensor
-    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
+
+    private var velocities: [ParamTensor] = []
 
     /// Gradient descent optimizer with momentum
     /// - Parameters:
-    ///   - model: Model to optimize
     ///   - learningRate: Learning rate with which to move along the gradient
     ///   - momentum: Decay rate of momentum that is built up, when subsequent gradient updates move in the same direction
-    public init(model: Layer, learningRate: ParamTensor, momentum: ParamTensor = 0.8) {
-        self.model = model
+    public init(learningRate: ParamTensor, momentum: ParamTensor = 0.8) {
         self.learningRate = learningRate
         self.momentum = momentum
-
-        velocities = model.parameters.map {
-            Tensor(repeating: 0, shape: $0.shape)
-        }
-        paths = model.parameterPaths
     }
 
-    /// Resets the state of the optimizer
     public mutating func reset() {
-        velocities = model.parameters.map {
-            Tensor(repeating: 0, shape: $0.shape)
+        velocities = []
+    }
+
+    public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
+        Self.validateGradients(gradients, against: parameters)
+        Self.initializeStateIfNeeded(&velocities, for: parameters)
+
+        for index in parameters.indices {
+            velocities[index] = velocities[index] * momentum + learningRate * gradients[index].detached()
+            parameters[index] -= velocities[index]
+            parameters[index].discardContext()
         }
-    }
-
-    public mutating func update(along gradients: [ParamTensor]) {
-        for i in paths.indices {
-            let keyPath = paths[i]
-            velocities[i] = velocities[i] * momentum + learningRate * gradients[i]
-            model[keyPath: keyPath] -= velocities[i]
-            model[keyPath: keyPath].discardContext()
-        }
-    }
-}
-
-extension Momentum: Codable where Layer: Codable {
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        model = try container.decode(Layer.self, forKey: .model)
-        momentum = try container.decode(ParamTensor.self, forKey: .momentum)
-        learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
-        velocities = try container.decode([ParamTensor].self, forKey: .velocities)
-
-        paths = model.parameterPaths
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-
-        try container.encode(model, forKey: .model)
-        try container.encode(momentum, forKey: .momentum)
-        try container.encode(learningRate, forKey: .learningRate)
-        try container.encode(velocities, forKey: .velocities)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case model
-        case velocities
-        case learningRate
-        case momentum
     }
 }

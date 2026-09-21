@@ -26,26 +26,15 @@
 import DL4S
 import Testing
 
-struct RowTransformerClassifier: LayerType, Codable {
-    typealias Inputs = Tensor<Float, CPU>
-    typealias Outputs = Tensor<Float, CPU>
+@Layer
+struct RowTransformerClassifier: Codable {
+    typealias Element = Float
+    typealias Device = CPU
 
     var project: Dense<Float, CPU>
     var positionalEncoding: PositionalEncoding<Float, CPU>
     var encoder: TransformerEncoder<Float, CPU>
     var classify: Dense<Float, CPU>
-
-    var parameters: [Tensor<Float, CPU>] {
-        Array([project.parameters, encoder.parameters, classify.parameters].joined())
-    }
-
-    var parameterPaths: [WritableKeyPath<Self, Tensor<Float, CPU>> & Sendable] {
-        Array([
-            parameterPaths(of: \.project),
-            parameterPaths(of: \.encoder),
-            parameterPaths(of: \.classify),
-        ].joined())
-    }
 
     init<Generator: RandomNumberGenerator>(hiddenDim: Int, layers: Int, heads: Int, using generator: inout Generator) {
         project = Dense(inputSize: 28, outputSize: hiddenDim, using: &generator)
@@ -69,22 +58,24 @@ struct TransformerMNISTTests {
     func testRowTransformerLearnsMNIST() {
         let data = MNIST.full
         var generator = WyHash(seed: 42)
-        let model = RowTransformerClassifier(hiddenDim: 64, layers: 2, heads: 4, using: &generator)
-        var optimizer = Adam(model: model, learningRate: 0.001)
+        var model = RowTransformerClassifier(hiddenDim: 64, layers: 2, heads: 4, using: &generator)
+        var optimizer = Adam<Float, CPU>(learningRate: 0.001)
         let batchSize = 64
         let steps = 600
         var bar = ProgressBar<Float>(totalUnitCount: steps, formatUserInfo: { "loss: \($0)" }, label: "training")
 
         for _ in 1 ... steps {
             let (input, target) = MNIST.minibatch(from: data.trainingImages, labels: data.trainingLabels, count: batchSize, using: &generator)
-            let prediction = optimizer.model(input.view(as: [batchSize, 28, 28]))
+            let prediction = model(input.view(as: [batchSize, 28, 28]))
             let loss = categoricalNegativeLogLikelihood(expected: target, actual: prediction)
-            optimizer.update(along: loss.gradients(of: optimizer.model.parameters))
+            model.update { parameters in
+                optimizer.update(&parameters, along: loss.gradients(of: parameters))
+            }
             bar.next(userInfo: loss.item)
         }
         bar.complete()
 
-        let prediction = optimizer.model(data.testImages.view(as: [-1, 28, 28]))
+        let prediction = model(data.testImages.view(as: [-1, 28, 28]))
         let accuracy = MNIST.accuracy(of: prediction, labels: data.testLabels)
         #expect(accuracy > 0.9, "test accuracy \(accuracy)")
         print("Accuracy: \(accuracy)")

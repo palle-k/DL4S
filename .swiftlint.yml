@@ -60,7 +60,7 @@ file_header:
   required_pattern: |
     \/\/
     \/\/  SWIFTLINT_CURRENT_FILENAME
-    \/\/  DL4S(Tests)?
+    \/\/  DL4S(Macros)?(Tests)?
     \/\/
     \/\/  Created by .+ on \d{2}\.\d{2}\.\d{2}\.
     \/\/  Copyright \(c\) \d{4}( - \d{4})? - .+

@@ -26,14 +26,8 @@
 import Foundation
 
 /// A 2D convolutional layer
-public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        [
-            \.filters,
-            \.bias,
-        ]
-    }
-
+@Layer
+public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     /// Convolution filters, shape [outputChannels, inputChannels, kernelHeight, kernelWidth]
     public var filters: Tensor<Element, Device>
     /// Bias, shape [1, outputChannels, 1, 1]
@@ -42,10 +36,6 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
     public let stride: Int
     // Padding around the edges of the input
     public let padding: Int?
-
-    public var parameters: [Tensor<Element, Device>] {
-        [filters, bias]
-    }
 
     /// Creates a 2D convolutional layer.
     ///
@@ -99,14 +89,8 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Laye
 }
 
 /// A 2D transposed (fractionally strided) convolutional layer
-public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        [
-            \.filters,
-            \.bias,
-        ]
-    }
-
+@Layer
+public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     /// Convolution filters, shape [outputChannels, inputChannels, kernelHeight, kernelWidth]
     public var filters: Tensor<Element, Device>
 
@@ -118,10 +102,6 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
 
     /// Number of elements that are removed from the edges of the output.
     public let inset: Int?
-
-    public var parameters: [Tensor<Element, Device>] {
-        [filters, bias]
-    }
 
     /// Creates a 2D transposed (fractionally strided) convolutional layer.
     ///

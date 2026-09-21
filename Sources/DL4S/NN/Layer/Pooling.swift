@@ -26,15 +26,8 @@
 import Foundation
 
 /// A 2D max pooling layer
-public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        []
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        []
-    }
-
+@Layer
+public struct MaxPool2D<Element: NumericType, Device: DeviceType>: Codable, Sendable {
     /// Pooling window size
     public let windowSize: Int
 
@@ -61,15 +54,8 @@ public struct MaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
 }
 
 /// A 2D average pooling layer
-public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        []
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        []
-    }
-
+@Layer
+public struct AvgPool2D<Element: NumericType, Device: DeviceType>: Codable, Sendable {
     /// Pooling window size
     public let windowSize: Int
 
@@ -96,15 +82,8 @@ public struct AvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Co
 }
 
 /// A 2D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
-public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        []
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        []
-    }
-
+@Layer
+public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Codable, Sendable {
     /// Width and height of the output tensor
     public let targetSize: Int
 
@@ -122,15 +101,8 @@ public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Layer
 }
 
 /// A 2D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
-public struct AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        []
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        []
-    }
-
+@Layer
+public struct AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: Codable, Sendable {
     /// Width and height of the output tensor
     public let targetSize: Int
 

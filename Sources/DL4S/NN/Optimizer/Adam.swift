@@ -3,7 +3,7 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 19.10.19.
-//  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - 2026 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +28,10 @@ import Foundation
 /// Adam optimizer (Adaptive moment estimation)
 ///
 /// Follows [Kingma et al. - Adam: A method for stochastic optimization](https://arxiv.org/pdf/1412.6980.pdf)
-public struct Adam<Layer: LayerType>: Optimizer {
-    public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
+public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+    public typealias ParamTensor = Tensor<Element, Device>
 
-    public private(set) var model: Layer
-
+    /// Whether the maximum of the past second moments normalizes the step, as in AMSGrad
     public let useAMSGrad: Bool
 
     /// Learning rate scaling factor
@@ -50,24 +49,20 @@ public struct Adam<Layer: LayerType>: Optimizer {
     private var beta1t: ParamTensor
     private var beta2t: ParamTensor
 
-    private var firstMoments: [ParamTensor]
-    private var secondMoments: [ParamTensor]
-    private var secondMomentMax: [ParamTensor]?
-
-    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
+    private var firstMoments: [ParamTensor] = []
+    private var secondMoments: [ParamTensor] = []
+    private var secondMomentMax: [ParamTensor] = []
 
     /// Adam optimizer (Adaptive moment estimation)
     ///
     /// Follows [Kingma et al. - Adam: A method for stochastic optimization](https://arxiv.org/pdf/1412.6980.pdf)
     /// - Parameters:
-    ///   - model: Model to optimize
     ///   - learningRate: Learning rate scaling factor
+    ///   - useAMSGrad: Whether the maximum of the past second moments normalizes the step, as in AMSGrad
     ///   - beta1: Exponential decay rate for first moment
     ///   - beta2: Exponential decay rate for second moment
     ///   - epsilon: Normalization scalar added to divisors
-    public init(model: Layer, learningRate: ParamTensor, useAMSGrad: Bool = false, beta1: ParamTensor = 0.9, beta2: ParamTensor = 0.999, epsilon: ParamTensor = 1e-8) {
-        self.model = model
-
+    public init(learningRate: ParamTensor, useAMSGrad: Bool = false, beta1: ParamTensor = 0.9, beta2: ParamTensor = 0.999, epsilon: ParamTensor = 1e-8) {
         self.useAMSGrad = useAMSGrad
 
         self.learningRate = learningRate
@@ -78,118 +73,51 @@ public struct Adam<Layer: LayerType>: Optimizer {
         beta2t = beta2
 
         self.epsilon = epsilon
-
-        firstMoments = model.parameters.map {
-            Tensor(repeating: 0, shape: $0.shape)
-        }
-        secondMoments = model.parameters.map {
-            Tensor(repeating: 0, shape: $0.shape)
-        }
-        paths = model.parameterPaths
-
-        if useAMSGrad {
-            secondMomentMax = model.parameters.map {
-                Tensor(repeating: 0, shape: $0.shape)
-            }
-        }
     }
 
-    /// Resets the state of the optimizer
     public mutating func reset() {
         beta1t = beta1
         beta2t = beta2
 
-        firstMoments = model.parameters.map {
-            Tensor(repeating: 0, shape: $0.shape)
-        }
-        secondMoments = model.parameters.map {
-            Tensor(repeating: 0, shape: $0.shape)
-        }
+        firstMoments = []
+        secondMoments = []
+        secondMomentMax = []
     }
 
-    public mutating func update(along gradients: [ParamTensor]) {
-        for i in paths.indices {
-            let path = paths[i]
-            let grad = gradients[i].detached()
+    public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
+        Self.validateGradients(gradients, against: parameters)
+        Self.initializeStateIfNeeded(&firstMoments, for: parameters)
+        Self.initializeStateIfNeeded(&secondMoments, for: parameters)
+        if useAMSGrad {
+            Self.initializeStateIfNeeded(&secondMomentMax, for: parameters)
+        }
+
+        for index in parameters.indices {
+            let grad = gradients[index].detached()
 
             let addedToFirstMoment = grad * (1 - beta1)
-            firstMoments[i] = firstMoments[i] * beta1 + addedToFirstMoment
+            firstMoments[index] = firstMoments[index] * beta1 + addedToFirstMoment
 
             let addedToSecondMoment = (grad * grad) * (1 - beta2)
-            secondMoments[i] = secondMoments[i] * beta2 + addedToSecondMoment
+            secondMoments[index] = secondMoments[index] * beta2 + addedToSecondMoment
 
             let v_t_norm: ParamTensor
-            if useAMSGrad, let secondMomentMax {
-                let v_t_max = secondMomentMax[i]
-                v_t_norm = Tensor.max(v_t_max, secondMoments[i])
+            if useAMSGrad {
+                secondMomentMax[index] = Tensor.max(secondMomentMax[index], secondMoments[index])
+                v_t_norm = secondMomentMax[index]
             } else {
-                v_t_norm = secondMoments[i]
+                v_t_norm = secondMoments[index]
             }
 
-            let m_car_t = firstMoments[i] / (1 - beta1t)
+            let m_car_t = firstMoments[index] / (1 - beta1t)
             let v_car_t = v_t_norm / (1 - beta2t)
 
             let delta = learningRate / (v_car_t.sqrt() + epsilon) * m_car_t
-            model[keyPath: path] -= delta
-            model[keyPath: path].discardContext()
+            parameters[index] -= delta
+            parameters[index].discardContext()
         }
 
         beta1t *= beta1
         beta2t *= beta2
-    }
-}
-
-extension Adam: Codable where Layer: Codable {
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        model = try container.decode(Layer.self, forKey: .model)
-        learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
-        beta1 = try container.decode(ParamTensor.self, forKey: .beta1)
-        beta2 = try container.decode(ParamTensor.self, forKey: .beta2)
-        beta1t = try container.decode(ParamTensor.self, forKey: .beta1t)
-        beta2t = try container.decode(ParamTensor.self, forKey: .beta2t)
-        epsilon = try container.decode(ParamTensor.self, forKey: .epsilon)
-        firstMoments = try container.decode([ParamTensor].self, forKey: .firstMoments)
-        secondMoments = try container.decode([ParamTensor].self, forKey: .secondMoments)
-        if container.contains(.useAMSGrad), try container.decode(Bool.self, forKey: .useAMSGrad) {
-            useAMSGrad = true
-            secondMomentMax = try container.decode([ParamTensor].self, forKey: .secondMomentMax)
-        } else {
-            useAMSGrad = false
-            secondMomentMax = nil
-        }
-
-        paths = model.parameterPaths
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-
-        try container.encode(model, forKey: .model)
-        try container.encode(learningRate, forKey: .learningRate)
-        try container.encode(beta1, forKey: .beta1)
-        try container.encode(beta2, forKey: .beta2)
-        try container.encode(beta1t, forKey: .beta1t)
-        try container.encode(beta2t, forKey: .beta2t)
-        try container.encode(epsilon, forKey: .epsilon)
-        try container.encode(firstMoments, forKey: .firstMoments)
-        try container.encode(secondMoments, forKey: .secondMoments)
-        try container.encode(useAMSGrad, forKey: .useAMSGrad)
-        try container.encode(secondMomentMax, forKey: .secondMomentMax)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case model
-        case firstMoments
-        case secondMoments
-        case useAMSGrad
-        case secondMomentMax
-        case learningRate
-        case beta1
-        case beta2
-        case beta1t
-        case beta2t
-        case epsilon
     }
 }

@@ -26,27 +26,8 @@
 import Foundation
 
 /// Residual block with two convolution and batch normalization layers as well as an optional downsampling block.
-public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: LayerType {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        Array([
-            parameterPaths(of: \.conv1),
-            parameterPaths(of: \.conv2),
-            parameterPaths(of: \.bn1),
-            parameterPaths(of: \.bn2),
-            downsample == nil ? [] : parameterPaths(of: \.downsample.forceUnwrapped),
-        ].joined())
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        Array([
-            conv1.parameters,
-            conv2.parameters,
-            bn1.parameters,
-            bn2.parameters,
-            downsample?.parameters ?? [],
-        ].joined())
-    }
-
+@Layer
+public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Sendable {
     /// First convolution layer
     public var conv1: Convolution2D<Element, Device>
     /// Second convolution layer

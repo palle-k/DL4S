@@ -30,37 +30,52 @@ import Foundation
 /// Batch normalization has been added to this implementation.
 ///
 /// https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
-public struct AlexNet<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        Array([
-            parameterPaths(of: \.featureNet),
-            parameterPaths(of: \.avgPool),
-            parameterPaths(of: \.classifier),
-        ].joined())
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        Array([
-            featureNet.parameters,
-            avgPool.parameters,
-            classifier.parameters,
-        ].joined())
-    }
-
-    var featureNet: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Convolution2D<Element, Device>, Relu<Element, Device>>, MaxPool2D<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, MaxPool2D<Element, Device>>, Convolution2D<Element, Device>>, Relu<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Convolution2D<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, MaxPool2D<Element, Device>>
+@Layer
+public struct AlexNet<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+    var featureNet: Sequential<
+        Convolution2D<Element, Device>,
+        Relu<Element, Device>,
+        MaxPool2D<Element, Device>,
+        Convolution2D<Element, Device>,
+        BatchNorm<Element, Device>,
+        Relu<Element, Device>,
+        MaxPool2D<Element, Device>,
+        Convolution2D<Element, Device>,
+        Relu<Element, Device>,
+        Convolution2D<Element, Device>,
+        BatchNorm<Element, Device>,
+        Relu<Element, Device>,
+        Convolution2D<Element, Device>,
+        BatchNorm<Element, Device>,
+        Relu<Element, Device>,
+        MaxPool2D<Element, Device>,
+    >
 
     var avgPool: AdaptiveAvgPool2D<Element, Device>
 
-    var classifier: Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Sequential<Flatten<Element, Device>, Dropout<Element, Device>>, Dense<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Dropout<Element, Device>>, Dense<Element, Device>>, BatchNorm<Element, Device>>, Relu<Element, Device>>, Dense<Element, Device>>, LogSoftmax<Element, Device>>
+    var classifier: Sequential<
+        Flatten<Element, Device>,
+        Dropout<Element, Device>,
+        Dense<Element, Device>,
+        BatchNorm<Element, Device>,
+        Relu<Element, Device>,
+        Dropout<Element, Device>,
+        Dense<Element, Device>,
+        BatchNorm<Element, Device>,
+        Relu<Element, Device>,
+        Dense<Element, Device>,
+        LogSoftmax<Element, Device>,
+    >
 
     /// Determines whether dropout is applied in the classification block
     public var isDropoutActive: Bool {
         get {
-            classifier.first.first.first.first.first.first.first.first.first.second.isActive || classifier.first.first.first.first.first.second.isActive
+            classifier.layers(of: Dropout<Element, Device>.self).contains { $0.isActive }
         }
         set {
-            classifier.first.first.first.first.first.first.first.first.first.second.isActive = newValue
-            classifier.first.first.first.first.first.second.isActive = newValue
+            classifier.modifyLayers(of: Dropout<Element, Device>.self) { dropout in
+                dropout.isActive = newValue
+            }
         }
     }
 

@@ -26,23 +26,13 @@
 import Foundation
 
 /// Dense (Linear, Fully connected) layer with no activation function.
-public struct Dense<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        [
-            \.weights,
-            \.bias,
-        ]
-    }
-
+@Layer
+public struct Dense<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     /// Weights, shape [inputSize, outputSize]
     public var weights: Tensor<Element, Device>
 
     /// Bias, shape [outputSize]
     public var bias: Tensor<Element, Device>
-
-    public var parameters: [Tensor<Element, Device>] {
-        [weights, bias]
-    }
 
     /// Creates a dense / linear / fully connected layer with no output activation function.
     ///

@@ -30,8 +30,8 @@ import Testing
 struct ModelTests {
     @Test(.longRunning)
     func testResNet() {
-        let resnet = ResNet18<Float, CPU>(inputShape: [3, 64, 64], classes: 256)
-        var optim = Adam(model: resnet, learningRate: 0.001)
+        var resnet = ResNet18<Float, CPU>(inputShape: [3, 64, 64], classes: 256)
+        var optim = Adam<Float, CPU>(learningRate: 0.001)
 
         let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 32, 3, 64, 64, min: 0, max: 1)
         let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 32, min: 0, max: 255)
@@ -39,23 +39,24 @@ struct ModelTests {
         let epochs = 5
 
         for i in 1 ... epochs {
-            let result = optim.model(t)
+            let result = resnet(t)
 
             let loss = categoricalNegativeLogLikelihood(expected: expected, actual: result)
-            let grads = loss.gradients(of: optim.model.parameters)
-            optim.update(along: grads)
+            resnet.update { parameters in
+                optim.update(&parameters, along: loss.gradients(of: parameters))
+            }
 
             print("[\(i)/\(epochs)] \(loss)")
         }
 
-        #expect(categoricalNegativeLogLikelihood(expected: expected, actual: optim.model(t)).item < 0.01)
+        #expect(categoricalNegativeLogLikelihood(expected: expected, actual: resnet(t)).item < 0.01)
     }
 
     @Test(.longRunning)
     func testAlexNet() {
         var alexNet = AlexNet<Float, CPU>(inputChannels: 3, classes: 256)
         alexNet.isDropoutActive = false
-        var optim = Adam(model: alexNet, learningRate: 0.001)
+        var optim = Adam<Float, CPU>(learningRate: 0.001)
 
         let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 32, 3, 192, 192, min: 0, max: 1)
         let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 32, min: 0, max: 255)
@@ -63,22 +64,23 @@ struct ModelTests {
         let epochs = 5
 
         for i in 1 ... epochs {
-            let result = optim.model(t)
+            let result = alexNet(t)
 
             let loss = categoricalNegativeLogLikelihood(expected: expected, actual: result)
-            let grads = loss.gradients(of: optim.model.parameters)
-            optim.update(along: grads)
+            alexNet.update { parameters in
+                optim.update(&parameters, along: loss.gradients(of: parameters))
+            }
 
             print("[\(i)/\(epochs)] \(loss)")
         }
 
-        #expect(categoricalNegativeLogLikelihood(expected: expected, actual: optim.model(t)).item < 0.1)
+        #expect(categoricalNegativeLogLikelihood(expected: expected, actual: alexNet(t)).item < 0.1)
     }
 
     @Test(.longRunning)
     func testVGG() {
-        let vgg = VGG11<Float, CPU>(inputChannels: 3, classes: 256)
-        var optim = Adam(model: vgg, learningRate: 0.001)
+        var vgg = VGG11<Float, CPU>(inputChannels: 3, classes: 256)
+        var optim = Adam<Float, CPU>(learningRate: 0.001)
 
         let t = Tensor<Float, CPU>(uniformlyDistributedWithShape: 16, 3, 192, 192, min: 0, max: 1)
         let expected = Tensor<Int32, CPU>(uniformlyDistributedWithShape: 16, min: 0, max: 255)
@@ -86,15 +88,16 @@ struct ModelTests {
         let epochs = 5
 
         for i in 1 ... epochs {
-            let result = optim.model(t)
+            let result = vgg(t)
 
             let loss = categoricalNegativeLogLikelihood(expected: expected, actual: result)
-            let grads = loss.gradients(of: optim.model.parameters)
-            optim.update(along: grads)
+            vgg.update { parameters in
+                optim.update(&parameters, along: loss.gradients(of: parameters))
+            }
 
             print("[\(i)/\(epochs)] \(loss)")
         }
 
-        #expect(categoricalNegativeLogLikelihood(expected: expected, actual: optim.model(t)).item < 0.1)
+        #expect(categoricalNegativeLogLikelihood(expected: expected, actual: vgg(t)).item < 0.1)
     }
 }

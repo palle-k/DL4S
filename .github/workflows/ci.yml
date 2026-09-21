@@ -14,13 +14,14 @@ jobs:
         os: [macos-latest, ubuntu-24.04]
         configuration: [debug, release]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    # The macro target compiles swift-syntax from source when no prebuilt library matches the toolchain.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: swift-actions/setup-swift@v2
         if: runner.os == 'Linux'
         with:
-          swift-version: "6.1"
+          swift-version: "6.2"
       - name: Show Swift version
         run: swift --version
       - name: Run tests (debug)
@@ -36,7 +37,7 @@ jobs:
   tsan:
     name: thread sanitizer (macos-latest)
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - name: Show Swift version
@@ -47,12 +48,12 @@ jobs:
   lint:
     name: lint (ubuntu-24.04)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: swift-actions/setup-swift@v2
         with:
-          swift-version: "6.1"
+          swift-version: "6.2"
       - name: Show Swift version
         run: swift --version
       - name: Check formatting

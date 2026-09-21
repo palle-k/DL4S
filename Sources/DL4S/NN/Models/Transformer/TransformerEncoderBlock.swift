@@ -26,22 +26,10 @@
 import Foundation
 
 /// Transformer encoder layer consisting of a self-attention and a pointwise feed forward layer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
-public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+@Layer
+public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     public var selfAttention: MultiHeadAttention<Element, Device>
     public var pointwiseFeedForward: PointwiseFeedForward<Element, Device>
-
-    public var parameters: [Tensor<Element, Device>] {
-        Array([
-            selfAttention.parameters, pointwiseFeedForward.parameters,
-        ].joined())
-    }
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        Array([
-            parameterPaths(of: \.selfAttention),
-            parameterPaths(of: \.pointwiseFeedForward),
-        ].joined())
-    }
 
     /// Creates Transformer encoder layer consisting of a self-attention and a pointwise feed forward layer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
