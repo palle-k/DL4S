@@ -1,4 +1,4 @@
---swiftversion 6.1
+--swiftversion 6.2
 --languagemode 6
 --exclude .build,.build-linux,.swiftpm
 

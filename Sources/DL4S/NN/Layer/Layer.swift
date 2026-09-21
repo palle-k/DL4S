@@ -3,7 +3,7 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 12.10.19.
-//  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - 2026 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,24 @@
 import Foundation
 
 /// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
-/// The layer may have parameters, which influence, how the outputs are generated.
-public protocol LayerType<Inputs, Outputs, Parameter, Device>: Sendable {
+/// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
+/// To do so, it may rely on a set of parameters (weights) may be trained through optimization.
+///
+/// Train a layer with ``update(_:)``:
+///
+/// ```swift
+/// var model = Sequential {
+///     Dense<Float, CPU>(inputSize: 784, outputSize: 10)
+///     LogSoftmax<Float, CPU>()
+/// }
+/// var optimizer = Adam<Float, CPU>(learningRate: 0.001)
+///
+/// let loss = categoricalNegativeLogLikelihood(expected: labels, actual: model(images))
+/// model.update { parameters in
+///     optimizer.update(&parameters, along: loss.gradients(of: parameters))
+/// }
+/// ```
+public protocol LayerType<Inputs, Outputs, Parameter, Device> {
     /// Inputs of the layer
     associatedtype Inputs
 
@@ -40,13 +56,15 @@ public protocol LayerType<Inputs, Outputs, Parameter, Device>: Sendable {
     /// Device type of a parameter tensor
     associatedtype Device: DeviceType
 
-    /// Keypaths to parameters that influence the output of the layer.
+    /// Reports the tensors and sublayers of the layer to the visitor.
     ///
-    /// Use `parameterPaths(of: layerPath)` to concatenate while retaining `Sendable`.
-    var parameterPaths: [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] { get }
-
-    /// Parameters, that influence the output of the layer.
-    var parameters: [Tensor<Parameter, Device>] { get }
+    /// Calls ``TensorVisitor/weight(_:named:)`` for every learned tensor, ``TensorVisitor/frozen(_:named:)`` for
+    /// every tensor that is saved but not trained, and `sublayer(_:named:)` for every
+    /// layer that is stored in a property.
+    /// Tensors are reported in a fixed order, to maintain correspondence with optimizer states.
+    ///
+    /// - Parameter visitor: Visitor that receives the tensors.
+    mutating func visitTensors(_ visitor: inout TensorVisitor<Parameter, Device>)
 
     /// Performs a transformation determined by the type of the layer.
     ///
@@ -57,21 +75,137 @@ public protocol LayerType<Inputs, Outputs, Parameter, Device>: Sendable {
 }
 
 public extension LayerType {
-    /// Returns the parameter key paths of a nested layer, prefixed with the key path to that layer.
+    /// The tensors that an optimizer updates: all weights of the layer and its sublayers that require a gradient.
     ///
-    /// Use this to build `parameterPaths` for a layer that contains other layers.
-    ///
-    /// - Parameter layerPath: Key path from this layer to the nested layer.
-    /// - Returns: One key path per parameter of the nested layer.
-    func parameterPaths<Layer: LayerType>(of layerPath: WritableKeyPath<Self, Layer> & Sendable) -> [WritableKeyPath<Self, Tensor<Parameter, Device>> & Sendable] where Layer.Parameter == Parameter, Layer.Device == Device {
-        self[keyPath: layerPath].parameterPaths.map { layerPath.appendingSendable(path: $0) }
+    /// The order is the traversal order of ``LayerType/visitTensors(_:)``. It is the same order that ``update(_:)`` uses
+    /// and that ``weightPaths`` describes.
+    var parameters: [Tensor<Parameter, Device>] {
+        var parameters: [Tensor<Parameter, Device>] = []
+        var copy = self
+        var visitor = TensorVisitor<Parameter, Device>(tensors: { tensor, role, _ in
+            if role == .weight, tensor.requiresGradient {
+                parameters.append(tensor)
+            }
+        })
+        copy.visitTensors(&visitor)
+        return parameters
     }
-}
 
-private extension WritableKeyPath {
-    /// Appends a key path and keeps the `Sendable` conformance.
-    func appendingSendable<AppendedValue>(path: WritableKeyPath<Value, AppendedValue> & Sendable) -> WritableKeyPath<Root, AppendedValue> & Sendable where Self: Sendable {
-        let appended: WritableKeyPath<Root, AppendedValue> = appending(path: path as WritableKeyPath<Value, AppendedValue>)
-        return unsafeBitCast(appended, to: (WritableKeyPath<Root, AppendedValue> & Sendable).self)
+    /// The paths of the tensors in ``parameters``, in the same order.
+    var weightPaths: [TensorPath] {
+        var paths: [TensorPath] = []
+        var copy = self
+        var visitor = TensorVisitor<Parameter, Device>(tensors: { tensor, role, path in
+            if role == .weight, tensor.requiresGradient {
+                paths.append(path)
+            }
+        })
+        copy.visitTensors(&visitor)
+        return paths
+    }
+
+    /// Replaces the trainable weights of the layer with the result of a closure.
+    ///
+    /// The closure receives the weights that require a gradient, in traversal order. Compute the gradients of
+    /// these tensors and let an optimizer change them in place. When the closure returns, the visitor writes
+    /// the tensors back to their positions, detaches them from the compute graph, and keeps them trainable.
+    ///
+    /// ```swift
+    /// model.update { parameters in
+    ///     optimizer.update(&parameters, along: loss.gradients(of: parameters))
+    /// }
+    /// ```
+    ///
+    /// - Parameter body: Closure that changes the weights. It must not add or remove tensors.
+    mutating func update<Failure: Error>(_ body: (inout [Tensor<Parameter, Device>]) throws(Failure) -> Void) throws(Failure) {
+        var parameters: [Tensor<Parameter, Device>] = []
+        var collector = TensorVisitor<Parameter, Device>(tensors: { tensor, role, _ in
+            if role == .weight, tensor.requiresGradient {
+                parameters.append(tensor)
+            }
+        })
+        visitTensors(&collector)
+        let count = parameters.count
+
+        try body(&parameters)
+        precondition(parameters.count == count, "update(_:) received \(count) tensors, but returned \(parameters.count).")
+
+        var index = 0
+        var writer = TensorVisitor<Parameter, Device>(tensors: { tensor, role, _ in
+            guard role == .weight, tensor.requiresGradient else {
+                return
+            }
+            tensor = parameters[index]
+            tensor.discardContext()
+            tensor.requiresGradient = true
+            index += 1
+        })
+        visitTensors(&writer)
+    }
+
+    /// Stops the training of all weights of the layer and its sublayers.
+    ///
+    /// A frozen weight does not require a gradient. The backward pass skips it, and ``update(_:)`` does not
+    /// present it. Tensors that a layer reports with ``TensorVisitor/frozen(_:named:)`` are not changed.
+    mutating func freeze() {
+        setRequiresGradient(false)
+    }
+
+    /// Makes all weights of the layer and its sublayers trainable again.
+    ///
+    /// Tensors that a layer reports with ``TensorVisitor/frozen(_:named:)`` stay frozen.
+    mutating func unfreeze() {
+        setRequiresGradient(true)
+    }
+
+    /// Changes all layers of a type in the layer tree, including the layer itself.
+    ///
+    /// ```swift
+    /// model.modifyLayers(of: Dropout<Float, CPU>.self) { dropout in
+    ///     dropout.isActive = false
+    /// }
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - type: Type of the layers to change.
+    ///   - body: Closure that changes one layer.
+    mutating func modifyLayers<Layer: LayerType>(of type: Layer.Type, _ body: (inout Layer) -> Void) {
+        if var layer = self as? Layer {
+            body(&layer)
+            // The cast to Layer succeeded, so Layer is Self and the cast back cannot fail.
+            // swiftlint:disable:next force_cast
+            self = layer as! Self
+        }
+        withoutActuallyEscaping(body) { body in
+            var visitor = TensorVisitor<Parameter, Device>(tensors: { _, _, _ in }, layers: { erased in
+                guard var layer = erased as? Layer else {
+                    return
+                }
+                body(&layer)
+                erased = layer
+            })
+            visitTensors(&visitor)
+        }
+    }
+
+    /// Returns all layers of a type in the layer tree, including the layer itself, in traversal order.
+    /// - Parameter type: Type of the layers to return.
+    /// - Returns: The layers of the type.
+    func layers<Layer: LayerType>(of type: Layer.Type) -> [Layer] {
+        var layers: [Layer] = []
+        var copy = self
+        copy.modifyLayers(of: type) { layer in
+            layers.append(layer)
+        }
+        return layers
+    }
+
+    private mutating func setRequiresGradient(_ requiresGradient: Bool) {
+        var visitor = TensorVisitor<Parameter, Device>(tensors: { tensor, role, _ in
+            if role == .weight {
+                tensor.requiresGradient = requiresGradient
+            }
+        })
+        visitTensors(&visitor)
     }
 }

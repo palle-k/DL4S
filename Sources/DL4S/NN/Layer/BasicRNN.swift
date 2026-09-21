@@ -27,15 +27,10 @@ import Foundation
 
 /// A 'vanilla' RNN.
 /// In each step, the RNN performs the transformation matMul(x\_t, W) + matMul(h\_t-1, U) + b
-public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Codable {
+@Layer
+public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Codable, Sendable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (Tensor<Element, Device>, () -> Tensor<Element, Device>)
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        [
-            \.W, \.U, \.b,
-        ]
-    }
 
     public let direction: RNNDirection
 
@@ -49,10 +44,6 @@ public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Coda
 
     public var hiddenSize: Int {
         W.shape[1]
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        [W, U, b]
     }
 
     /// A 'vanilla' RNN.

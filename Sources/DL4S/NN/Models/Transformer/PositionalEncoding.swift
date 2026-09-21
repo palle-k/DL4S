@@ -30,9 +30,8 @@ import Foundation
 /// The layer takes an array of Ints as an input, which indicate the number of elements in each sequence of the minibatch.
 /// It returns a tensor with the shape [max(inputs), hiddenSize].
 /// It does not mask out positional encodings for padding elements.
-public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
-    public typealias Parameter = Element
-
+@Layer
+public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     /// Number of elements in the positional encoding output tensor.
     public let hiddenSize: Int
 
@@ -41,14 +40,6 @@ public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>:
     public init(hiddenSize: Int) {
         precondition(hiddenSize.isMultiple(of: 2), "Hidden size must be multiple of 2")
         self.hiddenSize = hiddenSize
-    }
-
-    public var parameters: [Tensor<Element, Device>] {
-        []
-    }
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        []
     }
 
     /// Creates a positional encoding matrix

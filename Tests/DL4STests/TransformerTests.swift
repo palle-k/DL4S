@@ -30,7 +30,7 @@ import Testing
 struct TransformerTests {
     @Test(.longRunning)
     func testTransformerConvergence() {
-        let transformer = Transformer<Float, CPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
+        var transformer = Transformer<Float, CPU>(encoderLayers: 2, decoderLayers: 2, vocabSize: 4, hiddenDim: 16, heads: 4, keyDim: 8, valueDim: 8, forwardDim: 32, dropout: 0)
         let samples: [[Int32]] = [
             [1, 2, 3, 0],
             [2, 0, 3, 1],
@@ -39,7 +39,7 @@ struct TransformerTests {
         ]
         let outputs: [[Int32]] = [[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]]
 
-        var optim = Adam(model: transformer, learningRate: 0.001)
+        var optim = Adam<Float, CPU>(learningRate: 0.001)
 
         var bar = ProgressBar<Float>(totalUnitCount: 1000, formatUserInfo: { "loss: \($0)" }, label: "training")
 
@@ -53,10 +53,11 @@ struct TransformerTests {
                 [0] + $0.dropLast()
             }
 
-            let prediction = optim.model((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
+            let prediction = transformer((encoderInput: Tensor(input), decoderInput: Tensor(decoderInput), encoderInputLengths: [4, 4, 4, 4], decoderInputLengths: [4, 4, 4, 4]))
             let loss = categoricalNegativeLogLikelihood(expected: Tensor(expected), actual: prediction)
-            let grads = loss.gradients(of: optim.model.parameters)
-            optim.update(along: grads)
+            transformer.update { parameters in
+                optim.update(&parameters, along: loss.gradients(of: parameters))
+            }
             bar.next(userInfo: loss.item)
 
             lastLoss = loss.item

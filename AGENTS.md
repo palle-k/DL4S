@@ -31,7 +31,7 @@ Tests use Swift Testing (`@Suite` structs with `@Test` functions) in `Tests/DL4S
 `ConcurrencyTests` runs inference, backpropagation, dropout, and weight initialization from several raw threads at the same time. It is the acceptance test for the thread-safety work. Run the suite under the thread sanitizer to see data races as reports.
 
 ## Architecture
-Two targets: `CMKL` (a system library target: `module.modulemap` plus `shim.h`, which includes `mkl.h` and `ipp.h`; the MKL include path and link line come from the `mkl-dynamic-lp64-gomp` pkg-config file, the IPP libraries from `link` directives in the module map) and `DL4S`, which depends on `CMKL` only when the `MKL` trait is on. `Package.swift` declares `CMKL` only on x86_64 Linux hosts, so builds on other hosts do not look for the pkg-config file. Accelerate needs no configuration.
+Three targets: `CMKL` (a system library target: `module.modulemap` plus `shim.h`, which includes `mkl.h` and `ipp.h`; the MKL include path and link line come from the `mkl-dynamic-lp64-gomp` pkg-config file, the IPP libraries from `link` directives in the module map), `DL4SMacros` (the compiler plugin with the `@Layer` and `@Frozen` macros), and `DL4S`, which depends on `DL4SMacros`, and on `CMKL` only when the `MKL` trait is on. `Package.swift` declares `CMKL` only on x86_64 Linux hosts, so builds on other hosts do not look for the pkg-config file. Accelerate needs no configuration.
 
 ### Generic core: Tensor over Element and Device
 Everything is generic over two parameters: `Tensor<Element: NumericType, Device: DeviceType>` (`Sources/DL4S/Tensor/Tensor.swift`). Valid elements are `Float`, `Double`, and `Int32` (`Sources/DL4S/Numerics/`).
@@ -50,15 +50,19 @@ Autograd is closure-based and lives in `Sources/DL4S/Tensor/`:
 - Each tensor gets its `backpropID` from a process-wide atomic counter (`UniqueID`). Copies keep the id. `ensureOwnership` creates a new tensor with a new id when the buffer is shared.
 
 ### NN layer system
-- `LayerType` (`NN/Layer/Layer.swift`) has associated `Inputs`/`Outputs` types (not fixed to tensors, which is how RNNs return tuples), `callAsFunction`, and two parameter accessors: `parameters` and `parameterPaths` (writable key paths into the layer struct).
-- Layers are value types. Optimizers (`NN/Optimizer/`) copy the model and mutate its parameters through `parameterPaths`. This is why usage code must call `optimizer.model(input)`, never the original `model` variable.
-- `Sequential` (`NN/Layer/Sequential.swift`) is a result builder that folds a block of layers into nested `Sequential<Sequential<A, B>, C>` pairs.
+- `LayerType` (`NN/Layer/Layer.swift`) has associated `Inputs`/`Outputs` types (not fixed to tensors, which is how RNNs return tuples), `Parameter`/`Device` types, `callAsFunction`, and one traversal requirement: `mutating func visitTensors(_ visitor: inout TensorVisitor<Parameter, Device>)`. A layer reports every stored tensor with `visitor.weight(&tensor, named:)` or `visitor.frozen(&tensor, named:)` (saved, never trained) and every stored layer with `visitor.sublayer(&layer, named:)` (plain, optional, or array). `parameters`, `weightPaths`, `update`, `freeze`, `unfreeze`, `modifyLayers(of:)`, and `layers(of:)` are extension methods built on the traversal.
+- `TensorVisitor` (`NN/Layer/TensorVisitor.swift`) owns the `TensorPath` of the current tensor (property names and positions, rendered as `encoder.blocks.3.Wq` or `0.weights`) and the per-sequence counters. The path is the key of the tensor in checkpoint files.
+- The `@Layer` macro (declared in `NN/Layer/LayerMacros.swift`, implemented in the `DL4SMacros` target with swift-syntax) adds the `LayerType` conformance and generates `visitTensors` with one `visitor.stored(&self.x, named: "x")` call per stored `var`. The `stored` overloads on `TensorVisitor` select the role by type, so the macro needs no type information. The generated method uses the type names `Element` and `Device`, which the struct must have as generic parameters or typealiases. `@Frozen` marks a stored property as frozen. `let` tensors are not visited. Layers that decide a role at run time (`Swish`) implement `visitTensors` by hand. Expansion tests live in `Tests/DL4SMacrosTests`.
+- Layers are value types and stay the single source of truth. Training code calls `model(input)`, then `model.update { parameters in optimizer.update(&parameters, along: loss.gradients(of: parameters)) }`. The closure receives the weights that require a gradient as an array in traversal order, and the visitor writes them back detached from the graph.
+- Optimizers (`NN/Optimizer/`) are `Optimizer<Element, Device>` values that do not know the model. State is created on the first step from the parameter shapes, checked by count and shape on every step (a mismatch traps), and matched by position. They are `Codable`; call `reset()` after `freeze()`/`unfreeze()`.
+- `Sequential<First, each Middle, Last>` (`NN/Layer/Sequential.swift`) allows an arbitrary sequence of layers with arbitrary intermediate results to be expressed using result builders.
 - Reference architectures live in `NN/Models/`.
 
 ## Conventions
 - Every file starts with the MIT license header (`// <Filename>.swift / DL4S / Created by ... / Copyright ...`). New files get the same header.
 - Public APIs carry `///` doc comments with `- Parameters:` / `- Returns:`. The reference documentation is DocC output published from CI.
 - The package builds in Swift 6 language mode (`swiftLanguageModes: [.v6]` in `Package.swift`), so concurrency diagnostics are errors.
+- Layers use `@Layer` and store their tensors as `var` properties named after the paper or the role (`weights`, `bias`, `Wq`). The property name is the tensor path in checkpoints, so do not rename them without a reason.
 - Hot generic functions use `@inline(__always)` and `@_specialize(where Element == Float, Device == CPU)`.
 - Engine primitives use terse names (`vAdd`, `vsMul`, `gemm`, `img2col`); public tensor methods are spelled out (`matrixMultiplied(with:)`, `permuted(to:)`, `reduceSum(along:)`).
 

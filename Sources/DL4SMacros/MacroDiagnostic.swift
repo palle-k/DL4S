@@ -1,9 +1,9 @@
 //
-//  Dropout.swift
-//  DL4S
+//  MacroDiagnostic.swift
+//  DL4SMacros
 //
-//  Created by Palle Klewitz on 17.10.19.
-//  Copyright (c) 2019 - Palle Klewitz
+//  Created by Palle Klewitz on 21.09.26.
+//  Copyright (c) 2026 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -23,30 +23,17 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import Foundation
+import SwiftDiagnostics
 
-/// A dropout layer
-@Layer
-public struct Dropout<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
-    /// Rate, with which dropout is applied.
-    public var rate: Float
+/// A diagnostic message of the DL4S macros.
+struct MacroDiagnostic: DiagnosticMessage {
+    let message: String
+    let diagnosticID: MessageID
+    let severity: DiagnosticSeverity
 
-    /// Whether dropout is active. If dropout is deactivated, this layer performs the identity mapping.
-    public var isActive: Bool = true
-
-    /// Creates a layer, that drops elements with the given probability.
-    /// - Parameter rate: Dropout probability.
-    public init(rate: Float) {
-        self.rate = rate
-    }
-
-    public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        if isActive {
-            OperationGroup.capture(named: "Dropout") {
-                inputs * Tensor(bernoulliDistributedWithShape: inputs.shape, probability: 1 - rate)
-            }
-        } else {
-            inputs
-        }
+    init(_ message: String, id: String, severity: DiagnosticSeverity = .error) {
+        self.message = message
+        diagnosticID = MessageID(domain: "DL4SMacros", id: id)
+        self.severity = severity
     }
 }

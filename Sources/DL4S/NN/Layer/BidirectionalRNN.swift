@@ -26,19 +26,12 @@
 import Foundation
 
 /// A bidirectional RNN
-public struct Bidirectional<RNNLayer: RNN>: LayerType {
+@Layer
+public struct Bidirectional<RNNLayer: RNN> {
     public typealias Inputs = RNNLayer.Inputs
     public typealias Outputs = (forward: RNNLayer.Outputs, backward: RNNLayer.Outputs)
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<RNNLayer.Parameter, RNNLayer.Device>> & Sendable] {
-        let forwardPaths = parameterPaths(of: \.forwardLayer)
-        let backwardPaths = parameterPaths(of: \.backwardLayer)
-        return forwardPaths + backwardPaths
-    }
-
-    public var parameters: [Tensor<RNNLayer.Parameter, RNNLayer.Device>] {
-        forwardLayer.parameters + backwardLayer.parameters
-    }
+    public typealias Element = RNNLayer.Parameter
+    public typealias Device = RNNLayer.Device
 
     /// RNN for forwards direction
     public var forwardLayer: RNNLayer
@@ -66,3 +59,5 @@ public struct Bidirectional<RNNLayer: RNN>: LayerType {
 }
 
 extension Bidirectional: Codable where RNNLayer: Codable {}
+
+extension Bidirectional: Sendable where RNNLayer: Sendable {}

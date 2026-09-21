@@ -370,18 +370,18 @@ var model = Sequential {
    LogSoftmax<Float, CPU>()
 }
 
-var optimizer = Adam(model: model, learningRate: 0.001)
+var optimizer = Adam<Float, CPU>(learningRate: 0.001)
 
 // Single iteration of minibatch gradient descent
 let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 1, 28, 28]
 let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
 
-// use optimizer.model, not model
-let pred = optimizer.model(batch)
+let pred = model(batch)
 let loss = categoricalNegativeLogLikelihood(expected: y_true, actual: pred)
 
-let gradients = loss.gradients(of: optimizer.model.parameters)
-optimizer.update(along: gradients)
+model.update { parameters in
+    optimizer.update(&parameters, along: loss.gradients(of: parameters))
+}
 ```
 
 ### Recurrent Networks
@@ -391,7 +391,7 @@ Example for MNIST classification
 The Gated Reccurent Unit scans the image from top to bottom and uses the final hidden state for classification.
 
 ```swift
-let model = Sequential {
+var model = Sequential {
     GRU<Float, CPU>(inputSize: 28, hiddenSize: 128, direction: .forward)
     Lambda<GRU<Float, CPU>.Outputs, Tensor<Float, CPU>, Float, CPU> { inputs in
         inputs.0
@@ -400,15 +400,45 @@ let model = Sequential {
     LogSoftmax<Float, CPU>()
 }
 
-var optimizer = Adam(model: model, learningRate: 0.001)
+var optimizer = Adam<Float, CPU>(learningRate: 0.001)
 
 let batch: Tensor<Float, CPU> = ... // shape: [batchSize, 28, 28]
 let y_true: Tensor<Int32, CPU> = ... // shape: [batchSize]
 
 let x = batch.permuted(to: 1, 0, 2) // Swap first and second axis
-let pred = optimizer.model(x)
+let pred = model(x)
 let loss = categoricalNegativeLogLikelihood(expected: y_true, actual: pred)
 
-let gradients = loss.gradients(of: optimizer.model.parameters)
-optimizer.update(along: gradients)
+model.update { parameters in
+    optimizer.update(&parameters, along: loss.gradients(of: parameters))
+}
 ```
+
+### Custom Layers
+
+Layers and entire models are declared with the `@Layer` macro. This auto-synthesizes any necessary utilities for model updates.
+Parameters that are not updated must be declared as `let` or `@Frozen`.
+ 
+
+```swift
+@Layer
+struct Classifier {
+    typealias Element = Float
+    typealias Device = CPU
+
+    @Frozen var backbone: ResNet18<Float, CPU>
+    var head: Dense<Float, CPU>
+
+    func callAsFunction(_ inputs: Tensor<Float, CPU>) -> Tensor<Float, CPU> {
+        head(backbone(inputs))
+    }
+}
+
+var model = Classifier(backbone: pretrained, head: Dense(inputSize: 512, outputSize: 10))
+print(model.weightPaths) // ["head.weights", "head.bias"]
+
+model.head.freeze()      // stops the training of the head
+model.head.unfreeze()    // makes it trainable again
+```
+
+To get fine-grained control over the behavior of a layer, conformance to the `LayerType` protocol may be written by hand.

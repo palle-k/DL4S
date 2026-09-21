@@ -1,6 +1,7 @@
-// swift-tools-version:6.1
+// swift-tools-version:6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+import CompilerPluginSupport
 import PackageDescription
 
 // Intel oneAPI MKL and IPP exist for x86_64 Linux only. On other hosts, the system library target
@@ -58,12 +59,27 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.5.0"),
         .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.65.1"),
         .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.63.0"),
+        .package(url: "https://github.com/swiftlang/swift-syntax", "601.0.0" ..< "605.0.0"),
     ],
     targets: mklTargets + [
+        .macro(
+            name: "DL4SMacros",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+            ],
+        ),
         .target(
             name: "DL4S",
-            dependencies: mklDependencies,
+            dependencies: mklDependencies + ["DL4SMacros"],
             swiftSettings: mklSwiftSettings,
+        ),
+        .testTarget(
+            name: "DL4SMacrosTests",
+            dependencies: [
+                "DL4SMacros",
+                .product(name: "SwiftSyntaxMacrosGenericTestSupport", package: "swift-syntax"),
+            ],
         ),
         .testTarget(
             name: "DL4STests",

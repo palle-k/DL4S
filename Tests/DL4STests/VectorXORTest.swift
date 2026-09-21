@@ -43,22 +43,22 @@ struct VectorXORTest {
         ])
 
         var generator = WyHash(seed: 42)
-        let net = Sequential {
+        var net = Sequential {
             Dense<Float, CPU>(inputSize: 2, outputSize: 6, using: &generator)
             Tanh<Float, CPU>()
             Dense<Float, CPU>(inputSize: 6, outputSize: 1, using: &generator)
             Sigmoid<Float, CPU>()
         }
-        var optim = Adam(model: net, learningRate: 0.05)
+        var optim = Adam<Float, CPU>(learningRate: 0.05)
 
         var firstLoss: Float = 0
         var lastLoss: Float = 0
         for epoch in 1 ... 100 {
-            let pred = optim.model(xor_src)
+            let pred = net(xor_src)
             let loss = binaryCrossEntropy(expected: xor_dst, actual: pred)
-            let grads = loss.gradients(of: optim.model.parameters)
-
-            optim.update(along: grads)
+            net.update { parameters in
+                optim.update(&parameters, along: loss.gradients(of: parameters))
+            }
 
             if epoch == 1 {
                 firstLoss = loss.item
@@ -67,7 +67,7 @@ struct VectorXORTest {
         }
         #expect(lastLoss < firstLoss)
 
-        let predictions = optim.model(xor_src).view(as: -1)
+        let predictions = net(xor_src).view(as: -1)
 
         var correctCount = 0
         for i in 0 ..< 4 where round(predictions[i].item) == xor_dst[i, 0].item {

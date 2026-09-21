@@ -3,7 +3,7 @@
 //  DL4S
 //
 //  Created by Palle Klewitz on 19.10.19.
-//  Copyright (c) 2019 - Palle Klewitz
+//  Copyright (c) 2019 - 2026 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -26,51 +26,26 @@
 import Foundation
 
 /// 'Vanilla' stochastic gradient descent optimizer
-public struct SGD<Layer: LayerType>: Optimizer {
-    public typealias ParamTensor = Tensor<Layer.Parameter, Layer.Device>
+public struct SGD<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+    public typealias ParamTensor = Tensor<Element, Device>
 
-    public private(set) var model: Layer
+    /// Learning rate with which to move along the gradient
     public var learningRate: ParamTensor
-    private var paths: [WritableKeyPath<Layer, ParamTensor> & Sendable]
 
     /// 'Vanilla' stochastic gradient descent optimizer
-    /// - Parameters:
-    ///   - model: Model to optimize
-    ///   - learningRate: Learning rate with which to move along the gradient
-    public init(model: Layer, learningRate: ParamTensor) {
-        self.model = model
+    /// - Parameter learningRate: Learning rate with which to move along the gradient
+    public init(learningRate: ParamTensor) {
         self.learningRate = learningRate
-        // paths are only queried once, as creating keypaths is a major performance bottleneck
-        paths = model.parameterPaths
     }
 
-    public mutating func update(along gradients: [ParamTensor]) {
-        for (keyPath, grad) in zip(paths, gradients) {
-            model[keyPath: keyPath] -= learningRate * grad
-            model[keyPath: keyPath].discardContext()
+    public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
+        Self.validateGradients(gradients, against: parameters)
+        for index in parameters.indices {
+            parameters[index] -= learningRate * gradients[index].detached()
+            parameters[index].discardContext()
         }
     }
-}
 
-extension SGD: Codable where Layer: Codable {
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        model = try container.decode(Layer.self, forKey: .model)
-        learningRate = try container.decode(ParamTensor.self, forKey: .learningRate)
-
-        paths = model.parameterPaths
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-
-        try container.encode(model, forKey: .model)
-        try container.encode(learningRate, forKey: .learningRate)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case model
-        case learningRate
-    }
+    /// Stochastic gradient descent has no state, so this method does nothing.
+    public mutating func reset() {}
 }

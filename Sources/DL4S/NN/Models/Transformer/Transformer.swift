@@ -29,7 +29,8 @@ import Foundation
 ///
 /// The transformer model shares an embedding matrix between the encoder and decoder and reuses the embedding weights to compute the decoder output distribution.
 /// Outputs of the transformer are normalized using log softmax.
-public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+@Layer
+public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     public typealias Outputs = Tensor<Element, Device> // disambiguates callAsFunction protocol requirement
 
     public var embedding: Embedding<Element, Device>
@@ -40,24 +41,6 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: LayerT
     public var decoder: TransformerDecoder<Element, Device>
 
     public var outputBias: Tensor<Element, Device>
-
-    public var parameters: [Tensor<Element, Device>] {
-        Array([
-            embedding.parameters,
-            encoder.parameters,
-            decoder.parameters,
-            [outputBias],
-        ].joined())
-    }
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        Array([
-            parameterPaths(of: \.embedding),
-            parameterPaths(of: \.encoder),
-            parameterPaths(of: \.decoder),
-            [\Self.outputBias],
-        ].joined())
-    }
 
     /// Creates a new transformer, which follows [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:

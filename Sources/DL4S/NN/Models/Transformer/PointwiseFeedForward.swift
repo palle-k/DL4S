@@ -29,23 +29,12 @@ import Foundation
 ///
 /// The layer sequences a dense layer, GeLU activation, another dense layer and a dropout layer.
 /// Furthermore, it has a residual connection and the output is layer normalized.
-public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+@Layer
+public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     public var dense1: Dense<Element, Device>
     public var dense2: Dense<Element, Device>
     public var norm: LayerNorm<Element, Device>
     public var dropout: Dropout<Element, Device>
-
-    public var parameters: [Tensor<Element, Device>] {
-        Array([dense1.parameters, dense2.parameters, norm.parameters].joined())
-    }
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        Array([
-            parameterPaths(of: \.dense1),
-            parameterPaths(of: \.dense2),
-            parameterPaths(of: \.norm),
-        ].joined())
-    }
 
     /// Creates a pointwise forward layer to be used in a transformer as introduced in [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// The block sequences a dense layer, gelu activation, another dense layer, dropout, a residual connection and layer normalization.

@@ -25,43 +25,15 @@
 
 import Foundation
 
-extension Optional {
-    var forceUnwrapped: Wrapped {
-        get { self! }
-        set { self = newValue }
-    }
-}
-
 /// Residual neural network with 18 layers (17 convolutional, 1 dense)
-public struct ResNet18<Element: RandomizableType, Device: DeviceType>: LayerType {
-    public var parameters: [Tensor<Parameter, Self.Device>] {
-        Array([
-            start.parameters,
-            l1.parameters,
-            l2.parameters,
-            l3.parameters,
-            l4.parameters,
-            classifier.parameters,
-        ].joined())
-    }
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        Array([
-            parameterPaths(of: \.start),
-            parameterPaths(of: \.l1),
-            parameterPaths(of: \.l2),
-            parameterPaths(of: \.l3),
-            parameterPaths(of: \.l4),
-            parameterPaths(of: \.classifier),
-        ].joined())
-    }
-
-    public var start: Sequential<Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>>, Relu<Element, Device>>
+@Layer
+public struct ResNet18<Element: RandomizableType, Device: DeviceType>: Sendable {
+    public var start: Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>, Relu<Element, Device>>
     public var l1: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l2: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l3: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l4: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
-    public var classifier: Sequential<Sequential<Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>>, Dense<Element, Device>>, LogSoftmax<Element, Device>>
+    public var classifier: Sequential<AdaptiveAvgPool2D<Element, Device>, Flatten<Element, Device>, Dense<Element, Device>, LogSoftmax<Element, Device>>
 
     public init(inputShape: [Int], classes: Int) {
         var generator = WyHash()

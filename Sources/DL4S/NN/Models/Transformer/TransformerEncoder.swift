@@ -26,22 +26,9 @@
 import Foundation
 
 /// Transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
-public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>: LayerType, Codable {
+@Layer
+public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     public var encoderLayers: [TransformerEncoderBlock<Element, Device>]
-
-    public var parameters: [Tensor<Element, Device>] {
-        Array([
-            encoderLayers.flatMap(\.parameters),
-        ].joined())
-    }
-
-    public var parameterPaths: [WritableKeyPath<Self, Tensor<Element, Device>> & Sendable] {
-        Array([
-            encoderLayers.indices.flatMap { idx in
-                parameterPaths(of: \.encoderLayers[idx])
-            },
-        ].joined())
-    }
 
     /// Creates a transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
