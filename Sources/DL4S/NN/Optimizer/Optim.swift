@@ -30,7 +30,6 @@ import Foundation
 /// An optimizer does not know the model. It receives the trainable weights as an array from
 /// ``LayerType/update(_:)`` and changes them in place. State such as moments or step counters is created on
 /// the first step from the shapes of the weights and matched to the weights by position on every later step.
-/// Because the state is `Codable`, a training run can be saved and resumed.
 ///
 /// ```swift
 /// var optimizer = Adam<Float, CPU>(learningRate: 0.001)
@@ -39,12 +38,9 @@ import Foundation
 ///     optimizer.update(&parameters, along: loss.gradients(of: parameters))
 /// }
 /// ```
-public protocol Optimizer: Codable {
+public protocol Optimizer: TensorContainer where Parameter == Element {
     /// Element type of the weights
     associatedtype Element: NumericType
-
-    /// Device type of the weights
-    associatedtype Device: DeviceType
 
     /// Moves the weights along their gradients.
     ///
@@ -75,6 +71,22 @@ extension Optimizer {
         for index in state.indices {
             precondition(state[index].shape == parameters[index].shape, "\(Self.self) has state with shape \(state[index].shape) for weight \(index), but the weight has shape \(parameters[index].shape). Call reset() after the shapes of the trainable weights changed.")
         }
+    }
+
+    /// Returns zero state for the tensors of a layout, one tensor per position.
+    ///
+    /// The path of an entry is the position of its weight. A position that the layout does not have gets a
+    /// scalar, so the decoder reports the missing entry.
+    /// - Parameter entries: Paths and shapes of the state tensors, for example the children of `firstMoments`.
+    static func zeroState(for entries: [TensorLayout.Entry]) -> [Tensor<Element, Device>] {
+        var shapes: [Int: [Int]] = [:]
+        for entry in entries {
+            if entry.path.segments.count == 1, case let .index(index) = entry.path.segments[0] {
+                shapes[index] = entry.shape
+            }
+        }
+        let count = (shapes.keys.max() ?? -1) + 1
+        return (0 ..< count).map { Tensor(repeating: 0, shape: shapes[$0] ?? []) }
     }
 
     /// Checks that there is one gradient per weight.

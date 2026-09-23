@@ -85,26 +85,105 @@ struct OptimizerTests {
         #expect(model.parameters.count == 4)
     }
 
-    @Test func testOptimizerStateRoundTripsThroughCodable() throws {
+    /// Trains with an optimizer, saves its state, and checks that a new optimizer with the loaded state takes the same next step.
+    private func expectStateRoundTrip<Optim: Optimizer>(_ makeOptimizer: () -> Optim) throws where Optim.Element == Float, Optim.Device == CPU {
         var model = makeModel()
-        var optimizer = Adam<Float, CPU>(learningRate: 0.01, useAMSGrad: true)
+        var optimizer = makeOptimizer()
         for _ in 0 ..< 3 {
             step(&model, with: &optimizer)
         }
+        let data = try SafetensorsEncoder().encode(optimizer)
 
-        let data = try JSONEncoder().encode(optimizer)
-        var decoded = try JSONDecoder().decode(Adam<Float, CPU>.self, from: data)
+        var restored = makeOptimizer()
+        try SafetensorsDecoder().load(into: &restored, from: data)
+        #expect(try SafetensorsEncoder().encode(restored) == data, "\(Optim.self): the loaded state differs from the saved state")
+
         var copy = model
-
         step(&model, with: &optimizer)
-        step(&copy, with: &decoded)
+        step(&copy, with: &restored)
+        #expect(model.parameters == copy.parameters, "\(Optim.self): the step after loading differs")
+    }
 
-        #expect(model.parameters == copy.parameters)
+    @Test func testOptimizerStateRoundTripsThroughSafetensors() throws {
+        try expectStateRoundTrip { SGD<Float, CPU>(learningRate: 0.05) }
+        try expectStateRoundTrip { Momentum<Float, CPU>(learningRate: 0.02) }
+        try expectStateRoundTrip { Adam<Float, CPU>(learningRate: 0.02) }
+        try expectStateRoundTrip { Adam<Float, CPU>(learningRate: 0.02, useAMSGrad: true) }
+        try expectStateRoundTrip { Adagrad<Float, CPU>(learningRate: 0.1) }
+        try expectStateRoundTrip { Adadelta<Float, CPU>(learningRate: 0.05) }
+        try expectStateRoundTrip { RMSProp<Float, CPU>(learningRate: 0.01) }
+    }
 
-        var momentum = Momentum<Float, CPU>(learningRate: 0.01)
-        step(&model, with: &momentum)
-        let momentumData = try JSONEncoder().encode(momentum)
-        #expect(try JSONDecoder().decode(Momentum<Float, CPU>.self, from: momentumData).learningRate == momentum.learningRate)
+    @Test func testOptimizerStateKeysFollowWeightPositions() throws {
+        var model = makeModel()
+        var optimizer = Adam<Float, CPU>(learningRate: 0.01, useAMSGrad: true)
+        #expect(optimizer.tensorLayout.entries.map(\.path.description) == ["beta1t", "beta2t"])
+        step(&model, with: &optimizer)
+
+        let expected = ["beta1t", "beta2t"] + ["firstMoments", "secondMomentMax", "secondMoments"].flatMap { name in
+            (0 ..< 4).map { "\(name).\($0)" }
+        }
+        let header = try SafetensorsDecoder().header(from: SafetensorsEncoder().encode(optimizer))
+        #expect(header.entries.map(\.name).sorted() == expected.sorted())
+        // Position 0 is the weight matrix of the first dense layer.
+        #expect(optimizer.tensorLayout["firstMoments.0"] == [3, 4])
+        #expect(optimizer.tensorLayout["beta1t"] == [])
+    }
+
+    @Test func testOptimizerWorksWithoutALayer() throws {
+        var weights = [Tensor<Float, CPU>([1, 2, 3], requiresGradient: true)]
+        var optimizer = Momentum<Float, CPU>(learningRate: 0.1)
+        let loss = (weights[0] * weights[0]).reduceSum()
+        optimizer.update(&weights, along: loss.gradients(of: weights))
+        #expect(weights[0].elements == [0.8, 1.6, 2.4])
+
+        var restored = Momentum<Float, CPU>(learningRate: 0.1)
+        try SafetensorsDecoder().load(into: &restored, from: SafetensorsEncoder().encode(optimizer))
+        #expect(restored.tensorLayout == optimizer.tensorLayout)
+    }
+
+    @Test func testLoadingReplacesExistingState() throws {
+        var model = makeModel()
+        var source = Adam<Float, CPU>(learningRate: 0.01)
+        step(&model, with: &source)
+        step(&model, with: &source)
+
+        // The target has state for more weights than the file, with other shapes.
+        var other = Sequential {
+            Dense<Float, CPU>(inputSize: 3, outputSize: 2)
+            Dense<Float, CPU>(inputSize: 2, outputSize: 2)
+            Dense<Float, CPU>(inputSize: 2, outputSize: 2)
+        }
+        var target = Adam<Float, CPU>(learningRate: 0.01)
+        let loss = other(inputs).reduceSum()
+        other.update { parameters in
+            target.update(&parameters, along: loss.gradients(of: parameters))
+        }
+        #expect(target.tensorLayout != source.tensorLayout)
+
+        try SafetensorsDecoder().load(into: &target, from: SafetensorsEncoder().encode(source))
+        #expect(target.tensorLayout == source.tensorLayout)
+    }
+
+    @Test func testLoadingRejectsMismatchedConfigurationAndKeepsState() throws {
+        var model = makeModel()
+        var amsGrad = Adam<Float, CPU>(learningRate: 0.01, useAMSGrad: true)
+        step(&model, with: &amsGrad)
+        let data = try SafetensorsEncoder().encode(amsGrad)
+
+        var plain = Adam<Float, CPU>(learningRate: 0.01)
+        step(&model, with: &plain)
+        let before = try SafetensorsEncoder().encode(plain)
+
+        let error = try #require(throws: SafetensorsError.self) {
+            try SafetensorsDecoder().load(into: &plain, from: data)
+        }
+        #expect(error.kind == .unusedTensor)
+        #expect(error.key?.hasPrefix("secondMomentMax.") == true)
+        #expect(try SafetensorsEncoder().encode(plain) == before)
+
+        try SafetensorsDecoder(options: .init(allowsUnusedTensors: true)).load(into: &plain, from: data)
+        #expect(plain.tensorLayout.children(of: "secondMomentMax").isEmpty)
     }
 
     @Test func testResetAcceptsANewSetOfWeights() {

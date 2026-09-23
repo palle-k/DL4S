@@ -50,6 +50,16 @@ public struct Momentum<Element: NumericType, Device: DeviceType>: Optimizer, Sen
         velocities = []
     }
 
+    /// Reports the velocity of the weight at position `i` as `velocities.i`.
+    public mutating func visitTensors(_ visitor: inout TensorVisitor<Element, Device>) {
+        visitor.frozen(&velocities, named: "velocities")
+    }
+
+    /// Creates the velocities of the layout.
+    public mutating func adoptLayout(_ layout: TensorLayout) {
+        velocities = Self.zeroState(for: layout.children(of: "velocities"))
+    }
+
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&velocities, for: parameters)

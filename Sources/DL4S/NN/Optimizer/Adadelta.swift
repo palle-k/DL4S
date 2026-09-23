@@ -43,8 +43,6 @@ public struct Adadelta<Element: NumericType, Device: DeviceType>: Optimizer, Sen
     private var gradientSums: [ParamTensor] = []
     private var updateSums: [ParamTensor] = []
 
-    private var isInitialized = false
-
     /// Adadelta Optimizer
     ///
     /// Follows [Matthew D. Zeiler - Adadelta: An adaptive learning rate method](https://arxiv.org/pdf/1212.5701.pdf)
@@ -61,11 +59,23 @@ public struct Adadelta<Element: NumericType, Device: DeviceType>: Optimizer, Sen
     public mutating func reset() {
         gradientSums = []
         updateSums = []
-        isInitialized = false
+    }
+
+    /// Reports the moving averages of the weight at position `i` as `gradientSums.i` and `updateSums.i`.
+    public mutating func visitTensors(_ visitor: inout TensorVisitor<Element, Device>) {
+        visitor.frozen(&gradientSums, named: "gradientSums")
+        visitor.frozen(&updateSums, named: "updateSums")
+    }
+
+    /// Creates the moving averages of the layout.
+    public mutating func adoptLayout(_ layout: TensorLayout) {
+        gradientSums = Self.zeroState(for: layout.children(of: "gradientSums"))
+        updateSums = Self.zeroState(for: layout.children(of: "updateSums"))
     }
 
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
+        let isInitialized = !updateSums.isEmpty
         Self.initializeStateIfNeeded(&gradientSums, for: parameters)
         Self.initializeStateIfNeeded(&updateSums, for: parameters)
 
@@ -94,7 +104,5 @@ public struct Adadelta<Element: NumericType, Device: DeviceType>: Optimizer, Sen
 
             parameters[index].discardContext()
         }
-
-        isInitialized = true
     }
 }

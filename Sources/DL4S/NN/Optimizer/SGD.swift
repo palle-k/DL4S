@@ -48,4 +48,7 @@ public struct SGD<Element: NumericType, Device: DeviceType>: Optimizer, Sendable
 
     /// Stochastic gradient descent has no state, so this method does nothing.
     public mutating func reset() {}
+
+    /// Stochastic gradient descent has no state, so this method reports no tensors.
+    public mutating func visitTensors(_ visitor: inout TensorVisitor<Element, Device>) {}
 }

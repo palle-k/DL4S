@@ -25,7 +25,7 @@
 
 /// Makes a struct or a class a layer.
 ///
-/// The macro adds the ``LayerType`` conformance and generates ``LayerType/visitTensors(_:)`` from the stored
+/// The macro adds the ``LayerType`` conformance and generates ``TensorContainer/visitTensors(_:)`` from the stored
 /// `var` properties of the type:
 ///
 /// - Each `Tensor<Element, Device>` not marked as `@Frozen` is reported as a weight.

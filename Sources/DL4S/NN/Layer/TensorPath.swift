@@ -101,3 +101,31 @@ extension TensorPath: ExpressibleByStringLiteral {
         self.init(value)
     }
 }
+
+extension TensorPath.Segment: Comparable {
+    /// Indices sort before names. Indices sort by value, names sort by their text.
+    public static func < (lhs: TensorPath.Segment, rhs: TensorPath.Segment) -> Bool {
+        switch (lhs, rhs) {
+        case let (.index(left), .index(right)): left < right
+        case let (.name(left), .name(right)): left < right
+        case (.index, .name): true
+        case (.name, .index): false
+        }
+    }
+}
+
+extension TensorPath: Comparable {
+    /// Paths sort segment by segment. A path sorts before the paths that extend it.
+    public static func < (lhs: TensorPath, rhs: TensorPath) -> Bool {
+        lhs.segments.lexicographicallyPrecedes(rhs.segments)
+    }
+}
+
+public extension TensorPath {
+    /// Indicates whether the path starts with the segments of another path.
+    /// - Parameter prefix: The path to compare with the start of this path.
+    /// - Returns: `true` when the first segments of this path are the segments of `prefix`.
+    func starts(with prefix: TensorPath) -> Bool {
+        segments.starts(with: prefix.segments)
+    }
+}
