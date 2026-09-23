@@ -36,7 +36,7 @@ public enum TensorRole: Hashable, Sendable {
 
 /// Walks the tensors and sublayers of a layer.
 ///
-/// Layers implement ``LayerType/visitTensors(_:)`` by calling the methods of the visitor once for every
+/// Layers implement ``TensorContainer/visitTensors(_:)`` by calling the methods of the visitor once for every
 /// stored tensor and sublayer. The visitor tracks the ``TensorPath`` of every tensor and calls a closure with
 /// the tensor, its role, and its path. Because tensors are passed `inout`, the same traversal reads and
 /// replaces tensors.
@@ -51,8 +51,8 @@ public struct TensorVisitor<Element: NumericType, Device: DeviceType> {
     /// A closure that the visitor calls for every tensor.
     public typealias TensorHandler = (_ tensor: inout Tensor<Element, Device>, _ role: TensorRole, _ path: TensorPath) -> Void
 
-    /// A closure that the visitor calls for every sublayer before it walks the sublayer.
-    public typealias LayerHandler = (_ layer: inout any LayerType) -> Void
+    /// A closure that the visitor calls for every sublayer with its path, before it walks the sublayer.
+    public typealias LayerHandler = (_ layer: inout any TensorContainer, _ path: TensorPath) -> Void
 
     private let handleTensor: TensorHandler
     private let handleLayer: LayerHandler?
@@ -70,7 +70,7 @@ public struct TensorVisitor<Element: NumericType, Device: DeviceType> {
     /// Creates a visitor.
     /// - Parameters:
     ///   - tensors: Closure that is called for every tensor with the tensor, its role, and its path.
-    ///   - layers: Closure that is called for every sublayer before the visitor walks the sublayer.
+    ///   - layers: Closure that is called for every sublayer and its path before the visitor walks the sublayer.
     public init(tensors: @escaping TensorHandler, layers: LayerHandler? = nil) {
         handleTensor = tensors
         handleLayer = layers
@@ -90,6 +90,23 @@ public struct TensorVisitor<Element: NumericType, Device: DeviceType> {
     ///   - name: Name of the property that stores the tensor.
     public mutating func frozen(_ tensor: inout Tensor<Element, Device>, named name: String) {
         report(&tensor, role: .frozen, segment: .name(name))
+    }
+
+    /// Reports an array of learned tensors. The elements get the paths `name.0`, `name.1`, and so on.
+    /// - Parameters:
+    ///   - tensors: The tensors.
+    ///   - name: Name of the property that stores the array.
+    public mutating func weight(_ tensors: inout [Tensor<Element, Device>], named name: String) {
+        report(&tensors, role: frozenDepth > 0 ? .frozen : .weight, named: name)
+    }
+
+    /// Reports an array of tensors that are saved but never trained. The elements get the paths `name.0`,
+    /// `name.1`, and so on.
+    /// - Parameters:
+    ///   - tensors: The tensors.
+    ///   - name: Name of the property that stores the array.
+    public mutating func frozen(_ tensors: inout [Tensor<Element, Device>], named name: String) {
+        report(&tensors, role: .frozen, named: name)
     }
 
     /// Walks a sublayer.
@@ -161,6 +178,14 @@ public struct TensorVisitor<Element: NumericType, Device: DeviceType> {
         path.removeLast()
     }
 
+    private mutating func report(_ tensors: inout [Tensor<Element, Device>], role: TensorRole, named name: String) {
+        path.append(.name(name))
+        for index in tensors.indices {
+            report(&tensors[index], role: role, segment: .index(index))
+        }
+        path.removeLast()
+    }
+
     // Opens a new sequence scope for the layer, so that a Sequential inside the layer numbers its elements from 0.
     private mutating func descend<Layer: LayerType>(into layer: inout Layer) where Layer.Parameter == Element, Layer.Device == Device {
         applyLayerHandler(to: &layer)
@@ -173,8 +198,8 @@ public struct TensorVisitor<Element: NumericType, Device: DeviceType> {
         guard let handleLayer else {
             return
         }
-        var erased: any LayerType = layer
-        handleLayer(&erased)
+        var erased: any TensorContainer = layer
+        handleLayer(&erased, path)
         guard let replaced = erased as? Layer else {
             preconditionFailure("A layer handler replaced a \(Layer.self) with a \(type(of: erased)).")
         }
@@ -223,14 +248,10 @@ public extension TensorVisitor {
     ///   - name: Name of the property.
     ///   - role: Role of the tensors.
     mutating func stored(_ tensors: inout [Tensor<Element, Device>], named name: String, role: TensorRole = .weight) {
-        path.append(.name(name))
-        for index in tensors.indices {
-            switch role {
-            case .weight: report(&tensors[index], role: frozenDepth > 0 ? .frozen : .weight, segment: .index(index))
-            case .frozen: report(&tensors[index], role: .frozen, segment: .index(index))
-            }
+        switch role {
+        case .weight: weight(&tensors, named: name)
+        case .frozen: frozen(&tensors, named: name)
         }
-        path.removeLast()
     }
 
     /// Walks a stored sublayer. With the role ``TensorRole/frozen``, all weights of the sublayer are reported as frozen.

@@ -26,7 +26,6 @@
 import Foundation
 
 /// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
-/// A layer of a neural network that performs an arbitrary transformation on its inputs to generate its outputs.
 /// To do so, it may rely on a set of parameters (weights) may be trained through optimization.
 ///
 /// Train a layer with ``update(_:)``:
@@ -43,28 +42,12 @@ import Foundation
 ///     optimizer.update(&parameters, along: loss.gradients(of: parameters))
 /// }
 /// ```
-public protocol LayerType<Inputs, Outputs, Parameter, Device> {
+public protocol LayerType<Inputs, Outputs, Parameter, Device>: TensorContainer {
     /// Inputs of the layer
     associatedtype Inputs
 
     /// Outputs of the layer
     associatedtype Outputs
-
-    /// Element type of a parameter tensor
-    associatedtype Parameter: NumericType
-
-    /// Device type of a parameter tensor
-    associatedtype Device: DeviceType
-
-    /// Reports the tensors and sublayers of the layer to the visitor.
-    ///
-    /// Calls ``TensorVisitor/weight(_:named:)`` for every learned tensor, ``TensorVisitor/frozen(_:named:)`` for
-    /// every tensor that is saved but not trained, and `sublayer(_:named:)` for every
-    /// layer that is stored in a property.
-    /// Tensors are reported in a fixed order, to maintain correspondence with optimizer states.
-    ///
-    /// - Parameter visitor: Visitor that receives the tensors.
-    mutating func visitTensors(_ visitor: inout TensorVisitor<Parameter, Device>)
 
     /// Performs a transformation determined by the type of the layer.
     ///
@@ -77,7 +60,7 @@ public protocol LayerType<Inputs, Outputs, Parameter, Device> {
 public extension LayerType {
     /// The tensors that an optimizer updates: all weights of the layer and its sublayers that require a gradient.
     ///
-    /// The order is the traversal order of ``LayerType/visitTensors(_:)``. It is the same order that ``update(_:)`` uses
+    /// The order is the traversal order of ``TensorContainer/visitTensors(_:)``. It is the same order that ``update(_:)`` uses
     /// and that ``weightPaths`` describes.
     var parameters: [Tensor<Parameter, Device>] {
         var parameters: [Tensor<Parameter, Device>] = []
@@ -146,14 +129,14 @@ public extension LayerType {
     /// Stops the training of all weights of the layer and its sublayers.
     ///
     /// A frozen weight does not require a gradient. The backward pass skips it, and ``update(_:)`` does not
-    /// present it. Tensors that a layer reports with ``TensorVisitor/frozen(_:named:)`` are not changed.
+    /// present it. Tensors that a layer reports with ``TensorVisitor/frozen(_:named:)-(Tensor<Element,Device>,_)`` are not changed.
     mutating func freeze() {
         setRequiresGradient(false)
     }
 
     /// Makes all weights of the layer and its sublayers trainable again.
     ///
-    /// Tensors that a layer reports with ``TensorVisitor/frozen(_:named:)`` stay frozen.
+    /// Tensors that a layer reports with ``TensorVisitor/frozen(_:named:)-(Tensor<Element,Device>,_)`` stay frozen.
     mutating func unfreeze() {
         setRequiresGradient(true)
     }
@@ -177,7 +160,7 @@ public extension LayerType {
             self = layer as! Self
         }
         withoutActuallyEscaping(body) { body in
-            var visitor = TensorVisitor<Parameter, Device>(tensors: { _, _, _ in }, layers: { erased in
+            var visitor = TensorVisitor<Parameter, Device>(tensors: { _, _, _ in }, layers: { erased, _ in
                 guard var layer = erased as? Layer else {
                     return
                 }

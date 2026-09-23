@@ -442,3 +442,31 @@ model.head.unfreeze()    // makes it trainable again
 ```
 
 To get fine-grained control over the behavior of a layer, conformance to the `LayerType` protocol may be written by hand.
+
+### Model Loading and Saving
+
+DL4S uses the [safetensors](https://huggingface.co/docs/safetensors) format.
+
+```swift
+try SafetensorsEncoder().encode(model, to: URL(filePath: "model.safetensors"))
+
+var restoredModel = MyModel()
+try SafetensorsDecoder().load(into: &restoredModel, from: URL(filePath: "model.safetensors"))
+```
+
+Loading / persisting sharded safetensors is supported:
+
+```swift
+let encoder = SafetensorsEncoder(options: .init(sharding: .maximumBytes(2 << 30)))
+try encoder.encode(transformer, to: URL(filePath: "checkpoint/", directoryHint: .isDirectory))
+try SafetensorsDecoder().load(into: &transformer, from: URL(filePath: "checkpoint/", directoryHint: .isDirectory))
+```
+
+Optimizers store their state (excluding learning rates, momentums, and other hyperparameters) in safetensors as well.
+
+```swift
+try SafetensorsEncoder().encode(optimizer, to: URL(filePath: "optimizer.safetensors"))
+
+var restoredOptimizer = Adam<Float, CPU>(learningRate: 0.001)
+try SafetensorsDecoder().load(into: &restoredOptimizer, from: URL(filePath: "optimizer.safetensors"))
+```

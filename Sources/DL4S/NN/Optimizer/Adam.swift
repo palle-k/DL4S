@@ -84,6 +84,25 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
         secondMomentMax = []
     }
 
+    /// Reports the moments of the weight at position `i` as `firstMoments.i`, `secondMoments.i`, and, with
+    /// AMSGrad, `secondMomentMax.i`, and the decayed rates as `beta1t` and `beta2t`.
+    public mutating func visitTensors(_ visitor: inout TensorVisitor<Element, Device>) {
+        visitor.frozen(&firstMoments, named: "firstMoments")
+        visitor.frozen(&secondMoments, named: "secondMoments")
+        if useAMSGrad {
+            visitor.frozen(&secondMomentMax, named: "secondMomentMax")
+        }
+        visitor.frozen(&beta1t, named: "beta1t")
+        visitor.frozen(&beta2t, named: "beta2t")
+    }
+
+    /// Creates the moments of the layout. Without AMSGrad, the maximum second moments are not created.
+    public mutating func adoptLayout(_ layout: TensorLayout) {
+        firstMoments = Self.zeroState(for: layout.children(of: "firstMoments"))
+        secondMoments = Self.zeroState(for: layout.children(of: "secondMoments"))
+        secondMomentMax = useAMSGrad ? Self.zeroState(for: layout.children(of: "secondMomentMax")) : []
+    }
+
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&firstMoments, for: parameters)

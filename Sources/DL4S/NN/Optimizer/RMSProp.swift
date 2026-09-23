@@ -59,6 +59,16 @@ public struct RMSProp<Element: NumericType, Device: DeviceType>: Optimizer, Send
         gradientSums = []
     }
 
+    /// Reports the moving average of squared gradients of the weight at position `i` as `gradientSums.i`.
+    public mutating func visitTensors(_ visitor: inout TensorVisitor<Element, Device>) {
+        visitor.frozen(&gradientSums, named: "gradientSums")
+    }
+
+    /// Creates the gradient sums of the layout.
+    public mutating func adoptLayout(_ layout: TensorLayout) {
+        gradientSums = Self.zeroState(for: layout.children(of: "gradientSums"))
+    }
+
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&gradientSums, for: parameters)
