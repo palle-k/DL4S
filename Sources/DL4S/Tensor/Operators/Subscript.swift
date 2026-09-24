@@ -41,13 +41,7 @@ public extension Tensor {
     /// ```
     subscript(index: [Int?]) -> Self {
         get {
-            let index = zip(index, shape).map { idx, dim -> Int? in
-                if let idx, idx < 0 {
-                    dim + idx
-                } else {
-                    idx
-                }
-            }
+            let index = Self.resolvingNegativeIndices(index, shape: shape)
             let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
             let handle = TensorHandle(values: val, parent: isCopy ? nil : handle)
 
@@ -58,6 +52,10 @@ public extension Tensor {
                     tag: "read",
                     sources: [self],
                     backpropagateAccumulate: [{ resultGradient, acc in
+                        // Without a gradient graph, the gradient of a contiguous slice is added to the accumulator in place.
+                        if !resultGradient.requiresGradient, !(acc?.requiresGradient ?? false), let offset = Self.contiguousOffset(of: index, shape: self.shape) {
+                            return Self.addingInPlace(resultGradient, at: offset, to: acc, shape: self.shape)
+                        }
                         var result = acc ?? Self(repeating: 0, shape: self.shape)
                         // The slice view must be released before the write, or the write copies the whole accumulator.
                         let slice = result[index] + resultGradient
@@ -71,13 +69,7 @@ public extension Tensor {
         set(slice) {
             precondition(!requiresGradient, "Cannot write into tensor that requires gradient.")
 
-            let index = zip(index, shape).map { idx, dim -> Int? in
-                if let idx, idx < 0 {
-                    dim + idx
-                } else {
-                    idx
-                }
-            }
+            let index = Self.resolvingNegativeIndices(index, shape: shape)
             if slice.dim == 0, dim - index.filter({ $0 != nil }).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }
@@ -142,6 +134,10 @@ public extension Tensor {
                     tag: "SubscriptRangeRead",
                     sources: [self],
                     backpropagateAccumulate: [{ resultGradient, acc in
+                        // Without a gradient graph, the gradient of a contiguous slice is added to the accumulator in place.
+                        if !resultGradient.requiresGradient, !(acc?.requiresGradient ?? false), let offset = Self.contiguousOffset(of: index, shape: self.shape) {
+                            return Self.addingInPlace(resultGradient, at: offset, to: acc, shape: self.shape)
+                        }
                         var result = acc ?? Self(repeating: 0, shape: self.shape)
                         // The slice view must be released before the write, or the write copies the whole accumulator.
                         let slice = result[index] + resultGradient
@@ -187,5 +183,54 @@ public extension Tensor {
     subscript(index: Range<Int>?...) -> Self {
         get { self[index] }
         set(slice) { self[index] = slice }
+    }
+}
+
+extension Tensor {
+    /// Offset of the slice at an index of leading integers, which is contiguous in memory, or nil for other indices.
+    static func contiguousOffset(of index: [Int?], shape: [Int]) -> Int? {
+        var count = index.count
+        while count > 0, index[count - 1] == nil {
+            count -= 1
+        }
+        let strides = MemoryOps.strides(from: shape)
+        var offset = 0
+        for axis in 0 ..< count {
+            guard let position = index[axis] else {
+                return nil
+            }
+            offset += position * strides[axis]
+        }
+        return offset
+    }
+
+    /// Offset of the slice at an index with one range on the first axis, which is contiguous in memory, or nil for other indices.
+    static func contiguousOffset(of index: [Range<Int>?], shape: [Int]) -> Int? {
+        guard let first = index.first, let range = first, index.dropFirst().allSatisfy({ $0 == nil }) else {
+            return nil
+        }
+        return range.lowerBound * shape.dropFirst().reduce(1, *)
+    }
+
+    /// Adds the gradient of a contiguous slice to the accumulated gradient of the whole tensor, in place.
+    ///
+    /// Without an accumulator, the accumulated gradient starts at 0. Neither tensor may record a gradient graph.
+    static func addingInPlace(_ gradient: Self, at offset: Int, to accumulator: consuming Self?, shape: [Int]) -> Self {
+        var result = accumulator ?? Self(repeating: 0, shape: shape)
+        // The accumulator is uniquely referenced, so the write does not copy it.
+        let slice = Device.Memory.advance(buffer: result.mutableValues.values, by: offset)
+        Device.Engine.vAdd(lhs: Buffer(slice), rhs: gradient.values.values, result: slice, count: gradient.count)
+        return result
+    }
+
+    /// Replaces negative indices, which count from the end of their axis, with the corresponding positive indices.
+    @inline(__always)
+    static func resolvingNegativeIndices(_ index: [Int?], shape: [Int]) -> [Int?] {
+        guard index.contains(where: { ($0 ?? 0) < 0 }) else {
+            return index
+        }
+        return zip(index, shape).map { position, size in
+            position.map { $0 < 0 ? size + $0 : $0 }
+        }
     }
 }

@@ -102,30 +102,19 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         OperationGroup.capture(named: "MultiHeadAttention") {
             let (q, k, v, mask) = inputs // q, k, v: [batchSize, maxLen, hiddenDim]
 
-            let batchSize = q.shape[0]
-            let queryCount = q.shape[1] // == maxLen
-            let keyCount = k.shape[1]
-            let valueCount = v.shape[1]
-
-            let res = q
-
-            // [batchSize, queryCount, hiddenDim] x [hiddenDim, keyDim * heads] --> [batchSize, maxLen, keyDim * heads]
-            let q_prep = q.broadcastMatrixMultiplied(with: qDense).view(as: batchSize, queryCount, heads, keyDim) // [batchSize, queryCount
-            let k_prep = k.broadcastMatrixMultiplied(with: kDense).view(as: batchSize, keyCount, heads, keyDim)
-            let v_prep = v.broadcastMatrixMultiplied(with: vDense).view(as: batchSize, valueCount, heads, valueDim)
-
-            let q_trans = q_prep.permuted(to: 0, 2, 1, 3) // [batchSize, heads, queryCount, keyDim]
-            let k_trans = k_prep.permuted(to: 0, 2, 1, 3) // [batchSize, heads, keyCount, keyDim]
-            let v_trans = v_prep.permuted(to: 0, 2, 1, 3) // [batchSize, heads, valueCount, valueDim]
-
-            let q_attn = attn((q: q_trans, k: k_trans, v: v_trans, mask: mask)) // [batchSize, heads, queryCount, valueDim]
-
-            let out = q_attn.permuted(to: 0, 2, 1, 3) // [batchSize, queryCount, heads, valueDim]
-                .view(as: batchSize, queryCount, -1) // [batchSize, queryCount, heads * valueDim]
-                .broadcastMatrixMultiplied(with: fc) // [batchSize, queryCount, heads * valueDim] x [valueDim * heads, hiddenDim] --> [batchSize, queryCount, hiddenDim]
-            let out_drop = dropout(out)
-            let q_res = out_drop + res
-            return norm(q_res)
+            let attended = multiHeadAttention(
+                queries: q,
+                keys: k,
+                values: v,
+                mask: mask,
+                queryWeights: qDense,
+                keyWeights: kDense,
+                valueWeights: vDense,
+                outputWeights: fc,
+                heads: heads,
+                temperature: attn.temperature,
+            ) // [batchSize, queryCount, hiddenDim]
+            return norm(dropout(attended) + q)
         }
     }
 }

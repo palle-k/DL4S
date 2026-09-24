@@ -236,37 +236,94 @@ public struct CPUEngine: EngineType {
         precondition(shape == result.shape)
         #endif
 
-        let srcStrides = CPU.Memory.strides(from: values.shape)
-        let reductionStride = srcStrides[axis]
+        var srcStrides = CPU.Memory.strides(from: values.shape)
+        let reductionStride = srcStrides.remove(at: axis)
         let axisSize = values.shape[axis]
         let dstStrides = CPU.Memory.strides(from: result.shape)
+        let source = values.immutable
+        let destination = result.pointer
 
-        let indices = flatIterate(result.shape)
-        let dim = result.dim
-        let count = indices.count / Swift.max(dim, 1)
+        StridedIteration.forEachOffset(shape: result.shape, strides: srcStrides, dstStrides) { sourceOffset, destinationOffset in
+            destination[destinationOffset] = reduceOperator(source.advanced(by: sourceOffset), reductionStride, axisSize)
+        }
+    }
 
-        for k in 0 ..< count {
-            let base = k * dim
-            var prefixOffset = 0
-            var suffixOffset = 0
-            var linearIndex = 0
-            for i in 0 ..< Swift.min(axis, dim) {
-                prefixOffset &+= srcStrides[i] &* indices[base &+ i]
+    /// Sums along the given axes in one pass over the values.
+    ///
+    /// Neighboring axes that are all reduced or all kept are merged. When the last axis is kept, every row of the values
+    /// is added to a row of the result. When it is reduced, the rows are summed with a matrix-vector product with ones,
+    /// which avoids a call per short row.
+    @_specialize(where N == Float)
+    private static func sumAlongAxes<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, axes: [Int]) {
+        let shape = values.shape
+        let source = values.immutable.pointer(capacity: values.count)
+        let destination = result.pointer.pointer(capacity: result.count)
+        destination.initialize(repeating: 0, count: result.count)
+        guard values.count > 0 else {
+            return
+        }
+
+        var resultStrides = [Int](repeating: 0, count: shape.count)
+        var resultStride = 1
+        for axis in shape.indices.reversed() where !axes.contains(axis) {
+            resultStrides[axis] = resultStride
+            resultStride *= shape[axis]
+        }
+        let valueStrides = CPU.Memory.strides(from: shape)
+        var mergedShape: [Int] = []
+        var mergedValueStrides: [Int] = []
+        var mergedResultStrides: [Int] = []
+        for axis in shape.indices where shape[axis] != 1 {
+            if let lastValueStride = mergedValueStrides.last, let lastResultStride = mergedResultStrides.last,
+               lastValueStride == valueStrides[axis] * shape[axis], lastResultStride == resultStrides[axis] * shape[axis],
+               (lastResultStride == 0) == (resultStrides[axis] == 0)
+            {
+                mergedShape[mergedShape.count - 1] *= shape[axis]
+                mergedValueStrides[mergedValueStrides.count - 1] = valueStrides[axis]
+                mergedResultStrides[mergedResultStrides.count - 1] = resultStrides[axis]
+            } else {
+                mergedShape.append(shape[axis])
+                mergedValueStrides.append(valueStrides[axis])
+                mergedResultStrides.append(resultStrides[axis])
             }
-            for i in Swift.min(axis, dim) ..< dim {
-                suffixOffset &+= srcStrides[i &+ 1] &* indices[base &+ i]
-            }
-            for i in 0 ..< dim {
-                linearIndex &+= indices[base &+ i] &* dstStrides[i]
-            }
+        }
+        guard let rowLength = mergedShape.last, let rowResultStride = mergedResultStrides.last else {
+            destination[0] = source[0]
+            return
+        }
+        let dim = mergedShape.count
 
-            // let prefixOffset = zip(srcStrides.prefix(upTo: axis), idx).map(*).reduce(0, +)
-            // let suffixOffset = zip(srcStrides.suffix(from: axis+1), idx.suffix(from: axis)).map(*).reduce(0, +)
-            let totalOffset = prefixOffset + suffixOffset
-
-            let reduced = reduceOperator(values.immutable.advanced(by: totalOffset), reductionStride, axisSize)
-            // let linearIndex = zip(idx, dstStrides).map(*).reduce(0,+)
-            result.values[linearIndex] = reduced
+        if rowResultStride != 0 {
+            StridedIteration.forEachOffset(shape: Array(mergedShape.dropLast()), strides: Array(mergedValueStrides.dropLast()), Array(mergedResultStrides.dropLast())) { valueOffset, resultOffset in
+                let (row, target) = (source + valueOffset, destination + resultOffset)
+                for i in 0 ..< rowLength {
+                    target[i] += row[i]
+                }
+            }
+            return
+        }
+        guard dim >= 2 else {
+            destination[0] = N.sum(val: UnsafeBufferPointer(start: source, count: rowLength), count: rowLength)
+            return
+        }
+        // The axis before the reduced last axis is kept. Its rows are summed into consecutive elements of the result.
+        let rows = mergedShape[dim - 2]
+        withUnsafeTemporaryAllocation(of: N.self, capacity: rowLength) { ones in
+            ones.initialize(repeating: 1)
+            StridedIteration.forEachOffset(shape: Array(mergedShape.dropLast(2)), strides: Array(mergedValueStrides.dropLast(2)), Array(mergedResultStrides.dropLast(2))) { valueOffset, resultOffset in
+                N.gemm(
+                    lhs: UnsafeBufferPointer(start: source + valueOffset, count: rows &* rowLength),
+                    rhs: UnsafeBufferPointer(ones),
+                    result: UnsafeMutableBufferPointer(start: destination + resultOffset, count: rows),
+                    lhsShape: (rows, rowLength),
+                    rhsShape: (rowLength, 1),
+                    resultShape: (rows, 1),
+                    alpha: 1,
+                    beta: 1,
+                    transposeFirst: false,
+                    transposeSecond: false,
+                )
+            }
         }
     }
 
@@ -400,9 +457,14 @@ public struct CPUEngine: EngineType {
         let stride = result.count
         let count = values.count / stride
 
-        N.fill(value: 0, result: result.pointer, count: result.count)
+        guard count > 0 else {
+            N.fill(value: 0, result: result.pointer, count: result.count)
+            return
+        }
+        // The reduction starts with the first row, so that it is correct for the maximum and the minimum, not only for the sum.
+        result.pointer.baseAddress!.update(from: values.immutable.baseAddress!, count: stride)
 
-        for i in 0 ..< count {
+        for i in 1 ..< count {
             let offset = stride * i
 
             reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, stride)
@@ -435,21 +497,10 @@ public struct CPUEngine: EngineType {
         let reductionStride = srcStrides.remove(at: axis)
         let reductionCount = values.shape[axis]
 
-        let indices = flatIterate(result.shape)
-        let resultDim = result.dim
-
-        for i in 0 ..< result.count {
-            var srcBase = 0
-            var dstIdx = 0
-
-            for j in 0 ..< result.dim {
-                srcBase += srcStrides[j] * indices[j + i * resultDim]
-                dstIdx += dstStrides[j] * indices[j + i * resultDim]
-            }
-
-            let (val, ctx) = reduceOperator(srcPtr.advanced(by: srcBase), reductionStride, reductionCount)
-            dstPtr[dstIdx] = val
-            ctxPtr[dstIdx] = ctx
+        StridedIteration.forEachOffset(shape: result.shape, strides: srcStrides, dstStrides) { sourceOffset, destinationOffset in
+            let (value, position) = reduceOperator(srcPtr.advanced(by: sourceOffset), reductionStride, reductionCount)
+            dstPtr[destinationOffset] = value
+            ctxPtr[destinationOffset] = position
         }
     }
 
@@ -651,12 +702,7 @@ public struct CPUEngine: EngineType {
         if axis == 0, result.shape.reduce(1, *) > 1 {
             reducePrefix(values: values, result: result, reduceColumns: N.vAdd)
         } else {
-            reduce(
-                values: values,
-                result: result,
-                axis: axis,
-                reduceOperator: N.sum(val:stride:count:),
-            )
+            sumAlongAxes(values: values, result: result, axes: [axis])
         }
     }
 
@@ -728,13 +774,7 @@ public struct CPUEngine: EngineType {
                 reduceColumns: N.vAdd,
             )
         } else {
-            reduceMultiAxis(
-                values: values,
-                result: result,
-                axes: axes,
-                reduceOperator: N.sum,
-                reduceCombine: +,
-            )
+            sumAlongAxes(values: values, result: result, axes: axes)
         }
     }
 
@@ -903,75 +943,82 @@ public struct CPUEngine: EngineType {
         N.min(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, context: context.pointer, count: result.count)
     }
 
+    @_specialize(where N == Float)
     public static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, arangement: [Int]) {
-        let dim = values.dim
+        guard values.count > 0 else {
+            return
+        }
+        let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arangement)
+        let source = values.immutable.pointer(capacity: values.count)
+        let destination = result.pointer.pointer(capacity: result.count)
+        let destinationStrides = CPU.Memory.strides(from: shape)
+        let dim = shape.count
 
-        if dim == 2, arangement == [1, 0] {
-            // Fast path if operation is matrix transpose
-            N.transpose(val: values.immutable, result: result.pointer, srcRows: values.shape[0], srcCols: values.shape[1])
+        // When only the last two axes swap places, the source holds transposed matrices.
+        if dim >= 2, sourceStrides[dim - 2] == 1, sourceStrides[dim - 1] == shape[dim - 2] {
+            let (rows, columns) = (shape[dim - 2], shape[dim - 1])
+            StridedIteration.forEachOffset(shape: Array(shape.dropLast(2)), strides: Array(sourceStrides.dropLast(2)), Array(destinationStrides.dropLast(2))) { sourceOffset, destinationOffset in
+                N.transpose(
+                    val: UnsafeBufferPointer(start: source + sourceOffset, count: rows &* columns),
+                    result: UnsafeMutableBufferPointer(start: destination + destinationOffset, count: rows &* columns),
+                    srcRows: columns,
+                    srcCols: rows,
+                )
+            }
             return
         }
 
-        let sourceMem = values.immutable.pointer(capacity: values.count)
-        let dstMem = result.pointer.pointer(capacity: result.count)
-
-        let shape = values.shape
-        let dstShape = result.shape
-
-        let suffix = zip(shape.indices, arangement).suffix(while: { $0 == $1 }).count
-        // let suffix = 0
-
-        let copyCount = shape.suffix(suffix).reduce(1, *)
-        let iterShape = shape.dropLast(suffix) as Array
-
-        let srcStrides = CPU.Memory.strides(from: shape)
-        let dstStrides = CPU.Memory.strides(from: dstShape)
-
-        let indexDim = iterShape.count
-        let indices = flatIterate(iterShape)
-        let indexCount = indices.count / indexDim
-        for j in 0 ..< indexCount {
-            let offset = indexDim * j
-            var srcIdx = 0
-            var dstIdx = 0
-            for i in 0 ..< indexDim {
-                srcIdx += indices[offset + i] * srcStrides[i]
-                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
+        let rowLength = shape[dim - 1]
+        let rowStride = sourceStrides[dim - 1]
+        let outerShape = Array(shape.dropLast())
+        let outerSourceStrides = Array(sourceStrides.dropLast())
+        let outerDestinationStrides = Array(destinationStrides.dropLast())
+        if rowStride == 1 {
+            StridedIteration.forEachOffset(shape: outerShape, strides: outerSourceStrides, outerDestinationStrides) { sourceOffset, destinationOffset in
+                (destination + destinationOffset).update(from: source + sourceOffset, count: rowLength)
             }
-
-            dstMem.advanced(by: dstIdx).update(from: sourceMem.advanced(by: srcIdx), count: copyCount)
+        } else {
+            StridedIteration.forEachOffset(shape: outerShape, strides: outerSourceStrides, outerDestinationStrides) { sourceOffset, destinationOffset in
+                let (row, target) = (source + sourceOffset, destination + destinationOffset)
+                for i in 0 ..< rowLength {
+                    target[i] = row[i &* rowStride]
+                }
+            }
         }
     }
 
+    @_specialize(where N == Float)
     public static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, arangement: [Int]) {
-        let sourceMem = values.immutable
-        let addMem = add.immutable
-        let dstMem = result.pointer
+        guard values.count > 0 else {
+            return
+        }
+        let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arangement)
+        let source = values.immutable.pointer(capacity: values.count)
+        let summand = add.immutable.pointer(capacity: result.count)
+        let destination = result.pointer.pointer(capacity: result.count)
+        let destinationStrides = CPU.Memory.strides(from: shape)
 
-        let shape = values.shape
-        let dstShape = result.shape
-
-        let suffix = zip(shape.indices, arangement).suffix(while: { $0 == $1 }).count
-
-        let copyCount = shape.suffix(suffix).reduce(1, *)
-        let iterShape = shape.dropLast(suffix) as Array
-
-        let srcStrides = CPU.Memory.strides(from: shape)
-        let dstStrides = CPU.Memory.strides(from: dstShape)
-
-        let indexDim = iterShape.count
-        let indices = flatIterate(iterShape)
-        let indexCount = indices.count / indexDim
-        for j in 0 ..< indexCount {
-            let offset = indexDim * j
-            var srcIdx = 0
-            var dstIdx = 0
-            for i in 0 ..< indexDim {
-                srcIdx += indices[offset + i] * srcStrides[i]
-                dstIdx += indices[offset + i] * dstStrides[arangement[i]]
+        // The result can be the summand, so every element is read before it is written.
+        let rowLength = shape[shape.count - 1]
+        let rowStride = sourceStrides[shape.count - 1]
+        let outerShape = Array(shape.dropLast())
+        let outerSourceStrides = Array(sourceStrides.dropLast())
+        let outerDestinationStrides = Array(destinationStrides.dropLast())
+        if rowStride == 1 {
+            StridedIteration.forEachOffset(shape: outerShape, strides: outerSourceStrides, outerDestinationStrides) { sourceOffset, destinationOffset in
+                let (row, other, target) = (source + sourceOffset, summand + destinationOffset, destination + destinationOffset)
+                for i in 0 ..< rowLength {
+                    target[i] = row[i] + other[i]
+                }
             }
-
-            N.vAdd(lhs: sourceMem.advanced(by: srcIdx), rhs: addMem.advanced(by: dstIdx), result: dstMem.advanced(by: dstIdx), count: copyCount)
+        } else {
+            StridedIteration.forEachOffset(shape: outerShape, strides: outerSourceStrides, outerDestinationStrides) { sourceOffset, destinationOffset in
+                let (row, other, target) = (source + sourceOffset, summand + destinationOffset, destination + destinationOffset)
+                for i in 0 ..< rowLength {
+                    let (value, addend) = (row[i &* rowStride], other[i])
+                    target[i] = value + addend
+                }
+            }
         }
     }
 
@@ -1015,16 +1062,8 @@ public struct CPUEngine: EngineType {
             let iterShape = Array(buffer.shape.prefix(upTo: axis))
             let src = buffer.immutable.pointer(capacity: buffer.count)
 
-            for idx in iterate(iterShape) {
-                var srcIdx = 0
-                var dstIdx = 0
-
-                for i in 0 ..< idx.count {
-                    srcIdx += srcStrides[i] * idx[i]
-                    dstIdx += dstStrides[i] * idx[i]
-                }
-
-                dst.advanced(by: dstIdx).assign(from: src.advanced(by: srcIdx), count: copyCount)
+            StridedIteration.forEachOffset(shape: iterShape, strides: Array(srcStrides.prefix(upTo: axis)), Array(dstStrides.prefix(upTo: axis))) { srcIdx, dstIdx in
+                dst.advanced(by: dstIdx).update(from: src.advanced(by: srcIdx), count: copyCount)
             }
 
             offset += copyCount
@@ -1046,15 +1085,7 @@ public struct CPUEngine: EngineType {
             let dst = buffer.pointer
             let a = addBuffer.immutable
 
-            for idx in iterate(iterShape) {
-                var srcIdx = 0
-                var dstIdx = 0
-
-                for i in 0 ..< idx.count {
-                    srcIdx += srcStrides[i] * idx[i]
-                    dstIdx += dstStrides[i] * idx[i]
-                }
-
+            StridedIteration.forEachOffset(shape: iterShape, strides: Array(srcStrides.prefix(upTo: axis)), Array(dstStrides.prefix(upTo: axis))) { srcIdx, dstIdx in
                 N.vAdd(lhs: src.advanced(by: srcIdx), rhs: a.advanced(by: dstIdx), result: dst.advanced(by: dstIdx), count: copyCount)
             }
 
@@ -1076,16 +1107,8 @@ public struct CPUEngine: EngineType {
             let iterShape = Array(buffer.shape.prefix(upTo: axis))
             let dst = buffer.pointer
 
-            for idx in iterate(iterShape) {
-                var srcIdx = 0
-                var dstIdx = 0
-
-                for i in 0 ..< idx.count {
-                    srcIdx += srcStrides[i] * idx[i]
-                    dstIdx += dstStrides[i] * idx[i]
-                }
-
-                dst.advanced(by: dstIdx).assign(from: src.advanced(by: srcIdx), count: copyCount)
+            StridedIteration.forEachOffset(shape: iterShape, strides: Array(srcStrides.prefix(upTo: axis)), Array(dstStrides.prefix(upTo: axis))) { srcIdx, dstIdx in
+                dst.baseAddress!.advanced(by: dstIdx).update(from: src.baseAddress!.advanced(by: srcIdx), count: copyCount)
             }
 
             offset += copyCount

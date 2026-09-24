@@ -39,24 +39,6 @@ public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType
     ///       as well as an optional mask that may be used to prevent attention to certain elements outside of the batch or in future timesteps. Mask must be broadcastable to shape [batchSize, heads, queryCount, keyCount]
     /// - Returns: Attended values tensor of shape [batchSize, heads, queryCount, valueDim]
     public func callAsFunction(_ inputs: (q: Tensor<Element, Device>, k: Tensor<Element, Device>, v: Tensor<Element, Device>, mask: Tensor<Element, Device>?)) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "ScaledDotProductAttention") {
-            let (q, k, v, mask) = inputs
-            precondition(k.dim == 4)
-
-            // q: [batchSize, heads, queryCount, keyDim]
-            // k: [batchSize, heads, keyCount, keyDim]
-            // v: [batchSize, heads, valueCount, valueDim]
-
-            // [batchSize, heads, queryCount, keyDim] x [batchSize, heads, [keyCount, keyDim]^T] -> [batchSize, heads, queryCount, keyCount]
-            var attn = (q / Tensor(temperature)).broadcastMatrixMultiplied(with: k, transposeSelf: false, transposeOther: true)
-
-            if let mask {
-                attn -= mask * 1e9 // mask contains 1 for all entries that should be masked away ==> softmax zeros them out.
-            }
-
-            attn = softmax(attn, axis: 3) // softmax over last axis (keyCount)
-            // [batchSize, heads, queryCount, keyCount] x [batchSize, heads, valueCount, valueDim] -> [batchSize, heads, queryCount, valueDim] (constraint: keyCount == valueCount]
-            return attn.broadcastMatrixMultiplied(with: v)
-        }
+        scaledDotProductAttention(queries: inputs.q, keys: inputs.k, values: inputs.v, mask: inputs.mask, temperature: temperature)
     }
 }

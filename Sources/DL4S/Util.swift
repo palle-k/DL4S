@@ -85,6 +85,74 @@ func flatIterate(_ shape: [Int]) -> [Int] {
     return result
 }
 
+/// Iteration over the indices of a shape, with running offsets in two memory layouts instead of index arrays.
+enum StridedIteration {
+    /// Calls `body` for every index of `shape` in row-major order, with the offset of the index in two layouts with the given strides.
+    ///
+    /// An empty shape has one index, the scalar.
+    @inline(__always)
+    static func forEachOffset(shape: [Int], strides first: [Int], _ second: [Int], _ body: (_ first: Int, _ second: Int) -> Void) {
+        let dim = shape.count
+        guard dim > 0 else {
+            body(0, 0)
+            return
+        }
+        let count = shape.reduce(1, *)
+        guard count > 0 else {
+            return
+        }
+        withUnsafeTemporaryAllocation(of: Int.self, capacity: dim) { counters in
+            counters.initialize(repeating: 0)
+            var (firstOffset, secondOffset) = (0, 0)
+            for _ in 0 ..< count {
+                body(firstOffset, secondOffset)
+                var axis = dim &- 1
+                while axis >= 0 {
+                    counters[axis] &+= 1
+                    firstOffset &+= first[axis]
+                    secondOffset &+= second[axis]
+                    if counters[axis] < shape[axis] {
+                        break
+                    }
+                    firstOffset &-= first[axis] &* shape[axis]
+                    secondOffset &-= second[axis] &* shape[axis]
+                    counters[axis] = 0
+                    axis &-= 1
+                }
+            }
+        }
+    }
+
+    /// Describes the permutation of a contiguous source as a copy from strided source positions into a contiguous destination.
+    ///
+    /// Axes of size 1 are dropped, and neighboring destination axes that are also neighbors in the source are merged.
+    /// - Parameters:
+    ///   - sourceShape: Shape of the source
+    ///   - arrangement: Destination axis of every source axis
+    /// - Returns: The shape of the destination after merging, at least one axis, and the source stride of every axis.
+    static func permutationLayout(sourceShape: [Int], arrangement: [Int]) -> (shape: [Int], sourceStrides: [Int]) {
+        let sourceStrides = MemoryOps.strides(from: sourceShape)
+        var shape = [Int](repeating: 1, count: sourceShape.count)
+        var strides = [Int](repeating: 0, count: sourceShape.count)
+        for axis in sourceShape.indices {
+            shape[arrangement[axis]] = sourceShape[axis]
+            strides[arrangement[axis]] = sourceStrides[axis]
+        }
+        var mergedShape: [Int] = []
+        var mergedStrides: [Int] = []
+        for (size, stride) in zip(shape, strides) where size != 1 {
+            if let lastStride = mergedStrides.last, lastStride == stride * size {
+                mergedShape[mergedShape.count - 1] *= size
+                mergedStrides[mergedStrides.count - 1] = stride
+            } else {
+                mergedShape.append(size)
+                mergedStrides.append(stride)
+            }
+        }
+        return mergedShape.isEmpty ? ([1], [1]) : (mergedShape, mergedStrides)
+    }
+}
+
 prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parameters) -> Bool {
     { params in
         !predicate(params)

@@ -196,3 +196,23 @@ public extension Tensor {
         self.requiresGradient = requiresGradient
     }
 }
+
+// MARK: Dropout
+
+public extension Tensor {
+    /// Sets random elements of the tensor to zero. The other elements keep their values.
+    ///
+    /// - Parameter rate: Probability, with which an element is set to zero
+    /// - Returns: Tensor with the shape of the tensor
+    func droppedOut(rate: Float) -> Self {
+        let (result, mask) = Device.FusedOperations.dropout(input: self, rate: rate)
+        return result.attachingContext(tag: "dropout", sources: [self]) { resultGradient in
+            // The mask is a constant, so the product is differentiable with respect to the gradient of the result.
+            if resultGradient.requiresGradient {
+                [resultGradient * mask]
+            } else {
+                [Device.FusedOperations.dropoutBackward(mask: mask, outputGradient: resultGradient)]
+            }
+        }
+    }
+}
