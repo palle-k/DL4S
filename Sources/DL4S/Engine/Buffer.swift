@@ -145,7 +145,7 @@ public struct MutableShapedBuffer<Element, Device: DeviceType> {
         values.count
     }
 
-    fileprivate init(values: MutableBuffer<Element, Device>, shape: [Int]) {
+    init(values: MutableBuffer<Element, Device>, shape: [Int]) {
         self.shape = shape
         self.values = values
     }

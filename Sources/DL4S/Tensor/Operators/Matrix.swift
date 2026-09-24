@@ -155,6 +155,34 @@ public extension Tensor {
         }
         let lhsStrides = batchStrides(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1])
         let rhsStrides = batchStrides(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+
+        // When every operand is either complete or one matrix for the whole batch, the matrices of an operand have a
+        // constant stride, and the engine computes all products in one call.
+        let batchCount = batchShape.reduce(1, *)
+        func uniformStride(_ batch: [Int], matrixSize: Int) -> Int? {
+            if batch.allSatisfy({ $0 == 1 }) {
+                return 0
+            }
+            return batch == batchShape ? matrixSize : nil
+        }
+        if let lhsStride = uniformStride(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1]),
+           let rhsStride = uniformStride(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+        {
+            Device.Engine.gemmBatched(
+                lhs: lhs.values.slice(offset: 0, shape: lhsMatrix),
+                lhsStride: lhsStride,
+                rhs: rhs.values.slice(offset: 0, shape: rhsMatrix),
+                rhsStride: rhsStride,
+                result: result.slice(offset: 0, shape: [rows, columns]),
+                count: batchCount,
+                alpha: 1,
+                beta: 0,
+                transposeFirst: transposeLhs,
+                transposeSecond: transposeRhs,
+            )
+            return Tensor(using: result, context: nil)
+        }
+
         var resultOffset = 0
         StridedIteration.forEachOffset(shape: batchShape, strides: lhsStrides, rhsStrides) { lhsOffset, rhsOffset in
             Device.Engine.gemm(
