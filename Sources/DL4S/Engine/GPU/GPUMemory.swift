@@ -68,7 +68,9 @@ public struct GPUBuffer {
     ///
     /// The host can access it only after the GPU completed the work that uses it, see ``GPUContext/waitUntilReadable(_:)``.
     var hostMemory: UnsafeMutableRawBufferPointer {
-        UnsafeMutableRawBufferPointer(start: storage.buffer.contents() + byteOffset, count: byteCount)
+        // `contents()` autoreleases the buffer, see ``GPUContext``. The storage keeps the buffer alive while the pointer is used.
+        let contents = autoreleasepool { storage.buffer.contents() }
+        return UnsafeMutableRawBufferPointer(start: contents + byteOffset, count: byteCount)
     }
 }
 

@@ -106,7 +106,7 @@ enum GPUGraphCache {
             return graph
         }
         // The compilation runs without the lock. When two threads compile the same graph, the second result is kept.
-        let graph = compile()
+        let graph = autoreleasepool(invoking: compile)
         graphs.withLock { $0[key] = graph }
         return graph
     }

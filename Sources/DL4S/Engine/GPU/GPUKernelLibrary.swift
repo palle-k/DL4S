@@ -92,20 +92,22 @@ final class GPUKernelLibrary: @unchecked Sendable {
     /// Returns the pipeline state of the kernel with the given name in the given group.
     func pipeline(_ name: String, in source: GPUShaderSource) -> any MTLComputePipelineState {
         let key = source.name + "." + name
-        return state.withLock { state in
-            if let pipeline = state.pipelines[key] {
-                return pipeline
-            }
-            let library = library(for: source, state: &state)
-            guard let function = library.makeFunction(name: name) else {
-                preconditionFailure("DL4S: The GPU kernel \(name) does not exist in \(source.name).")
-            }
-            do {
-                let pipeline = try device.makeComputePipelineState(function: function)
-                state.pipelines[key] = pipeline
-                return pipeline
-            } catch {
-                preconditionFailure("DL4S: The pipeline of the GPU kernel \(name) could not be created: \(error)")
+        return autoreleasepool {
+            state.withLock { state in
+                if let pipeline = state.pipelines[key] {
+                    return pipeline
+                }
+                let library = library(for: source, state: &state)
+                guard let function = library.makeFunction(name: name) else {
+                    preconditionFailure("DL4S: The GPU kernel \(name) does not exist in \(source.name).")
+                }
+                do {
+                    let pipeline = try device.makeComputePipelineState(function: function)
+                    state.pipelines[key] = pipeline
+                    return pipeline
+                } catch {
+                    preconditionFailure("DL4S: The pipeline of the GPU kernel \(name) could not be created: \(error)")
+                }
             }
         }
     }

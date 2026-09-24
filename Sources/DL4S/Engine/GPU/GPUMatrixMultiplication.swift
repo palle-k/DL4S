@@ -53,6 +53,8 @@ enum GPUMatrixMultiplication {
     }
 
     private static let kernels = Mutex<[KernelKey: UncheckedKernel]>([:])
+    /// Number of Metal Performance Shaders kernels that the cache keeps.
+    private static let maximumCachedKernels = 256
 
     private struct GemmParameters {
         var rows: Int32
@@ -209,7 +211,12 @@ enum GPUMatrixMultiplication {
             if let kernel = kernels[key] {
                 return kernel
             }
-            let kernel = UncheckedKernel(kernel: MPSMatrixMultiplication(
+            // Shapes that change in every step, such as the lengths of padded sequences, would let the cache grow without a limit.
+            if kernels.count >= maximumCachedKernels {
+                kernels.removeAll()
+            }
+            // The creation autoreleases descriptors, see ``GPUContext``.
+            let kernel = autoreleasepool { UncheckedKernel(kernel: MPSMatrixMultiplication(
                 device: context.device,
                 transposeLeft: transposeFirst,
                 transposeRight: transposeSecond,
@@ -218,7 +225,7 @@ enum GPUMatrixMultiplication {
                 interiorColumns: inner,
                 alpha: Double(alpha),
                 beta: Double(beta),
-            ))
+            )) }
             kernels[key] = kernel
             return kernel
         }
