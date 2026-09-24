@@ -57,17 +57,19 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func scaledDotProductAttentionBackward<N: NumericType>(queries: Tensor<N, CPU>, keys: Tensor<N, CPU>, values: Tensor<N, CPU>, mask: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, temperature: N) -> (queries: Tensor<N, CPU>?, keys: Tensor<N, CPU>?, values: Tensor<N, CPU>?) {
+    static func scaledDotProductAttentionBackward<N: NumericType>(queries: Tensor<N, CPU>, keys: Tensor<N, CPU>, values: Tensor<N, CPU>, mask: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, temperature: N, accumulating gradients: inout (queries: Tensor<N, CPU>?, keys: Tensor<N, CPU>?, values: Tensor<N, CPU>?)) {
         guard let geometry = AttentionGeometry(queries: queries, keys: keys, values: values, mask: mask),
               outputGradient.shape == [geometry.batchSize, geometry.heads, geometry.queryCount, geometry.valueDim]
         else {
-            return DefaultFusedOperations<CPU>.scaledDotProductAttentionBackward(queries: queries, keys: keys, values: values, mask: mask, outputGradient: outputGradient, temperature: temperature)
+            DefaultFusedOperations<CPU>.scaledDotProductAttentionBackward(queries: queries, keys: keys, values: values, mask: mask, outputGradient: outputGradient, temperature: temperature, accumulating: &gradients)
+            return
         }
         let (q, k, v, g) = (queries.elementPointer, keys.elementPointer, values.elementPointer, outputGradient.elementPointer)
         let m = mask?.elementPointer
-        let queryGradient = queries.requiresGradient ? CPUKernels.makeTensor(shape: queries.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let keyGradient = keys.requiresGradient ? CPUKernels.makeTensor(shape: keys.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let valueGradient = values.requiresGradient ? CPUKernels.makeTensor(shape: values.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
+        // Every slice of a gradient is written once, so the products are added to the accumulated gradients directly.
+        let queryGradient = queries.requiresGradient ? GradientTarget(taking: &gradients.queries, shape: queries.shape) : nil
+        let keyGradient = keys.requiresGradient ? GradientTarget(taking: &gradients.keys, shape: keys.shape) : nil
+        let valueGradient = values.requiresGradient ? GradientTarget(taking: &gradients.values, shape: values.shape) : nil
         let (queryCount, keyCount, keyDim, valueDim) = (geometry.queryCount, geometry.keyCount, geometry.keyDim, geometry.valueDim)
         let matrixSize = queryCount * keyCount
         let inverseTemperature = 1 / temperature
@@ -80,8 +82,8 @@ public extension CPUFusedOperations {
                 // The attention weights are computed again instead of being kept alive between the forward and the backward pass.
                 geometry.attentionWeights(slice: slice, queries: q, keys: k, mask: m, temperature: temperature, scores: scores, into: weights)
 
-                if let (_, dv) = valueGradient {
-                    CPUKernels.gemm(weights, shape: (queryCount, keyCount), lhsTransposed: true, gradientSlice, shape: (queryCount, valueDim), into: dv + slice * keyCount * valueDim)
+                if let valueGradient {
+                    CPUKernels.gemm(weights, shape: (queryCount, keyCount), lhsTransposed: true, gradientSlice, shape: (queryCount, valueDim), into: valueGradient.pointer + slice * keyCount * valueDim, beta: valueGradient.beta)
                 }
                 guard queryGradient != nil || keyGradient != nil else {
                     continue
@@ -98,15 +100,17 @@ public extension CPUFusedOperations {
                         weightGradient[j] = weights[j] * (weightGradient[j] - product) * inverseTemperature
                     }
                 }
-                if let (_, dq) = queryGradient {
-                    CPUKernels.gemm(weightGradient, shape: (queryCount, keyCount), keySlice, shape: (keyCount, keyDim), into: dq + slice * queryCount * keyDim)
+                if let queryGradient {
+                    CPUKernels.gemm(weightGradient, shape: (queryCount, keyCount), keySlice, shape: (keyCount, keyDim), into: queryGradient.pointer + slice * queryCount * keyDim, beta: queryGradient.beta)
                 }
-                if let (_, dk) = keyGradient {
-                    CPUKernels.gemm(weightGradient, shape: (queryCount, keyCount), lhsTransposed: true, querySlice, shape: (queryCount, keyDim), into: dk + slice * keyCount * keyDim)
+                if let keyGradient {
+                    CPUKernels.gemm(weightGradient, shape: (queryCount, keyCount), lhsTransposed: true, querySlice, shape: (queryCount, keyDim), into: keyGradient.pointer + slice * keyCount * keyDim, beta: keyGradient.beta)
                 }
             }
         }
-        return (queryGradient?.0, keyGradient?.0, valueGradient?.0)
+        queryGradient?.finish(into: &gradients.queries)
+        keyGradient?.finish(into: &gradients.keys)
+        valueGradient?.finish(into: &gradients.values)
     }
 }
 

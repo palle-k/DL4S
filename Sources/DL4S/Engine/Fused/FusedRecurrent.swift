@@ -53,8 +53,9 @@ public extension FusedOperationsType {
         resetWeights: Tensor<N, Device>,
         candidateWeights: Tensor<N, Device>,
         outputGradient: Tensor<N, Device>,
-    ) -> GatedRecurrentUnitGradients<N, Device> {
-        Composed.gatedRecurrentUnitGradients(
+        accumulating gradients: inout GatedRecurrentUnitGradients<N, Device>,
+    ) {
+        gradients.accumulate(Composed.gatedRecurrentUnitGradients(
             updateInput: updateInput.detached(),
             resetInput: resetInput.detached(),
             candidateInput: candidateInput.detached(),
@@ -64,7 +65,7 @@ public extension FusedOperationsType {
             candidateWeights: candidateWeights.detached(),
             outputGradient: outputGradient.detached(),
             computes: [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights].map(\.requiresGradient),
-        )
+        ))
     }
 }
 

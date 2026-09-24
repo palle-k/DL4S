@@ -62,9 +62,9 @@ public func gatedRecurrentUnitStep<Element, Device>(
         candidateWeights: candidateWeights,
     )
     let sources = [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights]
-    return result.attachingContext(tag: "gruStep", sources: sources) { resultGradient in
-        let gradients = if resultGradient.requiresGradient {
-            Composed.gatedRecurrentUnitGradients(
+    return result.attachingContext(tag: "gruStep", sources: sources) { resultGradient, gradients in
+        if resultGradient.requiresGradient {
+            let computed = Composed.gatedRecurrentUnitGradients(
                 updateInput: updateInput,
                 resetInput: resetInput,
                 candidateInput: candidateInput,
@@ -75,7 +75,14 @@ public func gatedRecurrentUnitStep<Element, Device>(
                 outputGradient: resultGradient,
                 computes: sources.map(\.requiresGradient),
             )
+            for (index, gradient) in computed.inSourceOrder.enumerated() {
+                Tensor.accumulate(gradient, into: &gradients[index])
+            }
         } else {
+            // The array gives up its references, so the accumulated gradients stay uniquely referenced.
+            let taken = gradients
+            gradients = Array(repeating: nil, count: taken.count)
+            var accumulated = GatedRecurrentUnitGradients(inSourceOrder: consume taken)
             Device.FusedOperations.gatedRecurrentUnitStepBackward(
                 updateInput: updateInput,
                 resetInput: resetInput,
@@ -85,8 +92,9 @@ public func gatedRecurrentUnitStep<Element, Device>(
                 resetWeights: resetWeights,
                 candidateWeights: candidateWeights,
                 outputGradient: resultGradient,
+                accumulating: &accumulated,
             )
+            gradients = accumulated.inSourceOrder
         }
-        return gradients.inSourceOrder
     }
 }

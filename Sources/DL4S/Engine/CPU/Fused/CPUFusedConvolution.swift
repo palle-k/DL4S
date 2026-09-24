@@ -77,17 +77,19 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func convolution2dBackward<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, padding: Int, stride: Int) -> (input: Tensor<N, CPU>?, filters: Tensor<N, CPU>?, bias: Tensor<N, CPU>?) {
+    static func convolution2dBackward<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, padding: Int, stride: Int, accumulating gradients: inout (input: Tensor<N, CPU>?, filters: Tensor<N, CPU>?, bias: Tensor<N, CPU>?)) {
         guard let geometry = ConvolutionGeometry(input: input, filters: filters, bias: bias, padding: padding, stride: stride),
               outputGradient.shape == [geometry.batchSize, geometry.outputChannels, geometry.outputHeight, geometry.outputWidth]
         else {
-            return DefaultFusedOperations<CPU>.convolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: padding, stride: stride)
+            DefaultFusedOperations<CPU>.convolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: padding, stride: stride, accumulating: &gradients)
+            return
         }
         let (batchSize, outputChannels, windows, windowSize) = (geometry.batchSize, geometry.outputChannels, geometry.windows, geometry.windowSize)
         let (x, w, g) = (input.elementPointer, filters.elementPointer, outputGradient.elementPointer)
         let inputGradient = input.requiresGradient ? CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let filterGradient = filters.requiresGradient ? CPUKernels.makeTensor(shape: filters.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let biasGradient = (bias?.requiresGradient ?? false) ? CPUKernels.makeZeroTensor(shape: [outputChannels]) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
+        // The filter and bias gradients are added to the accumulated gradients directly.
+        let filterGradient = filters.requiresGradient ? GradientTarget(taking: &gradients.filters, shape: filters.shape) : nil
+        let biasGradient = (bias?.requiresGradient ?? false) ? GradientTarget(taking: &gradients.bias, shape: [outputChannels], zeroed: true) : nil
         let chunk = geometry.chunkSize(rowsPerImage: windowSize)
 
         CPUKernels.withScratch(N.self, count: windowSize * chunk * windows + (chunk > 1 ? outputChannels * chunk * windows : 0)) { scratch in
@@ -108,16 +110,16 @@ public extension CPUFusedOperations {
                     }
                     gradient = UnsafePointer(gradientMatrix)
                 }
-                if let (_, dw) = filterGradient {
+                if let filterGradient {
                     // The windows are extracted again instead of being kept alive between the forward and the backward pass.
                     geometry.extractWindows(from: x, firstImage: first, imageCount: count, into: columns)
-                    CPUKernels.gemm(gradient, shape: (outputChannels, count * windows), columns, shape: (windowSize, count * windows), rhsTransposed: true, into: dw, beta: first == 0 ? 0 : 1)
+                    CPUKernels.gemm(gradient, shape: (outputChannels, count * windows), columns, shape: (windowSize, count * windows), rhsTransposed: true, into: filterGradient.pointer, beta: first == 0 ? filterGradient.beta : 1)
                 }
                 if let (_, dx) = inputGradient {
                     CPUKernels.gemm(w, shape: (outputChannels, windowSize), lhsTransposed: true, gradient, shape: (outputChannels, count * windows), into: columns)
                     geometry.accumulateWindows(columns, firstImage: first, imageCount: count, into: dx)
                 }
-                if let (_, db) = biasGradient {
+                if let db = biasGradient?.pointer {
                     for image in 0 ..< count {
                         for channel in 0 ..< outputChannels {
                             db[channel] += CPUKernels.sum(g + ((first + image) * outputChannels + channel) * windows, count: windows)
@@ -126,7 +128,9 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return (inputGradient?.0, filterGradient?.0, biasGradient?.0)
+        Tensor.accumulate(inputGradient?.0, into: &gradients.input)
+        filterGradient?.finish(into: &gradients.filters)
+        biasGradient?.finish(into: &gradients.bias)
     }
 
     @_specialize(where N == Float)
@@ -179,18 +183,20 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func transposedConvolution2dBackward<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, inset: Int, stride: Int) -> (input: Tensor<N, CPU>?, filters: Tensor<N, CPU>?, bias: Tensor<N, CPU>?) {
+    static func transposedConvolution2dBackward<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, inset: Int, stride: Int, accumulating gradients: inout (input: Tensor<N, CPU>?, filters: Tensor<N, CPU>?, bias: Tensor<N, CPU>?)) {
         guard let geometry = TransposedConvolutionGeometry(input: input, filters: filters, bias: bias, inset: inset, stride: stride),
               outputGradient.shape == [geometry.batchSize, geometry.outputChannels, geometry.outputHeight, geometry.outputWidth]
         else {
-            return DefaultFusedOperations<CPU>.transposedConvolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, inset: inset, stride: stride)
+            DefaultFusedOperations<CPU>.transposedConvolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, inset: inset, stride: stride, accumulating: &gradients)
+            return
         }
         let (batchSize, inputChannels, outputChannels, pixels, kernelSize) = (geometry.batchSize, geometry.inputChannels, geometry.outputChannels, geometry.pixels, geometry.kernelSize)
         let outputPixels = geometry.outputHeight * geometry.outputWidth
         let (x, a, g) = (input.elementPointer, filters.elementPointer, outputGradient.elementPointer)
-        let inputGradient = input.requiresGradient ? CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let filterGradient = filters.requiresGradient ? CPUKernels.makeTensor(shape: filters.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let biasGradient = (bias?.requiresGradient ?? false) ? CPUKernels.makeZeroTensor(shape: [outputChannels]) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
+        // The gradients are added to the accumulated gradients directly.
+        let inputGradient = input.requiresGradient ? GradientTarget(taking: &gradients.input, shape: input.shape) : nil
+        let filterGradient = filters.requiresGradient ? GradientTarget(taking: &gradients.filters, shape: filters.shape) : nil
+        let biasGradient = (bias?.requiresGradient ?? false) ? GradientTarget(taking: &gradients.bias, shape: [outputChannels], zeroed: true) : nil
         let chunk = geometry.chunkSize
 
         CPUKernels.withScratch(N.self, count: kernelSize * chunk * pixels + (chunk > 1 ? inputChannels * chunk * pixels : 0)) { scratch in
@@ -211,24 +217,30 @@ public extension CPUFusedOperations {
                     padding: inset,
                     stride: stride,
                 )
-                if let (_, da) = filterGradient {
+                if let filterGradient {
                     let images = geometry.inputMatrix(x, firstImage: first, imageCount: count, scratch: inputMatrix)
-                    CPUKernels.gemm(images, shape: (inputChannels, count * pixels), columns, shape: (kernelSize, count * pixels), rhsTransposed: true, into: da, beta: first == 0 ? 0 : 1)
+                    CPUKernels.gemm(images, shape: (inputChannels, count * pixels), columns, shape: (kernelSize, count * pixels), rhsTransposed: true, into: filterGradient.pointer, beta: first == 0 ? filterGradient.beta : 1)
                 }
-                if let (_, dx) = inputGradient {
-                    let target = count == 1 ? dx + first * inputChannels * pixels : inputMatrix
-                    CPUKernels.gemm(a, shape: (inputChannels, kernelSize), columns, shape: (kernelSize, count * pixels), into: target)
-                    if count > 1 {
+                if let inputGradient {
+                    let dx = inputGradient.pointer
+                    if count == 1 {
+                        CPUKernels.gemm(a, shape: (inputChannels, kernelSize), columns, shape: (kernelSize, pixels), into: dx + first * inputChannels * pixels, beta: inputGradient.beta)
+                    } else {
+                        CPUKernels.gemm(a, shape: (inputChannels, kernelSize), columns, shape: (kernelSize, count * pixels), into: inputMatrix)
                         // The product has the layout [inputChannels, images, pixels]. The gradient has the layout [images, inputChannels, pixels].
                         for image in 0 ..< count {
                             for channel in 0 ..< inputChannels {
-                                (dx + ((first + image) * inputChannels + channel) * pixels)
-                                    .update(from: inputMatrix + (channel * count + image) * pixels, count: pixels)
+                                CPUKernels.store(
+                                    inputMatrix + (channel * count + image) * pixels,
+                                    into: dx + ((first + image) * inputChannels + channel) * pixels,
+                                    beta: inputGradient.beta,
+                                    count: pixels,
+                                )
                             }
                         }
                     }
                 }
-                if let (_, db) = biasGradient {
+                if let db = biasGradient?.pointer {
                     for image in first ..< first + count {
                         for channel in 0 ..< outputChannels {
                             db[channel] += CPUKernels.sum(g + (image * outputChannels + channel) * outputPixels, count: outputPixels)
@@ -237,7 +249,9 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return (inputGradient?.0, filterGradient?.0, biasGradient?.0)
+        inputGradient?.finish(into: &gradients.input)
+        filterGradient?.finish(into: &gradients.filters)
+        biasGradient?.finish(into: &gradients.bias)
     }
 
     @_specialize(where N == Float)
@@ -266,9 +280,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func maxPooling2dBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, CPU> {
+    static func maxPooling2dBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int, accumulating gradient: inout Tensor<N, CPU>?) {
         guard let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride), outputGradient.shape == geometry.outputShape else {
-            return DefaultFusedOperations<CPU>.maxPooling2dBackward(input: input, outputGradient: outputGradient, windowSize: windowSize, padding: padding, stride: stride)
+            DefaultFusedOperations<CPU>.maxPooling2dBackward(input: input, outputGradient: outputGradient, windowSize: windowSize, padding: padding, stride: stride, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeZeroTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let (x, g) = (input.elementPointer, outputGradient.elementPointer)
@@ -290,7 +305,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -327,9 +342,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func averagePooling2dBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, CPU> {
+    static func averagePooling2dBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int, accumulating gradient: inout Tensor<N, CPU>?) {
         guard let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride), outputGradient.shape == geometry.outputShape else {
-            return DefaultFusedOperations<CPU>.averagePooling2dBackward(input: input, outputGradient: outputGradient, windowSize: windowSize, padding: padding, stride: stride)
+            DefaultFusedOperations<CPU>.averagePooling2dBackward(input: input, outputGradient: outputGradient, windowSize: windowSize, padding: padding, stride: stride, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeZeroTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let g = outputGradient.elementPointer
@@ -351,7 +367,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 }
 

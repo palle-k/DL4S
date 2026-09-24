@@ -59,14 +59,16 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func layerNormalizationBackward<N: NumericType>(input: Tensor<N, CPU>, scale: Tensor<N, CPU>, shift: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, epsilon: N) -> (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?) {
+    static func layerNormalizationBackward<N: NumericType>(input: Tensor<N, CPU>, scale: Tensor<N, CPU>, shift: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, epsilon: N, accumulating gradients: inout (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?)) {
         guard let rowLength = layerNormalizationRowLength(input: input, scale: scale, shift: shift), outputGradient.shape == input.shape else {
-            return DefaultFusedOperations<CPU>.layerNormalizationBackward(input: input, scale: scale, shift: shift, outputGradient: outputGradient, epsilon: epsilon)
+            DefaultFusedOperations<CPU>.layerNormalizationBackward(input: input, scale: scale, shift: shift, outputGradient: outputGradient, epsilon: epsilon, accumulating: &gradients)
+            return
         }
         let (x, gamma, g) = (input.elementPointer, scale.elementPointer, outputGradient.elementPointer)
+        // The rows of the scale and shift gradients are added to the accumulated gradients directly.
         let inputGradient = input.requiresGradient ? CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let scaleGradient = scale.requiresGradient ? CPUKernels.makeZeroTensor(shape: scale.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        let shiftGradient = shift.requiresGradient ? CPUKernels.makeZeroTensor(shape: shift.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
+        let scaleGradient = scale.requiresGradient ? GradientTarget(taking: &gradients.scale, shape: scale.shape, zeroed: true) : nil
+        let shiftGradient = shift.requiresGradient ? GradientTarget(taking: &gradients.shift, shape: shift.shape, zeroed: true) : nil
         let inverseLength = 1 / N(rowLength)
 
         CPUKernels.withScratch(N.self, count: 3 * rowLength) { scratch in
@@ -86,12 +88,12 @@ public extension CPUFusedOperations {
                 for j in 0 ..< rowLength {
                     normalized[j] *= inverseDivisor
                 }
-                if let (_, dScale) = scaleGradient {
+                if let dScale = scaleGradient?.pointer {
                     for j in 0 ..< rowLength {
                         dScale[j] += gradient[j] * normalized[j]
                     }
                 }
-                if let (_, dShift) = shiftGradient {
+                if let dShift = shiftGradient?.pointer {
                     for j in 0 ..< rowLength {
                         dShift[j] += gradient[j]
                     }
@@ -112,7 +114,9 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return (inputGradient?.0, scaleGradient?.0, shiftGradient?.0)
+        Tensor.accumulate(inputGradient?.0, into: &gradients.input)
+        scaleGradient?.finish(into: &gradients.scale)
+        shiftGradient?.finish(into: &gradients.shift)
     }
 
     @_specialize(where N == Float)
@@ -167,10 +171,11 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, CPU>, scale: Tensor<N, CPU>, shift: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, epsilon: N) -> (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?) {
+    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, CPU>, scale: Tensor<N, CPU>, shift: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, epsilon: N, accumulating gradients: inout (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?)) {
         let columnShape = Array(input.shape.dropFirst())
         guard input.dim >= 1, input.count > 0, outputGradient.shape == input.shape, let gammaColumns = broadcastColumns(scale, to: columnShape), shift.dim <= columnShape.count else {
-            return DefaultFusedOperations<CPU>.batchNormalizationBackward(input: input, scale: scale, shift: shift, outputGradient: outputGradient, epsilon: epsilon)
+            DefaultFusedOperations<CPU>.batchNormalizationBackward(input: input, scale: scale, shift: shift, outputGradient: outputGradient, epsilon: epsilon, accumulating: &gradients)
+            return
         }
         let batchSize = input.shape[0]
         let columns = input.count / batchSize
@@ -250,11 +255,14 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return (
+        let computed: (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?) = (
             inputGradient?.0,
             scale.requiresGradient ? scaleColumns.reducingBroadcast(to: scale.shape) : nil,
             shift.requiresGradient ? shiftColumns.reducingBroadcast(to: shift.shape) : nil,
         )
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.scale, into: &gradients.scale)
+        Tensor.accumulate(computed.shift, into: &gradients.shift)
     }
 
     @_specialize(where N == Float)
@@ -281,13 +289,14 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, CPU>, scale: Tensor<N, CPU>, shift: Tensor<N, CPU>, mean: Tensor<N, CPU>, variance: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, epsilon: N) -> (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?) {
+    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, CPU>, scale: Tensor<N, CPU>, shift: Tensor<N, CPU>, mean: Tensor<N, CPU>, variance: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, epsilon: N, accumulating gradients: inout (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?)) {
         let columnShape = Array(input.shape.dropFirst())
         guard input.dim >= 1, input.count > 0, outputGradient.shape == input.shape, shift.dim <= columnShape.count,
               let affine = fixedNormalizationColumns(scale: scale, shift: shift, mean: mean, variance: variance, columnShape: columnShape, epsilon: epsilon),
               let meanColumns = broadcastColumns(mean, to: columnShape)
         else {
-            return DefaultFusedOperations<CPU>.batchNormalizationBackward(input: input, scale: scale, shift: shift, mean: mean, variance: variance, outputGradient: outputGradient, epsilon: epsilon)
+            DefaultFusedOperations<CPU>.batchNormalizationBackward(input: input, scale: scale, shift: shift, mean: mean, variance: variance, outputGradient: outputGradient, epsilon: epsilon, accumulating: &gradients)
+            return
         }
         let columns = input.count / input.shape[0]
         let (x, g) = (input.elementPointer, outputGradient.elementPointer)
@@ -312,11 +321,14 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return (
+        let computed: (input: Tensor<N, CPU>?, scale: Tensor<N, CPU>?, shift: Tensor<N, CPU>?) = (
             inputGradient?.0,
             scale.requiresGradient ? scaleColumns.reducingBroadcast(to: scale.shape) : nil,
             shift.requiresGradient ? shiftColumns.reducingBroadcast(to: shift.shape) : nil,
         )
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.scale, into: &gradients.scale)
+        Tensor.accumulate(computed.shift, into: &gradients.shift)
     }
 }
 

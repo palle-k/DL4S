@@ -81,36 +81,36 @@ public extension Tensor {
         precondition(Array(shape.suffix(2))[transposeSelf ? 0 : 1] == Array(other.shape.suffix(2))[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
 
         let result = Self.batchedMatrixProduct(detached(), other.detached(), transposeLhs: transposeSelf, transposeRhs: transposeOther)
-        return result.attachingContext(tag: "broadcastMatMul", sources: [self, other]) { resultGradient in
+        return result.attachingContext(tag: "broadcastMatMul", sources: [self, other]) { resultGradient, gradients in
             // The gradients use the batched product themselves, so they are differentiable for higher derivatives.
-            var lhsGradient: Self?
             if self.requiresGradient {
                 let gradient = if transposeSelf {
                     other.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: transposeOther, transposeOther: true)
                 } else {
                     resultGradient.broadcastMatrixMultiplied(with: other, transposeOther: !transposeOther)
                 }
-                lhsGradient = gradient.reducingBroadcast(to: self.shape)
+                Tensor.accumulate(gradient.reducingBroadcast(to: self.shape), into: &gradients[0])
             }
-            var rhsGradient: Self?
             if other.requiresGradient {
                 if other.dim == 2, !transposeSelf {
-                    // The right operand is shared by every matrix of the left operand, so its gradient is one product over all rows.
+                    // The right operand is shared by every matrix of the left operand, so its gradient is one product over all rows,
+                    // which is added to the accumulated gradient in place.
                     let rows = self.view(as: [-1, self.shape[self.dim - 1]])
                     let gradient = resultGradient.view(as: [-1, resultGradient.shape[resultGradient.dim - 1]])
-                    rhsGradient = transposeOther
-                        ? gradient.matrixMultiplied(with: rows, transposeSelf: true)
-                        : rows.matrixMultiplied(with: gradient, transposeSelf: true)
+                    if transposeOther {
+                        Tensor.accumulateProduct(gradient, rows, transposeLhs: true, into: &gradients[1])
+                    } else {
+                        Tensor.accumulateProduct(rows, gradient, transposeLhs: true, into: &gradients[1])
+                    }
                 } else {
                     let gradient = if transposeOther {
                         resultGradient.broadcastMatrixMultiplied(with: self, transposeSelf: true, transposeOther: transposeSelf)
                     } else {
                         self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf)
                     }
-                    rhsGradient = gradient.reducingBroadcast(to: other.shape)
+                    Tensor.accumulate(gradient.reducingBroadcast(to: other.shape), into: &gradients[1])
                 }
             }
-            return [lhsGradient, rhsGradient]
         }
     }
 
@@ -276,9 +276,9 @@ public extension Tensor {
         let input = dim == 1 ? view(as: [1, -1]) : self
         let result = Device.FusedOperations.linear(input: input, weights: weights, bias: bias)
 
-        let output = result.attachingContext(tag: "linear", sources: [input, weights] + (bias.map { [$0] } ?? [])) { resultGradient in
-            let gradients = if resultGradient.requiresGradient {
-                Composed.linearGradients(
+        let output = result.attachingContext(tag: "linear", sources: [input, weights] + (bias.map { [$0] } ?? [])) { resultGradient, gradients in
+            if resultGradient.requiresGradient {
+                let computed = Composed.linearGradients(
                     input: input,
                     weights: weights,
                     outputGradient: resultGradient,
@@ -286,12 +286,42 @@ public extension Tensor {
                     computesWeights: weights.requiresGradient,
                     computesBias: bias?.requiresGradient ?? false,
                 )
+                Tensor.accumulate(computed.input, into: &gradients[0])
+                Tensor.accumulate(computed.weights, into: &gradients[1])
+                if bias != nil {
+                    Tensor.accumulate(computed.bias, into: &gradients[2])
+                }
             } else {
-                Device.FusedOperations.linearBackward(input: input, weights: weights, bias: bias, outputGradient: resultGradient)
+                var accumulated = (input: gradients[0].take(), weights: gradients[1].take(), bias: bias == nil ? nil : gradients[2].take())
+                Device.FusedOperations.linearBackward(input: input, weights: weights, bias: bias, outputGradient: resultGradient, accumulating: &accumulated)
+                gradients[0] = accumulated.input
+                gradients[1] = accumulated.weights
+                if bias != nil {
+                    gradients[2] = accumulated.bias
+                }
             }
-            return [gradients.input, gradients.weights] + (bias == nil ? [] : [gradients.bias])
         }
         return dim == 1 ? output.view(as: [weights.shape[1]]) : output
+    }
+}
+
+extension Tensor {
+    /// Adds the matrix product `op(lhs) × op(rhs)` to an accumulated gradient, or stores it when there is no accumulated gradient yet.
+    ///
+    /// When no tensor records a gradient graph, the product is added in place with a GEMM, so no temporary tensor is needed.
+    static func accumulateProduct(_ lhs: Self, _ rhs: Self, transposeLhs: Bool = false, transposeRhs: Bool = false, into accumulator: inout Self?) {
+        precondition(lhs.dim == 2 && rhs.dim == 2, "The operands of the product must be matrices.")
+        let shape = [lhs.shape[transposeLhs ? 1 : 0], rhs.shape[transposeRhs ? 0 : 1]]
+        // The accumulated gradient is taken out of the optional, so that it is the only reference to its storage during the write.
+        if var target = accumulator.take() {
+            if !target.requiresGradient, !lhs.requiresGradient, !rhs.requiresGradient, target.shape == shape {
+                Device.Engine.gemm(lhs: lhs.values, rhs: rhs.values, result: target.mutableValues, alpha: 1, beta: 1, transposeFirst: transposeLhs, transposeSecond: transposeRhs)
+                accumulator = target
+                return
+            }
+            accumulator = target
+        }
+        accumulate(lhs.matrixMultiplied(with: rhs, transposeSelf: transposeLhs, transposeOther: transposeRhs), into: &accumulator)
     }
 }
 

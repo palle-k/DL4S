@@ -74,17 +74,18 @@ public extension CPUFusedOperations {
         resetWeights: Tensor<N, CPU>,
         candidateWeights: Tensor<N, CPU>,
         outputGradient: Tensor<N, CPU>,
-    ) -> GatedRecurrentUnitGradients<N, CPU> {
+        accumulating gradients: inout GatedRecurrentUnitGradients<N, CPU>,
+    ) {
         guard let geometry = GatedRecurrentUnitGeometry(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights),
               outputGradient.shape == state.shape
         else {
-            return DefaultFusedOperations<CPU>.gatedRecurrentUnitStepBackward(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.gatedRecurrentUnitStepBackward(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, outputGradient: outputGradient, accumulating: &gradients)
+            return
         }
         let (count, batchSize, hiddenSize) = (geometry.count, geometry.batchSize, geometry.hiddenSize)
-        let computes = [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights].map(\.requiresGradient)
+        let (stateShape, weightShape) = (state.shape, [hiddenSize, hiddenSize])
         let (h, g) = (state.elementPointer, outputGradient.elementPointer)
         let (uz, ur, uh) = (updateWeights.elementPointer, resetWeights.elementPointer, candidateWeights.elementPointer)
-        var gradients = GatedRecurrentUnitGradients<N, CPU>()
 
         CPUKernels.withScratch(N.self, count: 6 * count + CPUKernels.blockSize) { scratch in
             let (update, reset, resetState, candidate) = (scratch, scratch + count, scratch + 2 * count, scratch + 3 * count)
@@ -101,19 +102,28 @@ public extension CPUFusedOperations {
                 updateActivationGradient[i] = gradient * (c - previous) * z * (1 - z)
                 candidateActivationGradient[i] = gradient * z * (1 - c * c)
             }
-            if computes[0] {
-                gradients.updateInput = copy(updateActivationGradient, shape: state.shape)
+            // The weight gradients are added to the accumulated gradients with GEMMs, so a weight that every time step uses needs no temporary gradient.
+            if updateInput.requiresGradient {
+                CPUKernels.accumulate(into: &gradients.updateInput, shape: stateShape) { target, beta in
+                    CPUKernels.store(updateActivationGradient, into: target, beta: beta, count: count)
+                }
             }
-            if computes[2] {
-                gradients.candidateInput = copy(candidateActivationGradient, shape: state.shape)
+            if candidateInput.requiresGradient {
+                CPUKernels.accumulate(into: &gradients.candidateInput, shape: stateShape) { target, beta in
+                    CPUKernels.store(candidateActivationGradient, into: target, beta: beta, count: count)
+                }
             }
-            if computes[4] {
-                gradients.updateWeights = product(state: h, gradient: updateActivationGradient, batchSize: batchSize, hiddenSize: hiddenSize)
+            if updateWeights.requiresGradient {
+                CPUKernels.accumulate(into: &gradients.updateWeights, shape: weightShape) { target, beta in
+                    CPUKernels.gemm(h, shape: (batchSize, hiddenSize), lhsTransposed: true, updateActivationGradient, shape: (batchSize, hiddenSize), into: target, beta: beta)
+                }
             }
-            if computes[6] {
-                gradients.candidateWeights = product(state: resetState, gradient: candidateActivationGradient, batchSize: batchSize, hiddenSize: hiddenSize)
+            if candidateWeights.requiresGradient {
+                CPUKernels.accumulate(into: &gradients.candidateWeights, shape: weightShape) { target, beta in
+                    CPUKernels.gemm(resetState, shape: (batchSize, hiddenSize), lhsTransposed: true, candidateActivationGradient, shape: (batchSize, hiddenSize), into: target, beta: beta)
+                }
             }
-            guard computes[1] || computes[3] || computes[5] else {
+            guard resetInput.requiresGradient || state.requiresGradient || resetWeights.requiresGradient else {
                 return
             }
             // The gate buffers of the reset state and the candidate are free now.
@@ -124,40 +134,34 @@ public extension CPUFusedOperations {
                 let (gradient, r) = (resetStateGradient[i], reset[i])
                 resetActivationGradient[i] = gradient * h[i] * r * (1 - r)
             }
-            if computes[1] {
-                gradients.resetInput = copy(resetActivationGradient, shape: state.shape)
-            }
-            if computes[5] {
-                gradients.resetWeights = product(state: h, gradient: resetActivationGradient, batchSize: batchSize, hiddenSize: hiddenSize)
-            }
-            if computes[3] {
-                let (stateGradient, dh) = CPUKernels.makeTensor(shape: state.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-                for i in 0 ..< count {
-                    let (gradient, z, fromResetState, r) = (g[i], update[i], resetStateGradient[i], reset[i])
-                    dh[i] = gradient * (1 - z) + fromResetState * r
+            if resetInput.requiresGradient {
+                CPUKernels.accumulate(into: &gradients.resetInput, shape: stateShape) { target, beta in
+                    CPUKernels.store(resetActivationGradient, into: target, beta: beta, count: count)
                 }
-                CPUKernels.gemm(resetActivationGradient, shape: (batchSize, hiddenSize), ur, shape: (hiddenSize, hiddenSize), rhsTransposed: true, into: dh, beta: 1)
-                CPUKernels.gemm(updateActivationGradient, shape: (batchSize, hiddenSize), uz, shape: (hiddenSize, hiddenSize), rhsTransposed: true, into: dh, beta: 1)
-                gradients.state = stateGradient
+            }
+            if resetWeights.requiresGradient {
+                CPUKernels.accumulate(into: &gradients.resetWeights, shape: weightShape) { target, beta in
+                    CPUKernels.gemm(h, shape: (batchSize, hiddenSize), lhsTransposed: true, resetActivationGradient, shape: (batchSize, hiddenSize), into: target, beta: beta)
+                }
+            }
+            if state.requiresGradient {
+                CPUKernels.accumulate(into: &gradients.state, shape: stateShape) { target, beta in
+                    if beta == 0 {
+                        for i in 0 ..< count {
+                            let (gradient, z, fromResetState, r) = (g[i], update[i], resetStateGradient[i], reset[i])
+                            target[i] = gradient * (1 - z) + fromResetState * r
+                        }
+                    } else {
+                        for i in 0 ..< count {
+                            let (gradient, z, fromResetState, r) = (g[i], update[i], resetStateGradient[i], reset[i])
+                            target[i] += gradient * (1 - z) + fromResetState * r
+                        }
+                    }
+                    CPUKernels.gemm(resetActivationGradient, shape: (batchSize, hiddenSize), ur, shape: (hiddenSize, hiddenSize), rhsTransposed: true, into: target, beta: 1)
+                    CPUKernels.gemm(updateActivationGradient, shape: (batchSize, hiddenSize), uz, shape: (hiddenSize, hiddenSize), rhsTransposed: true, into: target, beta: 1)
+                }
             }
         }
-        return gradients
-    }
-}
-
-private extension CPUFusedOperations {
-    /// Returns a tensor without context with a copy of the elements.
-    static func copy<N: NumericType>(_ values: UnsafePointer<N>, shape: [Int]) -> Tensor<N, CPU> {
-        let (tensor, pointer) = CPUKernels.makeTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        pointer.update(from: values, count: tensor.count)
-        return tensor
-    }
-
-    /// Returns `stateᵀ × gradient`, the gradient of the weights of a gate, shape [hiddenSize, hiddenSize].
-    static func product<N: NumericType>(state: UnsafePointer<N>, gradient: UnsafePointer<N>, batchSize: Int, hiddenSize: Int) -> Tensor<N, CPU> {
-        let (tensor, pointer) = CPUKernels.makeTensor(shape: [hiddenSize, hiddenSize]) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        CPUKernels.gemm(state, shape: (batchSize, hiddenSize), lhsTransposed: true, gradient, shape: (batchSize, hiddenSize), into: pointer)
-        return tensor
     }
 }
 

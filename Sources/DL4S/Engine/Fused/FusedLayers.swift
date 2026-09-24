@@ -36,15 +36,18 @@ public extension FusedOperationsType {
         return product + bias.detached()
     }
 
-    static func linearBackward<N: NumericType>(input: Tensor<N, Device>, weights: Tensor<N, Device>, bias: Tensor<N, Device>?, outputGradient: Tensor<N, Device>) -> (input: Tensor<N, Device>?, weights: Tensor<N, Device>?, bias: Tensor<N, Device>?) {
-        Composed.linearGradients(
-            input: input.detached(),
-            weights: weights.detached(),
-            outputGradient: outputGradient.detached(),
-            computesInput: input.requiresGradient,
-            computesWeights: weights.requiresGradient,
-            computesBias: bias?.requiresGradient ?? false,
-        )
+    static func linearBackward<N: NumericType>(input: Tensor<N, Device>, weights: Tensor<N, Device>, bias: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, accumulating gradients: inout (input: Tensor<N, Device>?, weights: Tensor<N, Device>?, bias: Tensor<N, Device>?)) {
+        let outputGradient = outputGradient.detached()
+        // The products are added to the accumulated gradients in place, so a weight that is used several times needs no temporary gradient.
+        if input.requiresGradient {
+            Tensor.accumulateProduct(outputGradient, weights.detached(), transposeRhs: true, into: &gradients.input)
+        }
+        if weights.requiresGradient {
+            Tensor.accumulateProduct(input.detached(), outputGradient, transposeLhs: true, into: &gradients.weights)
+        }
+        if bias?.requiresGradient ?? false {
+            Tensor.accumulate(outputGradient.reduceSum(along: [0]), into: &gradients.bias)
+        }
     }
 
     static func dropout<N: NumericType>(input: Tensor<N, Device>, rate: Float) -> (output: Tensor<N, Device>, mask: Tensor<N, Device>) {
@@ -52,8 +55,11 @@ public extension FusedOperationsType {
         return (input.detached() * mask, mask)
     }
 
-    static func dropoutBackward<N: NumericType>(mask: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        outputGradient.detached() * mask.detached()
+    static func dropoutBackward<N: NumericType>(mask: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            outputGradient.detached() * mask.detached(),
+            into: &gradient,
+        )
     }
 }
 

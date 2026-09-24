@@ -92,29 +92,22 @@ extension Tensor {
     /// - Parameters:
     ///   - tag: Name of the operation for graph output.
     ///   - sources: Tensors that the operation reads.
-    ///   - backpropagate: Receives the gradient of the result and returns the gradient of every source in source order,
-    ///     or nil for a source that does not require a gradient.
+    ///   - backpropagate: Receives the gradient of the result and the accumulated gradients of the sources in source order,
+    ///     nil where a source has no gradient yet. It adds the gradient of every source that requires a gradient to its
+    ///     accumulated gradient, or stores it when the value is nil. The accumulated gradients are uniquely referenced,
+    ///     so they can be changed in place.
     /// - Returns: The tensor with the context, or the tensor without changes when no source requires a gradient.
-    func attachingContext(tag: String, sources: [Self], backpropagate: @escaping @Sendable (Self) -> [Self?]) -> Self {
+    func attachingContext(tag: String, sources: [Self], backpropagate: @escaping @Sendable (_ resultGradient: Self, _ gradients: inout [Self?]) -> Void) -> Self {
         guard sources.contains(where: \.requiresGradient) else {
             return self
         }
         let sourceCount = sources.count
         var result = self
         result.context = TensorContext(tag: tag, sources: sources, backpropagateAll: { resultGradient, accumulators in
-            var accumulators = accumulators
-            let gradients = backpropagate(resultGradient)
-            precondition(gradients.count == sourceCount, "A fused backward pass must return one gradient per source.")
-            return gradients.indices.map { i in
-                guard let gradient = gradients[i] else {
-                    return nil
-                }
-                // Taking the accumulator out of the array leaves it uniquely referenced.
-                if let accumulator = accumulators[i].take() {
-                    return accumulator + gradient
-                }
-                return gradient
-            }
+            var gradients = accumulators
+            backpropagate(resultGradient, &gradients)
+            precondition(gradients.count == sourceCount, "A fused backward pass must keep one gradient per source.")
+            return gradients
         })
         result.requiresGradient = true
         return result
@@ -133,5 +126,30 @@ extension Tensor {
             .filter { $1.0 == 1 && $1.1 > 1 }
             .map(\.offset)
         return reduceSum(along: reducedAxes).view(as: targetShape)
+    }
+
+    /// Adds a gradient to an accumulated gradient, or stores it when there is no accumulated gradient yet.
+    ///
+    /// Implementations of fused operations use this function for the accumulated gradients of their backward requirements.
+    /// When neither tensor records a gradient graph and both have the same shape, the gradient is added in place.
+    /// - Parameters:
+    ///   - gradient: Gradient to add, or nil to leave the accumulated gradient unchanged
+    ///   - accumulator: Accumulated gradient
+    public static func accumulate(_ gradient: Self?, into accumulator: inout Self?) {
+        guard let gradient else {
+            return
+        }
+        guard var existing = accumulator.take() else {
+            accumulator = gradient
+            return
+        }
+        guard !gradient.requiresGradient, !existing.requiresGradient, gradient.shape == existing.shape else {
+            accumulator = existing + gradient
+            return
+        }
+        // When the accumulated gradient shares its storage with another tensor, the write copies it first.
+        let target = existing.mutableValues.values
+        Device.Engine.vAdd(lhs: Buffer(target), rhs: gradient.values.values, result: target, count: gradient.count)
+        accumulator = existing
     }
 }

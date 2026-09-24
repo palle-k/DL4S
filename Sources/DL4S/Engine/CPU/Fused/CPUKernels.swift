@@ -118,6 +118,39 @@ enum CPUKernels {
         N.sqrt(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
+    /// Writes a gradient into an accumulated gradient.
+    ///
+    /// `write` receives the elements and a factor for their current values: 1 when the elements hold the accumulated
+    /// gradient, to which the gradient is added, and 0 for a new tensor, whose elements are not initialized.
+    /// An accumulated gradient with a gradient graph gets the sum without an in-place write.
+    @inline(__always)
+    static func accumulate<N: NumericType>(into accumulator: inout Tensor<N, CPU>?, shape: [Int], _ write: (_ elements: UnsafeMutablePointer<N>, _ beta: N) -> Void) {
+        // The accumulated gradient is taken out of the optional, so that it is the only reference to its storage during the write.
+        if var target = accumulator.take() {
+            if !target.requiresGradient, target.shape == shape {
+                write(target.mutableValues.pointer.baseAddress!, 1)
+                accumulator = target
+                return
+            }
+            accumulator = target
+        }
+        let (gradient, elements) = makeTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
+        write(elements, 0)
+        Tensor.accumulate(gradient, into: &accumulator)
+    }
+
+    /// Computes `target = values + beta * target` for a beta of 0 or 1. With beta 0, the target need not be initialized.
+    @inline(__always)
+    static func store<N: NumericType>(_ values: UnsafePointer<N>, into target: UnsafeMutablePointer<N>, beta: N, count: Int) {
+        if beta == 0 {
+            target.update(from: values, count: count)
+        } else {
+            for i in 0 ..< count {
+                target[i] += values[i]
+            }
+        }
+    }
+
     /// Multiplies two row-major matrices: `result = alpha * op(lhs) × op(rhs) + beta * result`.
     @inline(__always)
     static func gemm<N: NumericType>(
@@ -144,6 +177,50 @@ enum CPUKernels {
             transposeFirst: transposeFirst,
             transposeSecond: transposeSecond,
         )
+    }
+}
+
+/// A gradient that a kernel writes over several steps: the accumulated gradient of a source, or a new tensor.
+struct GradientTarget<N: NumericType> {
+    /// Tensor that receives the gradient
+    private(set) var tensor: Tensor<N, CPU>
+    /// Elements of the tensor
+    let pointer: UnsafeMutablePointer<N>
+    /// Factor of the current elements for the first write: 1 when they hold the accumulated gradient, 0 for a new tensor.
+    let beta: N
+    /// Accumulated gradient with a gradient graph, which gets the sum without an in-place write.
+    private var graphAccumulator: Tensor<N, CPU>?
+
+    /// Takes the accumulated gradient, or creates a new tensor when there is none or when it has a gradient graph.
+    /// - Parameters:
+    ///   - accumulator: Accumulated gradient, which is nil until ``finish(into:)``
+    ///   - shape: Shape of the gradient
+    ///   - zeroed: Whether a new tensor starts at 0, for kernels that add to the elements in every step
+    init(taking accumulator: inout Tensor<N, CPU>?, shape: [Int], zeroed: Bool = false) {
+        // The accumulated gradient is taken out of the optional, so that it is the only reference to its storage.
+        var existing = accumulator.take()
+        if var inPlace = existing.take() {
+            if !inPlace.requiresGradient, inPlace.shape == shape {
+                pointer = inPlace.mutableValues.pointer.baseAddress!
+                tensor = inPlace
+                beta = 1
+                graphAccumulator = nil
+                return
+            }
+            existing = inPlace
+        }
+        graphAccumulator = existing
+        let (created, elements) = zeroed
+            ? CPUKernels.makeZeroTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
+            : CPUKernels.makeTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
+        (tensor, pointer) = (created, elements)
+        beta = zeroed ? 1 : 0
+    }
+
+    /// Stores the gradient in the accumulated gradient.
+    consuming func finish(into accumulator: inout Tensor<N, CPU>?) {
+        accumulator = graphAccumulator
+        Tensor.accumulate(tensor, into: &accumulator)
     }
 }
 

@@ -42,19 +42,23 @@ import Foundation
 public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     precondition(expected.count == actual.count, "Expected and predicted values must have the same number of elements.")
     let result = Device.FusedOperations.binaryCrossEntropy(expected: expected, actual: actual)
-    return result.attachingContext(tag: "binaryCrossEntropy", sources: [expected, actual]) { resultGradient in
-        let gradients = if resultGradient.requiresGradient {
-            Composed.binaryCrossEntropyGradients(
+    return result.attachingContext(tag: "binaryCrossEntropy", sources: [expected, actual]) { resultGradient, gradients in
+        if resultGradient.requiresGradient {
+            let computed = Composed.binaryCrossEntropyGradients(
                 expected: expected,
                 actual: actual,
                 outputGradient: resultGradient,
                 computesExpected: expected.requiresGradient,
                 computesActual: actual.requiresGradient,
             )
+            Tensor.accumulate(computed.expected, into: &gradients[0])
+            Tensor.accumulate(computed.actual, into: &gradients[1])
         } else {
-            Device.FusedOperations.binaryCrossEntropyBackward(expected: expected, actual: actual, outputGradient: resultGradient)
+            var accumulated = (expected: gradients[0].take(), actual: gradients[1].take())
+            Device.FusedOperations.binaryCrossEntropyBackward(expected: expected, actual: actual, outputGradient: resultGradient, accumulating: &accumulated)
+            gradients[0] = accumulated.expected
+            gradients[1] = accumulated.actual
         }
-        return [gradients.expected, gradients.actual]
     }
 }
 
@@ -76,11 +80,11 @@ public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(ex
     precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
 
     let result = Device.FusedOperations.categoricalCrossEntropy(expected: expected, actual: actual, ignoreIndex: ignoreIndex)
-    return result.attachingContext(tag: "categoricalCrossEntropy", sources: [actual]) { resultGradient in
+    return result.attachingContext(tag: "categoricalCrossEntropy", sources: [actual]) { resultGradient, gradients in
         if resultGradient.requiresGradient {
-            [Composed.categoricalCrossEntropyGradient(expected: expected, actual: actual, outputGradient: resultGradient, ignoreIndex: ignoreIndex)]
+            Tensor.accumulate(Composed.categoricalCrossEntropyGradient(expected: expected, actual: actual, outputGradient: resultGradient, ignoreIndex: ignoreIndex), into: &gradients[0])
         } else {
-            [Device.FusedOperations.categoricalCrossEntropyBackward(expected: expected, actual: actual, outputGradient: resultGradient, ignoreIndex: ignoreIndex)]
+            Device.FusedOperations.categoricalCrossEntropyBackward(expected: expected, actual: actual, outputGradient: resultGradient, ignoreIndex: ignoreIndex, accumulating: &gradients[0])
         }
     }
 }
@@ -106,11 +110,11 @@ public func categoricalNegativeLogLikelihood<Element: NumericType, Device: Devic
 
     let result = Device.FusedOperations.categoricalNegativeLogLikelihood(expected: expected, actual: actual, ignoreIndex: ignoreIndex)
     let actualShape = actual.shape
-    return result.attachingContext(tag: "negativeLogLikelihood", sources: [actual]) { resultGradient in
+    return result.attachingContext(tag: "negativeLogLikelihood", sources: [actual]) { resultGradient, gradients in
         if resultGradient.requiresGradient {
-            [Composed.categoricalNegativeLogLikelihoodGradient(expected: expected, actualShape: actualShape, outputGradient: resultGradient, ignoreIndex: ignoreIndex)]
+            Tensor.accumulate(Composed.categoricalNegativeLogLikelihoodGradient(expected: expected, actualShape: actualShape, outputGradient: resultGradient, ignoreIndex: ignoreIndex), into: &gradients[0])
         } else {
-            [Device.FusedOperations.categoricalNegativeLogLikelihoodBackward(expected: expected, actual: actual, outputGradient: resultGradient, ignoreIndex: ignoreIndex)]
+            Device.FusedOperations.categoricalNegativeLogLikelihoodBackward(expected: expected, actual: actual, outputGradient: resultGradient, ignoreIndex: ignoreIndex, accumulating: &gradients[0])
         }
     }
 }
@@ -124,19 +128,23 @@ public func categoricalNegativeLogLikelihood<Element: NumericType, Device: Devic
 ///   - actual: Predicted values, broadcastable with the expected values
 public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     let result = Device.FusedOperations.meanSquaredError(expected: expected, actual: actual)
-    return result.attachingContext(tag: "meanSquaredError", sources: [expected, actual]) { resultGradient in
-        let gradients = if resultGradient.requiresGradient {
-            Composed.meanSquaredErrorGradients(
+    return result.attachingContext(tag: "meanSquaredError", sources: [expected, actual]) { resultGradient, gradients in
+        if resultGradient.requiresGradient {
+            let computed = Composed.meanSquaredErrorGradients(
                 expected: expected,
                 actual: actual,
                 outputGradient: resultGradient,
                 computesExpected: expected.requiresGradient,
                 computesActual: actual.requiresGradient,
             )
+            Tensor.accumulate(computed.expected, into: &gradients[0])
+            Tensor.accumulate(computed.actual, into: &gradients[1])
         } else {
-            Device.FusedOperations.meanSquaredErrorBackward(expected: expected, actual: actual, outputGradient: resultGradient)
+            var accumulated = (expected: gradients[0].take(), actual: gradients[1].take())
+            Device.FusedOperations.meanSquaredErrorBackward(expected: expected, actual: actual, outputGradient: resultGradient, accumulating: &accumulated)
+            gradients[0] = accumulated.expected
+            gradients[1] = accumulated.actual
         }
-        return [gradients.expected, gradients.actual]
     }
 }
 
@@ -146,11 +154,11 @@ public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>,
 ///   - loss: Weight decay importance scaling factor
 public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
     let result = Device.FusedOperations.l2Loss(input: vector, scale: loss)
-    return result.attachingContext(tag: "l2loss", sources: [vector]) { resultGradient in
+    return result.attachingContext(tag: "l2loss", sources: [vector]) { resultGradient, gradients in
         if resultGradient.requiresGradient {
-            [Composed.l2LossGradient(input: vector, outputGradient: resultGradient, scale: loss)]
+            Tensor.accumulate(Composed.l2LossGradient(input: vector, outputGradient: resultGradient, scale: loss), into: &gradients[0])
         } else {
-            [Device.FusedOperations.l2LossBackward(input: vector, outputGradient: resultGradient, scale: loss)]
+            Device.FusedOperations.l2LossBackward(input: vector, outputGradient: resultGradient, scale: loss, accumulating: &gradients[0])
         }
     }
 }
@@ -161,11 +169,11 @@ public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Ele
 ///   - loss: Weight decay importance scaling factor
 public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
     let result = Device.FusedOperations.l1Loss(input: vector, scale: loss)
-    return result.attachingContext(tag: "l1loss", sources: [vector]) { resultGradient in
+    return result.attachingContext(tag: "l1loss", sources: [vector]) { resultGradient, gradients in
         if resultGradient.requiresGradient {
-            [Composed.l1LossGradient(input: vector, outputGradient: resultGradient, scale: loss)]
+            Tensor.accumulate(Composed.l1LossGradient(input: vector, outputGradient: resultGradient, scale: loss), into: &gradients[0])
         } else {
-            [Device.FusedOperations.l1LossBackward(input: vector, outputGradient: resultGradient, scale: loss)]
+            Device.FusedOperations.l1LossBackward(input: vector, outputGradient: resultGradient, scale: loss, accumulating: &gradients[0])
         }
     }
 }

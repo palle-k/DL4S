@@ -567,11 +567,58 @@ struct FusedOperationTests {
         input.requiresGradient = true
         let outputGradient = DoubleTensor(repeating: 1, shape: [1, 3, 4, 4])
 
-        let gradients = CPU.FusedOperations.convolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: 1, stride: 1)
+        var gradients: (input: DoubleTensor?, filters: DoubleTensor?, bias: DoubleTensor?) = (nil, nil, nil)
+        CPU.FusedOperations.convolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: 1, stride: 1, accumulating: &gradients)
         #expect(gradients.input?.shape == input.shape)
         #expect(gradients.input?.requiresGradient == false)
         #expect(gradients.filters == nil)
         #expect(gradients.bias == nil)
+    }
+
+    @Test func backwardAddsToAccumulatedGradients() throws {
+        var (input, weights) = (uniform([3, 4], seed: 3006), uniform([4, 5], seed: 3007))
+        input.requiresGradient = true
+        weights.requiresGradient = true
+        let outputGradient = uniform([3, 5], seed: 3008)
+        let (inputStart, weightStart) = (uniform([3, 4], seed: 3009), uniform([4, 5], seed: 3010))
+
+        var empty: (input: DoubleTensor?, weights: DoubleTensor?, bias: DoubleTensor?) = (nil, nil, nil)
+        CPU.FusedOperations.linearBackward(input: input, weights: weights, bias: nil, outputGradient: outputGradient, accumulating: &empty)
+        var accumulated: (input: DoubleTensor?, weights: DoubleTensor?, bias: DoubleTensor?) = (inputStart, weightStart, nil)
+        CPU.FusedOperations.linearBackward(input: input, weights: weights, bias: nil, outputGradient: outputGradient, accumulating: &accumulated)
+
+        try expectApproximatelyEqual(#require(accumulated.input), inputStart + empty.input!, tolerance: 1e-12, "input gradient")
+        try expectApproximatelyEqual(#require(accumulated.weights), weightStart + empty.weights!, tolerance: 1e-12, "weight gradient")
+        #expect(accumulated.bias == nil)
+        // The accumulators share their storage with the start values, so the kernels must copy them before they write.
+        #expect(inputStart == uniform([3, 4], seed: 3009))
+        #expect(weightStart == uniform([4, 5], seed: 3010))
+    }
+
+    @Test func weightsUsedInSeveralStepsGetSumOfGradients() {
+        let sources = [uniform([2, 6], seed: 3060), uniform([6, 6], seed: 3061), uniform([6, 6], seed: 3062), uniform([6, 6], seed: 3063)]
+        // Three steps of a recurrent unit with batch size 2 and shared weights, as in a sequence model.
+        func unroll(_ sources: [DoubleTensor]) -> DoubleTensor {
+            var state = sources[0]
+            for step in 0 ..< 3 {
+                let input = DoubleTensor(repeating: Double(step) / 4, shape: [2, 6])
+                state = gatedRecurrentUnitStep(
+                    updateInput: input, resetInput: -input, candidateInput: input * 2, state: state,
+                    updateWeights: sources[1], resetWeights: sources[2], candidateWeights: sources[3],
+                )
+            }
+            return state
+        }
+        var trainable = sources
+        for index in trainable.indices {
+            trainable[index].requiresGradient = true
+        }
+        let weights = uniform([2, 6], min: 0.5, max: 1.5, seed: 3064)
+        let gradients = (unroll(trainable) * weights).reduceSum().gradients(of: trainable)
+        let numerical = numericalGradients(of: { unroll($0) * weights }, at: sources, differentiable: Array(sources.indices))
+        for index in sources.indices {
+            expectApproximatelyEqual(gradients[index], numerical[index], "gradient of source \(index)")
+        }
     }
 
     @Test func frozenSourcesGetNoGradient() {

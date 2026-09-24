@@ -33,8 +33,11 @@ public extension FusedOperationsType {
         return input.reduceSum(along: axes) / Tensor(N(Composed.elementCount(of: input.shape, along: axes)))
     }
 
-    static func reduceMeanBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int]) -> Tensor<N, Device> {
-        Composed.reduceMeanGradient(inputShape: input.shape, outputGradient: outputGradient.detached(), axes: axes)
+    static func reduceMeanBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int], accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.reduceMeanGradient(inputShape: input.shape, outputGradient: outputGradient.detached(), axes: axes),
+            into: &gradient,
+        )
     }
 
     static func variance<N: NumericType>(input: Tensor<N, Device>, axes: [Int]) -> Tensor<N, Device> {
@@ -43,8 +46,11 @@ public extension FusedOperationsType {
         return (input * input).reduceMean(along: axes) - mean * mean
     }
 
-    static func varianceBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int]) -> Tensor<N, Device> {
-        Composed.varianceGradient(input: input.detached(), outputGradient: outputGradient.detached(), axes: axes)
+    static func varianceBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int], accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.varianceGradient(input: input.detached(), outputGradient: outputGradient.detached(), axes: axes),
+            into: &gradient,
+        )
     }
 
     static func layerNormalization<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, epsilon: N) -> Tensor<N, Device> {
@@ -52,8 +58,8 @@ public extension FusedOperationsType {
         return Composed.normalized(input.detached(), along: axes, epsilon: epsilon) * scale.detached() + shift.detached()
     }
 
-    static func layerNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N) -> (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?) {
-        Composed.normalizationGradients(
+    static func layerNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N, accumulating gradients: inout (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?)) {
+        let computed = Composed.normalizationGradients(
             input: input.detached(),
             scale: scale.detached(),
             shiftShape: shift.shape,
@@ -64,6 +70,9 @@ public extension FusedOperationsType {
             computesScale: scale.requiresGradient,
             computesShift: shift.requiresGradient,
         )
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.scale, into: &gradients.scale)
+        Tensor.accumulate(computed.shift, into: &gradients.shift)
     }
 
     static func batchNormalization<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, epsilon: N) -> (output: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>) {
@@ -74,8 +83,8 @@ public extension FusedOperationsType {
         return (normalized * scale.detached() + shift.detached(), mean, variance)
     }
 
-    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N) -> (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?) {
-        Composed.normalizationGradients(
+    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N, accumulating gradients: inout (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?)) {
+        let computed = Composed.normalizationGradients(
             input: input.detached(),
             scale: scale.detached(),
             shiftShape: shift.shape,
@@ -86,6 +95,9 @@ public extension FusedOperationsType {
             computesScale: scale.requiresGradient,
             computesShift: shift.requiresGradient,
         )
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.scale, into: &gradients.scale)
+        Tensor.accumulate(computed.shift, into: &gradients.shift)
     }
 
     static func batchNormalization<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>, epsilon: N) -> Tensor<N, Device> {
@@ -93,8 +105,8 @@ public extension FusedOperationsType {
         return normalized * scale.detached() + shift.detached()
     }
 
-    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N) -> (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?) {
-        Composed.fixedNormalizationGradients(
+    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N, accumulating gradients: inout (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?)) {
+        let computed = Composed.fixedNormalizationGradients(
             input: input.detached(),
             scale: scale.detached(),
             shiftShape: shift.shape,
@@ -106,6 +118,9 @@ public extension FusedOperationsType {
             computesScale: scale.requiresGradient,
             computesShift: shift.requiresGradient,
         )
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.scale, into: &gradients.scale)
+        Tensor.accumulate(computed.shift, into: &gradients.shift)
     }
 }
 

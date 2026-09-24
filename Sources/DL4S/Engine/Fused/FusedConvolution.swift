@@ -60,8 +60,8 @@ public extension FusedOperationsType {
         return convolved + bias.detached().view(as: [1, outputChannels, 1, 1])
     }
 
-    static func convolution2dBackward<N: NumericType>(input: Tensor<N, Device>, filters: Tensor<N, Device>, bias: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, padding: Int, stride: Int) -> (input: Tensor<N, Device>?, filters: Tensor<N, Device>?, bias: Tensor<N, Device>?) {
-        Composed.convolution2dGradients(
+    static func convolution2dBackward<N: NumericType>(input: Tensor<N, Device>, filters: Tensor<N, Device>, bias: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, padding: Int, stride: Int, accumulating gradients: inout (input: Tensor<N, Device>?, filters: Tensor<N, Device>?, bias: Tensor<N, Device>?)) {
+        let computed = Composed.convolution2dGradients(
             input: input.detached(),
             filters: filters.detached(),
             outputGradient: outputGradient.detached(),
@@ -71,6 +71,9 @@ public extension FusedOperationsType {
             computesFilters: filters.requiresGradient,
             computesBias: bias?.requiresGradient ?? false,
         )
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.filters, into: &gradients.filters)
+        Tensor.accumulate(computed.bias, into: &gradients.bias)
     }
 
     static func transposedConvolution2d<N: NumericType>(input: Tensor<N, Device>, filters: Tensor<N, Device>, bias: Tensor<N, Device>?, inset: Int, stride: Int) -> Tensor<N, Device> {
@@ -103,8 +106,8 @@ public extension FusedOperationsType {
         return convolved + bias.detached().view(as: [1, outputChannels, 1, 1])
     }
 
-    static func transposedConvolution2dBackward<N: NumericType>(input: Tensor<N, Device>, filters: Tensor<N, Device>, bias: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, inset: Int, stride: Int) -> (input: Tensor<N, Device>?, filters: Tensor<N, Device>?, bias: Tensor<N, Device>?) {
-        Composed.transposedConvolution2dGradients(
+    static func transposedConvolution2dBackward<N: NumericType>(input: Tensor<N, Device>, filters: Tensor<N, Device>, bias: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, inset: Int, stride: Int, accumulating gradients: inout (input: Tensor<N, Device>?, filters: Tensor<N, Device>?, bias: Tensor<N, Device>?)) {
+        let computed = Composed.transposedConvolution2dGradients(
             input: input.detached(),
             filters: filters.detached(),
             outputGradient: outputGradient.detached(),
@@ -114,6 +117,9 @@ public extension FusedOperationsType {
             computesFilters: filters.requiresGradient,
             computesBias: bias?.requiresGradient ?? false,
         )
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.filters, into: &gradients.filters)
+        Tensor.accumulate(computed.bias, into: &gradients.bias)
     }
 
     static func maxPooling2d<N: NumericType>(input: Tensor<N, Device>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, Device> {
@@ -122,8 +128,11 @@ public extension FusedOperationsType {
             .view(as: Composed.poolingOutputShape(of: input, windowSize: windowSize, padding: padding, stride: stride))
     }
 
-    static func maxPooling2dBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, Device> {
-        Composed.maxPooling2dGradient(input: input.detached(), outputGradient: outputGradient.detached(), windowSize: windowSize, padding: padding, stride: stride)
+    static func maxPooling2dBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, windowSize: Int, padding: Int, stride: Int, accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.maxPooling2dGradient(input: input.detached(), outputGradient: outputGradient.detached(), windowSize: windowSize, padding: padding, stride: stride),
+            into: &gradient,
+        )
     }
 
     static func averagePooling2d<N: NumericType>(input: Tensor<N, Device>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, Device> {
@@ -133,8 +142,11 @@ public extension FusedOperationsType {
             / Tensor(N(windowSize * windowSize))
     }
 
-    static func averagePooling2dBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, Device> {
-        Composed.averagePooling2dGradient(inputShape: input.shape, outputGradient: outputGradient.detached(), windowSize: windowSize, padding: padding, stride: stride)
+    static func averagePooling2dBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, windowSize: Int, padding: Int, stride: Int, accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.averagePooling2dGradient(inputShape: input.shape, outputGradient: outputGradient.detached(), windowSize: windowSize, padding: padding, stride: stride),
+            into: &gradient,
+        )
     }
 }
 

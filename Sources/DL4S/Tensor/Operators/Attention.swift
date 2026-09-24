@@ -50,9 +50,9 @@ public func scaledDotProductAttention<Element, Device>(
     let mask = mask?.detached()
     let result = Device.FusedOperations.scaledDotProductAttention(queries: queries, keys: keys, values: values, mask: mask, temperature: temperature)
 
-    return result.attachingContext(tag: "scaledDotProductAttention", sources: [queries, keys, values]) { resultGradient in
-        let gradients = if resultGradient.requiresGradient {
-            Composed.scaledDotProductAttentionGradients(
+    return result.attachingContext(tag: "scaledDotProductAttention", sources: [queries, keys, values]) { resultGradient, gradients in
+        if resultGradient.requiresGradient {
+            let computed = Composed.scaledDotProductAttentionGradients(
                 queries: queries,
                 keys: keys,
                 values: values,
@@ -63,10 +63,16 @@ public func scaledDotProductAttention<Element, Device>(
                 computesKeys: keys.requiresGradient,
                 computesValues: values.requiresGradient,
             )
+            Tensor.accumulate(computed.queries, into: &gradients[0])
+            Tensor.accumulate(computed.keys, into: &gradients[1])
+            Tensor.accumulate(computed.values, into: &gradients[2])
         } else {
-            Device.FusedOperations.scaledDotProductAttentionBackward(queries: queries, keys: keys, values: values, mask: mask, outputGradient: resultGradient, temperature: temperature)
+            var accumulated = (queries: gradients[0].take(), keys: gradients[1].take(), values: gradients[2].take())
+            Device.FusedOperations.scaledDotProductAttentionBackward(queries: queries, keys: keys, values: values, mask: mask, outputGradient: resultGradient, temperature: temperature, accumulating: &accumulated)
+            gradients[0] = accumulated.queries
+            gradients[1] = accumulated.keys
+            gradients[2] = accumulated.values
         }
-        return [gradients.queries, gradients.keys, gradients.values]
     }
 }
 
@@ -118,9 +124,9 @@ public func multiHeadAttention<Element, Device>(
     )
 
     let sources = [queries, keys, values, queryWeights, keyWeights, valueWeights, outputWeights]
-    return result.attachingContext(tag: "multiHeadAttention", sources: sources) { resultGradient in
-        let gradients = if resultGradient.requiresGradient {
-            Composed.multiHeadAttentionGradients(
+    return result.attachingContext(tag: "multiHeadAttention", sources: sources) { resultGradient, gradients in
+        if resultGradient.requiresGradient {
+            let computed = Composed.multiHeadAttentionGradients(
                 queries: queries,
                 keys: keys,
                 values: values,
@@ -134,7 +140,20 @@ public func multiHeadAttention<Element, Device>(
                 temperature: temperature,
                 computes: sources.map(\.requiresGradient),
             )
+            for (index, gradient) in computed.inSourceOrder.enumerated() {
+                Tensor.accumulate(gradient, into: &gradients[index])
+            }
         } else {
+            // The struct takes the references out of the array, so the accumulated gradients stay uniquely referenced.
+            var accumulated = MultiHeadAttentionGradients(
+                queries: gradients[0].take(),
+                keys: gradients[1].take(),
+                values: gradients[2].take(),
+                queryWeights: gradients[3].take(),
+                keyWeights: gradients[4].take(),
+                valueWeights: gradients[5].take(),
+                outputWeights: gradients[6].take(),
+            )
             Device.FusedOperations.multiHeadAttentionBackward(
                 queries: queries,
                 keys: keys,
@@ -147,17 +166,10 @@ public func multiHeadAttention<Element, Device>(
                 outputGradient: resultGradient,
                 heads: heads,
                 temperature: temperature,
+                accumulating: &accumulated,
             )
+            gradients = accumulated.inSourceOrder
         }
-        return [
-            gradients.queries,
-            gradients.keys,
-            gradients.values,
-            gradients.queryWeights,
-            gradients.keyWeights,
-            gradients.valueWeights,
-            gradients.outputWeights,
-        ]
     }
 }
 

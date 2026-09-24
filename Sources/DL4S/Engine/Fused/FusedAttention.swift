@@ -33,8 +33,8 @@ public extension FusedOperationsType {
             .broadcastMatrixMultiplied(with: values.detached())
     }
 
-    static func scaledDotProductAttentionBackward<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, temperature: N) -> (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?) {
-        Composed.scaledDotProductAttentionGradients(
+    static func scaledDotProductAttentionBackward<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, temperature: N, accumulating gradients: inout (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?)) {
+        let computed = Composed.scaledDotProductAttentionGradients(
             queries: queries.detached(),
             keys: keys.detached(),
             values: values.detached(),
@@ -45,6 +45,9 @@ public extension FusedOperationsType {
             computesKeys: keys.requiresGradient,
             computesValues: values.requiresGradient,
         )
+        Tensor.accumulate(computed.queries, into: &gradients.queries)
+        Tensor.accumulate(computed.keys, into: &gradients.keys)
+        Tensor.accumulate(computed.values, into: &gradients.values)
     }
 
     static func multiHeadAttention<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, queryWeights: Tensor<N, Device>, keyWeights: Tensor<N, Device>, valueWeights: Tensor<N, Device>, outputWeights: Tensor<N, Device>, heads: Int, temperature: N) -> Tensor<N, Device> {
@@ -56,7 +59,7 @@ public extension FusedOperationsType {
         return Composed.project(Composed.joinHeads(attended), with: outputWeights.detached())
     }
 
-    static func multiHeadAttentionBackward<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, queryWeights: Tensor<N, Device>, keyWeights: Tensor<N, Device>, valueWeights: Tensor<N, Device>, outputWeights: Tensor<N, Device>, outputGradient: Tensor<N, Device>, heads: Int, temperature: N) -> MultiHeadAttentionGradients<N, Device> {
+    static func multiHeadAttentionBackward<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, queryWeights: Tensor<N, Device>, keyWeights: Tensor<N, Device>, valueWeights: Tensor<N, Device>, outputWeights: Tensor<N, Device>, outputGradient: Tensor<N, Device>, heads: Int, temperature: N, accumulating gradients: inout MultiHeadAttentionGradients<N, Device>) {
         let computes = [queries, keys, values, queryWeights, keyWeights, valueWeights, outputWeights].map(\.requiresGradient)
         let (queries, keys, values) = (queries.detached(), keys.detached(), values.detached())
         let outputGradient = outputGradient.detached()
@@ -64,26 +67,28 @@ public extension FusedOperationsType {
         var keyHeads = Composed.splitHeads(Composed.project(keys, with: keyWeights.detached()), heads: heads)
         var valueHeads = Composed.splitHeads(Composed.project(values, with: valueWeights.detached()), heads: heads)
 
-        var gradients = MultiHeadAttentionGradients<N, Device>(queries: nil, keys: nil, values: nil, queryWeights: nil, keyWeights: nil, valueWeights: nil, outputWeights: nil)
+        var computed = MultiHeadAttentionGradients<N, Device>(queries: nil, keys: nil, values: nil, queryWeights: nil, keyWeights: nil, valueWeights: nil, outputWeights: nil)
         if computes[6] {
             let attended = Device.FusedOperations.scaledDotProductAttention(queries: queryHeads, keys: keyHeads, values: valueHeads, mask: mask?.detached(), temperature: temperature)
-            gradients.outputWeights = Composed.projectionWeightGradient(input: Composed.joinHeads(attended), outputGradient: outputGradient)
+            computed.outputWeights = Composed.projectionWeightGradient(input: Composed.joinHeads(attended), outputGradient: outputGradient)
         }
 
         // The flags select the gradients that the fused attention of the device computes.
         queryHeads.requiresGradient = computes[0] || computes[3]
         keyHeads.requiresGradient = computes[1] || computes[4]
         valueHeads.requiresGradient = computes[2] || computes[5]
-        let headGradients = Device.FusedOperations.scaledDotProductAttentionBackward(
+        var headGradients: (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?) = (nil, nil, nil)
+        Device.FusedOperations.scaledDotProductAttentionBackward(
             queries: queryHeads,
             keys: keyHeads,
             values: valueHeads,
             mask: mask?.detached(),
             outputGradient: Composed.splitHeads(Composed.projectionInputGradient(outputGradient, weights: outputWeights.detached()), heads: heads),
             temperature: temperature,
+            accumulating: &headGradients,
         )
         Composed.addProjectionGradients(
-            to: &gradients,
+            to: &computed,
             headGradients: headGradients,
             queries: queries,
             keys: keys,
@@ -93,7 +98,7 @@ public extension FusedOperationsType {
             valueWeights: valueWeights.detached(),
             computes: computes,
         )
-        return gradients
+        gradients.accumulate(computed)
     }
 
     static func positionalEncoding<N: NumericType>(length: Int, hiddenSize: Int) -> Tensor<N, Device> {

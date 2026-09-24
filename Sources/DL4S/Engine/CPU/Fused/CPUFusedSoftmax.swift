@@ -58,9 +58,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softmaxBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, axis: Int) -> Tensor<N, CPU> {
+    static func softmaxBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, axis: Int, accumulating gradient: inout Tensor<N, CPU>?) {
         guard output.count > 0, axis == output.dim - 1, output.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.softmaxBackward(output: output, outputGradient: outputGradient, axis: axis)
+            DefaultFusedOperations<CPU>.softmaxBackward(output: output, outputGradient: outputGradient, axis: axis, accumulating: &gradient)
+            return
         }
         let rowLength = output.shape[axis]
         let (result, dx) = CPUKernels.makeTensor(shape: output.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
@@ -81,7 +82,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -112,9 +113,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func logSoftmaxBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, axis: Int) -> Tensor<N, CPU> {
+    static func logSoftmaxBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, axis: Int, accumulating gradient: inout Tensor<N, CPU>?) {
         guard output.count > 0, axis == output.dim - 1, output.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.logSoftmaxBackward(output: output, outputGradient: outputGradient, axis: axis)
+            DefaultFusedOperations<CPU>.logSoftmaxBackward(output: output, outputGradient: outputGradient, axis: axis, accumulating: &gradient)
+            return
         }
         let rowLength = output.shape[axis]
         let (result, dx) = CPUKernels.makeTensor(shape: output.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
@@ -133,7 +135,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 }
 

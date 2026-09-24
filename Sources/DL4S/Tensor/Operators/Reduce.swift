@@ -89,11 +89,11 @@ public extension Tensor {
             return self
         }
         let result = Device.FusedOperations.reduceMean(input: self, axes: axes)
-        return result.attachingContext(tag: "mean\(axes)", sources: [self]) { resultGradient in
+        return result.attachingContext(tag: "mean\(axes)", sources: [self]) { resultGradient, gradients in
             if resultGradient.requiresGradient {
-                [Composed.reduceMeanGradient(inputShape: self.shape, outputGradient: resultGradient, axes: axes)]
+                Tensor.accumulate(Composed.reduceMeanGradient(inputShape: self.shape, outputGradient: resultGradient, axes: axes), into: &gradients[0])
             } else {
-                [Device.FusedOperations.reduceMeanBackward(input: self, outputGradient: resultGradient, axes: axes)]
+                Device.FusedOperations.reduceMeanBackward(input: self, outputGradient: resultGradient, axes: axes, accumulating: &gradients[0])
             }
         }
     }
@@ -116,11 +116,11 @@ public extension Tensor {
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func variance(along axes: [Int]) -> Self {
         let result = Device.FusedOperations.variance(input: self, axes: axes)
-        return result.attachingContext(tag: "variance\(axes)", sources: [self]) { resultGradient in
+        return result.attachingContext(tag: "variance\(axes)", sources: [self]) { resultGradient, gradients in
             if resultGradient.requiresGradient {
-                [Composed.varianceGradient(input: self, outputGradient: resultGradient, axes: axes)]
+                Tensor.accumulate(Composed.varianceGradient(input: self, outputGradient: resultGradient, axes: axes), into: &gradients[0])
             } else {
-                [Device.FusedOperations.varianceBackward(input: self, outputGradient: resultGradient, axes: axes)]
+                Device.FusedOperations.varianceBackward(input: self, outputGradient: resultGradient, axes: axes, accumulating: &gradients[0])
             }
         }
     }

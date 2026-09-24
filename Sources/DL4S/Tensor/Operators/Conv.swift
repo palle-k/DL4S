@@ -131,9 +131,9 @@ public extension Tensor {
         }
         let result = Device.FusedOperations.convolution2d(input: self, filters: filters, bias: bias, padding: padding, stride: stride)
 
-        return result.attachingContext(tag: "conv2d", sources: [self, filters] + (bias.map { [$0] } ?? [])) { resultGradient in
-            let gradients = if resultGradient.requiresGradient {
-                Composed.convolution2dGradients(
+        return result.attachingContext(tag: "conv2d", sources: [self, filters] + (bias.map { [$0] } ?? [])) { resultGradient, gradients in
+            if resultGradient.requiresGradient {
+                let computed = Composed.convolution2dGradients(
                     input: self,
                     filters: filters,
                     outputGradient: resultGradient,
@@ -143,10 +143,20 @@ public extension Tensor {
                     computesFilters: filters.requiresGradient,
                     computesBias: bias?.requiresGradient ?? false,
                 )
+                Tensor.accumulate(computed.input, into: &gradients[0])
+                Tensor.accumulate(computed.filters, into: &gradients[1])
+                if bias != nil {
+                    Tensor.accumulate(computed.bias, into: &gradients[2])
+                }
             } else {
-                Device.FusedOperations.convolution2dBackward(input: self, filters: filters, bias: bias, outputGradient: resultGradient, padding: padding, stride: stride)
+                var accumulated = (input: gradients[0].take(), filters: gradients[1].take(), bias: bias == nil ? nil : gradients[2].take())
+                Device.FusedOperations.convolution2dBackward(input: self, filters: filters, bias: bias, outputGradient: resultGradient, padding: padding, stride: stride, accumulating: &accumulated)
+                gradients[0] = accumulated.input
+                gradients[1] = accumulated.filters
+                if bias != nil {
+                    gradients[2] = accumulated.bias
+                }
             }
-            return [gradients.input, gradients.filters] + (bias == nil ? [] : [gradients.bias])
         }
     }
 
@@ -169,9 +179,9 @@ public extension Tensor {
         }
         let result = Device.FusedOperations.transposedConvolution2d(input: self, filters: filters, bias: bias, inset: inset, stride: stride)
 
-        return result.attachingContext(tag: "transposedConv2d", sources: [self, filters] + (bias.map { [$0] } ?? [])) { resultGradient in
-            let gradients = if resultGradient.requiresGradient {
-                Composed.transposedConvolution2dGradients(
+        return result.attachingContext(tag: "transposedConv2d", sources: [self, filters] + (bias.map { [$0] } ?? [])) { resultGradient, gradients in
+            if resultGradient.requiresGradient {
+                let computed = Composed.transposedConvolution2dGradients(
                     input: self,
                     filters: filters,
                     outputGradient: resultGradient,
@@ -181,10 +191,20 @@ public extension Tensor {
                     computesFilters: filters.requiresGradient,
                     computesBias: bias?.requiresGradient ?? false,
                 )
+                Tensor.accumulate(computed.input, into: &gradients[0])
+                Tensor.accumulate(computed.filters, into: &gradients[1])
+                if bias != nil {
+                    Tensor.accumulate(computed.bias, into: &gradients[2])
+                }
             } else {
-                Device.FusedOperations.transposedConvolution2dBackward(input: self, filters: filters, bias: bias, outputGradient: resultGradient, inset: inset, stride: stride)
+                var accumulated = (input: gradients[0].take(), filters: gradients[1].take(), bias: bias == nil ? nil : gradients[2].take())
+                Device.FusedOperations.transposedConvolution2dBackward(input: self, filters: filters, bias: bias, outputGradient: resultGradient, inset: inset, stride: stride, accumulating: &accumulated)
+                gradients[0] = accumulated.input
+                gradients[1] = accumulated.filters
+                if bias != nil {
+                    gradients[2] = accumulated.bias
+                }
             }
-            return [gradients.input, gradients.filters] + (bias == nil ? [] : [gradients.bias])
         }
     }
 }
@@ -206,11 +226,11 @@ public extension Tensor {
         let stride = stride ?? windowSize
         let result = Device.FusedOperations.maxPooling2d(input: self, windowSize: windowSize, padding: padding, stride: stride)
 
-        return result.attachingContext(tag: "maxPool2d", sources: [self]) { resultGradient in
+        return result.attachingContext(tag: "maxPool2d", sources: [self]) { resultGradient, gradients in
             if resultGradient.requiresGradient {
-                [Composed.maxPooling2dGradient(input: self, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride)]
+                Tensor.accumulate(Composed.maxPooling2dGradient(input: self, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride), into: &gradients[0])
             } else {
-                [Device.FusedOperations.maxPooling2dBackward(input: self, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride)]
+                Device.FusedOperations.maxPooling2dBackward(input: self, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride, accumulating: &gradients[0])
             }
         }
     }
@@ -229,11 +249,11 @@ public extension Tensor {
         let stride = stride ?? windowSize
         let result = Device.FusedOperations.averagePooling2d(input: self, windowSize: windowSize, padding: padding, stride: stride)
 
-        return result.attachingContext(tag: "averagePool2d", sources: [self]) { resultGradient in
+        return result.attachingContext(tag: "averagePool2d", sources: [self]) { resultGradient, gradients in
             if resultGradient.requiresGradient {
-                [Composed.averagePooling2dGradient(inputShape: self.shape, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride)]
+                Tensor.accumulate(Composed.averagePooling2dGradient(inputShape: self.shape, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride), into: &gradients[0])
             } else {
-                [Device.FusedOperations.averagePooling2dBackward(input: self, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride)]
+                Device.FusedOperations.averagePooling2dBackward(input: self, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride, accumulating: &gradients[0])
             }
         }
     }

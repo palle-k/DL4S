@@ -34,22 +34,27 @@ public extension FusedOperationsType {
         return (-(e * a.log() + (1 - e) * (1 - a).log())).reduceMean()
     }
 
-    static func binaryCrossEntropyBackward<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?) {
-        Composed.binaryCrossEntropyGradients(
+    static func binaryCrossEntropyBackward<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradients: inout (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?)) {
+        let computed = Composed.binaryCrossEntropyGradients(
             expected: expected.detached(),
             actual: actual.detached(),
             outputGradient: outputGradient.detached(),
             computesExpected: expected.requiresGradient,
             computesActual: actual.requiresGradient,
         )
+        Tensor.accumulate(computed.expected, into: &gradients.expected)
+        Tensor.accumulate(computed.actual, into: &gradients.actual)
     }
 
     static func categoricalCrossEntropy<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
         -Composed.selectedProbabilities(expected: expected, actual: actual.detached(), ignoreIndex: ignoreIndex).log().reduceMean()
     }
 
-    static func categoricalCrossEntropyBackward<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
-        Composed.categoricalCrossEntropyGradient(expected: expected, actual: actual.detached(), outputGradient: outputGradient.detached(), ignoreIndex: ignoreIndex)
+    static func categoricalCrossEntropyBackward<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32, accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.categoricalCrossEntropyGradient(expected: expected, actual: actual.detached(), outputGradient: outputGradient.detached(), ignoreIndex: ignoreIndex),
+            into: &gradient,
+        )
     }
 
     static func categoricalNegativeLogLikelihood<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
@@ -60,8 +65,11 @@ public extension FusedOperationsType {
             .reduceMean()
     }
 
-    static func categoricalNegativeLogLikelihoodBackward<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
-        Composed.categoricalNegativeLogLikelihoodGradient(expected: expected, actualShape: actual.shape, outputGradient: outputGradient.detached(), ignoreIndex: ignoreIndex)
+    static func categoricalNegativeLogLikelihoodBackward<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32, accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.categoricalNegativeLogLikelihoodGradient(expected: expected, actualShape: actual.shape, outputGradient: outputGradient.detached(), ignoreIndex: ignoreIndex),
+            into: &gradient,
+        )
     }
 
     static func meanSquaredError<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>) -> Tensor<N, Device> {
@@ -69,14 +77,16 @@ public extension FusedOperationsType {
         return (difference * difference).reduceSum() / Tensor(Composed.meanSquaredErrorDivisor(expected: expected))
     }
 
-    static func meanSquaredErrorBackward<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?) {
-        Composed.meanSquaredErrorGradients(
+    static func meanSquaredErrorBackward<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradients: inout (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?)) {
+        let computed = Composed.meanSquaredErrorGradients(
             expected: expected.detached(),
             actual: actual.detached(),
             outputGradient: outputGradient.detached(),
             computesExpected: expected.requiresGradient,
             computesActual: actual.requiresGradient,
         )
+        Tensor.accumulate(computed.expected, into: &gradients.expected)
+        Tensor.accumulate(computed.actual, into: &gradients.actual)
     }
 
     static func l1Loss<N: NumericType>(input: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
@@ -84,8 +94,11 @@ public extension FusedOperationsType {
         return (input.rectifiedLinear() + (-input).rectifiedLinear()).reduceMean() * Tensor(scale)
     }
 
-    static func l1LossBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
-        Composed.l1LossGradient(input: input.detached(), outputGradient: outputGradient.detached(), scale: scale)
+    static func l1LossBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.l1LossGradient(input: input.detached(), outputGradient: outputGradient.detached(), scale: scale),
+            into: &gradient,
+        )
     }
 
     static func l2Loss<N: NumericType>(input: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
@@ -93,8 +106,11 @@ public extension FusedOperationsType {
         return (input * input).reduceMean() * Tensor(scale)
     }
 
-    static func l2LossBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
-        Composed.l2LossGradient(input: input.detached(), outputGradient: outputGradient.detached(), scale: scale)
+    static func l2LossBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, accumulating gradient: inout Tensor<N, Device>?) {
+        Tensor.accumulate(
+            Composed.l2LossGradient(input: input.detached(), outputGradient: outputGradient.detached(), scale: scale),
+            into: &gradient,
+        )
     }
 }
 

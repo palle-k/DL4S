@@ -34,9 +34,10 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func tanhBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func tanhBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard output.count > 0, output.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.tanhBackward(output: output, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.tanhBackward(output: output, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: output.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let y = output.elementPointer
@@ -44,14 +45,15 @@ public extension CPUFusedOperations {
         for i in 0 ..< output.count {
             dx[i] = (1 - y[i] * y[i]) * g[i]
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func reluBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func reluBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard input.count > 0, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.reluBackward(input: input, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.reluBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let x = input.elementPointer
@@ -60,7 +62,7 @@ public extension CPUFusedOperations {
             let (value, gradient) = (x[i], g[i])
             dx[i] = value > 0 ? gradient : 0
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -90,9 +92,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func sigmoidBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func sigmoidBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard output.count > 0, output.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.sigmoidBackward(output: output, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.sigmoidBackward(output: output, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: output.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let y = output.elementPointer
@@ -100,7 +103,7 @@ public extension CPUFusedOperations {
         for i in 0 ..< output.count {
             dx[i] = y[i] * (1 - y[i]) * g[i]
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -121,9 +124,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func leakyReluBackward<N: NumericType>(input: Tensor<N, CPU>, leakage: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> (input: Tensor<N, CPU>?, leakage: Tensor<N, CPU>?) {
+    static func leakyReluBackward<N: NumericType>(input: Tensor<N, CPU>, leakage: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradients: inout (input: Tensor<N, CPU>?, leakage: Tensor<N, CPU>?)) {
         guard input.count > 0, leakage.count == 1, leakage.dim <= input.dim, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.leakyReluBackward(input: input, leakage: leakage, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.leakyReluBackward(input: input, leakage: leakage, outputGradient: outputGradient, accumulating: &gradients)
+            return
         }
         let x = input.elementPointer
         let g = outputGradient.elementPointer
@@ -155,7 +159,9 @@ public extension CPUFusedOperations {
             }
             leakageGradient = Tensor([total], shape: leakage.shape)
         }
-        return (inputGradient, leakageGradient)
+        let computed: (input: Tensor<N, CPU>?, leakage: Tensor<N, CPU>?) = (inputGradient, leakageGradient)
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.leakage, into: &gradients.leakage)
     }
 
     @_specialize(where N == Float)
@@ -186,9 +192,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func geluBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func geluBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard input.count > 0, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.geluBackward(input: input, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.geluBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let x = input.elementPointer
@@ -210,7 +217,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -242,9 +249,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func swishBackward<N: NumericType>(input: Tensor<N, CPU>, beta: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> (input: Tensor<N, CPU>?, beta: Tensor<N, CPU>?) {
+    static func swishBackward<N: NumericType>(input: Tensor<N, CPU>, beta: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradients: inout (input: Tensor<N, CPU>?, beta: Tensor<N, CPU>?)) {
         guard input.count > 0, input.shape == outputGradient.shape, let rowLength = swishRowLength(input: input, beta: beta) else {
-            return DefaultFusedOperations<CPU>.swishBackward(input: input, beta: beta, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.swishBackward(input: input, beta: beta, outputGradient: outputGradient, accumulating: &gradients)
+            return
         }
         let x = input.elementPointer
         let g = outputGradient.elementPointer
@@ -304,7 +312,9 @@ public extension CPUFusedOperations {
             let values = beta.count == 1 ? [betaRowGradient.reduce(0, +)] : betaRowGradient
             betaGradient = Tensor(values, shape: beta.shape)
         }
-        return (inputGradient, betaGradient)
+        let computed: (input: Tensor<N, CPU>?, beta: Tensor<N, CPU>?) = (inputGradient, betaGradient)
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.beta, into: &gradients.beta)
     }
 
     @_specialize(where N == Float)
@@ -330,9 +340,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func mishBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func mishBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard input.count > 0, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.mishBackward(input: input, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.mishBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let x = input.elementPointer
@@ -350,7 +361,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -375,9 +386,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func lishtBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func lishtBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard input.count > 0, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.lishtBackward(input: input, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.lishtBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let x = input.elementPointer
@@ -391,7 +403,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -419,9 +431,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func eluBackward<N: NumericType>(input: Tensor<N, CPU>, alpha: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> (input: Tensor<N, CPU>?, alpha: Tensor<N, CPU>?) {
+    static func eluBackward<N: NumericType>(input: Tensor<N, CPU>, alpha: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradients: inout (input: Tensor<N, CPU>?, alpha: Tensor<N, CPU>?)) {
         guard input.count > 0, alpha.count == 1, alpha.dim <= input.dim, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.eluBackward(input: input, alpha: alpha, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.eluBackward(input: input, alpha: alpha, outputGradient: outputGradient, accumulating: &gradients)
+            return
         }
         let x = input.elementPointer
         let g = outputGradient.elementPointer
@@ -453,7 +466,9 @@ public extension CPUFusedOperations {
             }
             return total
         }
-        return (inputGradient, computesAlpha ? Tensor([alphaTotal], shape: alpha.shape) : nil)
+        let computed: (input: Tensor<N, CPU>?, alpha: Tensor<N, CPU>?) = (inputGradient, computesAlpha ? Tensor([alphaTotal], shape: alpha.shape) : nil)
+        Tensor.accumulate(computed.input, into: &gradients.input)
+        Tensor.accumulate(computed.alpha, into: &gradients.alpha)
     }
 
     @_specialize(where N == Float)
@@ -478,9 +493,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softplusBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func softplusBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard input.count > 0, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.softplusBackward(input: input, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.softplusBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let x = input.elementPointer
@@ -494,7 +510,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
@@ -524,9 +540,10 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func squareplusBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>) -> Tensor<N, CPU> {
+    static func squareplusBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, accumulating gradient: inout Tensor<N, CPU>?) {
         guard input.count > 0, input.shape == outputGradient.shape else {
-            return DefaultFusedOperations<CPU>.squareplusBackward(input: input, outputGradient: outputGradient)
+            DefaultFusedOperations<CPU>.squareplusBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+            return
         }
         let (result, dx) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
         let x = input.elementPointer
@@ -545,7 +562,7 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        return result
+        Tensor.accumulate(result, into: &gradient)
     }
 }
 
