@@ -35,15 +35,96 @@ import Accelerate
 // This is safe.
 // swiftlint:disable force_cast
 
-struct D4Img2ColSetup {
-    let batch_size: Int
+/// Shapes of the window matrix of img2col and col2img.
+struct WindowGeometry {
     let channels: Int
-    let height: Int
     let width: Int
-    let kernel_height: Int
-    let kernel_width: Int
+    let kernelHeight: Int
+    let kernelWidth: Int
     let padding: Int
     let stride: Int
+    let outputHeight: Int
+    let outputWidth: Int
+    /// Number of elements of one channel of an image.
+    let imageElements: Int
+    /// Number of windows of one image.
+    let windowsPerImage: Int
+    /// Number of elements of a row of the window matrix: the windows of all images.
+    let resultRowLength: Int
+
+    /// Number of rows of the window matrix: one per channel and position in the kernel.
+    var rows: Int {
+        channels &* kernelHeight &* kernelWidth
+    }
+
+    init(batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        self.channels = channels
+        self.width = width
+        self.kernelHeight = kernelHeight
+        self.kernelWidth = kernelWidth
+        self.padding = padding
+        self.stride = stride
+        outputHeight = (height + 2 * padding - kernelHeight) / stride + 1
+        outputWidth = (width + 2 * padding - kernelWidth) / stride + 1
+        imageElements = height * width
+        windowsPerImage = outputHeight * outputWidth
+        resultRowLength = windowsPerImage * batchSize
+    }
+
+    /// The channel and the position in the kernel of a row of the window matrix.
+    @inline(__always)
+    func kernelPosition(ofRow row: Int) -> (channel: Int, kernelRow: Int, kernelColumn: Int) {
+        let kernelColumn = row % kernelWidth
+        let rest = row / kernelWidth
+        return (rest / kernelHeight, rest % kernelHeight, kernelColumn)
+    }
+
+    /// Writes the windows of one image, one channel, and one kernel position, for stride 1 and an output as wide as the input.
+    ///
+    /// The output rows then have the row length of the input, so the valid rows are one contiguous copy of the input,
+    /// shifted by the kernel column. The columns that the shift moves across a row boundary, and the rows in the padding, are set to 0.
+    @inline(__always)
+    func copyShiftedImage<N: CPUNumeric>(from image: UnsafePointer<N>, into target: UnsafeMutablePointer<N>, height: Int, kernelRow: Int, kernelColumn: Int) {
+        let firstRow = Swift.max(0, padding - kernelRow)
+        let endRow = Swift.max(firstRow, Swift.min(outputHeight, height + padding - kernelRow))
+        let shift = kernelColumn - padding
+        target.initialize(repeating: .zero, count: firstRow &* width)
+        (target + endRow &* width).initialize(repeating: .zero, count: (outputHeight &- endRow) &* width)
+        guard endRow > firstRow else {
+            return
+        }
+        let rows = target + firstRow &* width
+        let rowCount = endRow &- firstRow
+        guard Swift.abs(shift) < width else {
+            rows.initialize(repeating: .zero, count: rowCount &* width)
+            return
+        }
+        let source = image + (firstRow &+ kernelRow &- padding) &* width
+        let count = rowCount &* width &- Swift.abs(shift)
+        if shift >= 0 {
+            rows.update(from: source + shift, count: count)
+            for row in 0 ..< rowCount {
+                (rows + (row &* width &+ width &- shift)).initialize(repeating: .zero, count: shift)
+            }
+        } else {
+            (rows - shift).update(from: source, count: count)
+            for row in 0 ..< rowCount {
+                (rows + row &* width).initialize(repeating: .zero, count: -shift)
+            }
+        }
+    }
+
+    /// Output columns whose input column `column * stride - padding + kernelColumn` is inside the image.
+    @inline(__always)
+    func validOutputColumns(kernelColumn: Int) -> Range<Int> {
+        // The first column is the smallest one with column * stride >= padding - kernelColumn,
+        // the last one the largest with column * stride <= width - 1 + padding - kernelColumn.
+        let lowerLimit = padding - kernelColumn
+        let first = lowerLimit <= 0 ? 0 : (lowerLimit + stride - 1) / stride
+        let upperLimit = width - 1 + padding - kernelColumn
+        let last = upperLimit < 0 ? -1 : Swift.min(upperLimit / stride, outputWidth - 1)
+        return first <= last ? first ..< last + 1 : first ..< first
+    }
 }
 
 public extension CPUNumeric {
@@ -51,64 +132,40 @@ public extension CPUNumeric {
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
     static func img2col(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        let geometry = WindowGeometry(batchSize: batchSize, channels: channels, height: height, width: width, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
         let src = values.baseAddress!
         let dst = result.baseAddress!
 
-        let setup = D4Img2ColSetup(
-            batch_size: batchSize,
-            channels: channels,
-            height: height,
-            width: width,
-            kernel_height: kernelHeight,
-            kernel_width: kernelWidth,
-            padding: padding,
-            stride: stride,
-        )
-
-        let depth_stride = setup.width * setup.height
-        let featuremap_stride = depth_stride * setup.channels
-
-        let output_height = (setup.height + 2 * setup.padding - setup.kernel_height) / setup.stride + 1
-        let output_width = (setup.width + 2 * setup.padding - setup.kernel_width) / setup.stride + 1
-        let dst_batch_stride = output_width * output_height
-        let dst_full_stride = dst_batch_stride * setup.batch_size
-
-        for k in 0 ..< setup.kernel_width &* setup.kernel_height &* setup.channels {
-            let kx = k % setup.kernel_width
-            let kyz = k / setup.kernel_width
-            let ky = kyz % setup.kernel_height
-            let kz = kyz / setup.kernel_height
-            for b in 0 ..< setup.batch_size {
-                for y in 0 ..< output_height {
-                    let in_y = y &* setup.stride &- setup.padding &+ ky
-
-                    if in_y >= 0, in_y < setup.height {
-                        for x in 0 ..< output_width {
-                            let in_x = x &* setup.stride &- setup.padding &+ kx
-                            let input: Self = if in_x >= 0, in_x < setup.width {
-                                src[in_x &+ in_y &* setup.width &+ kz * depth_stride &+ b &* featuremap_stride]
-                            } else {
-                                Self.zero
-                            }
-                            dst[dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width &+ x] = input
-                        }
+        // Every row of the result belongs to one channel and one position in the kernel. For one image and one output row,
+        // the row holds a contiguous run of outputWidth elements: zeros for the padding on the left, the elements of one
+        // input row, and zeros for the padding on the right. The columns in the padding only depend on the kernel column.
+        for row in 0 ..< geometry.rows {
+            let (channel, kernelRow, kernelColumn) = geometry.kernelPosition(ofRow: row)
+            let columns = geometry.validOutputColumns(kernelColumn: kernelColumn)
+            let firstInputColumn = columns.lowerBound &* stride &- padding &+ kernelColumn
+            for image in 0 ..< batchSize {
+                let inputChannel = src + (image &* channels &+ channel) &* geometry.imageElements
+                let resultImage = dst + (row &* geometry.resultRowLength &+ image &* geometry.windowsPerImage)
+                if stride == 1, geometry.outputWidth == width {
+                    geometry.copyShiftedImage(from: inputChannel, into: resultImage, height: height, kernelRow: kernelRow, kernelColumn: kernelColumn)
+                    continue
+                }
+                for outputRow in 0 ..< geometry.outputHeight {
+                    let target = resultImage + outputRow &* geometry.outputWidth
+                    let inputRow = outputRow &* stride &- padding &+ kernelRow
+                    guard inputRow >= 0, inputRow < height, !columns.isEmpty else {
+                        target.initialize(repeating: .zero, count: geometry.outputWidth)
+                        continue
+                    }
+                    target.initialize(repeating: .zero, count: columns.lowerBound)
+                    (target + columns.upperBound).initialize(repeating: .zero, count: geometry.outputWidth &- columns.upperBound)
+                    let source = inputChannel + (inputRow &* width &+ firstInputColumn)
+                    let run = target + columns.lowerBound
+                    if stride == 1 {
+                        run.update(from: source, count: columns.count)
                     } else {
-                        if Self.self == Float.self {
-                            let dst_float = (dst as! UnsafeMutablePointer<Float>)
-                            #if MKL_ENABLE
-                            ippsSet_32f(0, &dst_float[dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width], Int32(output_width))
-                            #elseif canImport(Accelerate)
-                            vDSP_vfill([0], &dst_float[dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width], 1, UInt(output_width))
-                            #else
-                            let dst_offset = dst_float.advanced(by: dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width)
-                            for i in 0 ..< output_width {
-                                dst_offset[i] = 0
-                            }
-                            #endif
-                        } else {
-                            let ptr = dst.advanced(by: dst_full_stride &* k &+ b &* dst_batch_stride &+ y &* output_width)
-                            let bufferPtr = UnsafeMutableBufferPointer<Self>(start: ptr, count: output_width)
-                            Self.fill(value: 0, result: bufferPtr, count: output_width)
+                        for i in 0 ..< columns.count {
+                            run[i] = source[i &* stride]
                         }
                     }
                 }
@@ -120,58 +177,37 @@ public extension CPUNumeric {
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
     static func col2img(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) {
+        let geometry = WindowGeometry(batchSize: batchSize, channels: channels, height: height, width: width, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
         let src = values.baseAddress!
         let dst = result.baseAddress!
+        dst.initialize(repeating: .zero, count: batchSize &* channels &* geometry.imageElements)
 
-        let setup = D4Img2ColSetup(
-            batch_size: batchSize,
-            channels: channels,
-            height: height,
-            width: width,
-            kernel_height: kernelHeight,
-            kernel_width: kernelWidth,
-            padding: padding,
-            stride: stride,
-        )
-
-        let depth_stride = setup.width * setup.height
-        let featuremap_stride = depth_stride * setup.channels
-
-        let input_height = (setup.height + 2 * setup.padding - setup.kernel_height) / setup.stride + 1
-        let input_width = (setup.width + 2 * setup.padding - setup.kernel_width) / setup.stride + 1
-        let src_batch_stride = input_width * input_height
-        let src_full_stride = src_batch_stride * setup.batch_size
-
-        if Self.self == Float.self {
-            #if MKL_ENABLE
-            ippsSet_32f(0, dst as! UnsafeMutablePointer<Float>, Int32(setup.width * setup.height * setup.channels * setup.batch_size))
-            #elseif canImport(Accelerate)
-            vDSP_vfill([0], dst as! UnsafeMutablePointer<Float>, 1, UInt(setup.width * setup.height * setup.channels * setup.batch_size))
-            #else
-            for i in 0 ..< setup.width * setup.height * setup.channels * setup.batch_size {
-                dst[i] = 0
+        // The adjoint of img2col: the runs of every row are added to the input rows that img2col copied them from.
+        // The rows are added in the same order as before, so the sums are the same.
+        for row in 0 ..< geometry.rows {
+            let (channel, kernelRow, kernelColumn) = geometry.kernelPosition(ofRow: row)
+            let columns = geometry.validOutputColumns(kernelColumn: kernelColumn)
+            guard !columns.isEmpty else {
+                continue
             }
-            #endif
-        } else {
-            Self.fill(value: 0, result: UnsafeMutableBufferPointer<Self>(start: dst, count: setup.width * setup.height * setup.channels * setup.batch_size), count: setup.width * setup.height * setup.channels * setup.batch_size)
-        }
-
-        for k in 0 ..< setup.kernel_width * setup.kernel_height * setup.channels {
-            let kx = k % setup.kernel_width
-            let kyz = k / setup.kernel_width
-            let ky = kyz % setup.kernel_height
-            let kz = kyz / setup.kernel_height
-
-            for b in 0 ..< setup.batch_size {
-                for y in 0 ..< input_height {
-                    let in_y = y &* setup.stride &- setup.padding &+ ky
-
-                    for x in 0 ..< input_width {
-                        let in_x = x &* setup.stride &- setup.padding &+ kx
-
-                        if in_x >= 0, in_x < setup.width, in_y >= 0, in_y < setup.height {
-                            let input = src[src_full_stride &* k &+ b &* src_batch_stride &+ y &* input_width &+ x]
-                            dst[in_x &+ in_y &* setup.width &+ kz &* depth_stride &+ b &* featuremap_stride] += input
+            let firstInputColumn = columns.lowerBound &* stride &- padding &+ kernelColumn
+            for image in 0 ..< batchSize {
+                let resultChannel = dst + (image &* channels &+ channel) &* geometry.imageElements
+                let sourceImage = src + (row &* geometry.resultRowLength &+ image &* geometry.windowsPerImage)
+                for outputRow in 0 ..< geometry.outputHeight {
+                    let inputRow = outputRow &* stride &- padding &+ kernelRow
+                    guard inputRow >= 0, inputRow < height else {
+                        continue
+                    }
+                    let run = sourceImage + (outputRow &* geometry.outputWidth &+ columns.lowerBound)
+                    let target = resultChannel + (inputRow &* width &+ firstInputColumn)
+                    if stride == 1 {
+                        for i in 0 ..< columns.count {
+                            target[i] += run[i]
+                        }
+                    } else {
+                        for i in 0 ..< columns.count {
+                            target[i &* stride] += run[i]
                         }
                     }
                 }

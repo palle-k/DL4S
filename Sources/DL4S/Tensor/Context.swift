@@ -41,10 +41,10 @@ struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
         /// One closure for all sources.
         ///
         /// The closure receives the gradient of the result and one accumulator per source.
-        /// It returns the accumulated gradient of every source in source order.
+        /// It returns the accumulated gradient of every source in source order, or nil for a source that does not require a gradient.
         /// Operations use this form when one kernel produces the gradients of all sources at once,
         /// so the kernel runs once per backward pass and no state needs to be shared between closures.
-        case allSources(@Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>])
+        case allSources(@Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>?])
         // swiftformat:enable spaceAroundBrackets
     }
 
@@ -77,10 +77,79 @@ struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
     ///   - tag: Name of the operation for graph output.
     ///   - sources: Tensors that the operation reads.
     ///   - backpropagateAll: Closure that receives the gradient of the result and owns one accumulator per source, and returns the accumulated gradient of every source.
-    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAll: @escaping @Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>]) {
+    ///     It returns nil for a source that does not require a gradient.
+    init(tag: String?, sources: [Tensor<Element, Device>], backpropagateAll: @escaping @Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>?]) {
         self.tag = tag
         self.sources = sources
         backpropagate = .allSources(backpropagateAll)
     }
     // swiftformat:enable spaceAroundBrackets
+}
+
+extension Tensor {
+    /// Attaches the context of a fused operation to the result of its forward requirement.
+    ///
+    /// - Parameters:
+    ///   - tag: Name of the operation for graph output.
+    ///   - sources: Tensors that the operation reads.
+    ///   - backpropagate: Receives the gradient of the result and the accumulated gradients of the sources in source order,
+    ///     nil where a source has no gradient yet. It adds the gradient of every source that requires a gradient to its
+    ///     accumulated gradient, or stores it when the value is nil. The accumulated gradients are uniquely referenced,
+    ///     so they can be changed in place.
+    /// - Returns: The tensor with the context, or the tensor without changes when no source requires a gradient.
+    func attachingContext(tag: String, sources: [Self], backpropagate: @escaping @Sendable (_ resultGradient: Self, _ gradients: inout [Self?]) -> Void) -> Self {
+        guard sources.contains(where: \.requiresGradient) else {
+            return self
+        }
+        let sourceCount = sources.count
+        var result = self
+        result.context = TensorContext(tag: tag, sources: sources, backpropagateAll: { resultGradient, accumulators in
+            var gradients = accumulators
+            backpropagate(resultGradient, &gradients)
+            precondition(gradients.count == sourceCount, "A fused backward pass must keep one gradient per source.")
+            return gradients
+        })
+        result.requiresGradient = true
+        return result
+    }
+
+    /// Sums the tensor along the axes that broadcasting expanded, so that the result has the given shape.
+    ///
+    /// This is the gradient of a broadcast from `shape` to the shape of the tensor.
+    /// - Parameter targetShape: Shape that broadcasts to the shape of the tensor.
+    func reducingBroadcast(to targetShape: [Int]) -> Self {
+        if shape == targetShape {
+            return self
+        }
+        let paddedShape = Array(repeating: 1, count: dim - targetShape.count) + targetShape
+        let reducedAxes = zip(paddedShape, shape).enumerated()
+            .filter { $1.0 == 1 && $1.1 > 1 }
+            .map(\.offset)
+        return reduceSum(along: reducedAxes).view(as: targetShape)
+    }
+
+    /// Adds a gradient to an accumulated gradient, or stores it when there is no accumulated gradient yet.
+    ///
+    /// Implementations of fused operations use this function for the accumulated gradients of their backward requirements.
+    /// When neither tensor records a gradient graph and both have the same shape, the gradient is added in place.
+    /// - Parameters:
+    ///   - gradient: Gradient to add, or nil to leave the accumulated gradient unchanged
+    ///   - accumulator: Accumulated gradient
+    public static func accumulate(_ gradient: Self?, into accumulator: inout Self?) {
+        guard let gradient else {
+            return
+        }
+        guard var existing = accumulator.take() else {
+            accumulator = gradient
+            return
+        }
+        guard !gradient.requiresGradient, !existing.requiresGradient, gradient.shape == existing.shape else {
+            accumulator = existing + gradient
+            return
+        }
+        // When the accumulated gradient shares its storage with another tensor, the write copies it first.
+        let target = existing.mutableValues.values
+        Device.Engine.vAdd(lhs: Buffer(target), rhs: gradient.values.values, result: target, count: gradient.count)
+        accumulator = existing
+    }
 }

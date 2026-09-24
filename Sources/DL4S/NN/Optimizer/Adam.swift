@@ -111,6 +111,40 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
             Self.initializeStateIfNeeded(&secondMomentMax, for: parameters)
         }
 
+        let hyperparameters = [learningRate, beta1, beta2, epsilon, beta1t, beta2t]
+        if hyperparameters.allSatisfy({ $0.count == 1 }) {
+            let (rate, decay1, decay2, epsilon, power1, power2) = (learningRate.item, beta1.item, beta2.item, self.epsilon.item, beta1t.item, beta2t.item)
+            // Holds the place of a maximum while it is out of the array, so that the maximum is the only reference to its buffer.
+            let placeholder = ParamTensor(repeating: 0, shape: [])
+            for index in parameters.indices {
+                var maximum: ParamTensor?
+                if useAMSGrad {
+                    maximum = secondMomentMax[index]
+                    secondMomentMax[index] = placeholder
+                }
+                parameters[index] = Device.FusedOperations.adamUpdate(
+                    parameter: parameters[index],
+                    gradient: gradients[index],
+                    firstMoment: &firstMoments[index],
+                    secondMoment: &secondMoments[index],
+                    secondMomentMax: &maximum,
+                    learningRate: rate,
+                    beta1: decay1,
+                    beta2: decay2,
+                    epsilon: epsilon,
+                    beta1Power: power1,
+                    beta2Power: power2,
+                )
+                if let maximum {
+                    secondMomentMax[index] = maximum
+                }
+            }
+            beta1t *= beta1
+            beta2t *= beta2
+            return
+        }
+
+        // Hyperparameters with more than one element are applied with tensor operations.
         for index in parameters.indices {
             let grad = gradients[index].detached()
 

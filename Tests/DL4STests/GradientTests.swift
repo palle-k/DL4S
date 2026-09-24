@@ -151,6 +151,14 @@ struct GradientTests {
         #expect(!inputGrad.graph().isEmpty)
     }
 
+    /// Overlapping range slices along the first axis add their gradients, so the overlap gets both.
+    @Test func testOverlappingRangeSlicesAccumulateGradients() {
+        let x = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6], [7, 8]], requiresGradient: true)
+        let result = x[0 ..< 3].reduceSum() + 2 * x[2 ..< 4].reduceSum() + x[1].reduceSum()
+        let gradient = result.gradients(of: [x])[0]
+        #expect(gradient == Tensor([[1, 1], [2, 2], [3, 3], [2, 2]]))
+    }
+
     @Test func testRepeatedSubscriptReadAccumulatesGradient() {
         let x = Tensor<Float, CPU>([[1, 2], [3, 4]], requiresGradient: true)
         let y = (x[0] * 2 + x[0] * 3 + x[1 ..< 2] * 4 + x[1 ..< 2] * 5).reduceSum()
@@ -172,5 +180,53 @@ struct GradientTests {
             .gradients(of: [w])[0]
 
         expectClose(broadcastGrad, explicitGrad, tolerance: 1e-8)
+    }
+
+    /// The batched product matches the products of its matrices, and its gradients match central differences,
+    /// for batches on both sides, broadcast axes, a single matrix on either side, and all transposes.
+    @Test(arguments: [
+        ([2, 3, 4, 5], [2, 3, 5, 6]),
+        ([2, 1, 4, 5], [3, 5, 6]),
+        ([4, 5], [2, 3, 5, 6]),
+        ([2, 3, 4, 5], [5, 6]),
+    ])
+    func testBatchedMatrixProduct(lhsShape: [Int], rhsShape: [Int]) {
+        for (transposeLhs, transposeRhs) in [(false, false), (true, false), (false, true), (true, true)] {
+            var lhsShape = lhsShape
+            var rhsShape = rhsShape
+            if transposeLhs {
+                lhsShape.swapAt(lhsShape.count - 1, lhsShape.count - 2)
+            }
+            if transposeRhs {
+                rhsShape.swapAt(rhsShape.count - 1, rhsShape.count - 2)
+            }
+            var generator = WyHash(seed: 11)
+            let lhs = Tensor<Double, CPU>(uniformlyDistributedWithShape: lhsShape, min: -1, max: 1, requiresGradient: true, using: &generator)
+            let rhs = Tensor<Double, CPU>(uniformlyDistributedWithShape: rhsShape, min: -1, max: 1, requiresGradient: true, using: &generator)
+            let weights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [2, 3, 4, 6], min: 0.5, max: 1.5, using: &generator)
+            let label = "\(lhsShape) x \(rhsShape), transposes \(transposeLhs) \(transposeRhs)"
+
+            let product = lhs.broadcastMatrixMultiplied(with: rhs, transposeSelf: transposeLhs, transposeOther: transposeRhs)
+            #expect(product.shape == [2, 3, 4, 6], "\(label)")
+            let paddedLhs = lhs.detached().view(as: Array(repeating: 1, count: 4 - lhs.dim) + lhsShape)
+            let paddedRhs = rhs.detached().view(as: Array(repeating: 1, count: 4 - rhs.dim) + rhsShape)
+            for i in 0 ..< 2 {
+                for j in 0 ..< 3 {
+                    let lhsMatrix = paddedLhs[Swift.min(i, paddedLhs.shape[0] - 1), Swift.min(j, paddedLhs.shape[1] - 1)]
+                    let rhsMatrix = paddedRhs[Swift.min(i, paddedRhs.shape[0] - 1), Swift.min(j, paddedRhs.shape[1] - 1)]
+                    expectClose(product[i, j].detached(), lhsMatrix.matrixMultiplied(with: rhsMatrix, transposeSelf: transposeLhs, transposeOther: transposeRhs), tolerance: 1e-20)
+                }
+            }
+
+            let function: (Tensor<Double, CPU>, Tensor<Double, CPU>) -> Tensor<Double, CPU> = { a, b in
+                a.broadcastMatrixMultiplied(with: b, transposeSelf: transposeLhs, transposeOther: transposeRhs) * weights
+            }
+            for retainsGraph in [false, true] {
+                let gradients = function(lhs, rhs).reduceSum().gradients(of: [lhs, rhs], retainBackwardsGraph: retainsGraph)
+                expectClose(gradients[0], numericalGradient(of: { function($0, rhs.detached()) }, at: lhs), tolerance: 1e-14)
+                expectClose(gradients[1], numericalGradient(of: { function(lhs.detached(), $0) }, at: rhs), tolerance: 1e-14)
+                #expect(gradients[0].requiresGradient == retainsGraph, "\(label)")
+            }
+        }
     }
 }

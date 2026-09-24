@@ -298,7 +298,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
                     let accumulators = ctx.sources.map { src in
                         src.requiresGradient ? grads.removeValue(forKey: src.backpropID) : nil
                     }
-                    var accumulated = backpropagate(grad, consume accumulators).map(Optional.some)
+                    var accumulated = backpropagate(grad, consume accumulators)
                     precondition(accumulated.count == ctx.sources.count, "Backpropagation must return one gradient per source.")
 
                     for i in ctx.sources.indices {

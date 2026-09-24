@@ -85,7 +85,17 @@ public extension Tensor {
     /// - Parameter axes: Axes to compute the mean of
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func reduceMean(along axes: [Int]) -> Self {
-        reduceSum(along: axes) / Tensor(integerLiteral: axes.map { shape[$0] }.reduce(1, *))
+        if axes.isEmpty {
+            return self
+        }
+        let result = Device.FusedOperations.reduceMean(input: self, axes: axes)
+        return result.attachingContext(tag: "mean\(axes)", sources: [self]) { resultGradient, gradients in
+            if resultGradient.requiresGradient {
+                Tensor.accumulate(Composed.reduceMeanGradient(inputShape: self.shape, outputGradient: resultGradient, axes: axes), into: &gradients[0])
+            } else {
+                Device.FusedOperations.reduceMeanBackward(input: self, outputGradient: resultGradient, axes: axes, accumulating: &gradients[0])
+            }
+        }
     }
 
     /// Computes the mean of the elements along the given axes
@@ -100,13 +110,19 @@ public extension Tensor {
         reduceMean(along: Array(0 ..< dim))
     }
 
-    /// Computes the variance of the tensor along the given axes.
+    /// Computes the biased variance of the tensor along the given axes, `mean(x * x) - mean(x) * mean(x)`.
     ///
     /// - Parameter axes: Axes to compute the variance along.
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func variance(along axes: [Int]) -> Self {
-        let m = reduceMean(along: axes)
-        return (self * self).reduceMean(along: axes) - m * m
+        let result = Device.FusedOperations.variance(input: self, axes: axes)
+        return result.attachingContext(tag: "variance\(axes)", sources: [self]) { resultGradient, gradients in
+            if resultGradient.requiresGradient {
+                Tensor.accumulate(Composed.varianceGradient(input: self, outputGradient: resultGradient, axes: axes), into: &gradients[0])
+            } else {
+                Device.FusedOperations.varianceBackward(input: self, outputGradient: resultGradient, axes: axes, accumulating: &gradients[0])
+            }
+        }
     }
 
     /// Computes the variance of the tensor along the given axes.
@@ -127,6 +143,22 @@ public extension Tensor {
     /// Returns the index of the largest element in the tensor.
     func argmax() -> Int {
         Device.Engine.argmax(values: values.values, count: count).0
+    }
+}
+
+extension Tensor {
+    /// Returns the positions of the largest elements along the given axis.
+    /// - Parameter axis: Axis to reduce along
+    /// - Returns: Positions along the axis, with the shape of the tensor without the axis.
+    func argmax(along axis: Int) -> Tensor<Int32, Device> {
+        var resultShape = shape
+        resultShape.remove(at: axis)
+        let maximumBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
+        let positionBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
+        Device.Engine.reduceMax(values: values, result: maximumBuffer, context: positionBuffer, axis: axis)
+        // The tensor owns the buffer of the maximum values and frees it.
+        _ = Tensor(using: maximumBuffer, context: nil)
+        return Tensor<Int32, Device>(using: positionBuffer, context: nil)
     }
 }
 

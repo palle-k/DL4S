@@ -226,10 +226,15 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] leaky relu
 - [x] gelu
 - [x] elu
+- [x] sigmoid
+- [x] softmax / log softmax
+- [x] softplus / squareplus
 - [x] elementwise min
 - [x] elementwise max
 - [x] reduce sum
 - [x] reduce max
+- [x] reduce mean
+- [x] variance
 - [x] scatter
 - [x] gather
 - [x] conv2d
@@ -247,6 +252,11 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] swish activation
 - [x] mish activation
 - [x] lisht activation
+- [x] linear transformation (matmul plus bias)
+- [x] layer normalization / batch normalization
+- [x] dropout
+- [x] scaled dot product attention / multi-head attention
+- [x] positional encoding
 - [x] diagonal matrix generation
 - [x] diagonal extraction
 - [x] band matrix generation
@@ -263,9 +273,6 @@ Engines
 - [x] CPU (Accelerate framework for Apple Devices)
 - [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
 - [x] CPU (Generic)
-- [ ] GPU (ArrayFire: OpenCL, CUDA)
-
-For an experimental, early stage GPU accelerated version, check out `feature/arrayfire`.
 
 </p>
 </details>

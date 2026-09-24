@@ -65,8 +65,6 @@ public struct Dense<Element: RandomizableType, Device: DeviceType>: Codable, Sen
     }
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "Dense") {
-            inputs.matrixMultiplied(with: weights) + bias
-        }
+        inputs.linearlyTransformed(weights: weights, bias: bias)
     }
 }

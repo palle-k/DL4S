@@ -173,7 +173,7 @@ extension Int32: CPUNumeric {
     }
 
     public static func sum(val: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> Int32 {
-        let src = val.pointer(capacity: count * stride)
+        let src = val.pointer(capacity: (count - 1) * stride + 1)
         var dst: Int32 = 0
         for i in 0 ..< count {
             dst &+= src[i &* stride]
@@ -247,7 +247,7 @@ extension Int32: CPUNumeric {
         }
         var maxI = 0
         var maxV = Int32.min
-        let src = values.pointer(capacity: stride * count)
+        let src = values.pointer(capacity: (count - 1) * stride + 1)
         for i in 0 ..< count {
             let v = src[i &* stride]
             if v > maxV {
@@ -264,7 +264,7 @@ extension Int32: CPUNumeric {
         }
         var minI = 0
         var minV = Int32.max
-        let src = values.pointer(capacity: stride * count)
+        let src = values.pointer(capacity: (count - 1) * stride + 1)
         for i in 0 ..< count {
             let v = src[i &* stride]
             if v < minV {

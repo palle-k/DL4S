@@ -377,7 +377,7 @@ extension Float: CPUNumeric {
         #else
         var minI = 0
         var minV = Float.infinity
-        let src = values.pointer(capacity: stride * count)
+        let src = values.pointer(capacity: (count - 1) * stride + 1)
         for i in 0 ..< count {
             let v = src[i &* stride]
             if v < minV {

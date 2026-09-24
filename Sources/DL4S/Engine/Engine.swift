@@ -36,6 +36,8 @@ public protocol DeviceType: Sendable {
     associatedtype Memory: MemoryOperatorsType where Memory.Device == Self
     /// Tensor operation engine for a device
     associatedtype Engine: EngineType where Engine.Device == Self
+    /// High-level operations and their first derivatives for a device
+    associatedtype FusedOperations: FusedOperationsType where FusedOperations.Device == Self
 }
 
 // MARK: Memory
@@ -143,6 +145,9 @@ public protocol MemoryOperatorsType {
 // MARK: Engine
 
 /// Tensor operation engine for a device
+///
+/// The engine provides the basic operations of a device.
+/// Tensor operations, and the default implementations of the fused operations in ``FusedOperationsType``, may composed from them.
 public protocol EngineType {
     associatedtype Device: DeviceType where Device.Engine == Self
 
