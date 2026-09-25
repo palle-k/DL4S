@@ -39,4 +39,25 @@ struct MemTests {
             #expect(a[nil, column] == Tensor(expectedColumn))
         }
     }
+
+    @Test func rangeSliceWithFullAxisBetweenRangesReadsAndWritesRegion() {
+        let a: Tensor<Float, CPU> = Tensor((0 ..< 120).map(Float.init), shape: 6, 5, 4)
+        var expected: [Float] = []
+        for i in 1 ..< 4 {
+            for j in 0 ..< 5 {
+                for k in 1 ..< 3 {
+                    expected.append(Float(i * 20 + j * 4 + k))
+                }
+            }
+        }
+
+        let slice = a[1 ..< 4, nil, 1 ..< 3]
+        #expect(slice.shape == [3, 5, 2])
+        #expect(slice.elements == expected)
+
+        var b = Tensor<Float, CPU>(repeating: 0, shape: 6, 5, 4)
+        b[1 ..< 4, nil, 1 ..< 3] = slice
+        #expect(b[1 ..< 4, nil, 1 ..< 3].elements == expected)
+        #expect(b.reduceSum().item == expected.reduce(0, +))
+    }
 }

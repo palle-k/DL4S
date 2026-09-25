@@ -86,6 +86,28 @@ swift test --traits MKL
 ```
 
 
+#### GPU Support
+
+On Apple devices with Metal, DL4S can run tensor operations on the GPU. Use the `GPU` device instead of `CPU`:
+
+```swift
+if GPU.isAvailable {
+    var model = Sequential {
+        Dense<Float, GPU>(inputSize: 784, outputSize: 256)
+        Relu<Float, GPU>()
+        Dense<Float, GPU>(inputSize: 256, outputSize: 10)
+        LogSoftmax<Float, GPU>()
+    }
+    let batch = Tensor<Float, GPU>(cpuBatch) // copies a CPU tensor to the GPU
+    let prediction = Tensor<Float, CPU>(model(batch)) // copies the result back
+}
+```
+
+The GPU runs operations after they return. A read of tensor values, such as `elements` or `item`, waits for the GPU work that the values depend on.
+Large matrix products and convolutions use Metal Performance Shaders, the other operations use Metal kernels of DL4S.
+Small operations whose inputs are available on the host run on the CPU, see `GPU.hostExecutionLimit`.
+`Double` tensors on the GPU device run on the CPU, because Metal has no double precision arithmetic.
+
 ### TensorBoard Support
 
 [DL4S-Tensorboard](https://github.com/palle-k/DL4S-Tensorboard) provides a summary writer that can write tensorboard compatible logs.
@@ -273,6 +295,7 @@ Engines
 - [x] CPU (Accelerate framework for Apple Devices)
 - [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
 - [x] CPU (Generic)
+- [x] GPU (Metal and Metal Performance Shaders for Apple Devices)
 
 </p>
 </details>

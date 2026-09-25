@@ -230,6 +230,23 @@ public protocol EngineType {
     ///   - transposeSecond: Whether to transpose the second matrix
     static func gemm<N: NumericType>(lhs: ShapedBuffer<N, Device>, rhs: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
 
+    /// Matrix multiply add in-place for a batch of matrices with constant strides between the matrices of an operand
+    ///
+    /// The shapes of `lhs`, `rhs`, and `result` are the shapes of the first matrices. Matrix `i` of an operand starts
+    /// `i` times its stride after the first matrix, and the result matrices follow each other without gaps.
+    /// - Parameters:
+    ///   - lhs: First left-hand side matrix
+    ///   - lhsStride: Number of elements between neighboring left-hand side matrices, 0 to use the same matrix for all products
+    ///   - rhs: First right-hand side matrix
+    ///   - rhsStride: Number of elements between neighboring right-hand side matrices, 0 to use the same matrix for all products
+    ///   - result: First summand and result matrix
+    ///   - count: Number of products
+    ///   - alpha: Matrix multiplication scale
+    ///   - beta: Add scale
+    ///   - transposeFirst: Whether to transpose the left-hand side matrices
+    ///   - transposeSecond: Whether to transpose the right-hand side matrices
+    static func gemmBatched<N: NumericType>(lhs: ShapedBuffer<N, Device>, lhsStride: Int, rhs: ShapedBuffer<N, Device>, rhsStride: Int, result: MutableShapedBuffer<N, Device>, count: Int, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
+
     /// Band matrix extraction
     /// - Parameters:
     ///   - buffer: Source matrix
@@ -584,4 +601,21 @@ public protocol EngineType {
     ///   - padding: Zero padding applied around the input image
     ///   - stride: Stride, with which the window is moved over the input image
     static func col2img<N: NumericType>(matrix: ShapedBuffer<N, Device>, image: MutableShapedBuffer<N, Device>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int)
+}
+
+public extension EngineType {
+    static func gemmBatched<N: NumericType>(lhs: ShapedBuffer<N, Device>, lhsStride: Int, rhs: ShapedBuffer<N, Device>, rhsStride: Int, result: MutableShapedBuffer<N, Device>, count: Int, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) {
+        let resultStride = result.shape.reduce(1, *)
+        for index in 0 ..< count {
+            gemm(
+                lhs: lhs.slice(offset: index * lhsStride, shape: lhs.shape),
+                rhs: rhs.slice(offset: index * rhsStride, shape: rhs.shape),
+                result: result.slice(offset: index * resultStride, shape: result.shape),
+                alpha: alpha,
+                beta: beta,
+                transposeFirst: transposeFirst,
+                transposeSecond: transposeSecond,
+            )
+        }
+    }
 }
