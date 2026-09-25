@@ -219,13 +219,13 @@ extension FusedOperationCase {
         // Distinct values, so that the maximum of every window is unique.
         FusedOperationCase(
             "maxPooled2d",
-            sources: [DoubleTensor((0 ..< 32).map { Double(($0 * 7) % 32) / 32 + 0.01 }, shape: [2, 1, 4, 4])],
+            sources: [DoubleTensor((0 ..< 32).map { (i: Int) -> Double in Double(i * 7 % 32) / 32 + 0.01 }, shape: [2, 1, 4, 4])],
             fused: { $0[0].maxPooled2d(windowSize: 2, padding: 0, stride: 2) },
             reference: { referencePooling($0[0], windowSize: 2, padding: 0, stride: 2) { $0.reduceMax(along: [0]) } },
         ),
         FusedOperationCase(
             "maxPooled2d with padding and overlapping windows",
-            sources: [DoubleTensor((0 ..< 50).map { Double(($0 * 11) % 50) / 50 + 0.01 }, shape: [1, 2, 5, 5])],
+            sources: [DoubleTensor((0 ..< 50).map { (i: Int) -> Double in Double(i * 11 % 50) / 50 + 0.01 }, shape: [1, 2, 5, 5])],
             fused: { $0[0].maxPooled2d(windowSize: 3, padding: 1, stride: 2) },
             reference: { referencePooling($0[0], windowSize: 3, padding: 1, stride: 2) { $0.reduceMax(along: [0]) } },
         ),
