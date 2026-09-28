@@ -227,6 +227,22 @@ extension Double: CPUNumeric {
         return dst
     }
 
+    public static func dot(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, count: Int) -> Double {
+        let (a, b) = (lhs.pointer(capacity: count), rhs.pointer(capacity: count))
+        var dst: Double = 0
+
+        #if MKL_ENABLE
+        ippsDotProd_64f(a, b, Int32(count), &dst)
+        #elseif canImport(Accelerate)
+        vDSP_dotprD(a, 1, b, 1, &dst, UInt(count))
+        #else
+        for i in 0 ..< count {
+            dst += a[i] * b[i]
+        }
+        #endif
+        return dst
+    }
+
     public static func sum(val: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> Double {
         let src = val.pointer(capacity: (count - 1) * stride + 1)
         var dst: Double = 0

@@ -29,92 +29,131 @@ import Foundation
 
 public extension FusedOperationsType {
     static func gatedRecurrentUnitStep<N: NumericType>(
-        updateInput: Tensor<N, Device>,
-        resetInput: Tensor<N, Device>,
-        candidateInput: Tensor<N, Device>,
-        state: Tensor<N, Device>,
-        updateWeights: Tensor<N, Device>,
-        resetWeights: Tensor<N, Device>,
-        candidateWeights: Tensor<N, Device>,
-    ) -> Tensor<N, Device> {
-        let state = state.detached()
-        let update = (updateInput.detached() + state.matrixMultiplied(with: updateWeights.detached())).sigmoid()
-        let reset = (resetInput.detached() + state.matrixMultiplied(with: resetWeights.detached())).sigmoid()
-        let candidate = (candidateInput.detached() + (reset * state).matrixMultiplied(with: candidateWeights.detached())).tanh()
-        return (1 - update) * state + update * candidate
+        updateInput: ShapedBuffer<N, Device>,
+        resetInput: ShapedBuffer<N, Device>,
+        candidateInput: ShapedBuffer<N, Device>,
+        state: ShapedBuffer<N, Device>,
+        updateWeights: ShapedBuffer<N, Device>,
+        resetWeights: ShapedBuffer<N, Device>,
+        candidateWeights: ShapedBuffer<N, Device>,
+        result: MutableShapedBuffer<N, Device>,
+    ) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let gates = GatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, candidate: result, math: math)
+        // The new state is state + update * (candidate - state), and the candidate is in the result.
+        math.subtract(result, state, into: result)
+        math.multiply(result, gates.update, into: result)
+        math.add(result, state, into: result)
     }
 
     static func gatedRecurrentUnitStepBackward<N: NumericType>(
-        updateInput: Tensor<N, Device>,
-        resetInput: Tensor<N, Device>,
-        candidateInput: Tensor<N, Device>,
-        state: Tensor<N, Device>,
-        updateWeights: Tensor<N, Device>,
-        resetWeights: Tensor<N, Device>,
-        candidateWeights: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        accumulating gradients: inout GatedRecurrentUnitGradients<N, Device>,
+        updateInput: ShapedBuffer<N, Device>,
+        resetInput: ShapedBuffer<N, Device>,
+        candidateInput: ShapedBuffer<N, Device>,
+        state: ShapedBuffer<N, Device>,
+        updateWeights: ShapedBuffer<N, Device>,
+        resetWeights: ShapedBuffer<N, Device>,
+        candidateWeights: ShapedBuffer<N, Device>,
+        outputGradient: ShapedBuffer<N, Device>,
+        gradients: GatedRecurrentUnitGradients<GradientBuffer<N, Device>?>,
     ) {
-        gradients.accumulate(Composed.gatedRecurrentUnitGradients(
-            updateInput: updateInput.detached(),
-            resetInput: resetInput.detached(),
-            candidateInput: candidateInput.detached(),
-            state: state.detached(),
-            updateWeights: updateWeights.detached(),
-            resetWeights: resetWeights.detached(),
-            candidateWeights: candidateWeights.detached(),
-            outputGradient: outputGradient.detached(),
-            computes: [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights].map(\.requiresGradient),
-        ))
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // The gates are computed again instead of being kept alive between the forward and the backward pass.
+        let candidate = math.temporary(state.shape)
+        let gates = GatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, candidate: candidate, math: math)
+        let (update, reset, resetState) = (gates.update, gates.reset, gates.resetState)
+        let slope = math.temporary(state.shape)
+
+        // The new state is state + update * (candidate - state).
+        // The gradient of the update activation is outputGradient * (candidate - state) * update * (1 - update).
+        let updateActivationGradient = math.temporary(state.shape)
+        math.subtract(candidate, state, into: updateActivationGradient)
+        math.multiply(updateActivationGradient, outputGradient, into: updateActivationGradient)
+        math.subtract(1, update, into: slope)
+        math.multiply(slope, update, into: slope)
+        math.multiply(updateActivationGradient, slope, into: updateActivationGradient)
+        // The gradient of the candidate activation is outputGradient * update * (1 - candidate * candidate).
+        let candidateActivationGradient = candidate
+        math.multiply(candidate, candidate, into: candidateActivationGradient)
+        math.subtract(1, candidateActivationGradient, into: candidateActivationGradient)
+        math.multiply(candidateActivationGradient, update, into: candidateActivationGradient)
+        math.multiply(candidateActivationGradient, outputGradient, into: candidateActivationGradient)
+
+        // The weight gradients are added with GEMMs, so a weight that every time step uses needs no temporary gradient.
+        math.write(gradients.updateInput) { math.copy(updateActivationGradient, into: $0) }
+        math.write(gradients.candidateInput) { math.copy(candidateActivationGradient, into: $0) }
+        if let weightGradient = gradients.updateWeights {
+            math.multiplyMatrices(state, updateActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
+        }
+        if let weightGradient = gradients.candidateWeights {
+            math.multiplyMatrices(resetState, candidateActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
+        }
+        guard gradients.resetInput != nil || gradients.state != nil || gradients.resetWeights != nil else {
+            return
+        }
+        let resetStateGradient = math.temporary(state.shape)
+        math.multiplyMatrices(candidateActivationGradient, candidateWeights, rhsTransposed: true, into: resetStateGradient)
+        // The gradient of the reset activation is resetStateGradient * state * reset * (1 - reset).
+        let resetActivationGradient = math.temporary(state.shape)
+        math.multiply(resetStateGradient, state, into: resetActivationGradient)
+        math.subtract(1, reset, into: slope)
+        math.multiply(slope, reset, into: slope)
+        math.multiply(resetActivationGradient, slope, into: resetActivationGradient)
+        math.write(gradients.resetInput) { math.copy(resetActivationGradient, into: $0) }
+        if let weightGradient = gradients.resetWeights {
+            math.multiplyMatrices(state, resetActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
+        }
+        // outputGradient * (1 - update) + resetStateGradient * reset, and the products with the weights of the gates
+        math.write(gradients.state) { stateGradient in
+            math.subtract(1, update, into: stateGradient)
+            math.multiply(stateGradient, outputGradient, into: stateGradient)
+            math.multiply(resetStateGradient, reset, into: slope)
+            math.add(stateGradient, slope, into: stateGradient)
+            math.multiplyMatrices(resetActivationGradient, resetWeights, rhsTransposed: true, into: stateGradient, beta: 1)
+            math.multiplyMatrices(updateActivationGradient, updateWeights, rhsTransposed: true, into: stateGradient, beta: 1)
+        }
     }
 }
 
-// MARK: Composed gradients
+/// The gates of one step of a gated recurrent unit, in intermediate buffers.
+struct GatedRecurrentUnitGates<N: NumericType, Device: DeviceType> {
+    /// Update gate, `sigmoid(updateInput + state × updateWeights)`
+    let update: MutableShapedBuffer<N, Device>
+    /// Reset gate, `sigmoid(resetInput + state × resetWeights)`
+    let reset: MutableShapedBuffer<N, Device>
+    /// Reset state, `reset * state`
+    let resetState: MutableShapedBuffer<N, Device>
 
-extension Composed {
-    /// Computes the gradients of one step of a gated recurrent unit.
-    ///
-    /// The flags in `computes` select the gradients in the order of ``GatedRecurrentUnitGradients/inSourceOrder``.
-    static func gatedRecurrentUnitGradients<N, Device>(
-        updateInput: Tensor<N, Device>,
-        resetInput: Tensor<N, Device>,
-        candidateInput: Tensor<N, Device>,
-        state: Tensor<N, Device>,
-        updateWeights: Tensor<N, Device>,
-        resetWeights: Tensor<N, Device>,
-        candidateWeights: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        computes: [Bool],
-    ) -> GatedRecurrentUnitGradients<N, Device> {
-        // The gates are computed again instead of being kept alive between the forward and the backward pass.
-        let update = (updateInput + state.matrixMultiplied(with: updateWeights)).sigmoid()
-        let reset = (resetInput + state.matrixMultiplied(with: resetWeights)).sigmoid()
-        let resetState = reset * state
-        let candidate = (candidateInput + resetState.matrixMultiplied(with: candidateWeights)).tanh()
-
-        // The new state is state + update * (candidate - state).
-        let updateActivationGradient = outputGradient * (candidate - state) * update * (1 - update)
-        let candidateActivationGradient = outputGradient * update * (1 - candidate * candidate)
-
-        var gradients = GatedRecurrentUnitGradients<N, Device>()
-        gradients.updateInput = computes[0] ? updateActivationGradient : nil
-        gradients.candidateInput = computes[2] ? candidateActivationGradient : nil
-        gradients.updateWeights = computes[4] ? state.matrixMultiplied(with: updateActivationGradient, transposeSelf: true) : nil
-        gradients.candidateWeights = computes[6] ? resetState.matrixMultiplied(with: candidateActivationGradient, transposeSelf: true) : nil
-
-        guard computes[1] || computes[3] || computes[5] else {
-            return gradients
-        }
-        let resetStateGradient = candidateActivationGradient.matrixMultiplied(with: candidateWeights, transposeOther: true)
-        let resetActivationGradient = resetStateGradient * state * reset * (1 - reset)
-        gradients.resetInput = computes[1] ? resetActivationGradient : nil
-        gradients.resetWeights = computes[5] ? state.matrixMultiplied(with: resetActivationGradient, transposeSelf: true) : nil
-        if computes[3] {
-            gradients.state = outputGradient * (1 - update)
-                + resetStateGradient * reset
-                + resetActivationGradient.matrixMultiplied(with: resetWeights, transposeOther: true)
-                + updateActivationGradient.matrixMultiplied(with: updateWeights, transposeOther: true)
-        }
-        return gradients
+    /// Computes the gates, and the candidate state `tanh(candidateInput + resetState × candidateWeights)` into the given buffer.
+    init(
+        updateInput: ShapedBuffer<N, Device>,
+        resetInput: ShapedBuffer<N, Device>,
+        candidateInput: ShapedBuffer<N, Device>,
+        state: ShapedBuffer<N, Device>,
+        updateWeights: ShapedBuffer<N, Device>,
+        resetWeights: ShapedBuffer<N, Device>,
+        candidateWeights: ShapedBuffer<N, Device>,
+        candidate: MutableShapedBuffer<N, Device>,
+        math: BufferMath<N, Device>,
+    ) {
+        update = math.temporary(state.shape)
+        reset = math.temporary(state.shape)
+        resetState = math.temporary(state.shape)
+        math.copy(updateInput, into: update)
+        math.multiplyMatrices(state, updateWeights, into: update, beta: 1)
+        math.sigmoid(update, into: update)
+        math.copy(resetInput, into: reset)
+        math.multiplyMatrices(state, resetWeights, into: reset, beta: 1)
+        math.sigmoid(reset, into: reset)
+        math.multiply(reset, state, into: resetState)
+        math.copy(candidateInput, into: candidate)
+        math.multiplyMatrices(resetState, candidateWeights, into: candidate, beta: 1)
+        math.tanh(candidate, into: candidate)
     }
 }

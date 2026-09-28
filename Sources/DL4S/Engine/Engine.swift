@@ -147,7 +147,7 @@ public protocol MemoryOperatorsType {
 /// Tensor operation engine for a device
 ///
 /// The engine provides the basic operations of a device.
-/// Tensor operations, and the default implementations of the fused operations in ``FusedOperationsType``, may composed from them.
+/// Tensor operations, and the default implementations of the fused operations in ``FusedOperationsType``, can be composed from them.
 public protocol EngineType {
     associatedtype Device: DeviceType where Device.Engine == Self
 

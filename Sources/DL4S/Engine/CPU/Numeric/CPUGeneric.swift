@@ -25,16 +25,6 @@
 
 import Foundation
 
-#if MKL_ENABLE
-import CMKL
-#elseif canImport(Accelerate)
-import Accelerate
-#endif
-
-// `Self.self == Float.self` is used as a test before buffers are force cast.
-// This is safe.
-// swiftlint:disable force_cast
-
 /// Shapes of the window matrix of img2col and col2img.
 struct WindowGeometry {
     let channels: Int
@@ -321,21 +311,7 @@ public extension CPUNumeric {
         let count = src_shape[0] * src_strides[0]
 
         let dst_count = dst_strides[0] * dst_shape[0]
-        if Self.self == Float.self {
-            #if MKL_ENABLE
-            ippsSet_32f(0, target as! UnsafeMutablePointer<Float>, Int32(dst_count))
-            #elseif canImport(Accelerate)
-            vDSP_vfill([0], target as! UnsafeMutablePointer<Float>, 1, UInt(dst_count))
-            #else
-            for i in 0 ..< dst_count {
-                target[i] = 0
-            }
-            #endif
-        } else {
-            for i in 0 ..< dst_count {
-                target[i] = 0
-            }
-        }
+        fill(value: .zero, result: result, count: dst_count)
 
         for i in 0 ..< count {
             let src_idx = i
@@ -458,5 +434,3 @@ public extension CPUNumeric {
         }
     }
 }
-
-// swiftlint:enable force_cast

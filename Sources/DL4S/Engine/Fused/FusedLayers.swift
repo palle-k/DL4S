@@ -28,55 +28,58 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func linear<N: NumericType>(input: Tensor<N, Device>, weights: Tensor<N, Device>, bias: Tensor<N, Device>?) -> Tensor<N, Device> {
-        let product = input.detached().matrixMultiplied(with: weights.detached())
-        guard let bias else {
-            return product
+    static func linear<N: NumericType>(input: ShapedBuffer<N, Device>, weights: ShapedBuffer<N, Device>, bias: ShapedBuffer<N, Device>?, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
         }
-        return product + bias.detached()
-    }
-
-    static func linearBackward<N: NumericType>(input: Tensor<N, Device>, weights: Tensor<N, Device>, bias: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, accumulating gradients: inout (input: Tensor<N, Device>?, weights: Tensor<N, Device>?, bias: Tensor<N, Device>?)) {
-        let outputGradient = outputGradient.detached()
-        // The products are added to the accumulated gradients in place, so a weight that is used several times needs no temporary gradient.
-        if input.requiresGradient {
-            Tensor.accumulateProduct(outputGradient, weights.detached(), transposeRhs: true, into: &gradients.input)
-        }
-        if weights.requiresGradient {
-            Tensor.accumulateProduct(input.detached(), outputGradient, transposeLhs: true, into: &gradients.weights)
-        }
-        if bias?.requiresGradient ?? false {
-            Tensor.accumulate(outputGradient.reduceSum(along: [0]), into: &gradients.bias)
+        math.multiplyMatrices(input, weights, into: result)
+        if let bias {
+            math.add(result, bias, into: result)
         }
     }
 
-    static func dropout<N: NumericType>(input: Tensor<N, Device>, rate: Float) -> (output: Tensor<N, Device>, mask: Tensor<N, Device>) {
-        let mask = Tensor<N, Device>(bernoulliDistributedWithShape: input.shape, probability: 1 - rate)
-        return (input.detached() * mask, mask)
+    static func linearBackward<N: NumericType>(
+        input: ShapedBuffer<N, Device>,
+        weights: ShapedBuffer<N, Device>,
+        bias: ShapedBuffer<N, Device>?,
+        outputGradient: ShapedBuffer<N, Device>,
+        inputGradient: GradientBuffer<N, Device>?,
+        weightGradient: GradientBuffer<N, Device>?,
+        biasGradient: GradientBuffer<N, Device>?,
+    ) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // The products are added to the gradients with GEMMs, so a weight that is used in several steps needs no temporary gradient.
+        if let inputGradient {
+            math.multiplyMatrices(outputGradient, weights, rhsTransposed: true, into: inputGradient.values, beta: inputGradient.beta)
+        }
+        if let weightGradient {
+            math.multiplyMatrices(input, outputGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
+        }
+        math.write(biasGradient) { db in
+            math.sum(outputGradient, along: [0], into: db)
+        }
     }
 
-    static func dropoutBackward<N: NumericType>(mask: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            outputGradient.detached() * mask.detached(),
-            into: &gradient,
-        )
+    static func dropout<N: NumericType>(input: ShapedBuffer<N, Device>, rate: Float, result: MutableShapedBuffer<N, Device>, mask: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        Random.bernoulli(mask, p: 1 - rate)
+        math.multiply(input, mask, into: result)
     }
-}
 
-// MARK: Composed gradients
-
-extension Composed {
-    static func linearGradients<N, Device>(
-        input: Tensor<N, Device>,
-        weights: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        computesInput: Bool,
-        computesWeights: Bool,
-        computesBias: Bool,
-    ) -> (input: Tensor<N, Device>?, weights: Tensor<N, Device>?, bias: Tensor<N, Device>?) {
-        let inputGradient = computesInput ? outputGradient.matrixMultiplied(with: weights, transposeOther: true) : nil
-        let weightGradient = computesWeights ? input.matrixMultiplied(with: outputGradient, transposeSelf: true) : nil
-        let biasGradient = computesBias ? outputGradient.reduceSum(along: [0]) : nil
-        return (inputGradient, weightGradient, biasGradient)
+    static func dropoutBackward<N: NumericType>(mask: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.write(inputGradient) { dx in
+            math.multiply(outputGradient, mask, into: dx)
+        }
     }
 }

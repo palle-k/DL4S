@@ -172,6 +172,15 @@ extension Int32: CPUNumeric {
         return dst
     }
 
+    public static func dot(lhs: UnsafeBufferPointer<Int32>, rhs: UnsafeBufferPointer<Int32>, count: Int) -> Int32 {
+        let (a, b) = (lhs.pointer(capacity: count), rhs.pointer(capacity: count))
+        var dst: Int32 = 0
+        for i in 0 ..< count {
+            dst &+= a[i] &* b[i]
+        }
+        return dst
+    }
+
     public static func sum(val: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> Int32 {
         let src = val.pointer(capacity: (count - 1) * stride + 1)
         var dst: Int32 = 0

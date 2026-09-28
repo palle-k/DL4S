@@ -27,257 +27,377 @@ import Foundation
 
 // MARK: Default implementations
 
+// The defaults compute in the buffers of their results where they can. A gradient that is added to an accumulated gradient
+// goes through one intermediate buffer, see `BufferMath.write(_:_:)`.
+
 public extension FusedOperationsType {
-    static func tanhBackward<N: NumericType>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.tanhGradient(output: output.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func tanhBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // (1 - output * output) * outputGradient
+        math.write(inputGradient) { dx in
+            math.multiply(output, output, into: dx)
+            math.subtract(1, dx, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 
-    static func reluBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.reluGradient(input: input.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func reluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.write(inputGradient) { dx in
+            math.heaviside(input, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 
-    static func sigmoid<N: NumericType>(input: Tensor<N, Device>) -> Tensor<N, Device> {
-        0.5 * (input.detached() * 0.5).tanh() + 0.5
+    static func sigmoid<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.sigmoid(input, into: result)
     }
 
-    static func sigmoidBackward<N: NumericType>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.sigmoidGradient(output: output.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func sigmoidBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // output * (1 - output) * outputGradient
+        math.write(inputGradient) { dx in
+            math.subtract(1, output, into: dx)
+            math.multiply(dx, output, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 
-    static func softmax<N: NumericType>(input: Tensor<N, Device>, axis: Int) -> Tensor<N, Device> {
-        let input = input.detached()
-        let normalizer = input.reduceMax(along: [axis]).unsqueezed(at: axis)
-        let exponentiated = (input - normalizer).exp()
-        return exponentiated / exponentiated.reduceSum(along: [axis]).unsqueezed(at: axis)
+    static func softmax<N: NumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.softmax(input, along: axis, into: result)
     }
 
-    static func softmaxBackward<N: NumericType>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.softmaxGradient(output: output.detached(), outputGradient: outputGradient.detached(), axis: axis),
-            into: &gradient,
-        )
+    static func softmaxBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // output * (outputGradient - sum(outputGradient * output))
+        math.write(inputGradient) { dx in
+            let sums = math.temporary(ShapeUtil.keptShape(of: output.shape, along: [axis]))
+            math.multiply(outputGradient, output, into: dx)
+            math.sum(dx, along: [axis], into: sums)
+            math.subtract(outputGradient, sums, into: dx)
+            math.multiply(dx, output, into: dx)
+        }
     }
 
-    static func logSoftmax<N: NumericType>(input: Tensor<N, Device>, axis: Int) -> Tensor<N, Device> {
-        let input = input.detached()
-        let normalized = input - input.reduceMax(along: [axis]).unsqueezed(at: axis)
-        let logSumExp = normalized.exp().reduceSum(along: [axis]).log().unsqueezed(at: axis)
-        return normalized - logSumExp
+    static func logSoftmax<N: NumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let reduced = math.temporary(ShapeUtil.keptShape(of: input.shape, along: [axis]))
+        let exponentials = math.temporary(input.shape)
+        math.maximum(input, along: axis, into: reduced)
+        math.subtract(input, reduced, into: result)
+        math.exp(result, into: exponentials)
+        math.sum(exponentials, along: [axis], into: reduced)
+        math.log(reduced, into: reduced)
+        math.subtract(result, reduced, into: result)
     }
 
-    static func logSoftmaxBackward<N: NumericType>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.logSoftmaxGradient(output: output.detached(), outputGradient: outputGradient.detached(), axis: axis),
-            into: &gradient,
-        )
+    static func logSoftmaxBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // outputGradient - exp(output) * sum(outputGradient)
+        math.write(inputGradient) { dx in
+            let sums = math.temporary(ShapeUtil.keptShape(of: output.shape, along: [axis]))
+            math.sum(outputGradient, along: [axis], into: sums)
+            math.exp(output, into: dx)
+            math.multiply(dx, sums, into: dx)
+            math.subtract(outputGradient, dx, into: dx)
+        }
     }
 
-    static func leakyRelu<N: NumericType>(input: Tensor<N, Device>, leakage: Tensor<N, Device>) -> Tensor<N, Device> {
-        let input = input.detached()
-        return input.rectifiedLinear() - leakage.detached() * (-input).rectifiedLinear()
+    static func leakyRelu<N: NumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // relu(input) - leakage * relu(-input)
+        let negativePart = math.temporary(input.shape)
+        math.negate(input, into: negativePart)
+        math.relu(negativePart, into: negativePart)
+        math.multiply(negativePart, leakage, into: negativePart)
+        math.relu(input, into: result)
+        math.subtract(result, negativePart, into: result)
     }
 
-    static func leakyReluBackward<N: NumericType>(input: Tensor<N, Device>, leakage: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradients: inout (input: Tensor<N, Device>?, leakage: Tensor<N, Device>?)) {
-        let computed = Composed.leakyReluGradients(
-            input: input.detached(),
-            leakage: leakage.detached(),
-            outputGradient: outputGradient.detached(),
-            computesInput: input.requiresGradient,
-            computesLeakage: leakage.requiresGradient,
-        )
-        Tensor.accumulate(computed.input, into: &gradients.input)
-        Tensor.accumulate(computed.leakage, into: &gradients.leakage)
+    static func leakyReluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, leakageGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // The slope at 0 is 0, as for the rectified linear unit: (heaviside(input) + leakage * heaviside(-input)) * outputGradient
+        math.write(inputGradient) { dx in
+            let positive = math.temporary(input.shape)
+            math.negate(input, into: dx)
+            math.heaviside(dx, into: dx)
+            math.multiply(dx, leakage, into: dx)
+            math.heaviside(input, into: positive)
+            math.add(dx, positive, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
+        if leakageGradient != nil {
+            // -relu(-input) * outputGradient
+            let products = math.temporary(input.shape)
+            math.negate(input, into: products)
+            math.relu(products, into: products)
+            math.negate(products, into: products)
+            math.multiply(products, outputGradient, into: products)
+            math.writeSum(of: products, into: leakageGradient)
+        }
     }
 
-    static func gelu<N: NumericType>(input: Tensor<N, Device>) -> Tensor<N, Device> {
-        let input = input.detached()
-        return input * (input * 1.702).sigmoid()
+    static func gelu<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // input * sigmoid(1.702 * input)
+        math.sigmoid(input, scale: N(1.702), into: result)
+        math.multiply(result, input, into: result)
     }
 
-    static func geluBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.geluGradient(input: input.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func geluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // (s + 1.702 * input * s * (1 - s)) * outputGradient with s = sigmoid(1.702 * input)
+        math.write(inputGradient) { dx in
+            let s = math.temporary(input.shape)
+            math.sigmoid(input, scale: N(1.702), into: s)
+            math.subtract(1, s, into: dx)
+            math.multiply(dx, s, into: dx)
+            math.multiply(dx, input, into: dx)
+            math.multiply(dx, N(1.702), into: dx)
+            math.add(dx, s, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 
-    static func swish<N: NumericType>(input: Tensor<N, Device>, beta: Tensor<N, Device>) -> Tensor<N, Device> {
-        let input = input.detached()
-        return input * (beta.detached() * input).sigmoid()
+    static func swish<N: NumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // input * sigmoid(beta * input)
+        math.multiply(input, beta, into: result)
+        math.sigmoid(result, into: result)
+        math.multiply(result, input, into: result)
     }
 
-    static func swishBackward<N: NumericType>(input: Tensor<N, Device>, beta: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradients: inout (input: Tensor<N, Device>?, beta: Tensor<N, Device>?)) {
-        let computed = Composed.swishGradients(
-            input: input.detached(),
-            beta: beta.detached(),
-            outputGradient: outputGradient.detached(),
-            computesInput: input.requiresGradient,
-            computesBeta: beta.requiresGradient,
-        )
-        Tensor.accumulate(computed.input, into: &gradients.input)
-        Tensor.accumulate(computed.beta, into: &gradients.beta)
+    static func swishBackward<N: NumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, betaGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // With s = sigmoid(beta * input) and the slope s * (1 - s):
+        // the input gradient is (s + beta * input * slope) * outputGradient, the beta gradient input * input * slope * outputGradient.
+        let s = math.temporary(input.shape)
+        let slope = math.temporary(input.shape)
+        math.multiply(input, beta, into: s)
+        math.sigmoid(s, into: s)
+        math.subtract(1, s, into: slope)
+        math.multiply(slope, s, into: slope)
+        math.write(inputGradient) { dx in
+            math.multiply(input, slope, into: dx)
+            math.multiply(dx, beta, into: dx)
+            math.add(dx, s, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
+        if betaGradient != nil {
+            math.multiply(slope, input, into: slope)
+            math.multiply(slope, input, into: slope)
+            math.multiply(slope, outputGradient, into: slope)
+            math.writeSum(of: slope, into: betaGradient)
+        }
     }
 
-    static func mish<N: NumericType>(input: Tensor<N, Device>) -> Tensor<N, Device> {
-        let input = input.detached()
-        return input * (1 + input.exp()).log().tanh()
+    static func mish<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // input * tanh(log(1 + exp(input)))
+        math.exp(input, into: result)
+        math.add(result, 1, into: result)
+        math.log(result, into: result)
+        math.tanh(result, into: result)
+        math.multiply(result, input, into: result)
     }
 
-    static func mishBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.mishGradient(input: input.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func mishBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // (t + input * (1 - t * t) * sigmoid(input)) * outputGradient with t = tanh(log(1 + exp(input))).
+        // The derivative of log(1 + exp(x)) is sigmoid(x).
+        math.write(inputGradient) { dx in
+            let t = math.temporary(input.shape)
+            let s = math.temporary(input.shape)
+            math.exp(input, into: t)
+            math.add(t, 1, into: t)
+            math.log(t, into: t)
+            math.tanh(t, into: t)
+            math.sigmoid(input, into: s)
+            math.multiply(t, t, into: dx)
+            math.subtract(1, dx, into: dx)
+            math.multiply(dx, input, into: dx)
+            math.multiply(dx, s, into: dx)
+            math.add(dx, t, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 
-    static func lisht<N: NumericType>(input: Tensor<N, Device>) -> Tensor<N, Device> {
-        let input = input.detached()
-        return input * input.tanh()
+    static func lisht<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.tanh(input, into: result)
+        math.multiply(result, input, into: result)
     }
 
-    static func lishtBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.lishtGradient(input: input.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func lishtBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // (t + input * (1 - t * t)) * outputGradient with t = tanh(input)
+        math.write(inputGradient) { dx in
+            let t = math.temporary(input.shape)
+            math.tanh(input, into: t)
+            math.multiply(t, t, into: dx)
+            math.subtract(1, dx, into: dx)
+            math.multiply(dx, input, into: dx)
+            math.add(dx, t, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 
-    static func elu<N: NumericType>(input: Tensor<N, Device>, alpha: Tensor<N, Device>) -> Tensor<N, Device> {
-        let input = input.detached()
-        // exp(min(input, 0)) does not overflow for large inputs, and its exponential part is 0 for positive inputs.
-        return input.rectifiedLinear() + alpha.detached() * ((-(-input).rectifiedLinear()).exp() - 1)
+    static func elu<N: NumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // relu(input) + alpha * (exp(min(input, 0)) - 1). exp(min(input, 0)) does not overflow for large inputs,
+        // and its exponential part is 0 for positive inputs.
+        let exponentialPart = math.temporary(input.shape)
+        exponentialOfNegativePart(input, into: exponentialPart, math: math)
+        math.add(exponentialPart, -1, into: exponentialPart)
+        math.multiply(exponentialPart, alpha, into: exponentialPart)
+        math.relu(input, into: result)
+        math.add(result, exponentialPart, into: result)
     }
 
-    static func eluBackward<N: NumericType>(input: Tensor<N, Device>, alpha: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradients: inout (input: Tensor<N, Device>?, alpha: Tensor<N, Device>?)) {
-        let computed = Composed.eluGradients(
-            input: input.detached(),
-            alpha: alpha.detached(),
-            outputGradient: outputGradient.detached(),
-            computesInput: input.requiresGradient,
-            computesAlpha: alpha.requiresGradient,
-        )
-        Tensor.accumulate(computed.input, into: &gradients.input)
-        Tensor.accumulate(computed.alpha, into: &gradients.alpha)
+    static func eluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, alphaGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // With e = exp(min(input, 0)) and p = heaviside(input): the input gradient is (p + (1 - p) * alpha * e) * outputGradient,
+        // the alpha gradient (e - 1) * outputGradient.
+        let exponentials = math.temporary(input.shape)
+        exponentialOfNegativePart(input, into: exponentials, math: math)
+        math.write(inputGradient) { dx in
+            let positive = math.temporary(input.shape)
+            math.heaviside(input, into: positive)
+            math.subtract(1, positive, into: dx)
+            math.multiply(dx, alpha, into: dx)
+            math.multiply(dx, exponentials, into: dx)
+            math.add(dx, positive, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
+        if alphaGradient != nil {
+            math.add(exponentials, -1, into: exponentials)
+            math.multiply(exponentials, outputGradient, into: exponentials)
+            math.writeSum(of: exponentials, into: alphaGradient)
+        }
     }
 
-    static func softplus<N: NumericType>(input: Tensor<N, Device>) -> Tensor<N, Device> {
-        (input.detached().exp() + 1).log()
+    static func softplus<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.exp(input, into: result)
+        math.add(result, 1, into: result)
+        math.log(result, into: result)
     }
 
-    static func softplusBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.softplusGradient(input: input.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func softplusBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.write(inputGradient) { dx in
+            math.sigmoid(input, into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 
-    static func squareplus<N: NumericType>(input: Tensor<N, Device>) -> Tensor<N, Device> {
-        let input = input.detached()
-        return (input + (input * input + 4).sqrt()) / 2
+    static func squareplus<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // (input + sqrt(input * input + 4)) / 2
+        let roots = math.temporary(input.shape)
+        math.multiply(input, input, into: roots)
+        math.add(roots, 4, into: roots)
+        math.sqrt(roots, into: roots)
+        math.add(input, roots, into: result)
+        math.multiply(result, N(0.5), into: result)
     }
 
-    static func squareplusBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.squareplusGradient(input: input.detached(), outputGradient: outputGradient.detached()),
-            into: &gradient,
-        )
+    static func squareplusBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // (1 + input / sqrt(input * input + 4)) / 2 * outputGradient
+        math.write(inputGradient) { dx in
+            let roots = math.temporary(input.shape)
+            math.multiply(input, input, into: roots)
+            math.add(roots, 4, into: roots)
+            math.sqrt(roots, into: roots)
+            math.divide(input, roots, into: dx)
+            math.add(dx, 1, into: dx)
+            math.multiply(dx, N(0.5), into: dx)
+            math.multiply(dx, outputGradient, into: dx)
+        }
     }
 }
 
-// MARK: Composed gradients
-
-extension Composed {
-    static func tanhGradient<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        (1 - output * output) * outputGradient
-    }
-
-    static func reluGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        input.heaviside() * outputGradient
-    }
-
-    static func sigmoidGradient<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        output * (1 - output) * outputGradient
-    }
-
-    static func softmaxGradient<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int) -> Tensor<N, Device> {
-        output * (outputGradient - (outputGradient * output).reduceSum(along: [axis]).unsqueezed(at: axis))
-    }
-
-    static func logSoftmaxGradient<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int) -> Tensor<N, Device> {
-        outputGradient - output.exp() * outputGradient.reduceSum(along: [axis]).unsqueezed(at: axis)
-    }
-
-    static func leakyReluGradients<N, Device>(
-        input: Tensor<N, Device>,
-        leakage: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        computesInput: Bool,
-        computesLeakage: Bool,
-    ) -> (input: Tensor<N, Device>?, leakage: Tensor<N, Device>?) {
-        // The slope at 0 is 0, as for the rectified linear unit.
-        let inputGradient = computesInput ? ((input.heaviside() + leakage * (-input).heaviside()) * outputGradient).reducingBroadcast(to: input.shape) : nil
-        let leakageGradient = computesLeakage ? (-(-input).rectifiedLinear() * outputGradient).reducingBroadcast(to: leakage.shape) : nil
-        return (inputGradient, leakageGradient)
-    }
-
-    static func geluGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        let s = (input * 1.702).sigmoid()
-        return (s + 1.702 * input * s * (1 - s)) * outputGradient
-    }
-
-    static func swishGradients<N, Device>(
-        input: Tensor<N, Device>,
-        beta: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        computesInput: Bool,
-        computesBeta: Bool,
-    ) -> (input: Tensor<N, Device>?, beta: Tensor<N, Device>?) {
-        let s = (beta * input).sigmoid()
-        let sigmoidSlope = s * (1 - s)
-        let inputGradient = computesInput ? ((s + beta * input * sigmoidSlope) * outputGradient).reducingBroadcast(to: input.shape) : nil
-        let betaGradient = computesBeta ? (input * input * sigmoidSlope * outputGradient).reducingBroadcast(to: beta.shape) : nil
-        return (inputGradient, betaGradient)
-    }
-
-    static func mishGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        let t = (1 + input.exp()).log().tanh()
-        // The derivative of log(1 + exp(x)) is sigmoid(x).
-        return (t + input * (1 - t * t) * input.sigmoid()) * outputGradient
-    }
-
-    static func lishtGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        let t = input.tanh()
-        return (t + input * (1 - t * t)) * outputGradient
-    }
-
-    static func eluGradients<N, Device>(
-        input: Tensor<N, Device>,
-        alpha: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        computesInput: Bool,
-        computesAlpha: Bool,
-    ) -> (input: Tensor<N, Device>?, alpha: Tensor<N, Device>?) {
-        let positive = input.heaviside()
-        let exponential = (-(-input).rectifiedLinear()).exp()
-        let inputGradient = computesInput ? ((positive + (1 - positive) * alpha * exponential) * outputGradient).reducingBroadcast(to: input.shape) : nil
-        let alphaGradient = computesAlpha ? ((exponential - 1) * outputGradient).reducingBroadcast(to: alpha.shape) : nil
-        return (inputGradient, alphaGradient)
-    }
-
-    static func softplusGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        input.sigmoid() * outputGradient
-    }
-
-    static func squareplusGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        (1 + input / (input * input + 4).sqrt()) / 2 * outputGradient
+extension FusedOperationsType {
+    /// Computes `exp(min(input, 0))`, which does not overflow for large inputs.
+    static func exponentialOfNegativePart<N: NumericType>(_ input: ShapedBuffer<N, Device>, into result: MutableShapedBuffer<N, Device>, math: BufferMath<N, Device>) {
+        math.negate(input, into: result)
+        math.relu(result, into: result)
+        math.negate(result, into: result)
+        math.exp(result, into: result)
     }
 }

@@ -82,13 +82,11 @@ public extension Tensor {
 
         // A copy without context. Capturing the result itself would create a retain cycle.
         let output = result
-        return result.attachingContext(tag: "tanh", sources: [self]) { resultGradient, gradients in
+        return result.attachingContext(tag: "tanh", source: self) { resultGradient, gradient in
             // The output has no compute graph, so the gradient is computed from the source when it must be differentiable.
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.tanhGradient(output: self.tanh(), outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.tanhBackward(output: output, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+            Composed.tanhBackward(output: self.tanh(), outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.tanhBackward(output: output.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 
@@ -149,12 +147,10 @@ public extension Tensor {
 
         let result = Tensor(using: resultBuffer, context: nil)
 
-        return result.attachingContext(tag: "relu", sources: [self]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.reluGradient(input: self, outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.reluBackward(input: self, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+        return result.attachingContext(tag: "relu", source: self) { resultGradient, gradient in
+            Composed.reluBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.reluBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 
@@ -162,71 +158,56 @@ public extension Tensor {
     ///
     /// The leaky relu function is defined as `value > 0 ? value : leakage * value`
     func leakyRectifiedLinear(leakage: Self) -> Self {
-        let result = Device.FusedOperations.leakyRelu(input: self, leakage: leakage)
-        return result.attachingContext(tag: "leakyRelu", sources: [self, leakage]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                let computed = Composed.leakyReluGradients(
-                    input: self,
-                    leakage: leakage,
-                    outputGradient: resultGradient,
-                    computesInput: self.requiresGradient,
-                    computesLeakage: leakage.requiresGradient,
-                )
-                Tensor.accumulate(computed.input, into: &gradients[0])
-                Tensor.accumulate(computed.leakage, into: &gradients[1])
-            } else {
-                var accumulated = (input: gradients[0].take(), leakage: gradients[1].take())
-                Device.FusedOperations.leakyReluBackward(input: self, leakage: leakage, outputGradient: resultGradient, accumulating: &accumulated)
-                gradients[0] = accumulated.input
-                gradients[1] = accumulated.leakage
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.leakyRelu(input: values, leakage: leakage.values, result: result.mutableValues)
+        return result.attachingContext(tag: "leakyRelu", sources: self, leakage) { resultGradient, inputGradient, leakageGradient in
+            Composed.leakyReluBackward(input: self, leakage: leakage, outputGradient: resultGradient, inputGradient: &inputGradient, leakageGradient: &leakageGradient)
+        } fused: { resultGradient, inputGradient, leakageGradient in
+            Device.FusedOperations.leakyReluBackward(input: self.values, leakage: leakage.values, outputGradient: resultGradient, inputGradient: inputGradient, leakageGradient: leakageGradient)
         }
     }
 
     /// Computes the element-wise sigmoid function.
     func sigmoid() -> Self {
-        let result = Device.FusedOperations.sigmoid(input: self)
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.sigmoid(input: values, result: result.mutableValues)
         // A copy without context. Capturing the result itself would create a retain cycle.
         let output = result
-        return result.attachingContext(tag: "sigmoid", sources: [self]) { resultGradient, gradients in
+        return result.attachingContext(tag: "sigmoid", source: self) { resultGradient, gradient in
             // The output has no compute graph, so the gradient is computed from the source when it must be differentiable.
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.sigmoidGradient(output: self.sigmoid(), outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.sigmoidBackward(output: output, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+            Composed.sigmoidBackward(output: self.sigmoid(), outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.sigmoidBackward(output: output.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 
     /// Computes the softmax function along the given axis.
     /// If no axis is provided, the softmax is computed along axis 1.
     func softmax(axis: Int = 1) -> Self {
-        let result = Device.FusedOperations.softmax(input: self, axis: axis)
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.softmax(input: values, axis: axis, result: result.mutableValues)
         // A copy without context. Capturing the result itself would create a retain cycle.
         let output = result
-        return result.attachingContext(tag: "softmax", sources: [self]) { resultGradient, gradients in
+        return result.attachingContext(tag: "softmax", source: self) { resultGradient, gradient in
             // The output has no compute graph, so the gradient is computed from the source when it must be differentiable.
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.softmaxGradient(output: self.softmax(axis: axis), outputGradient: resultGradient, axis: axis), into: &gradients[0])
-            } else {
-                Device.FusedOperations.softmaxBackward(output: output, outputGradient: resultGradient, axis: axis, accumulating: &gradients[0])
-            }
+            Composed.softmaxBackward(output: self.softmax(axis: axis), outputGradient: resultGradient, axis: axis, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.softmaxBackward(output: output.values, outputGradient: resultGradient, axis: axis, inputGradient: gradient)
         }
     }
 
     /// Computes the logarithm of the softmax function along the given axis.
     /// If no axis is provided, the softmax is computed along axis 1.
     func logSoftmax(axis: Int = 1) -> Self {
-        let result = Device.FusedOperations.logSoftmax(input: self, axis: axis)
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.logSoftmax(input: values, axis: axis, result: result.mutableValues)
         // A copy without context. Capturing the result itself would create a retain cycle.
         let output = result
-        return result.attachingContext(tag: "logSoftmax", sources: [self]) { resultGradient, gradients in
+        return result.attachingContext(tag: "logSoftmax", source: self) { resultGradient, gradient in
             // The output has no compute graph, so the gradient is computed from the source when it must be differentiable.
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.logSoftmaxGradient(output: self.logSoftmax(axis: axis), outputGradient: resultGradient, axis: axis), into: &gradients[0])
-            } else {
-                Device.FusedOperations.logSoftmaxBackward(output: output, outputGradient: resultGradient, axis: axis, accumulating: &gradients[0])
-            }
+            Composed.logSoftmaxBackward(output: self.logSoftmax(axis: axis), outputGradient: resultGradient, axis: axis, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.logSoftmaxBackward(output: output.values, outputGradient: resultGradient, axis: axis, inputGradient: gradient)
         }
     }
 
@@ -270,13 +251,12 @@ public extension Tensor {
     ///
     /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
     func gaussianErrorLinear() -> Self {
-        let result = Device.FusedOperations.gelu(input: self)
-        return result.attachingContext(tag: "gelu", sources: [self]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.geluGradient(input: self, outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.geluBackward(input: self, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.gelu(input: values, result: result.mutableValues)
+        return result.attachingContext(tag: "gelu", source: self) { resultGradient, gradient in
+            Composed.geluBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.geluBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 
@@ -284,24 +264,12 @@ public extension Tensor {
     ///
     /// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
     func swishActivated(beta: Self = 1) -> Self {
-        let result = Device.FusedOperations.swish(input: self, beta: beta)
-        return result.attachingContext(tag: "swish", sources: [self, beta]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                let computed = Composed.swishGradients(
-                    input: self,
-                    beta: beta,
-                    outputGradient: resultGradient,
-                    computesInput: self.requiresGradient,
-                    computesBeta: beta.requiresGradient,
-                )
-                Tensor.accumulate(computed.input, into: &gradients[0])
-                Tensor.accumulate(computed.beta, into: &gradients[1])
-            } else {
-                var accumulated = (input: gradients[0].take(), beta: gradients[1].take())
-                Device.FusedOperations.swishBackward(input: self, beta: beta, outputGradient: resultGradient, accumulating: &accumulated)
-                gradients[0] = accumulated.input
-                gradients[1] = accumulated.beta
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.swish(input: values, beta: beta.values, result: result.mutableValues)
+        return result.attachingContext(tag: "swish", sources: self, beta) { resultGradient, inputGradient, betaGradient in
+            Composed.swishBackward(input: self, beta: beta, outputGradient: resultGradient, inputGradient: &inputGradient, betaGradient: &betaGradient)
+        } fused: { resultGradient, inputGradient, betaGradient in
+            Device.FusedOperations.swishBackward(input: self.values, beta: beta.values, outputGradient: resultGradient, inputGradient: inputGradient, betaGradient: betaGradient)
         }
     }
 
@@ -309,13 +277,12 @@ public extension Tensor {
     ///
     /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
     func mishActivated() -> Self {
-        let result = Device.FusedOperations.mish(input: self)
-        return result.attachingContext(tag: "mish", sources: [self]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.mishGradient(input: self, outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.mishBackward(input: self, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.mish(input: values, result: result.mutableValues)
+        return result.attachingContext(tag: "mish", source: self) { resultGradient, gradient in
+            Composed.mishBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.mishBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 
@@ -323,13 +290,12 @@ public extension Tensor {
     ///
     /// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
     func lishtActivated() -> Self {
-        let result = Device.FusedOperations.lisht(input: self)
-        return result.attachingContext(tag: "lisht", sources: [self]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.lishtGradient(input: self, outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.lishtBackward(input: self, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.lisht(input: values, result: result.mutableValues)
+        return result.attachingContext(tag: "lisht", source: self) { resultGradient, gradient in
+            Composed.lishtBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.lishtBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 
@@ -338,24 +304,12 @@ public extension Tensor {
     /// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf)
     /// - Parameter alpha: Scale applied to exponential part
     func exponentialLinearActivated(alpha: Self = 1) -> Self {
-        let result = Device.FusedOperations.elu(input: self, alpha: alpha)
-        return result.attachingContext(tag: "elu", sources: [self, alpha]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                let computed = Composed.eluGradients(
-                    input: self,
-                    alpha: alpha,
-                    outputGradient: resultGradient,
-                    computesInput: self.requiresGradient,
-                    computesAlpha: alpha.requiresGradient,
-                )
-                Tensor.accumulate(computed.input, into: &gradients[0])
-                Tensor.accumulate(computed.alpha, into: &gradients[1])
-            } else {
-                var accumulated = (input: gradients[0].take(), alpha: gradients[1].take())
-                Device.FusedOperations.eluBackward(input: self, alpha: alpha, outputGradient: resultGradient, accumulating: &accumulated)
-                gradients[0] = accumulated.input
-                gradients[1] = accumulated.alpha
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.elu(input: values, alpha: alpha.values, result: result.mutableValues)
+        return result.attachingContext(tag: "elu", sources: self, alpha) { resultGradient, inputGradient, alphaGradient in
+            Composed.eluBackward(input: self, alpha: alpha, outputGradient: resultGradient, inputGradient: &inputGradient, alphaGradient: &alphaGradient)
+        } fused: { resultGradient, inputGradient, alphaGradient in
+            Device.FusedOperations.eluBackward(input: self.values, alpha: alpha.values, outputGradient: resultGradient, inputGradient: inputGradient, alphaGradient: alphaGradient)
         }
     }
 
@@ -365,13 +319,12 @@ public extension Tensor {
     ///
     /// See [Dugas et al. - Incorporating Second-Order Functional Knowledge for Better Option Pricing](https://proceedings.neurips.cc/paper/2000/file/44968aece94f667e4095002d140b5896-Paper.pdf)
     func softplus() -> Self {
-        let result = Device.FusedOperations.softplus(input: self)
-        return result.attachingContext(tag: "softplus", sources: [self]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.softplusGradient(input: self, outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.softplusBackward(input: self, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.softplus(input: values, result: result.mutableValues)
+        return result.attachingContext(tag: "softplus", source: self) { resultGradient, gradient in
+            Composed.softplusBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.softplusBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 
@@ -381,13 +334,12 @@ public extension Tensor {
     ///
     /// See https://twitter.com/jon_barron/status/1387167648669048833
     func squareplus() -> Self {
-        let result = Device.FusedOperations.squareplus(input: self)
-        return result.attachingContext(tag: "squareplus", sources: [self]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(Composed.squareplusGradient(input: self, outputGradient: resultGradient), into: &gradients[0])
-            } else {
-                Device.FusedOperations.squareplusBackward(input: self, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.squareplus(input: values, result: result.mutableValues)
+        return result.attachingContext(tag: "squareplus", source: self) { resultGradient, gradient in
+            Composed.squareplusBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.squareplusBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 }

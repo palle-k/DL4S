@@ -28,279 +28,263 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func scaledDotProductAttention<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, temperature: N) -> Tensor<N, Device> {
-        Composed.attentionWeights(queries: queries.detached(), keys: keys.detached(), mask: mask?.detached(), temperature: temperature)
-            .broadcastMatrixMultiplied(with: values.detached())
-    }
-
-    static func scaledDotProductAttentionBackward<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, outputGradient: Tensor<N, Device>, temperature: N, accumulating gradients: inout (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?)) {
-        let computed = Composed.scaledDotProductAttentionGradients(
-            queries: queries.detached(),
-            keys: keys.detached(),
-            values: values.detached(),
-            mask: mask?.detached(),
-            outputGradient: outputGradient.detached(),
-            temperature: temperature,
-            computesQueries: queries.requiresGradient,
-            computesKeys: keys.requiresGradient,
-            computesValues: values.requiresGradient,
-        )
-        Tensor.accumulate(computed.queries, into: &gradients.queries)
-        Tensor.accumulate(computed.keys, into: &gradients.keys)
-        Tensor.accumulate(computed.values, into: &gradients.values)
-    }
-
-    static func multiHeadAttention<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, queryWeights: Tensor<N, Device>, keyWeights: Tensor<N, Device>, valueWeights: Tensor<N, Device>, outputWeights: Tensor<N, Device>, heads: Int, temperature: N) -> Tensor<N, Device> {
-        let projectedQueries = Composed.splitHeads(Composed.project(queries.detached(), with: queryWeights.detached()), heads: heads)
-        let projectedKeys = Composed.splitHeads(Composed.project(keys.detached(), with: keyWeights.detached()), heads: heads)
-        let projectedValues = Composed.splitHeads(Composed.project(values.detached(), with: valueWeights.detached()), heads: heads)
-
-        let attended = Device.FusedOperations.scaledDotProductAttention(queries: projectedQueries, keys: projectedKeys, values: projectedValues, mask: mask?.detached(), temperature: temperature)
-        return Composed.project(Composed.joinHeads(attended), with: outputWeights.detached())
-    }
-
-    static func multiHeadAttentionBackward<N: NumericType>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, values: Tensor<N, Device>, mask: Tensor<N, Device>?, queryWeights: Tensor<N, Device>, keyWeights: Tensor<N, Device>, valueWeights: Tensor<N, Device>, outputWeights: Tensor<N, Device>, outputGradient: Tensor<N, Device>, heads: Int, temperature: N, accumulating gradients: inout MultiHeadAttentionGradients<N, Device>) {
-        let computes = [queries, keys, values, queryWeights, keyWeights, valueWeights, outputWeights].map(\.requiresGradient)
-        let (queries, keys, values) = (queries.detached(), keys.detached(), values.detached())
-        let outputGradient = outputGradient.detached()
-        var queryHeads = Composed.splitHeads(Composed.project(queries, with: queryWeights.detached()), heads: heads)
-        var keyHeads = Composed.splitHeads(Composed.project(keys, with: keyWeights.detached()), heads: heads)
-        var valueHeads = Composed.splitHeads(Composed.project(values, with: valueWeights.detached()), heads: heads)
-
-        var computed = MultiHeadAttentionGradients<N, Device>(queries: nil, keys: nil, values: nil, queryWeights: nil, keyWeights: nil, valueWeights: nil, outputWeights: nil)
-        if computes[6] {
-            let attended = Device.FusedOperations.scaledDotProductAttention(queries: queryHeads, keys: keyHeads, values: valueHeads, mask: mask?.detached(), temperature: temperature)
-            computed.outputWeights = Composed.projectionWeightGradient(input: Composed.joinHeads(attended), outputGradient: outputGradient)
+    static func scaledDotProductAttention<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
         }
-
-        // The flags select the gradients that the fused attention of the device computes.
-        queryHeads.requiresGradient = computes[0] || computes[3]
-        keyHeads.requiresGradient = computes[1] || computes[4]
-        valueHeads.requiresGradient = computes[2] || computes[5]
-        var headGradients: (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?) = (nil, nil, nil)
-        Device.FusedOperations.scaledDotProductAttentionBackward(
-            queries: queryHeads,
-            keys: keyHeads,
-            values: valueHeads,
-            mask: mask?.detached(),
-            outputGradient: Composed.splitHeads(Composed.projectionInputGradient(outputGradient, weights: outputWeights.detached()), heads: heads),
-            temperature: temperature,
-            accumulating: &headGradients,
-        )
-        Composed.addProjectionGradients(
-            to: &computed,
-            headGradients: headGradients,
-            queries: queries,
-            keys: keys,
-            values: values,
-            queryWeights: queryWeights.detached(),
-            keyWeights: keyWeights.detached(),
-            valueWeights: valueWeights.detached(),
-            computes: computes,
-        )
-        gradients.accumulate(computed)
+        let weights = attentionWeights(queries: queries, keys: keys, mask: mask, temperature: temperature, math: math)
+        math.multiplyBatchedMatrices(weights, values, into: result)
     }
 
-    static func positionalEncoding<N: NumericType>(length: Int, hiddenSize: Int) -> Tensor<N, Device> {
-        let positions = Tensor<N, Device>((0 ..< length).map(N.init))
-        let frequencyIndices = Tensor<N, Device>((0 ..< hiddenSize / 2).map(N.init))
-        let frequencies = Tensor<N, Device>(10000).raised(toPowerOf: frequencyIndices / Tensor(N(hiddenSize / 2)))
-        let samplePoints = positions.unsqueezed(at: 1) / frequencies.unsqueezed(at: 0) // [length, hiddenSize / 2]
-
-        return Tensor(
-            stacking: [
-                samplePoints.sine().unsqueezed(at: 2),
-                samplePoints.cosine().unsqueezed(at: 2),
-            ],
-            along: 2,
-        ).view(as: [-1, hiddenSize])
-    }
-}
-
-// MARK: Composed gradients
-
-extension Composed {
-    /// Computes `softmax(queries × keysᵀ / temperature - 10⁹ * mask)` along the last axis, shape [batchSize, heads, queryCount, keyCount].
-    static func attentionWeights<N, Device>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, mask: Tensor<N, Device>?, temperature: N) -> Tensor<N, Device> {
-        var scores = (queries / Tensor(temperature)).broadcastMatrixMultiplied(with: keys, transposeOther: true)
-        if let mask {
-            // The mask contains 1 for every entry that is blocked, so the softmax sets these entries to 0.
-            scores -= mask * 1e9
-        }
-        return scores.softmax(axis: 3)
-    }
-
-    static func scaledDotProductAttentionGradients<N, Device>(
-        queries: Tensor<N, Device>,
-        keys: Tensor<N, Device>,
-        values: Tensor<N, Device>,
-        mask: Tensor<N, Device>?,
-        outputGradient: Tensor<N, Device>,
+    static func scaledDotProductAttentionBackward<N: NumericType>(
+        queries: ShapedBuffer<N, Device>,
+        keys: ShapedBuffer<N, Device>,
+        values: ShapedBuffer<N, Device>,
+        mask: ShapedBuffer<N, Device>?,
+        outputGradient: ShapedBuffer<N, Device>,
         temperature: N,
-        computesQueries: Bool,
-        computesKeys: Bool,
-        computesValues: Bool,
-    ) -> (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?) {
+        queryGradient: GradientBuffer<N, Device>?,
+        keyGradient: GradientBuffer<N, Device>?,
+        valueGradient: GradientBuffer<N, Device>?,
+    ) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
         // The attention weights are computed again instead of being kept alive between the forward and the backward pass.
-        scaledDotProductAttentionGradients(
-            weights: attentionWeights(queries: queries, keys: keys, mask: mask, temperature: temperature),
-            queries: queries,
-            keys: keys,
-            values: values,
-            outputGradient: outputGradient,
-            temperature: temperature,
-            computesQueries: computesQueries,
-            computesKeys: computesKeys,
-            computesValues: computesValues,
-        )
-    }
-
-    /// Computes the gradients of scaled dot product attention from the attention weights of the forward pass.
-    static func scaledDotProductAttentionGradients<N, Device>(
-        weights: Tensor<N, Device>,
-        queries: Tensor<N, Device>,
-        keys: Tensor<N, Device>,
-        values: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        temperature: N,
-        computesQueries: Bool,
-        computesKeys: Bool,
-        computesValues: Bool,
-    ) -> (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?) {
-        let valueGradient = computesValues ? weights
-            .broadcastMatrixMultiplied(with: outputGradient, transposeSelf: true)
-            .reducingBroadcast(to: values.shape) : nil
-
-        guard computesQueries || computesKeys else {
-            return (nil, nil, valueGradient)
+        let weights = attentionWeights(queries: queries, keys: keys, mask: mask, temperature: temperature, math: math)
+        math.writeBatchedProduct(weights, outputGradient, lhsTransposed: true, into: valueGradient)
+        guard queryGradient != nil || keyGradient != nil else {
+            return
         }
-        let weightGradient = outputGradient.broadcastMatrixMultiplied(with: values, transposeOther: true)
-        let scaledScoreGradient = softmaxGradient(output: weights, outputGradient: weightGradient, axis: 3) / Tensor(temperature)
-
-        let queryGradient = computesQueries ? scaledScoreGradient
-            .broadcastMatrixMultiplied(with: keys)
-            .reducingBroadcast(to: queries.shape) : nil
-        let keyGradient = computesKeys ? scaledScoreGradient
-            .broadcastMatrixMultiplied(with: queries, transposeSelf: true)
-            .reducingBroadcast(to: keys.shape) : nil
-        return (queryGradient, keyGradient, valueGradient)
+        // The gradient of the scores is the gradient of the softmax. The products with the keys and the queries divide it by the temperature.
+        let scoreGradient = math.temporary(weights.shape)
+        math.multiplyBatchedMatrices(outputGradient, values, rhsTransposed: true, into: scoreGradient)
+        math.softmaxGradient(output: weights, outputGradient: scoreGradient, along: 3, into: scoreGradient)
+        math.writeBatchedProduct(scoreGradient, keys, alpha: 1 / temperature, into: queryGradient)
+        math.writeBatchedProduct(scoreGradient, queries, lhsTransposed: true, alpha: 1 / temperature, into: keyGradient)
     }
 
-    /// Multiplies every vector of a [batchSize, count, inputSize] tensor with weights of the shape [inputSize, outputSize].
-    static func project<N, Device>(_ input: Tensor<N, Device>, with weights: Tensor<N, Device>) -> Tensor<N, Device> {
-        input
-            .view(as: [-1, input.shape[2]])
-            .matrixMultiplied(with: weights)
-            .view(as: [input.shape[0], input.shape[1], weights.shape[1]])
-    }
-
-    /// Computes the gradient of the input of ``project(_:with:)``.
-    static func projectionInputGradient<N, Device>(_ outputGradient: Tensor<N, Device>, weights: Tensor<N, Device>) -> Tensor<N, Device> {
-        project(outputGradient, with: weights.transposed())
-    }
-
-    /// Computes the gradient of the weights of ``project(_:with:)``.
-    static func projectionWeightGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>) -> Tensor<N, Device> {
-        input
-            .view(as: [-1, input.shape[2]])
-            .matrixMultiplied(with: outputGradient.view(as: [-1, outputGradient.shape[2]]), transposeSelf: true)
-    }
-
-    /// Splits [batchSize, count, heads \* size] into [batchSize, heads, count, size].
-    static func splitHeads<N, Device>(_ input: Tensor<N, Device>, heads: Int) -> Tensor<N, Device> {
-        input
-            .view(as: [input.shape[0], input.shape[1], heads, -1])
-            .permuted(to: [0, 2, 1, 3])
-    }
-
-    /// Joins [batchSize, heads, count, size] into [batchSize, count, heads \* size].
-    static func joinHeads<N, Device>(_ input: Tensor<N, Device>) -> Tensor<N, Device> {
-        input
-            .permuted(to: [0, 2, 1, 3])
-            .view(as: [input.shape[0], input.shape[2], -1])
-    }
-
-    /// Computes the gradients of multi-head attention.
-    ///
-    /// The flags in `computes` select the gradients in the order queries, keys, values, query weights, key weights, value weights, and output weights.
-    static func multiHeadAttentionGradients<N, Device>(
-        queries: Tensor<N, Device>,
-        keys: Tensor<N, Device>,
-        values: Tensor<N, Device>,
-        mask: Tensor<N, Device>?,
-        queryWeights: Tensor<N, Device>,
-        keyWeights: Tensor<N, Device>,
-        valueWeights: Tensor<N, Device>,
-        outputWeights: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
+    static func multiHeadAttention<N: NumericType>(
+        queries: ShapedBuffer<N, Device>,
+        keys: ShapedBuffer<N, Device>,
+        values: ShapedBuffer<N, Device>,
+        mask: ShapedBuffer<N, Device>?,
+        queryWeights: ShapedBuffer<N, Device>,
+        keyWeights: ShapedBuffer<N, Device>,
+        valueWeights: ShapedBuffer<N, Device>,
+        outputWeights: ShapedBuffer<N, Device>,
         heads: Int,
         temperature: N,
-        computes: [Bool],
-    ) -> MultiHeadAttentionGradients<N, Device> {
-        let queryHeads = splitHeads(project(queries, with: queryWeights), heads: heads)
-        let keyHeads = splitHeads(project(keys, with: keyWeights), heads: heads)
-        let valueHeads = splitHeads(project(values, with: valueWeights), heads: heads)
-        let weights = attentionWeights(queries: queryHeads, keys: keyHeads, mask: mask, temperature: temperature)
-
-        var gradients = MultiHeadAttentionGradients<N, Device>(queries: nil, keys: nil, values: nil, queryWeights: nil, keyWeights: nil, valueWeights: nil, outputWeights: nil)
-
-        if computes[6] {
-            let joined = joinHeads(weights.broadcastMatrixMultiplied(with: valueHeads))
-            gradients.outputWeights = projectionWeightGradient(input: joined, outputGradient: outputGradient)
+        result: MutableShapedBuffer<N, Device>,
+    ) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
         }
+        let queryHeads = projectedHeads(queries, weights: queryWeights, heads: heads, math: math)
+        let keyHeads = projectedHeads(keys, weights: keyWeights, heads: heads, math: math)
+        let valueHeads = projectedHeads(values, weights: valueWeights, heads: heads, math: math)
+        let attended = Device.Memory.allocateBuffer(withShape: [queryHeads.shape[0], heads, queryHeads.shape[2], valueHeads.shape[3]], type: N.self)
+        scaledDotProductAttention(queries: ShapedBuffer(queryHeads), keys: ShapedBuffer(keyHeads), values: ShapedBuffer(valueHeads), mask: mask, temperature: temperature, result: attended)
+        [queryHeads, keyHeads, valueHeads].forEach(Device.Memory.free)
+        let joined = joinedHeads(attended, math: math)
+        Device.Memory.free(attended)
+        math.multiplyMatrices(joined, outputWeights, into: result.reshaped(to: [joined.shape[0], outputWeights.shape[1]]))
+        Device.Memory.free(joined)
+    }
 
-        let (queryHeadGradient, keyHeadGradient, valueHeadGradient) = scaledDotProductAttentionGradients(
-            weights: weights,
-            queries: queryHeads,
-            keys: keyHeads,
-            values: valueHeads,
-            outputGradient: splitHeads(projectionInputGradient(outputGradient, weights: outputWeights), heads: heads),
-            temperature: temperature,
-            computesQueries: computes[0] || computes[3],
-            computesKeys: computes[1] || computes[4],
-            computesValues: computes[2] || computes[5],
-        )
-
-        addProjectionGradients(
-            to: &gradients,
-            headGradients: (queryHeadGradient, keyHeadGradient, valueHeadGradient),
+    static func multiHeadAttentionBackward<N: NumericType>(
+        queries: ShapedBuffer<N, Device>,
+        keys: ShapedBuffer<N, Device>,
+        values: ShapedBuffer<N, Device>,
+        mask: ShapedBuffer<N, Device>?,
+        queryWeights: ShapedBuffer<N, Device>,
+        keyWeights: ShapedBuffer<N, Device>,
+        valueWeights: ShapedBuffer<N, Device>,
+        outputWeights: ShapedBuffer<N, Device>,
+        outputGradient: ShapedBuffer<N, Device>,
+        heads: Int,
+        temperature: N,
+        gradients: MultiHeadAttentionGradients<GradientBuffer<N, Device>?>,
+    ) {
+        projectedAttentionBackward(
             queries: queries,
             keys: keys,
             values: values,
             queryWeights: queryWeights,
             keyWeights: keyWeights,
             valueWeights: valueWeights,
-            computes: computes,
-        )
-        return gradients
+            outputWeights: outputWeights,
+            outputGradient: outputGradient,
+            heads: heads,
+            gradients: gradients,
+        ) { queries, keys, values, outputGradient, output, queryGradient, keyGradient, valueGradient in
+            // The attention of the device does not return its result from the backward pass, so the result is computed separately.
+            if let output {
+                scaledDotProductAttention(queries: queries, keys: keys, values: values, mask: mask, temperature: temperature, result: output)
+            }
+            scaledDotProductAttentionBackward(
+                queries: queries,
+                keys: keys,
+                values: values,
+                mask: mask,
+                outputGradient: outputGradient,
+                temperature: temperature,
+                queryGradient: queryGradient,
+                keyGradient: keyGradient,
+                valueGradient: valueGradient,
+            )
+        }
     }
 
-    /// Adds the gradients of the queries, keys, values, and their projections, given the gradients of the heads.
-    static func addProjectionGradients<N, Device>(
-        to gradients: inout MultiHeadAttentionGradients<N, Device>,
-        headGradients: (queries: Tensor<N, Device>?, keys: Tensor<N, Device>?, values: Tensor<N, Device>?),
-        queries: Tensor<N, Device>,
-        keys: Tensor<N, Device>,
-        values: Tensor<N, Device>,
-        queryWeights: Tensor<N, Device>,
-        keyWeights: Tensor<N, Device>,
-        valueWeights: Tensor<N, Device>,
-        computes: [Bool],
+    static func positionalEncoding<N: NumericType>(length: Int, hiddenSize: Int, result: MutableShapedBuffer<N, Device>) {
+        // The encoding is a constant, so it is computed on the host and copied to the device once.
+        var encoding = [N](repeating: 0, count: length * hiddenSize)
+        for position in 0 ..< length {
+            for index in 0 ..< hiddenSize / 2 {
+                let angle = Double(position) / Foundation.pow(10000, Double(index) / Double(hiddenSize / 2))
+                encoding[position * hiddenSize + 2 * index] = N(Foundation.sin(angle))
+                encoding[position * hiddenSize + 2 * index + 1] = N(Foundation.cos(angle))
+            }
+        }
+        encoding.withUnsafeBufferPointer { elements in
+            Device.Memory.assign(from: elements, to: result.values, count: elements.count)
+        }
+    }
+}
+
+/// Computes the gradients of the attention of the heads of multi-head attention, shape [batchSize, heads, count, size].
+///
+/// The closure receives the queries, keys, and values of the heads, the gradient of the result of the attention, a buffer for
+/// the result of the attention, or nil when it is not needed, and the buffers of the requested gradients of the heads.
+typealias HeadAttentionBackward<N: NumericType, Device: DeviceType> = (
+    _ queries: ShapedBuffer<N, Device>,
+    _ keys: ShapedBuffer<N, Device>,
+    _ values: ShapedBuffer<N, Device>,
+    _ outputGradient: ShapedBuffer<N, Device>,
+    _ output: MutableShapedBuffer<N, Device>?,
+    _ queryGradient: GradientBuffer<N, Device>?,
+    _ keyGradient: GradientBuffer<N, Device>?,
+    _ valueGradient: GradientBuffer<N, Device>?,
+) -> Void
+
+extension FusedOperationsType {
+    /// Computes `softmax(queries × keysᵀ / temperature - 10⁹ * mask)` along the last axis, shape [batchSize, heads, queryCount, keyCount].
+    static func attentionWeights<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
+        let weights = math.temporary(ShapeUtil.batchedProductShape(queries.shape, keys.shape, lhsTransposed: false, rhsTransposed: true))
+        math.multiplyBatchedMatrices(queries, keys, rhsTransposed: true, into: weights, alpha: 1 / temperature)
+        if let mask {
+            // The mask contains 1 for every entry that is blocked, so the softmax sets these entries to 0.
+            let blocked = math.temporary(mask.shape)
+            math.multiply(mask, N(1e9), into: blocked)
+            math.subtract(weights, blocked, into: weights)
+        }
+        math.softmax(weights, along: weights.dim - 1, into: weights)
+        return weights
+    }
+
+    // The helpers of multi-head attention allocate their results with the memory operators, and the caller frees every
+    // intermediate after its last use, so that the next allocations reuse memory that is still in the cache.
+
+    /// Projects a [batchSize, count, inputSize] buffer with weights of the shape [inputSize, heads \* size] and splits the
+    /// result into heads, shape [batchSize, heads, count, size]. The caller frees the result.
+    static func projectedHeads<N: NumericType>(_ input: ShapedBuffer<N, Device>, weights: ShapedBuffer<N, Device>, heads: Int, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
+        let (batchSize, count) = (input.shape[0], input.shape[1])
+        let size = weights.shape[1] / heads
+        let projected = Device.Memory.allocateBuffer(withShape: [batchSize, count, heads, size], type: N.self)
+        defer {
+            Device.Memory.free(projected)
+        }
+        math.multiplyMatrices(input.reshaped(to: [batchSize * count, input.shape[2]]), weights, into: projected.reshaped(to: [batchSize * count, weights.shape[1]]))
+        let split = Device.Memory.allocateBuffer(withShape: [batchSize, heads, count, size], type: N.self)
+        math.permute(projected, to: [0, 2, 1, 3], into: split)
+        return split
+    }
+
+    /// Joins [batchSize, heads, count, size] into a [batchSize \* count, heads \* size] matrix. The caller frees the result.
+    static func joinedHeads<N: NumericType>(_ input: some ReadableBuffer<N, Device>, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
+        let input = input.readable
+        let (batchSize, heads, count, size) = (input.shape[0], input.shape[1], input.shape[2], input.shape[3])
+        let joined = Device.Memory.allocateBuffer(withShape: [batchSize, count, heads, size], type: N.self)
+        math.permute(input, to: [0, 2, 1, 3], into: joined)
+        return joined.reshaped(to: [batchSize * count, heads * size])
+    }
+
+    /// Computes the gradients of multi-head attention, where `headAttentionBackward` computes the gradients of the attention of
+    /// the heads, and its result when the output projection has a requested gradient.
+    static func projectedAttentionBackward<N: NumericType>(
+        queries: ShapedBuffer<N, Device>,
+        keys: ShapedBuffer<N, Device>,
+        values: ShapedBuffer<N, Device>,
+        queryWeights: ShapedBuffer<N, Device>,
+        keyWeights: ShapedBuffer<N, Device>,
+        valueWeights: ShapedBuffer<N, Device>,
+        outputWeights: ShapedBuffer<N, Device>,
+        outputGradient: ShapedBuffer<N, Device>,
+        heads: Int,
+        gradients: MultiHeadAttentionGradients<GradientBuffer<N, Device>?>,
+        headAttentionBackward: HeadAttentionBackward<N, Device>,
     ) {
-        if let queryHeadGradient = headGradients.queries {
-            let projectedGradient = joinHeads(queryHeadGradient)
-            gradients.queries = computes[0] ? projectionInputGradient(projectedGradient, weights: queryWeights) : nil
-            gradients.queryWeights = computes[3] ? projectionWeightGradient(input: queries, outputGradient: projectedGradient) : nil
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
         }
-        if let keyHeadGradient = headGradients.keys {
-            let projectedGradient = joinHeads(keyHeadGradient)
-            gradients.keys = computes[1] ? projectionInputGradient(projectedGradient, weights: keyWeights) : nil
-            gradients.keyWeights = computes[4] ? projectionWeightGradient(input: keys, outputGradient: projectedGradient) : nil
+        let queryHeads = projectedHeads(queries, weights: queryWeights, heads: heads, math: math)
+        let keyHeads = projectedHeads(keys, weights: keyWeights, heads: heads, math: math)
+        let valueHeads = projectedHeads(values, weights: valueWeights, heads: heads, math: math)
+        let (batchSize, queryCount) = (queries.shape[0], queries.shape[1])
+        let gradientMatrix = outputGradient.reshaped(to: [batchSize * queryCount, outputWeights.shape[1]])
+
+        // The gradient of the attention of the heads, [batchSize, heads, queryCount, valueSize]
+        let joinedGradient = Device.Memory.allocateBuffer(withShape: [batchSize, queryCount, heads, valueHeads.shape[3]], type: N.self)
+        math.multiplyMatrices(gradientMatrix, outputWeights, rhsTransposed: true, into: joinedGradient.reshaped(to: [batchSize * queryCount, outputWeights.shape[0]]))
+        let headOutputGradient = Device.Memory.allocateBuffer(withShape: [batchSize, heads, queryCount, valueHeads.shape[3]], type: N.self)
+        math.permute(joinedGradient, to: [0, 2, 1, 3], into: headOutputGradient)
+        Device.Memory.free(joinedGradient)
+
+        func headGradient(_ heads: MutableShapedBuffer<N, Device>, _ inputGradient: GradientBuffer<N, Device>?, _ weightGradient: GradientBuffer<N, Device>?) -> GradientBuffer<N, Device>? {
+            inputGradient == nil && weightGradient == nil ? nil : GradientBuffer(values: Device.Memory.allocateBuffer(withShape: heads.shape, type: N.self), adds: false)
         }
-        if let valueHeadGradient = headGradients.values {
-            let projectedGradient = joinHeads(valueHeadGradient)
-            gradients.values = computes[2] ? projectionInputGradient(projectedGradient, weights: valueWeights) : nil
-            gradients.valueWeights = computes[5] ? projectionWeightGradient(input: values, outputGradient: projectedGradient) : nil
+        let queryHeadGradient = headGradient(queryHeads, gradients.queries, gradients.queryWeights)
+        let keyHeadGradient = headGradient(keyHeads, gradients.keys, gradients.keyWeights)
+        let valueHeadGradient = headGradient(valueHeads, gradients.values, gradients.valueWeights)
+        let attended = gradients.outputWeights == nil ? nil : Device.Memory.allocateBuffer(withShape: headOutputGradient.shape, type: N.self)
+        headAttentionBackward(
+            ShapedBuffer(queryHeads),
+            ShapedBuffer(keyHeads),
+            ShapedBuffer(valueHeads),
+            ShapedBuffer(headOutputGradient),
+            attended,
+            queryHeadGradient,
+            keyHeadGradient,
+            valueHeadGradient,
+        )
+        [queryHeads, keyHeads, valueHeads, headOutputGradient].forEach(Device.Memory.free)
+        if let attended, let outputWeightGradient = gradients.outputWeights {
+            let joined = joinedHeads(attended, math: math)
+            Device.Memory.free(attended)
+            math.multiplyMatrices(joined, gradientMatrix, lhsTransposed: true, into: outputWeightGradient.values, beta: outputWeightGradient.beta)
+            Device.Memory.free(joined)
         }
+        func addProjectionGradients(input: ShapedBuffer<N, Device>, weights: ShapedBuffer<N, Device>, headGradient: GradientBuffer<N, Device>?, inputGradient: GradientBuffer<N, Device>?, weightGradient: GradientBuffer<N, Device>?) {
+            guard let headGradient else {
+                return
+            }
+            let joined = joinedHeads(headGradient.values, math: math)
+            Device.Memory.free(headGradient.values)
+            let inputMatrixShape = [input.shape[0] * input.shape[1], input.shape[2]]
+            if let inputGradient {
+                math.multiplyMatrices(joined, weights, rhsTransposed: true, into: inputGradient.values.reshaped(to: inputMatrixShape), beta: inputGradient.beta)
+            }
+            if let weightGradient {
+                math.multiplyMatrices(input.reshaped(to: inputMatrixShape), joined, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
+            }
+            Device.Memory.free(joined)
+        }
+        addProjectionGradients(input: queries, weights: queryWeights, headGradient: queryHeadGradient, inputGradient: gradients.queries, weightGradient: gradients.queryWeights)
+        addProjectionGradients(input: keys, weights: keyWeights, headGradient: keyHeadGradient, inputGradient: gradients.keys, weightGradient: gradients.keyWeights)
+        addProjectionGradients(input: values, weights: valueWeights, headGradient: valueHeadGradient, inputGradient: gradients.values, weightGradient: gradients.valueWeights)
     }
 }

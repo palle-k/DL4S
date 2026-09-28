@@ -23,7 +23,7 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-import DL4S
+@testable import DL4S
 import Foundation
 import Testing
 
@@ -560,32 +560,40 @@ struct FusedOperationTests {
         }
     }
 
-    @Test func backwardComputesOnlyRequiredGradients() {
-        var input = uniform([1, 2, 4, 4], seed: 3000)
+    @Test func backwardComputesOnlyRequestedGradients() {
+        let input = uniform([1, 2, 4, 4], seed: 3000)
         let filters = uniform([3, 2, 3, 3], seed: 3001)
         let bias = uniform([3], seed: 3002)
-        input.requiresGradient = true
         let outputGradient = DoubleTensor(repeating: 1, shape: [1, 3, 4, 4])
 
-        var gradients: (input: DoubleTensor?, filters: DoubleTensor?, bias: DoubleTensor?) = (nil, nil, nil)
-        CPU.FusedOperations.convolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: 1, stride: 1, accumulating: &gradients)
-        #expect(gradients.input?.shape == input.shape)
-        #expect(gradients.input?.requiresGradient == false)
-        #expect(gradients.filters == nil)
-        #expect(gradients.bias == nil)
+        var inputGradient = GradientAccumulator<Double, CPU>(isRequested: true, shape: input.shape)
+        var filterGradient = GradientAccumulator<Double, CPU>(isRequested: false, shape: filters.shape)
+        var biasGradient = GradientAccumulator<Double, CPU>(isRequested: false, shape: bias.shape)
+        withExtendedLifetime((input, filters, bias, outputGradient)) {
+            CPU.FusedOperations.convolution2dBackward(input: input.values, filters: filters.values, bias: bias.values, outputGradient: outputGradient.values, padding: 1, stride: 1, inputGradient: inputGradient.buffer(), filterGradient: filterGradient.buffer(), biasGradient: biasGradient.buffer())
+        }
+        #expect(inputGradient.value?.shape == input.shape)
+        #expect(inputGradient.value?.requiresGradient == false)
+        #expect(filterGradient.value == nil)
+        #expect(biasGradient.value == nil)
     }
 
     @Test func backwardAddsToAccumulatedGradients() throws {
-        var (input, weights) = (uniform([3, 4], seed: 3006), uniform([4, 5], seed: 3007))
-        input.requiresGradient = true
-        weights.requiresGradient = true
+        let (input, weights) = (uniform([3, 4], seed: 3006), uniform([4, 5], seed: 3007))
         let outputGradient = uniform([3, 5], seed: 3008)
         let (inputStart, weightStart) = (uniform([3, 4], seed: 3009), uniform([4, 5], seed: 3010))
 
-        var empty: (input: DoubleTensor?, weights: DoubleTensor?, bias: DoubleTensor?) = (nil, nil, nil)
-        CPU.FusedOperations.linearBackward(input: input, weights: weights, bias: nil, outputGradient: outputGradient, accumulating: &empty)
-        var accumulated: (input: DoubleTensor?, weights: DoubleTensor?, bias: DoubleTensor?) = (inputStart, weightStart, nil)
-        CPU.FusedOperations.linearBackward(input: input, weights: weights, bias: nil, outputGradient: outputGradient, accumulating: &accumulated)
+        func linearGradients(inputStart: DoubleTensor?, weightStart: DoubleTensor?) -> (input: DoubleTensor?, weights: DoubleTensor?, bias: DoubleTensor?) {
+            var inputGradient = GradientAccumulator(isRequested: true, shape: input.shape, value: inputStart)
+            var weightGradient = GradientAccumulator(isRequested: true, shape: weights.shape, value: weightStart)
+            var biasGradient = GradientAccumulator<Double, CPU>(isRequested: false, shape: [5])
+            withExtendedLifetime((input, weights, outputGradient)) {
+                CPU.FusedOperations.linearBackward(input: input.values, weights: weights.values, bias: nil, outputGradient: outputGradient.values, inputGradient: inputGradient.buffer(), weightGradient: weightGradient.buffer(), biasGradient: biasGradient.buffer())
+            }
+            return (inputGradient.value, weightGradient.value, biasGradient.value)
+        }
+        let empty = linearGradients(inputStart: nil, weightStart: nil)
+        let accumulated = linearGradients(inputStart: inputStart, weightStart: weightStart)
 
         try expectApproximatelyEqual(#require(accumulated.input), inputStart + empty.input!, tolerance: 1e-12, "input gradient")
         try expectApproximatelyEqual(#require(accumulated.weights), weightStart + empty.weights!, tolerance: 1e-12, "weight gradient")
@@ -593,6 +601,19 @@ struct FusedOperationTests {
         // The accumulators share their storage with the start values, so the kernels must copy them before they write.
         #expect(inputStart == uniform([3, 4], seed: 3009))
         #expect(weightStart == uniform([4, 5], seed: 3010))
+    }
+
+    @Test func binaryCrossEntropyComparesElementsInMemoryOrder() {
+        var expected = uniform([4], min: 0, max: 1, seed: 3020)
+        var actual = uniform([4, 1], min: 0.1, max: 0.9, seed: 3021)
+        expected.requiresGradient = true
+        actual.requiresGradient = true
+        let gradients = binaryCrossEntropy(expected: expected, actual: actual).gradients(of: [expected, actual])
+        let flat = binaryCrossEntropy(expected: expected, actual: actual.view(as: [4])).gradients(of: [expected, actual])
+        #expect(gradients[0].shape == [4])
+        #expect(gradients[1].shape == [4, 1])
+        expectApproximatelyEqual(gradients[0], flat[0], "expected gradient")
+        expectApproximatelyEqual(gradients[1], flat[1], "actual gradient")
     }
 
     @Test func weightsUsedInSeveralStepsGetSumOfGradients() {
@@ -687,6 +708,16 @@ struct FusedOperationTests {
         let input = DoubleTensor([-2, -0.5, 0.5, 100])
         let expected = DoubleTensor([0.5 * (Foundation.exp(-2) - 1), 0.5 * (Foundation.exp(-0.5) - 1), 0.5, 100])
         expectApproximatelyEqual(input.exponentialLinearActivated(alpha: 0.5), expected, "result")
+    }
+
+    @Test func positionalEncodingLayerReturnsRowsOfTheLongestEncoding() throws {
+        let layer = PositionalEncoding<Double, CPU>(hiddenSize: 6)
+        for length in [3, 7, 2, 7, 5] {
+            #expect(layer(length) == Tensor<Double, CPU>(positionalEncodingWithLength: length, hiddenSize: 6), "length \(length)")
+        }
+        let decoded = try JSONDecoder().decode(PositionalEncoding<Double, CPU>.self, from: JSONEncoder().encode(layer))
+        #expect(decoded.hiddenSize == 6)
+        #expect(decoded(4) == layer(4))
     }
 
     @Test func positionalEncodingMatchesDefinition() {

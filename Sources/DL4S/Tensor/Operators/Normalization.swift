@@ -42,31 +42,13 @@ public extension Tensor {
     func layerNormalized(scale: Self, shift: Self, epsilon: Element = Element(1e-5)) -> Self {
         precondition(Array(shape.suffix(scale.dim)) == scale.shape, "The scale must have the shape of the trailing axes of the tensor.")
         precondition(shift.shape == scale.shape, "The shift must have the shape of the scale.")
-        let result = Device.FusedOperations.layerNormalization(input: self, scale: scale, shift: shift, epsilon: epsilon)
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.layerNormalization(input: values, scale: scale.values, shift: shift.values, epsilon: epsilon, result: result.mutableValues)
 
-        return result.attachingContext(tag: "layerNorm", sources: [self, scale, shift]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                let computed = Composed.normalizationGradients(
-                    input: self,
-                    scale: scale,
-                    shiftShape: shift.shape,
-                    outputGradient: resultGradient,
-                    axes: Composed.layerNormalizationAxes(input: self, scale: scale),
-                    epsilon: epsilon,
-                    computesInput: self.requiresGradient,
-                    computesScale: scale.requiresGradient,
-                    computesShift: shift.requiresGradient,
-                )
-                Tensor.accumulate(computed.input, into: &gradients[0])
-                Tensor.accumulate(computed.scale, into: &gradients[1])
-                Tensor.accumulate(computed.shift, into: &gradients[2])
-            } else {
-                var accumulated = (input: gradients[0].take(), scale: gradients[1].take(), shift: gradients[2].take())
-                Device.FusedOperations.layerNormalizationBackward(input: self, scale: scale, shift: shift, outputGradient: resultGradient, epsilon: epsilon, accumulating: &accumulated)
-                gradients[0] = accumulated.input
-                gradients[1] = accumulated.scale
-                gradients[2] = accumulated.shift
-            }
+        return result.attachingContext(tag: "layerNorm", sources: self, scale, shift) { resultGradient, inputGradient, scaleGradient, shiftGradient in
+            Composed.normalizationBackward(input: self, scale: scale, outputGradient: resultGradient, axes: Array(self.dim - scale.dim ..< self.dim), epsilon: epsilon, inputGradient: &inputGradient, scaleGradient: &scaleGradient, shiftGradient: &shiftGradient)
+        } fused: { resultGradient, inputGradient, scaleGradient, shiftGradient in
+            Device.FusedOperations.layerNormalizationBackward(input: self.values, scale: scale.values, shift: shift.values, outputGradient: resultGradient, epsilon: epsilon, inputGradient: inputGradient, scaleGradient: scaleGradient, shiftGradient: shiftGradient)
         }
     }
 
@@ -80,31 +62,15 @@ public extension Tensor {
     ///   - epsilon: Value added to the standard deviation
     /// - Returns: The normalized tensor, and the mean and the biased variance of the batch. The statistics have no gradient.
     func batchNormalized(scale: Self, shift: Self, epsilon: Element = Element(1e-5)) -> (output: Self, mean: Self, variance: Self) {
-        let (result, mean, variance) = Device.FusedOperations.batchNormalization(input: self, scale: scale, shift: shift, epsilon: epsilon)
+        var result = Self(uninitializedShape: shape)
+        var mean = Self(uninitializedShape: Array(shape.dropFirst()))
+        var variance = Self(uninitializedShape: Array(shape.dropFirst()))
+        Device.FusedOperations.batchNormalization(input: values, scale: scale.values, shift: shift.values, epsilon: epsilon, result: result.mutableValues, mean: mean.mutableValues, variance: variance.mutableValues)
 
-        let output = result.attachingContext(tag: "batchNorm", sources: [self, scale, shift]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                let computed = Composed.normalizationGradients(
-                    input: self,
-                    scale: scale,
-                    shiftShape: shift.shape,
-                    outputGradient: resultGradient,
-                    axes: [0],
-                    epsilon: epsilon,
-                    computesInput: self.requiresGradient,
-                    computesScale: scale.requiresGradient,
-                    computesShift: shift.requiresGradient,
-                )
-                Tensor.accumulate(computed.input, into: &gradients[0])
-                Tensor.accumulate(computed.scale, into: &gradients[1])
-                Tensor.accumulate(computed.shift, into: &gradients[2])
-            } else {
-                var accumulated = (input: gradients[0].take(), scale: gradients[1].take(), shift: gradients[2].take())
-                Device.FusedOperations.batchNormalizationBackward(input: self, scale: scale, shift: shift, outputGradient: resultGradient, epsilon: epsilon, accumulating: &accumulated)
-                gradients[0] = accumulated.input
-                gradients[1] = accumulated.scale
-                gradients[2] = accumulated.shift
-            }
+        let output = result.attachingContext(tag: "batchNorm", sources: self, scale, shift) { resultGradient, inputGradient, scaleGradient, shiftGradient in
+            Composed.normalizationBackward(input: self, scale: scale, outputGradient: resultGradient, axes: [0], epsilon: epsilon, inputGradient: &inputGradient, scaleGradient: &scaleGradient, shiftGradient: &shiftGradient)
+        } fused: { resultGradient, inputGradient, scaleGradient, shiftGradient in
+            Device.FusedOperations.batchNormalizationBackward(input: self.values, scale: scale.values, shift: shift.values, outputGradient: resultGradient, epsilon: epsilon, inputGradient: inputGradient, scaleGradient: scaleGradient, shiftGradient: shiftGradient)
         }
         return (output, mean, variance)
     }
@@ -124,32 +90,13 @@ public extension Tensor {
     func batchNormalized(scale: Self, shift: Self, mean: Self, variance: Self, epsilon: Element = Element(1e-5)) -> Self {
         let mean = mean.detached()
         let variance = variance.detached()
-        let result = Device.FusedOperations.batchNormalization(input: self, scale: scale, shift: shift, mean: mean, variance: variance, epsilon: epsilon)
+        var result = Self(uninitializedShape: shape)
+        Device.FusedOperations.batchNormalization(input: values, scale: scale.values, shift: shift.values, mean: mean.values, variance: variance.values, epsilon: epsilon, result: result.mutableValues)
 
-        return result.attachingContext(tag: "batchNorm", sources: [self, scale, shift]) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                let computed = Composed.fixedNormalizationGradients(
-                    input: self,
-                    scale: scale,
-                    shiftShape: shift.shape,
-                    mean: mean,
-                    variance: variance,
-                    outputGradient: resultGradient,
-                    epsilon: epsilon,
-                    computesInput: self.requiresGradient,
-                    computesScale: scale.requiresGradient,
-                    computesShift: shift.requiresGradient,
-                )
-                Tensor.accumulate(computed.input, into: &gradients[0])
-                Tensor.accumulate(computed.scale, into: &gradients[1])
-                Tensor.accumulate(computed.shift, into: &gradients[2])
-            } else {
-                var accumulated = (input: gradients[0].take(), scale: gradients[1].take(), shift: gradients[2].take())
-                Device.FusedOperations.batchNormalizationBackward(input: self, scale: scale, shift: shift, mean: mean, variance: variance, outputGradient: resultGradient, epsilon: epsilon, accumulating: &accumulated)
-                gradients[0] = accumulated.input
-                gradients[1] = accumulated.scale
-                gradients[2] = accumulated.shift
-            }
+        return result.attachingContext(tag: "batchNorm", sources: self, scale, shift) { resultGradient, inputGradient, scaleGradient, shiftGradient in
+            Composed.fixedNormalizationBackward(input: self, scale: scale, mean: mean, variance: variance, outputGradient: resultGradient, epsilon: epsilon, inputGradient: &inputGradient, scaleGradient: &scaleGradient, shiftGradient: &shiftGradient)
+        } fused: { resultGradient, inputGradient, scaleGradient, shiftGradient in
+            Device.FusedOperations.batchNormalizationBackward(input: self.values, scale: scale.values, shift: shift.values, mean: mean.values, variance: variance.values, outputGradient: resultGradient, epsilon: epsilon, inputGradient: inputGradient, scaleGradient: scaleGradient, shiftGradient: shiftGradient)
         }
     }
 }

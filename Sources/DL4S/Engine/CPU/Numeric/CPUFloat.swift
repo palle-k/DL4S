@@ -232,6 +232,22 @@ extension Float: CPUNumeric {
         return dst
     }
 
+    public static func dot(lhs: UnsafeBufferPointer<Float>, rhs: UnsafeBufferPointer<Float>, count: Int) -> Float {
+        let (a, b) = (lhs.pointer(capacity: count), rhs.pointer(capacity: count))
+        var dst: Float = 0
+
+        #if MKL_ENABLE
+        ippsDotProd_32f(a, b, Int32(count), &dst)
+        #elseif canImport(Accelerate)
+        vDSP_dotpr(a, 1, b, 1, &dst, UInt(count))
+        #else
+        for i in 0 ..< count {
+            dst += a[i] * b[i]
+        }
+        #endif
+        return dst
+    }
+
     public static func sum(val: UnsafeBufferPointer<Float>, stride: Int, count: Int) -> Float {
         let src = val.pointer(capacity: (count - 1) * stride + 1)
         var dst: Float = 0

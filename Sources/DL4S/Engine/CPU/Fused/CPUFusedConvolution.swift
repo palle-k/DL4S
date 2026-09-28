@@ -27,354 +27,192 @@ import Foundation
 
 // The convolutions process the batch in chunks of images. A chunk extracts its windows with img2col into one
 // scratch matrix of at most `CPUKernels.maximumColumnElements` elements, which is reused for every chunk, and
-// multiplies it with the filters directly into the layout of the result. Pooling works on the images directly.
+// multiplies it with the filters directly into the layout of the result. A transposed convolution is the adjoint
+// of a convolution, so it uses the same operations with the roles of the images and the windows exchanged.
+// Pooling works on the images directly.
 
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func convolution2d<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, padding: Int, stride: Int) -> Tensor<N, CPU> {
-        guard let geometry = ConvolutionGeometry(input: input, filters: filters, bias: bias, padding: padding, stride: stride) else {
-            return DefaultFusedOperations<CPU>.convolution2d(input: input, filters: filters, bias: bias, padding: padding, stride: stride)
-        }
-        let (batchSize, outputChannels, windows, windowSize) = (geometry.batchSize, geometry.outputChannels, geometry.windows, geometry.windowSize)
-        let (result, y) = CPUKernels.makeTensor(shape: [batchSize, outputChannels, geometry.outputHeight, geometry.outputWidth]) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let (x, w, b) = (input.elementPointer, filters.elementPointer, bias?.elementPointer)
-        let chunk = geometry.chunkSize(rowsPerImage: windowSize)
-
-        CPUKernels.withScratch(N.self, count: windowSize * chunk * windows + (chunk > 1 ? outputChannels * chunk * windows : 0)) { scratch in
-            let columns = scratch
-            let products = scratch + windowSize * chunk * windows
-            for first in Swift.stride(from: 0, to: batchSize, by: chunk) {
-                let count = Swift.min(chunk, batchSize - first)
-                geometry.extractWindows(from: x, firstImage: first, imageCount: count, into: columns)
-                if count == 1 {
-                    // A single image is multiplied directly into its slice of the result, which starts with the bias.
-                    let output = y + first * outputChannels * windows
-                    if let b {
-                        for channel in 0 ..< outputChannels {
-                            CPUKernels.fill(output + channel * windows, with: b[channel], count: windows)
-                        }
-                    }
-                    CPUKernels.gemm(w, shape: (outputChannels, windowSize), columns, shape: (windowSize, windows), into: output, beta: b == nil ? 0 : 1)
-                    continue
-                }
-                CPUKernels.gemm(w, shape: (outputChannels, windowSize), columns, shape: (windowSize, count * windows), into: products)
-                // The product has the layout [outputChannels, images, windows]. The result has the layout [images, outputChannels, windows].
-                for image in 0 ..< count {
-                    for channel in 0 ..< outputChannels {
-                        N.vsAdd(
-                            lhs: UnsafeBufferPointer(start: products + (channel * count + image) * windows, count: windows),
-                            rhs: b?[channel] ?? 0,
-                            result: UnsafeMutableBufferPointer(start: y + ((first + image) * outputChannels + channel) * windows, count: windows),
-                            count: windows,
-                        )
-                    }
-                }
-            }
-        }
-        return result
+    static func convolution2d<N: NumericType>(input: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, bias: ShapedBuffer<N, CPU>?, padding: Int, stride: Int, result: MutableShapedBuffer<N, CPU>) {
+        let geometry = ConvolutionGeometry(input: input, filters: filters, bias: bias, padding: padding, stride: stride)
+        geometry.multiplyWindows(of: input.elementPointer, filters: filters.elementPointer, bias: bias?.elementPointer, output: (result.elementPointer, 0), filterGradient: nil)
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func convolution2dBackward<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, padding: Int, stride: Int, accumulating gradients: inout (input: Tensor<N, CPU>?, filters: Tensor<N, CPU>?, bias: Tensor<N, CPU>?)) {
-        guard let geometry = ConvolutionGeometry(input: input, filters: filters, bias: bias, padding: padding, stride: stride),
-              outputGradient.shape == [geometry.batchSize, geometry.outputChannels, geometry.outputHeight, geometry.outputWidth]
-        else {
-            DefaultFusedOperations<CPU>.convolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: padding, stride: stride, accumulating: &gradients)
-            return
-        }
-        let (batchSize, outputChannels, windows, windowSize) = (geometry.batchSize, geometry.outputChannels, geometry.windows, geometry.windowSize)
+    static func convolution2dBackward<N: NumericType>(
+        input: ShapedBuffer<N, CPU>,
+        filters: ShapedBuffer<N, CPU>,
+        bias: ShapedBuffer<N, CPU>?,
+        outputGradient: ShapedBuffer<N, CPU>,
+        padding: Int,
+        stride: Int,
+        inputGradient: GradientBuffer<N, CPU>?,
+        filterGradient: GradientBuffer<N, CPU>?,
+        biasGradient: GradientBuffer<N, CPU>?,
+    ) {
+        let geometry = ConvolutionGeometry(input: input, filters: filters, bias: bias, padding: padding, stride: stride)
+        precondition(outputGradient.shape == geometry.outputShape, "The gradient of the result must have the shape of the result.")
         let (x, w, g) = (input.elementPointer, filters.elementPointer, outputGradient.elementPointer)
-        let inputGradient = input.requiresGradient ? CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>) : nil
-        // The filter and bias gradients are added to the accumulated gradients directly.
-        let filterGradient = filters.requiresGradient ? GradientTarget(taking: &gradients.filters, shape: filters.shape) : nil
-        let biasGradient = (bias?.requiresGradient ?? false) ? GradientTarget(taking: &gradients.bias, shape: [outputChannels], zeroed: true) : nil
-        let chunk = geometry.chunkSize(rowsPerImage: windowSize)
-
-        CPUKernels.withScratch(N.self, count: windowSize * chunk * windows + (chunk > 1 ? outputChannels * chunk * windows : 0)) { scratch in
-            let columns = scratch
-            let gradientMatrix = scratch + windowSize * chunk * windows
-            for first in Swift.stride(from: 0, to: batchSize, by: chunk) {
-                let count = Swift.min(chunk, batchSize - first)
-                // The gradient in the layout [outputChannels, images, windows] of the matrix product.
-                let gradient: UnsafePointer<N>
-                if count == 1 {
-                    gradient = g + first * outputChannels * windows
-                } else {
-                    for image in 0 ..< count {
-                        for channel in 0 ..< outputChannels {
-                            (gradientMatrix + (channel * count + image) * windows)
-                                .update(from: g + ((first + image) * outputChannels + channel) * windows, count: windows)
-                        }
-                    }
-                    gradient = UnsafePointer(gradientMatrix)
-                }
-                if let filterGradient {
-                    // The windows are extracted again instead of being kept alive between the forward and the backward pass.
-                    geometry.extractWindows(from: x, firstImage: first, imageCount: count, into: columns)
-                    CPUKernels.gemm(gradient, shape: (outputChannels, count * windows), columns, shape: (windowSize, count * windows), rhsTransposed: true, into: filterGradient.pointer, beta: first == 0 ? filterGradient.beta : 1)
-                }
-                if let (_, dx) = inputGradient {
-                    CPUKernels.gemm(w, shape: (outputChannels, windowSize), lhsTransposed: true, gradient, shape: (outputChannels, count * windows), into: columns)
-                    geometry.accumulateWindows(columns, firstImage: first, imageCount: count, into: dx)
-                }
-                if let db = biasGradient?.pointer {
-                    for image in 0 ..< count {
-                        for channel in 0 ..< outputChannels {
-                            db[channel] += CPUKernels.sum(g + ((first + image) * outputChannels + channel) * windows, count: windows)
-                        }
-                    }
-                }
-            }
+        geometry.multiplyOutputGradient(
+            g,
+            filters: w,
+            imageGradient: inputGradient?.elementsToWrite(),
+            filterGradient: filterGradient.map { (x, $0.elementsToAddTo()) },
+        )
+        if let biasGradient {
+            CPUKernels.addChannelSums(g, images: geometry.batchSize, channels: geometry.outputChannels, pixels: geometry.windows, to: biasGradient.elementsToAddTo())
         }
-        Tensor.accumulate(inputGradient?.0, into: &gradients.input)
-        filterGradient?.finish(into: &gradients.filters)
-        biasGradient?.finish(into: &gradients.bias)
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func transposedConvolution2d<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, inset: Int, stride: Int) -> Tensor<N, CPU> {
-        guard let geometry = TransposedConvolutionGeometry(input: input, filters: filters, bias: bias, inset: inset, stride: stride) else {
-            return DefaultFusedOperations<CPU>.transposedConvolution2d(input: input, filters: filters, bias: bias, inset: inset, stride: stride)
+    static func transposedConvolution2d<N: NumericType>(input: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, bias: ShapedBuffer<N, CPU>?, inset: Int, stride: Int, result: MutableShapedBuffer<N, CPU>) {
+        let geometry = ConvolutionGeometry(transposedInput: input, filters: filters, bias: bias, inset: inset, stride: stride)
+        let y = result.elementPointer
+        geometry.multiplyOutputGradient(input.elementPointer, filters: filters.elementPointer, imageGradient: (y, 0), filterGradient: nil)
+        if let bias {
+            CPUKernels.addChannelOffsets(bias.elementPointer, to: y, images: geometry.batchSize, channels: geometry.imageChannels, pixels: geometry.imagePixels)
         }
-        let (batchSize, inputChannels, outputChannels, pixels, kernelSize) = (geometry.batchSize, geometry.inputChannels, geometry.outputChannels, geometry.pixels, geometry.kernelSize)
-        let outputPixels = geometry.outputHeight * geometry.outputWidth
-        let (result, y) = CPUKernels.makeTensor(shape: [batchSize, outputChannels, geometry.outputHeight, geometry.outputWidth]) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let (x, a, b) = (input.elementPointer, filters.elementPointer, bias?.elementPointer)
-        let chunk = geometry.chunkSize
-
-        CPUKernels.withScratch(N.self, count: kernelSize * chunk * pixels + (chunk > 1 ? inputChannels * chunk * pixels : 0)) { scratch in
-            let columns = scratch
-            let inputMatrix = scratch + kernelSize * chunk * pixels
-            for first in Swift.stride(from: 0, to: batchSize, by: chunk) {
-                let count = Swift.min(chunk, batchSize - first)
-                let images = geometry.inputMatrix(x, firstImage: first, imageCount: count, scratch: inputMatrix)
-                // The filters, read as a [inputChannels, outputChannels * kernelHeight * kernelWidth] matrix, transposed.
-                CPUKernels.gemm(a, shape: (inputChannels, kernelSize), lhsTransposed: true, images, shape: (inputChannels, count * pixels), into: columns)
-                N.col2img(
-                    values: UnsafeBufferPointer(start: columns, count: kernelSize * count * pixels),
-                    result: UnsafeMutableBufferPointer(start: y + first * outputChannels * outputPixels, count: count * outputChannels * outputPixels),
-                    batchSize: count,
-                    channels: outputChannels,
-                    height: geometry.outputHeight,
-                    width: geometry.outputWidth,
-                    kernelHeight: geometry.kernelHeight,
-                    kernelWidth: geometry.kernelWidth,
-                    padding: inset,
-                    stride: stride,
-                )
-                if let b {
-                    for image in first ..< first + count {
-                        for channel in 0 ..< outputChannels {
-                            let row = y + (image * outputChannels + channel) * outputPixels
-                            let value = b[channel]
-                            for j in 0 ..< outputPixels {
-                                row[j] += value
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return result
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func transposedConvolution2dBackward<N: NumericType>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, outputGradient: Tensor<N, CPU>, inset: Int, stride: Int, accumulating gradients: inout (input: Tensor<N, CPU>?, filters: Tensor<N, CPU>?, bias: Tensor<N, CPU>?)) {
-        guard let geometry = TransposedConvolutionGeometry(input: input, filters: filters, bias: bias, inset: inset, stride: stride),
-              outputGradient.shape == [geometry.batchSize, geometry.outputChannels, geometry.outputHeight, geometry.outputWidth]
-        else {
-            DefaultFusedOperations<CPU>.transposedConvolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, inset: inset, stride: stride, accumulating: &gradients)
-            return
+    static func transposedConvolution2dBackward<N: NumericType>(
+        input: ShapedBuffer<N, CPU>,
+        filters: ShapedBuffer<N, CPU>,
+        bias: ShapedBuffer<N, CPU>?,
+        outputGradient: ShapedBuffer<N, CPU>,
+        inset: Int,
+        stride: Int,
+        inputGradient: GradientBuffer<N, CPU>?,
+        filterGradient: GradientBuffer<N, CPU>?,
+        biasGradient: GradientBuffer<N, CPU>?,
+    ) {
+        let geometry = ConvolutionGeometry(transposedInput: input, filters: filters, bias: bias, inset: inset, stride: stride)
+        precondition(outputGradient.shape == geometry.imageShape, "The gradient of the result must have the shape of the result.")
+        let (x, w, g) = (input.elementPointer, filters.elementPointer, outputGradient.elementPointer)
+        // The adjoint convolution reads the gradient of the result as its images.
+        geometry.multiplyWindows(
+            of: g,
+            filters: w,
+            bias: nil,
+            output: inputGradient?.elementsToWrite(),
+            filterGradient: filterGradient.map { (x, $0.elementsToAddTo()) },
+        )
+        if let biasGradient {
+            CPUKernels.addChannelSums(g, images: geometry.batchSize, channels: geometry.imageChannels, pixels: geometry.imagePixels, to: biasGradient.elementsToAddTo())
         }
-        let (batchSize, inputChannels, outputChannels, pixels, kernelSize) = (geometry.batchSize, geometry.inputChannels, geometry.outputChannels, geometry.pixels, geometry.kernelSize)
-        let outputPixels = geometry.outputHeight * geometry.outputWidth
-        let (x, a, g) = (input.elementPointer, filters.elementPointer, outputGradient.elementPointer)
-        // The gradients are added to the accumulated gradients directly.
-        let inputGradient = input.requiresGradient ? GradientTarget(taking: &gradients.input, shape: input.shape) : nil
-        let filterGradient = filters.requiresGradient ? GradientTarget(taking: &gradients.filters, shape: filters.shape) : nil
-        let biasGradient = (bias?.requiresGradient ?? false) ? GradientTarget(taking: &gradients.bias, shape: [outputChannels], zeroed: true) : nil
-        let chunk = geometry.chunkSize
-
-        CPUKernels.withScratch(N.self, count: kernelSize * chunk * pixels + (chunk > 1 ? inputChannels * chunk * pixels : 0)) { scratch in
-            let columns = scratch
-            let inputMatrix = scratch + kernelSize * chunk * pixels
-            for first in Swift.stride(from: 0, to: batchSize, by: chunk) {
-                let count = Swift.min(chunk, batchSize - first)
-                // img2col is the adjoint of the col2img of the forward pass.
-                N.img2col(
-                    values: UnsafeBufferPointer(start: g + first * outputChannels * outputPixels, count: count * outputChannels * outputPixels),
-                    result: UnsafeMutableBufferPointer(start: columns, count: kernelSize * count * pixels),
-                    batchSize: count,
-                    channels: outputChannels,
-                    height: geometry.outputHeight,
-                    width: geometry.outputWidth,
-                    kernelHeight: geometry.kernelHeight,
-                    kernelWidth: geometry.kernelWidth,
-                    padding: inset,
-                    stride: stride,
-                )
-                if let filterGradient {
-                    let images = geometry.inputMatrix(x, firstImage: first, imageCount: count, scratch: inputMatrix)
-                    CPUKernels.gemm(images, shape: (inputChannels, count * pixels), columns, shape: (kernelSize, count * pixels), rhsTransposed: true, into: filterGradient.pointer, beta: first == 0 ? filterGradient.beta : 1)
-                }
-                if let inputGradient {
-                    let dx = inputGradient.pointer
-                    if count == 1 {
-                        CPUKernels.gemm(a, shape: (inputChannels, kernelSize), columns, shape: (kernelSize, pixels), into: dx + first * inputChannels * pixels, beta: inputGradient.beta)
-                    } else {
-                        CPUKernels.gemm(a, shape: (inputChannels, kernelSize), columns, shape: (kernelSize, count * pixels), into: inputMatrix)
-                        // The product has the layout [inputChannels, images, pixels]. The gradient has the layout [images, inputChannels, pixels].
-                        for image in 0 ..< count {
-                            for channel in 0 ..< inputChannels {
-                                CPUKernels.store(
-                                    inputMatrix + (channel * count + image) * pixels,
-                                    into: dx + ((first + image) * inputChannels + channel) * pixels,
-                                    beta: inputGradient.beta,
-                                    count: pixels,
-                                )
-                            }
-                        }
-                    }
-                }
-                if let db = biasGradient?.pointer {
-                    for image in first ..< first + count {
-                        for channel in 0 ..< outputChannels {
-                            db[channel] += CPUKernels.sum(g + (image * outputChannels + channel) * outputPixels, count: outputPixels)
-                        }
-                    }
-                }
-            }
-        }
-        inputGradient?.finish(into: &gradients.input)
-        filterGradient?.finish(into: &gradients.filters)
-        biasGradient?.finish(into: &gradients.bias)
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func maxPooling2d<N: NumericType>(input: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, CPU> {
-        guard let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride) else {
-            return DefaultFusedOperations<CPU>.maxPooling2d(input: input, windowSize: windowSize, padding: padding, stride: stride)
+    static func maxPooling2d<N: NumericType>(input: ShapedBuffer<N, CPU>, windowSize: Int, padding: Int, stride: Int, result: MutableShapedBuffer<N, CPU>) {
+        let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride)
+        let (x, y) = (input.elementPointer, result.elementPointer)
+        let columnMaxima = UnsafeMutablePointer<N>.allocate(capacity: geometry.width)
+        defer {
+            columnMaxima.deallocate()
         }
-        let (result, y) = CPUKernels.makeTensor(shape: geometry.outputShape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let x = input.elementPointer
-        let (outputHeight, outputWidth) = (geometry.outputShape[2], geometry.outputShape[3])
         for plane in 0 ..< geometry.planes {
-            let image = x + plane * geometry.pixels
-            let output = y + plane * outputHeight * outputWidth
-            for row in 0 ..< outputHeight {
-                for column in 0 ..< outputWidth {
-                    let (firstRow, firstColumn) = (row &* stride &- padding, column &* stride &- padding)
-                    output[row &* outputWidth &+ column] = geometry.isInside(firstRow: firstRow, firstColumn: firstColumn)
-                        ? geometry.interiorMaximum(in: image, firstRow: firstRow, firstColumn: firstColumn).value
-                        : geometry.maximum(in: image, firstRow: firstRow, firstColumn: firstColumn).value
-                }
+            let (image, output) = (x + plane * geometry.pixels, y + plane * geometry.outputPixels)
+            for row in 0 ..< geometry.outputHeight {
+                geometry.columnMaxima(of: image, outputRow: row, into: columnMaxima)
+                geometry.windowMaxima(of: columnMaxima, into: output + row * geometry.outputWidth)
             }
         }
-        return result
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func maxPooling2dBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int, accumulating gradient: inout Tensor<N, CPU>?) {
-        guard let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride), outputGradient.shape == geometry.outputShape else {
-            DefaultFusedOperations<CPU>.maxPooling2dBackward(input: input, outputGradient: outputGradient, windowSize: windowSize, padding: padding, stride: stride, accumulating: &gradient)
+    static func maxPooling2dBackward<N: NumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, windowSize: Int, padding: Int, stride: Int, inputGradient: GradientBuffer<N, CPU>?) {
+        guard let inputGradient else {
             return
         }
-        let (result, dx) = CPUKernels.makeZeroTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
+        let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride)
+        precondition(outputGradient.shape == geometry.outputShape, "The gradient of the result must have the shape of the result.")
         let (x, g) = (input.elementPointer, outputGradient.elementPointer)
-        let (outputHeight, outputWidth) = (geometry.outputShape[2], geometry.outputShape[3])
+        if geometry.isHalving {
+            // Every element belongs to at most one window, so every element of the gradient is written once.
+            let (dx, beta) = inputGradient.elementsToWrite()
+            for plane in 0 ..< geometry.planes {
+                geometry.writeHalvingMaximumGradients(g + plane * geometry.outputPixels, of: x + plane * geometry.pixels, into: dx + plane * geometry.pixels, beta: beta)
+            }
+            return
+        }
+        // Every window adds its gradient to the position of its largest value.
+        let dx = inputGradient.elementsToAddTo()
         for plane in 0 ..< geometry.planes {
             let (image, imageGradient) = (x + plane * geometry.pixels, dx + plane * geometry.pixels)
-            let gradient = g + plane * outputHeight * outputWidth
-            for row in 0 ..< outputHeight {
-                for column in 0 ..< outputWidth {
-                    let (firstRow, firstColumn) = (row &* stride &- padding, column &* stride &- padding)
-                    // The maximum is found again instead of being kept alive between the forward and the backward pass.
-                    // The gradient of a padding element is dropped.
-                    let position = geometry.isInside(firstRow: firstRow, firstColumn: firstColumn)
-                        ? geometry.interiorMaximum(in: image, firstRow: firstRow, firstColumn: firstColumn).position
-                        : geometry.maximum(in: image, firstRow: firstRow, firstColumn: firstColumn).position
-                    if let position {
-                        imageGradient[position] += gradient[row &* outputWidth &+ column]
-                    }
-                }
+            let gradient = g + plane * geometry.outputPixels
+            for row in 0 ..< geometry.outputHeight {
+                // The maxima are found again instead of being kept alive between the forward and the backward pass.
+                geometry.addMaximumGradients(gradient + row * geometry.outputWidth, of: image, outputRow: row, to: imageGradient)
             }
         }
-        Tensor.accumulate(result, into: &gradient)
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func averagePooling2d<N: NumericType>(input: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int) -> Tensor<N, CPU> {
-        guard let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride) else {
-            return DefaultFusedOperations<CPU>.averagePooling2d(input: input, windowSize: windowSize, padding: padding, stride: stride)
-        }
-        let (result, y) = CPUKernels.makeTensor(shape: geometry.outputShape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let x = input.elementPointer
-        let (outputHeight, outputWidth) = (geometry.outputShape[2], geometry.outputShape[3])
+    static func averagePooling2d<N: NumericType>(input: ShapedBuffer<N, CPU>, windowSize: Int, padding: Int, stride: Int, result: MutableShapedBuffer<N, CPU>) {
+        let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride)
+        let (x, y) = (input.elementPointer, result.elementPointer)
         // Padding elements are zeros that count for the mean.
         let inverseWindowElements = 1 / N(windowSize * windowSize)
+        let columnSums = UnsafeMutablePointer<N>.allocate(capacity: geometry.width)
+        defer {
+            columnSums.deallocate()
+        }
         for plane in 0 ..< geometry.planes {
-            let image = x + plane * geometry.pixels
-            let output = y + plane * outputHeight * outputWidth
-            for row in 0 ..< outputHeight {
-                for column in 0 ..< outputWidth {
-                    let (firstRow, firstColumn) = (row &* stride &- padding, column &* stride &- padding)
-                    let (rows, columns) = (geometry.clampedRows(firstRow: firstRow), geometry.clampedColumns(firstColumn: firstColumn))
-                    var sum: N = 0
-                    for imageRow in rows {
-                        let line = image + imageRow &* geometry.width
-                        for imageColumn in columns {
-                            sum += line[imageColumn]
-                        }
-                    }
-                    output[row &* outputWidth &+ column] = sum * inverseWindowElements
-                }
+            let (image, output) = (x + plane * geometry.pixels, y + plane * geometry.outputPixels)
+            for row in 0 ..< geometry.outputHeight {
+                geometry.columnSums(of: image, outputRow: row, into: columnSums)
+                geometry.windowSums(of: columnSums, scale: inverseWindowElements, into: output + row * geometry.outputWidth)
             }
         }
-        return result
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func averagePooling2dBackward<N: NumericType>(input: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int, accumulating gradient: inout Tensor<N, CPU>?) {
-        guard let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride), outputGradient.shape == geometry.outputShape else {
-            DefaultFusedOperations<CPU>.averagePooling2dBackward(input: input, outputGradient: outputGradient, windowSize: windowSize, padding: padding, stride: stride, accumulating: &gradient)
+    static func averagePooling2dBackward<N: NumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, windowSize: Int, padding: Int, stride: Int, inputGradient: GradientBuffer<N, CPU>?) {
+        guard let inputGradient else {
             return
         }
-        let (result, dx) = CPUKernels.makeZeroTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
+        let geometry = PoolingGeometry(input: input, windowSize: windowSize, padding: padding, stride: stride)
+        precondition(outputGradient.shape == geometry.outputShape, "The gradient of the result must have the shape of the result.")
         let g = outputGradient.elementPointer
-        let (outputHeight, outputWidth) = (geometry.outputShape[2], geometry.outputShape[3])
+        // Every window adds its gradient to the elements that it reads.
+        let dx = inputGradient.elementsToAddTo()
         let inverseWindowElements = 1 / N(windowSize * windowSize)
+        let columnGradient = UnsafeMutablePointer<N>.allocate(capacity: geometry.width)
+        defer {
+            columnGradient.deallocate()
+        }
         for plane in 0 ..< geometry.planes {
-            let imageGradient = dx + plane * geometry.pixels
-            let gradient = g + plane * outputHeight * outputWidth
-            for row in 0 ..< outputHeight {
-                for column in 0 ..< outputWidth {
-                    let (firstRow, firstColumn) = (row &* stride &- padding, column &* stride &- padding)
-                    let value = gradient[row &* outputWidth &+ column] * inverseWindowElements
-                    for imageRow in geometry.clampedRows(firstRow: firstRow) {
-                        let line = imageGradient + imageRow &* geometry.width
-                        for imageColumn in geometry.clampedColumns(firstColumn: firstColumn) {
-                            line[imageColumn] += value
-                        }
+            let (imageGradient, gradient) = (dx + plane * geometry.pixels, g + plane * geometry.outputPixels)
+            for row in 0 ..< geometry.outputHeight {
+                // The gradients of the windows of the row go to their columns first, and then to every row of the windows.
+                geometry.spreadWindows(gradient + row * geometry.outputWidth, scale: inverseWindowElements, into: columnGradient)
+                for imageRow in geometry.clampedRows(firstRow: row &* stride &- padding) {
+                    let line = imageGradient + imageRow &* geometry.width
+                    for j in 0 ..< geometry.width {
+                        line[j] += columnGradient[j]
                     }
                 }
             }
         }
-        Tensor.accumulate(result, into: &gradient)
     }
 }
 
-/// Shapes of a 2D convolution.
+/// Shapes of a 2D convolution, which moves windows over images.
+///
+/// A convolution reads images of the shape [batchSize, imageChannels, height, width] and writes one value per window and
+/// filter, shape [batchSize, outputChannels, outputHeight, outputWidth]. A transposed convolution is the adjoint of the
+/// convolution whose images are the result of the transposed convolution, so it uses the geometry of that convolution.
 struct ConvolutionGeometry {
     let batchSize: Int
-    let inputChannels: Int
+    let imageChannels: Int
     let height: Int
     let width: Int
     let outputChannels: Int
@@ -392,127 +230,239 @@ struct ConvolutionGeometry {
 
     /// Number of elements per window.
     var windowSize: Int {
-        inputChannels * kernelHeight * kernelWidth
+        imageChannels * kernelHeight * kernelWidth
     }
 
-    /// Returns nil for shapes that the kernels do not support.
-    init?<N>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, padding: Int, stride: Int) {
-        guard input.dim == 4, filters.dim == 4, input.count > 0, filters.count > 0, input.shape[1] == filters.shape[1], stride > 0, padding >= 0,
-              bias.map({ $0.count == filters.shape[0] }) ?? true
-        else {
-            return nil
-        }
-        batchSize = input.shape[0]
-        inputChannels = input.shape[1]
-        height = input.shape[2]
-        width = input.shape[3]
-        outputChannels = filters.shape[0]
-        kernelHeight = filters.shape[2]
-        kernelWidth = filters.shape[3]
-        outputHeight = (height + 2 * padding - kernelHeight) / stride + 1
-        outputWidth = (width + 2 * padding - kernelWidth) / stride + 1
-        self.padding = padding
-        self.stride = stride
-        guard height + 2 * padding >= kernelHeight, width + 2 * padding >= kernelWidth else {
-            return nil
-        }
+    /// Number of pixels per image channel.
+    var imagePixels: Int {
+        height * width
     }
 
-    /// Number of images per chunk, so that the window matrix of a chunk stays below the upper bound.
-    func chunkSize(rowsPerImage: Int) -> Int {
-        Swift.max(1, Swift.min(batchSize, CPUKernels.maximumColumnElements / Swift.max(rowsPerImage * windows, 1)))
+    /// Number of elements per image.
+    var imageElements: Int {
+        imageChannels * imagePixels
     }
 
-    /// Writes the windows of consecutive images as a [windowSize, imageCount \* windows] matrix.
-    func extractWindows<N: NumericType>(from x: UnsafePointer<N>, firstImage: Int, imageCount: Int, into columns: UnsafeMutablePointer<N>) {
-        let imageElements = inputChannels * height * width
-        N.img2col(
-            values: UnsafeBufferPointer(start: x + firstImage * imageElements, count: imageCount * imageElements),
-            result: UnsafeMutableBufferPointer(start: columns, count: windowSize * imageCount * windows),
-            batchSize: imageCount,
-            channels: inputChannels,
-            height: height,
-            width: width,
-            kernelHeight: kernelHeight,
-            kernelWidth: kernelWidth,
-            padding: padding,
-            stride: stride,
-        )
+    var imageShape: [Int] {
+        [batchSize, imageChannels, height, width]
     }
 
-    /// Adds the windows of a [windowSize, imageCount \* windows] matrix to the images, after the images were set to 0.
-    func accumulateWindows<N: NumericType>(_ columns: UnsafePointer<N>, firstImage: Int, imageCount: Int, into dx: UnsafeMutablePointer<N>) {
-        let imageElements = inputChannels * height * width
-        N.col2img(
-            values: UnsafeBufferPointer(start: columns, count: windowSize * imageCount * windows),
-            result: UnsafeMutableBufferPointer(start: dx + firstImage * imageElements, count: imageCount * imageElements),
-            batchSize: imageCount,
-            channels: inputChannels,
-            height: height,
-            width: width,
-            kernelHeight: kernelHeight,
-            kernelWidth: kernelWidth,
-            padding: padding,
-            stride: stride,
-        )
-    }
-}
-
-/// Shapes of a transposed 2D convolution.
-struct TransposedConvolutionGeometry {
-    let batchSize: Int
-    let inputChannels: Int
-    let pixels: Int
-    let outputChannels: Int
-    let kernelHeight: Int
-    let kernelWidth: Int
-    let outputHeight: Int
-    let outputWidth: Int
-
-    /// Number of rows of the window matrix: outputChannels \* kernelHeight \* kernelWidth.
-    var kernelSize: Int {
-        outputChannels * kernelHeight * kernelWidth
+    var outputShape: [Int] {
+        [batchSize, outputChannels, outputHeight, outputWidth]
     }
 
     /// Number of images per chunk, so that the window matrix of a chunk stays below the upper bound.
     var chunkSize: Int {
-        Swift.max(1, Swift.min(batchSize, CPUKernels.maximumColumnElements / Swift.max(kernelSize * pixels, 1)))
+        Swift.max(1, Swift.min(batchSize, CPUKernels.maximumColumnElements / Swift.max(windowSize * windows, 1)))
     }
 
-    /// Returns nil for shapes that the kernels do not support.
-    init?<N>(input: Tensor<N, CPU>, filters: Tensor<N, CPU>, bias: Tensor<N, CPU>?, inset: Int, stride: Int) {
-        guard input.dim == 4, filters.dim == 4, input.count > 0, filters.count > 0, input.shape[1] == filters.shape[1], stride > 0, inset >= 0,
-              bias.map({ $0.count == filters.shape[0] }) ?? true
-        else {
-            return nil
-        }
-        batchSize = input.shape[0]
-        inputChannels = input.shape[1]
-        pixels = input.shape[2] * input.shape[3]
-        outputChannels = filters.shape[0]
-        kernelHeight = filters.shape[2]
-        kernelWidth = filters.shape[3]
-        outputHeight = (input.shape[2] - 1) * stride - 2 * inset + kernelHeight
-        outputWidth = (input.shape[3] - 1) * stride - 2 * inset + kernelWidth
-        guard outputHeight > 0, outputWidth > 0 else {
-            return nil
-        }
+    /// The geometry of a convolution. The arguments must have the shapes that ``FusedOperationsType/convolution2d(input:filters:bias:padding:stride:result:)`` states.
+    init<N>(input: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, bias: ShapedBuffer<N, CPU>?, padding: Int, stride: Int) {
+        Self.checkShapes(input: input, filters: filters, bias: bias, stride: stride)
+        precondition(padding >= 0, "The padding must not be negative.")
+        precondition(input.shape[2] + 2 * padding >= filters.shape[2] && input.shape[3] + 2 * padding >= filters.shape[3], "The filters must fit into the padded images.")
+        self.init(images: input.shape, filters: filters.shape, padding: padding, stride: stride)
     }
 
-    /// Returns consecutive images as an [inputChannels, imageCount \* pixels] matrix. It uses the scratch buffer for more than one image.
-    func inputMatrix<N>(_ x: UnsafePointer<N>, firstImage: Int, imageCount: Int, scratch: UnsafeMutablePointer<N>) -> UnsafePointer<N> {
-        if imageCount == 1 {
-            return x + firstImage * inputChannels * pixels
+    /// The geometry of the convolution that is the adjoint of a transposed convolution.
+    ///
+    /// The arguments must have the shapes that ``FusedOperationsType/transposedConvolution2d(input:filters:bias:inset:stride:result:)`` states.
+    /// The filters of the transposed convolution, shape [outputChannels, inputChannels, kernelHeight, kernelWidth], have the
+    /// memory layout of the filters of the adjoint convolution, shape [inputChannels, outputChannels, kernelHeight, kernelWidth].
+    init<N>(transposedInput input: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, bias: ShapedBuffer<N, CPU>?, inset: Int, stride: Int) {
+        Self.checkShapes(input: input, filters: filters, bias: bias, stride: stride)
+        precondition(inset >= 0, "The inset must not be negative.")
+        let height = ConvUtil.transposedOutputSize(inputSize: input.shape[2], kernelSize: filters.shape[2], inset: inset, stride: stride)
+        let width = ConvUtil.transposedOutputSize(inputSize: input.shape[3], kernelSize: filters.shape[3], inset: inset, stride: stride)
+        precondition(height > 0 && width > 0, "The inset must leave a result of at least one element per axis.")
+        self.init(images: [input.shape[0], filters.shape[0], height, width], filters: [filters.shape[1], filters.shape[0], filters.shape[2], filters.shape[3]], padding: inset, stride: stride)
+    }
+
+    /// Checks the shapes that both convolutions state.
+    private static func checkShapes<N>(input: ShapedBuffer<N, CPU>, filters: ShapedBuffer<N, CPU>, bias: ShapedBuffer<N, CPU>?, stride: Int) {
+        precondition(input.dim == 4 && filters.dim == 4, "The images and the filters must have 4 axes.")
+        precondition(input.shape[1] == filters.shape[1], "The images must have one channel for every input channel of the filters.")
+        precondition(bias.map { $0.shape == [filters.shape[0]] } ?? true, "The bias must have one element for every output channel.")
+        precondition(stride > 0, "The stride must be positive.")
+    }
+
+    private init(images: [Int], filters: [Int], padding: Int, stride: Int) {
+        batchSize = images[0]
+        imageChannels = images[1]
+        height = images[2]
+        width = images[3]
+        outputChannels = filters[0]
+        kernelHeight = filters[2]
+        kernelWidth = filters[3]
+        outputHeight = ConvUtil.outputSize(inputSize: height, kernelSize: kernelHeight, padding: padding, stride: stride)
+        outputWidth = ConvUtil.outputSize(inputSize: width, kernelSize: kernelWidth, padding: padding, stride: stride)
+        self.padding = padding
+        self.stride = stride
+    }
+
+    /// Computes the products of the windows of the images, one chunk of images at a time, so that the windows are extracted once:
+    /// the convolution `output = filters × windows(images) + bias + beta * output` for a beta of 0 or 1,
+    /// and the gradient of the filters, `filterGradient += outputGradient × windows(images)ᵀ`.
+    func multiplyWindows<N: NumericType>(
+        of x: UnsafePointer<N>,
+        filters w: UnsafePointer<N>,
+        bias b: UnsafePointer<N>?,
+        output: (elements: UnsafeMutablePointer<N>, beta: N)?,
+        filterGradient: (outputGradient: UnsafePointer<N>, elements: UnsafeMutablePointer<N>)?,
+    ) {
+        let chunk = chunkSize
+        let columns = UnsafeMutablePointer<N>.allocate(capacity: windowSize * chunk * windows)
+        let matrix = UnsafeMutablePointer<N>.allocate(capacity: chunk > 1 ? outputChannels * chunk * windows : 0)
+        defer {
+            columns.deallocate()
+            matrix.deallocate()
         }
-        for image in 0 ..< imageCount {
-            for channel in 0 ..< inputChannels {
-                (scratch + (channel * imageCount + image) * pixels)
-                    .update(from: x + ((firstImage + image) * inputChannels + channel) * pixels, count: pixels)
+        forEachChunk { first, count in
+            extractWindows(from: x, firstImage: first, imageCount: count, into: columns)
+            if let (y, beta) = output {
+                let result = y + first * outputChannels * windows
+                if count == 1 {
+                    // A single image is multiplied directly into its slice of the result, which starts with the bias.
+                    if let b, beta == 0 {
+                        for channel in 0 ..< outputChannels {
+                            CPUKernels.fill(result + channel * windows, with: b[channel], count: windows)
+                        }
+                        CPUKernels.gemm(w, shape: (outputChannels, windowSize), columns, shape: (windowSize, windows), into: result, beta: 1)
+                    } else {
+                        CPUKernels.gemm(w, shape: (outputChannels, windowSize), columns, shape: (windowSize, windows), into: result, beta: beta)
+                        if let b {
+                            CPUKernels.addChannelOffsets(b, to: result, images: 1, channels: outputChannels, pixels: windows)
+                        }
+                    }
+                } else {
+                    // The product has the layout [outputChannels, images, windows]. The result has the layout [images, outputChannels, windows].
+                    CPUKernels.gemm(w, shape: (outputChannels, windowSize), columns, shape: (windowSize, count * windows), into: matrix)
+                    CPUKernels.swapLeadingAxes(matrix, first: outputChannels, second: count, length: windows, adding: b, into: result, beta: beta)
+                }
+            }
+            if let (g, dW) = filterGradient {
+                let gradient = gradientInProductLayout(g, firstImage: first, imageCount: count, scratch: matrix)
+                CPUKernels.gemm(gradient, shape: (outputChannels, count * windows), columns, shape: (windowSize, count * windows), rhsTransposed: true, into: dW, beta: 1)
             }
         }
+    }
+
+    /// Computes the products of the gradient of the output, one chunk of images at a time, so that the gradient is brought
+    /// into the layout of the matrix product once: the gradient of the images, `images = windowsᵀ(filtersᵀ × outputGradient) + beta * images`
+    /// for a beta of 0 or 1, and the gradient of the filters, `filterGradient += outputGradient × windows(images)ᵀ`.
+    func multiplyOutputGradient<N: NumericType>(
+        _ g: UnsafePointer<N>,
+        filters w: UnsafePointer<N>,
+        imageGradient: (elements: UnsafeMutablePointer<N>, beta: N)?,
+        filterGradient: (images: UnsafePointer<N>, elements: UnsafeMutablePointer<N>)?,
+    ) {
+        let chunk = chunkSize
+        let columns = UnsafeMutablePointer<N>.allocate(capacity: windowSize * chunk * windows)
+        let gradientMatrix = UnsafeMutablePointer<N>.allocate(capacity: chunk > 1 ? outputChannels * chunk * windows : 0)
+        // col2img overwrites its result, so the images of a chunk go through a scratch buffer when they are added.
+        let addsImages = imageGradient.map { $0.beta != 0 } ?? false
+        let chunkImages = UnsafeMutablePointer<N>.allocate(capacity: addsImages ? chunk * imageElements : 0)
+        defer {
+            columns.deallocate()
+            gradientMatrix.deallocate()
+            chunkImages.deallocate()
+        }
+        forEachChunk { first, count in
+            let gradient = gradientInProductLayout(g, firstImage: first, imageCount: count, scratch: gradientMatrix)
+            if let (x, dW) = filterGradient {
+                // The windows are extracted again instead of being kept alive between the forward and the backward pass.
+                extractWindows(from: x, firstImage: first, imageCount: count, into: columns)
+                CPUKernels.gemm(gradient, shape: (outputChannels, count * windows), columns, shape: (windowSize, count * windows), rhsTransposed: true, into: dW, beta: 1)
+            }
+            if let (dx, _) = imageGradient {
+                CPUKernels.gemm(w, shape: (outputChannels, windowSize), lhsTransposed: true, gradient, shape: (outputChannels, count * windows), into: columns)
+                let images = dx + first * imageElements
+                if addsImages {
+                    writeImages(from: columns, imageCount: count, into: chunkImages)
+                    CPUKernels.store(chunkImages, into: images, beta: 1, count: count * imageElements)
+                } else {
+                    writeImages(from: columns, imageCount: count, into: images)
+                }
+            }
+        }
+    }
+
+    /// Calls `body` with the first image and the number of images of every chunk.
+    private func forEachChunk(_ body: (_ firstImage: Int, _ imageCount: Int) -> Void) {
+        CPUKernels.forEachBlock(count: batchSize, blockSize: chunkSize, body)
+    }
+
+    /// Returns the gradient of the output of consecutive images in the layout of the matrix product, [outputChannels, images, windows].
+    /// It uses the scratch buffer for more than one image.
+    private func gradientInProductLayout<N: NumericType>(_ g: UnsafePointer<N>, firstImage: Int, imageCount: Int, scratch: UnsafeMutablePointer<N>) -> UnsafePointer<N> {
+        let gradient = g + firstImage * outputChannels * windows
+        guard imageCount > 1 else {
+            return gradient
+        }
+        CPUKernels.swapLeadingAxes(gradient, first: imageCount, second: outputChannels, length: windows, into: scratch)
         return UnsafePointer(scratch)
     }
+
+    /// Writes the windows of consecutive images as a [windowSize, imageCount \* windows] matrix.
+    private func extractWindows<N: NumericType>(from x: UnsafePointer<N>, firstImage: Int, imageCount: Int, into columns: UnsafeMutablePointer<N>) {
+        N.img2col(
+            values: UnsafeBufferPointer(start: x + firstImage * imageElements, count: imageCount * imageElements),
+            result: UnsafeMutableBufferPointer(start: columns, count: windowSize * imageCount * windows),
+            batchSize: imageCount,
+            channels: imageChannels,
+            height: height,
+            width: width,
+            kernelHeight: kernelHeight,
+            kernelWidth: kernelWidth,
+            padding: padding,
+            stride: stride,
+        )
+    }
+
+    /// Writes the sums of the windows of a [windowSize, imageCount \* windows] matrix into consecutive images.
+    private func writeImages<N: NumericType>(from columns: UnsafePointer<N>, imageCount: Int, into images: UnsafeMutablePointer<N>) {
+        N.col2img(
+            values: UnsafeBufferPointer(start: columns, count: windowSize * imageCount * windows),
+            result: UnsafeMutableBufferPointer(start: images, count: imageCount * imageElements),
+            batchSize: imageCount,
+            channels: imageChannels,
+            height: height,
+            width: width,
+            kernelHeight: kernelHeight,
+            kernelWidth: kernelWidth,
+            padding: padding,
+            stride: stride,
+        )
+    }
 }
+
+extension CPUKernels {
+    /// Adds the sum of every channel of an [images, channels, pixels] array to the elements of `sums`.
+    static func addChannelSums<N: NumericType>(_ values: UnsafePointer<N>, images: Int, channels: Int, pixels: Int, to sums: UnsafeMutablePointer<N>) {
+        for image in 0 ..< images {
+            for channel in 0 ..< channels {
+                sums[channel] += sum(values + (image * channels + channel) * pixels, count: pixels)
+            }
+        }
+    }
+
+    /// Adds one value per channel to every pixel of the channel of an [images, channels, pixels] array.
+    static func addChannelOffsets<N: NumericType>(_ offsets: UnsafePointer<N>, to values: UnsafeMutablePointer<N>, images: Int, channels: Int, pixels: Int) {
+        for image in 0 ..< images {
+            for channel in 0 ..< channels {
+                let row = values + (image * channels + channel) * pixels
+                let offset = offsets[channel]
+                for j in 0 ..< pixels {
+                    row[j] += offset
+                }
+            }
+        }
+    }
+}
+
+// The pooling kernels reduce the rows of the windows of one output row first, which is an element-wise loop over the
+// columns, and then the columns of every window. Windows of size 2 with stride 2 and no padding have a loop without
+// window bounds, which the compiler vectorizes.
 
 /// Shapes of 2D pooling.
 struct PoolingGeometry {
@@ -522,56 +472,177 @@ struct PoolingGeometry {
     let windowSize: Int
     let padding: Int
     let stride: Int
-    let outputShape: [Int]
+    let outputHeight: Int
+    let outputWidth: Int
 
     var pixels: Int {
         height * width
     }
 
-    /// Returns nil for shapes that the kernels do not support.
-    init?<N>(input: Tensor<N, CPU>, windowSize: Int, padding: Int, stride: Int) {
-        guard input.dim == 4, input.count > 0, windowSize > 0, stride > 0, padding >= 0,
-              input.shape[2] + 2 * padding >= windowSize, input.shape[3] + 2 * padding >= windowSize
-        else {
-            return nil
-        }
+    var outputPixels: Int {
+        outputHeight * outputWidth
+    }
+
+    var outputShape: [Int] {
+        [planes / channels, channels, outputHeight, outputWidth]
+    }
+
+    private let channels: Int
+
+    /// Whether the windows have the size 2, the stride 2, and no padding.
+    var isHalving: Bool {
+        windowSize == 2 && stride == 2 && padding == 0
+    }
+
+    /// The geometry of a pooling operation. The arguments must have the shapes that ``FusedOperationsType/maxPooling2d(input:windowSize:padding:stride:result:)`` states.
+    init<N>(input: ShapedBuffer<N, CPU>, windowSize: Int, padding: Int, stride: Int) {
+        precondition(input.dim == 4, "The images must have 4 axes.")
+        precondition(windowSize > 0 && stride > 0 && padding >= 0, "The window size and the stride must be positive, and the padding must not be negative.")
+        precondition(input.shape[2] + 2 * padding >= windowSize && input.shape[3] + 2 * padding >= windowSize, "The windows must fit into the padded images.")
+        channels = input.shape[1]
         planes = input.shape[0] * input.shape[1]
         height = input.shape[2]
         width = input.shape[3]
         self.windowSize = windowSize
         self.padding = padding
         self.stride = stride
-        outputShape = [
-            input.shape[0],
-            input.shape[1],
-            (height + 2 * padding - windowSize) / stride + 1,
-            (width + 2 * padding - windowSize) / stride + 1,
-        ]
-    }
-
-    /// Whether a window with the given top left position lies completely inside the image.
-    @inline(__always)
-    func isInside(firstRow: Int, firstColumn: Int) -> Bool {
-        firstRow >= 0 && firstColumn >= 0 && firstRow &+ windowSize <= height && firstColumn &+ windowSize <= width
+        outputHeight = ConvUtil.outputSize(inputSize: height, kernelSize: windowSize, padding: padding, stride: stride)
+        outputWidth = ConvUtil.outputSize(inputSize: width, kernelSize: windowSize, padding: padding, stride: stride)
     }
 
     /// Rows of a window that are not in the padding.
     @inline(__always)
     func clampedRows(firstRow: Int) -> Range<Int> {
-        Swift.max(firstRow, 0) ..< Swift.min(firstRow &+ windowSize, height)
+        Swift.max(firstRow, 0) ..< Swift.max(Swift.min(firstRow &+ windowSize, height), Swift.max(firstRow, 0))
     }
 
     /// Columns of a window that are not in the padding.
     @inline(__always)
     func clampedColumns(firstColumn: Int) -> Range<Int> {
-        Swift.max(firstColumn, 0) ..< Swift.min(firstColumn &+ windowSize, width)
+        Swift.max(firstColumn, 0) ..< Swift.max(Swift.min(firstColumn &+ windowSize, width), Swift.max(firstColumn, 0))
     }
 
-    /// Returns the largest value of a window that lies completely inside the image, and its index in the plane.
-    ///
-    /// The elements are compared in row-major order and the first largest value wins, as in the default implementation.
+    /// Writes the largest value of every column of the rows of the windows of an output row. Padding rows add zeros.
     @inline(__always)
-    func interiorMaximum<N: NumericType>(in image: UnsafePointer<N>, firstRow: Int, firstColumn: Int) -> (value: N, position: Int?) {
+    func columnMaxima<N: NumericType>(of image: UnsafePointer<N>, outputRow: Int, into maxima: UnsafeMutablePointer<N>) {
+        let rows = clampedRows(firstRow: outputRow &* stride &- padding)
+        guard let firstRow = rows.first else {
+            CPUKernels.fill(maxima, with: 0, count: width)
+            return
+        }
+        maxima.update(from: image + firstRow &* width, count: width)
+        for row in rows.dropFirst() {
+            let line = image + row &* width
+            for j in 0 ..< width {
+                maxima[j] = Swift.max(maxima[j], line[j])
+            }
+        }
+        if rows.count < windowSize {
+            for j in 0 ..< width {
+                maxima[j] = Swift.max(maxima[j], 0)
+            }
+        }
+    }
+
+    /// Writes the largest value of every window of an output row, given the maxima of its columns. Padding columns add zeros.
+    @inline(__always)
+    func windowMaxima<N: NumericType>(of columnMaxima: UnsafePointer<N>, into maxima: UnsafeMutablePointer<N>) {
+        if isHalving {
+            for column in 0 ..< outputWidth {
+                let (left, right) = (columnMaxima[column &* 2], columnMaxima[column &* 2 &+ 1])
+                maxima[column] = Swift.max(left, right)
+            }
+            return
+        }
+        for column in 0 ..< outputWidth {
+            let columns = clampedColumns(firstColumn: column &* stride &- padding)
+            var best: N = columns.count < windowSize ? 0 : columnMaxima[columns.lowerBound]
+            for j in columns {
+                best = Swift.max(best, columnMaxima[j])
+            }
+            maxima[column] = best
+        }
+    }
+
+    /// Adds the gradient of every window of an output row to the position of the largest value of the window.
+    ///
+    /// The elements of a window are compared in row-major order, and the first largest value wins, as in the default
+    /// implementation. The gradient of a padding element is dropped.
+    @inline(__always)
+    func addMaximumGradients<N: NumericType>(_ gradient: UnsafePointer<N>, of image: UnsafePointer<N>, outputRow: Int, to imageGradient: UnsafeMutablePointer<N>) {
+        let firstRow = outputRow &* stride &- padding
+        for column in 0 ..< outputWidth {
+            let firstColumn = column &* stride &- padding
+            let position = isInside(firstRow: firstRow, firstColumn: firstColumn)
+                ? interiorMaximumPosition(in: image, firstRow: firstRow, firstColumn: firstColumn)
+                : maximumPosition(in: image, firstRow: firstRow, firstColumn: firstColumn)
+            if let position {
+                imageGradient[position] += gradient[column]
+            }
+        }
+    }
+
+    /// Computes the gradient of max pooling of one plane with windows of the size 2, the stride 2, and no padding.
+    ///
+    /// The gradient of a window goes to its first largest value in row-major order. With beta 0, the other elements of the
+    /// gradient are set to 0, and with beta 1, they do not change.
+    @inline(__always)
+    func writeHalvingMaximumGradients<N: NumericType>(_ gradient: UnsafePointer<N>, of image: UnsafePointer<N>, into imageGradient: UnsafeMutablePointer<N>, beta: N) {
+        for outputRow in 0 ..< outputHeight {
+            let (top, bottom) = (image + outputRow &* 2 &* width, image + (outputRow &* 2 &+ 1) &* width)
+            let (topGradient, bottomGradient) = (imageGradient + outputRow &* 2 &* width, imageGradient + (outputRow &* 2 &+ 1) &* width)
+            let rowGradient = gradient + outputRow &* outputWidth
+            if beta == 0 {
+                for column in 0 ..< outputWidth {
+                    let (left, right) = (column &* 2, column &* 2 &+ 1)
+                    let gradients = Self.halvingMaximumGradients(top[left], top[right], bottom[left], bottom[right], gradient: rowGradient[column])
+                    (topGradient[left], topGradient[right], bottomGradient[left], bottomGradient[right]) = gradients
+                }
+            } else {
+                for column in 0 ..< outputWidth {
+                    let (left, right) = (column &* 2, column &* 2 &+ 1)
+                    let gradients = Self.halvingMaximumGradients(top[left], top[right], bottom[left], bottom[right], gradient: rowGradient[column])
+                    topGradient[left] += gradients.topLeft
+                    topGradient[right] += gradients.topRight
+                    bottomGradient[left] += gradients.bottomLeft
+                    bottomGradient[right] += gradients.bottomRight
+                }
+            }
+            // With an odd width, no window reads the last column.
+            if beta == 0, width > outputWidth &* 2 {
+                topGradient[width &- 1] = 0
+                bottomGradient[width &- 1] = 0
+            }
+        }
+        // With an odd height, no window reads the last row.
+        if beta == 0, height > outputHeight &* 2 {
+            CPUKernels.fill(imageGradient + (height &- 1) &* width, with: 0, count: width)
+        }
+    }
+
+    /// The gradients of the four elements of a window of the size 2: the gradient of the window at its first largest value
+    /// in row-major order, and 0 elsewhere.
+    @inline(__always)
+    private static func halvingMaximumGradients<N: NumericType>(_ a: N, _ b: N, _ c: N, _ d: N, gradient: N) -> (topLeft: N, topRight: N, bottomLeft: N, bottomRight: N) {
+        let bottomWins = Swift.max(c, d) > Swift.max(a, b)
+        let (bIsTopMaximum, dIsBottomMaximum) = (b > a, d > c)
+        return (
+            !bottomWins && !bIsTopMaximum ? gradient : 0,
+            !bottomWins && bIsTopMaximum ? gradient : 0,
+            bottomWins && !dIsBottomMaximum ? gradient : 0,
+            bottomWins && dIsBottomMaximum ? gradient : 0,
+        )
+    }
+
+    /// Whether a window with the given top left position lies completely inside the image.
+    @inline(__always)
+    private func isInside(firstRow: Int, firstColumn: Int) -> Bool {
+        firstRow >= 0 && firstColumn >= 0 && firstRow &+ windowSize <= height && firstColumn &+ windowSize <= width
+    }
+
+    /// Returns the index in the plane of the largest value of a window that lies completely inside the image.
+    @inline(__always)
+    private func interiorMaximumPosition<N: NumericType>(in image: UnsafePointer<N>, firstRow: Int, firstColumn: Int) -> Int {
         var position = firstRow &* width &+ firstColumn
         var best = image[position]
         for row in firstRow ..< firstRow &+ windowSize {
@@ -583,28 +654,86 @@ struct PoolingGeometry {
                 position = isLarger ? lineStart &+ column : position
             }
         }
-        return (best, position)
+        return position
     }
 
-    /// Returns the largest value of a window and its index in the plane, or nil as the index when the largest value is a padding zero.
-    ///
-    /// The elements are compared in row-major order and the first largest value wins, as in the default implementation.
+    /// Returns the index in the plane of the largest value of a window, or nil when the largest value is a padding zero.
     @inline(__always)
-    func maximum<N: NumericType>(in image: UnsafePointer<N>, firstRow: Int, firstColumn: Int) -> (value: N, position: Int?) {
+    private func maximumPosition<N: NumericType>(in image: UnsafePointer<N>, firstRow: Int, firstColumn: Int) -> Int? {
         var best: N = 0
         var position: Int?
         var found = false
-        for row in firstRow ..< firstRow + windowSize {
-            for column in firstColumn ..< firstColumn + windowSize {
+        for row in firstRow ..< firstRow &+ windowSize {
+            for column in firstColumn ..< firstColumn &+ windowSize {
                 let isInside = row >= 0 && row < height && column >= 0 && column < width
-                let value = isInside ? image[row * width + column] : 0
+                let value = isInside ? image[row &* width &+ column] : 0
                 if !found || value > best {
                     best = value
-                    position = isInside ? row * width + column : nil
+                    position = isInside ? row &* width &+ column : nil
                     found = true
                 }
             }
         }
-        return (best, position)
+        return position
+    }
+
+    /// Writes the sum of every column of the rows of the windows of an output row. Padding rows add zeros.
+    @inline(__always)
+    func columnSums<N: NumericType>(of image: UnsafePointer<N>, outputRow: Int, into sums: UnsafeMutablePointer<N>) {
+        let rows = clampedRows(firstRow: outputRow &* stride &- padding)
+        guard let firstRow = rows.first else {
+            CPUKernels.fill(sums, with: 0, count: width)
+            return
+        }
+        sums.update(from: image + firstRow &* width, count: width)
+        for row in rows.dropFirst() {
+            let line = image + row &* width
+            for j in 0 ..< width {
+                sums[j] += line[j]
+            }
+        }
+    }
+
+    /// Writes the sum of every window of an output row, times `scale`, given the sums of its columns.
+    @inline(__always)
+    func windowSums<N: NumericType>(of columnSums: UnsafePointer<N>, scale: N, into sums: UnsafeMutablePointer<N>) {
+        if isHalving {
+            for column in 0 ..< outputWidth {
+                let (left, right) = (columnSums[column &* 2], columnSums[column &* 2 &+ 1])
+                sums[column] = (left + right) * scale
+            }
+            return
+        }
+        for column in 0 ..< outputWidth {
+            var sum: N = 0
+            for j in clampedColumns(firstColumn: column &* stride &- padding) {
+                sum += columnSums[j]
+            }
+            sums[column] = sum * scale
+        }
+    }
+
+    /// Writes, for every column of the image, the sum of the gradients of the windows of an output row that read the column, times `scale`.
+    @inline(__always)
+    func spreadWindows<N: NumericType>(_ gradient: UnsafePointer<N>, scale: N, into columnGradient: UnsafeMutablePointer<N>) {
+        if isHalving {
+            for column in 0 ..< outputWidth {
+                let value = gradient[column] * scale
+                columnGradient[column &* 2] = value
+                columnGradient[column &* 2 &+ 1] = value
+            }
+            // An odd width has a last column that no window reads.
+            for j in outputWidth &* 2 ..< width {
+                columnGradient[j] = 0
+            }
+            return
+        }
+        CPUKernels.fill(columnGradient, with: 0, count: width)
+        for column in 0 ..< outputWidth {
+            let value = gradient[column] * scale
+            for j in clampedColumns(firstColumn: column &* stride &- padding) {
+                columnGradient[j] += value
+            }
+        }
     }
 }

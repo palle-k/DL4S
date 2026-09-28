@@ -44,23 +44,17 @@ public extension Tensor {
             let index = Self.resolvingNegativeIndices(index, shape: shape)
             let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
             let handle = TensorHandle(values: val, parent: isCopy ? nil : handle)
+            let sourceShape = self.shape
 
+            // Subscripts are small operations that run in loops, so they use the context with one closure per source directly.
             return Tensor(
                 handle: handle,
                 shape: shape,
                 context: requiresGradient ? TensorContext(
                     tag: "read",
                     sources: [self],
-                    backpropagateAccumulate: [{ resultGradient, acc in
-                        // Without a gradient graph, the gradient of a contiguous slice is added to the accumulator in place.
-                        if !resultGradient.requiresGradient, !(acc?.requiresGradient ?? false), let offset = Self.contiguousOffset(of: index, shape: self.shape) {
-                            return Self.addingInPlace(resultGradient, at: offset, to: acc, shape: self.shape)
-                        }
-                        var result = acc ?? Self(repeating: 0, shape: self.shape)
-                        // The slice view must be released before the write, or the write copies the whole accumulator.
-                        let slice = result[index] + resultGradient
-                        result[index] = slice
-                        return result
+                    backpropagateAccumulate: [{ resultGradient, accumulated in
+                        Self.addingSlice(resultGradient, to: accumulated, shape: sourceShape, contiguousOffset: Self.contiguousOffset(of: index, shape: sourceShape), read: { $0[index] }, write: { $0[index] = $1 })
                     }],
                 ) : nil,
             )
@@ -126,23 +120,17 @@ public extension Tensor {
             } else {
                 TensorHandle(values: val, parent: self.handle)
             }
+            let sourceShape = self.shape
 
+            // Subscripts are small operations that run in loops, so they use the context with one closure per source directly.
             return Tensor(
                 handle: handle,
                 shape: shape,
                 context: requiresGradient ? TensorContext(
                     tag: "SubscriptRangeRead",
                     sources: [self],
-                    backpropagateAccumulate: [{ resultGradient, acc in
-                        // Without a gradient graph, the gradient of a contiguous slice is added to the accumulator in place.
-                        if !resultGradient.requiresGradient, !(acc?.requiresGradient ?? false), let offset = Self.contiguousOffset(of: index, shape: self.shape) {
-                            return Self.addingInPlace(resultGradient, at: offset, to: acc, shape: self.shape)
-                        }
-                        var result = acc ?? Self(repeating: 0, shape: self.shape)
-                        // The slice view must be released before the write, or the write copies the whole accumulator.
-                        let slice = result[index] + resultGradient
-                        result[index] = slice
-                        return result
+                    backpropagateAccumulate: [{ resultGradient, accumulated in
+                        Self.addingSlice(resultGradient, to: accumulated, shape: sourceShape, contiguousOffset: Self.contiguousOffset(of: index, shape: sourceShape), read: { $0[index] }, write: { $0[index] = $1 })
                     }],
                 ) : nil,
             )
@@ -212,17 +200,6 @@ extension Tensor {
         return range.lowerBound * shape.dropFirst().reduce(1, *)
     }
 
-    /// Adds the gradient of a contiguous slice to the accumulated gradient of the whole tensor, in place.
-    ///
-    /// Without an accumulator, the accumulated gradient starts at 0. Neither tensor may record a gradient graph.
-    static func addingInPlace(_ gradient: Self, at offset: Int, to accumulator: consuming Self?, shape: [Int]) -> Self {
-        var result = accumulator ?? Self(repeating: 0, shape: shape)
-        // The accumulator is uniquely referenced, so the write does not copy it.
-        let slice = Device.Memory.advance(buffer: result.mutableValues.values, by: offset)
-        Device.Engine.vAdd(lhs: Buffer(slice), rhs: gradient.values.values, result: slice, count: gradient.count)
-        return result
-    }
-
     /// Replaces negative indices, which count from the end of their axis, with the corresponding positive indices.
     @inline(__always)
     static func resolvingNegativeIndices(_ index: [Int?], shape: [Int]) -> [Int?] {
@@ -232,5 +209,38 @@ extension Tensor {
         return zip(index, shape).map { position, size in
             position.map { $0 < 0 ? size + $0 : $0 }
         }
+    }
+}
+
+private extension Tensor {
+    /// Adds the gradient of a slice of the source to the accumulated gradient of the source, which has the given shape.
+    ///
+    /// `read` reads the slice from, and `write` writes it into, a tensor with the shape of the source. Without a gradient graph,
+    /// the gradient is added in place: with one addition for a slice that is contiguous in memory, which starts at
+    /// `contiguousOffset`, and with a subscript write otherwise.
+    static func addingSlice(
+        _ sliceGradient: Self,
+        to accumulated: consuming Self?,
+        shape: [Int],
+        contiguousOffset: Int?,
+        read: (Self) -> Self,
+        write: (inout Self, Self) -> Void,
+    ) -> Self {
+        guard !sliceGradient.requiresGradient, !(accumulated?.requiresGradient ?? false) else {
+            var scattered = Self(repeating: 0, shape: shape)
+            write(&scattered, sliceGradient)
+            return accumulated.map { $0 + scattered } ?? scattered
+        }
+        var result = accumulated ?? Self(repeating: 0, shape: shape)
+        if let contiguousOffset {
+            // The accumulated gradient is uniquely referenced, so the write does not copy it.
+            let target = Device.Memory.advance(buffer: result.mutableValues.values, by: contiguousOffset)
+            Device.Engine.vAdd(lhs: Buffer(target), rhs: sliceGradient.values.values, result: target, count: sliceGradient.count)
+        } else {
+            // The slice view must be released before the write, or the write copies the whole accumulated gradient.
+            let sum = read(result) + sliceGradient
+            write(&result, sum)
+        }
+        return result
     }
 }

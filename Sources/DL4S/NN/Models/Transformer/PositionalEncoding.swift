@@ -24,16 +24,28 @@
 //  SOFTWARE.
 
 import Foundation
+import Synchronization
 
 /// Positional Encoding layer using the encoding method proposed in [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 ///
 /// The layer takes an array of Ints as an input, which indicate the number of elements in each sequence of the minibatch.
 /// It returns a tensor with the shape [max(inputs), hiddenSize].
 /// It does not mask out positional encodings for padding elements.
+///
+/// The layer keeps the longest encoding that it created, and returns its first rows for shorter sequences.
+/// Copies of the layer share the kept encoding.
 @Layer
 public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
     /// Number of elements in the positional encoding output tensor.
     public let hiddenSize: Int
+
+    // The encoding does not depend on the inputs of the layer, so it is created once for the longest sequence so far
+    // instead of in every forward pass.
+    private let longestEncoding = EncodingStore()
+
+    private enum CodingKeys: String, CodingKey {
+        case hiddenSize
+    }
 
     /// Creates a Positional Encoding layer using the encoding method proposed in [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameter hiddenSize: Number of elements in the positional encoding output tensor.
@@ -46,11 +58,24 @@ public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>:
     /// - Parameter maxLen: Maximum sequence length in the current minibatch
     /// - Returns: Tensor of shape [max(inputs), hiddenSize]
     public func callAsFunction(_ maxLen: Int) -> Tensor<Element, Device> {
-        var samples = Tensor<Element, Device>(positionalEncodingWithLength: maxLen, hiddenSize: hiddenSize)
+        let encoding = longestEncoding.encoding.withLock { longest in
+            if let longest, longest.shape[0] >= maxLen {
+                return longest
+            }
+            let created = Tensor<Element, Device>(positionalEncodingWithLength: maxLen, hiddenSize: hiddenSize)
+            longest = created
+            return created
+        }
+        var samples = encoding.shape[0] == maxLen ? encoding : encoding[0 ..< maxLen]
 
         #if DEBUG
         samples.tag = "PositionEncodings"
         #endif
         return samples // [seqlen, hiddensize]
+    }
+
+    /// Storage for the longest encoding, which the copies of a layer share.
+    private final class EncodingStore: Sendable {
+        let encoding = Mutex<Tensor<Element, Device>?>(nil)
     }
 }

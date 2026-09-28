@@ -28,196 +28,227 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func reduceMean<N: NumericType>(input: Tensor<N, Device>, axes: [Int]) -> Tensor<N, Device> {
-        let input = input.detached()
-        return input.reduceSum(along: axes) / Tensor(N(Composed.elementCount(of: input.shape, along: axes)))
+    static func variance<N: NumericType>(input: ShapedBuffer<N, Device>, axes: [Int], result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // mean(input * input) - mean(input) * mean(input)
+        let mean = math.temporary(result.shape)
+        let squares = math.temporary(input.shape)
+        math.mean(input, along: axes, into: mean)
+        math.multiply(input, input, into: squares)
+        math.mean(squares, along: axes, into: result)
+        math.multiply(mean, mean, into: mean)
+        math.subtract(result, mean, into: result)
     }
 
-    static func reduceMeanBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int], accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.reduceMeanGradient(inputShape: input.shape, outputGradient: outputGradient.detached(), axes: axes),
-            into: &gradient,
-        )
+    static func varianceBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axes: [Int], inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // 2 / n * (input - mean(input)) * outputGradient
+        let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
+        let count = axes.map { input.shape[$0] }.reduce(1, *)
+        math.write(inputGradient) { dx in
+            let mean = math.temporary(keptShape)
+            math.mean(input, along: axes, into: mean)
+            math.subtract(input, mean, into: dx)
+            math.multiply(dx, outputGradient.reshaped(to: keptShape), into: dx)
+            math.multiply(dx, N(2) / N(count), into: dx)
+        }
     }
 
-    static func variance<N: NumericType>(input: Tensor<N, Device>, axes: [Int]) -> Tensor<N, Device> {
-        let input = input.detached()
-        let mean = input.reduceMean(along: axes)
-        return (input * input).reduceMean(along: axes) - mean * mean
+    static func layerNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let axes = Array(input.dim - scale.dim ..< input.dim)
+        let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
+        let mean = math.temporary(keptShape)
+        let deviation = math.temporary(keptShape)
+        let squares = math.temporary(input.shape)
+        // (input - mean) / (sqrt(variance) + epsilon) * scale + shift, with the centered values in the result
+        math.mean(input, along: axes, into: mean)
+        math.subtract(input, mean, into: result)
+        math.multiply(result, result, into: squares)
+        math.mean(squares, along: axes, into: deviation)
+        math.sqrt(deviation, into: deviation)
+        math.add(deviation, epsilon, into: deviation)
+        math.divide(result, deviation, into: result)
+        math.multiply(result, scale, into: result)
+        math.add(result, shift, into: result)
     }
 
-    static func varianceBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int], accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.varianceGradient(input: input.detached(), outputGradient: outputGradient.detached(), axes: axes),
-            into: &gradient,
-        )
-    }
-
-    static func layerNormalization<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, epsilon: N) -> Tensor<N, Device> {
-        let axes = Composed.layerNormalizationAxes(input: input, scale: scale)
-        return Composed.normalized(input.detached(), along: axes, epsilon: epsilon) * scale.detached() + shift.detached()
-    }
-
-    static func layerNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N, accumulating gradients: inout (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?)) {
-        let computed = Composed.normalizationGradients(
-            input: input.detached(),
-            scale: scale.detached(),
-            shiftShape: shift.shape,
-            outputGradient: outputGradient.detached(),
-            axes: Composed.layerNormalizationAxes(input: input, scale: scale),
+    static func layerNormalizationBackward<N: NumericType>(
+        input: ShapedBuffer<N, Device>,
+        scale: ShapedBuffer<N, Device>,
+        shift: ShapedBuffer<N, Device>,
+        outputGradient: ShapedBuffer<N, Device>,
+        epsilon: N,
+        inputGradient: GradientBuffer<N, Device>?,
+        scaleGradient: GradientBuffer<N, Device>?,
+        shiftGradient: GradientBuffer<N, Device>?,
+    ) {
+        normalizationBackward(
+            input: input,
+            scale: scale,
+            outputGradient: outputGradient,
+            axes: Array(input.dim - scale.dim ..< input.dim),
             epsilon: epsilon,
-            computesInput: input.requiresGradient,
-            computesScale: scale.requiresGradient,
-            computesShift: shift.requiresGradient,
+            inputGradient: inputGradient,
+            scaleGradient: scaleGradient,
+            shiftGradient: shiftGradient,
         )
-        Tensor.accumulate(computed.input, into: &gradients.input)
-        Tensor.accumulate(computed.scale, into: &gradients.scale)
-        Tensor.accumulate(computed.shift, into: &gradients.shift)
     }
 
-    static func batchNormalization<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, epsilon: N) -> (output: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>) {
-        let input = input.detached()
-        let mean = input.reduceMean(along: [0])
-        let variance = (input * input).reduceMean(along: [0]) - mean * mean
-        let normalized = (input - mean) / (variance.sqrt() + Tensor(epsilon))
-        return (normalized * scale.detached() + shift.detached(), mean, variance)
+    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>, mean: MutableShapedBuffer<N, Device>, variance: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // The statistics have the shape of the input without the batch axis, which broadcasts to the input.
+        let squares = math.temporary(input.shape)
+        let deviation = math.temporary(mean.shape)
+        math.mean(input, along: [0], into: mean)
+        math.multiply(input, input, into: squares)
+        math.mean(squares, along: [0], into: variance)
+        math.multiply(mean, mean, into: deviation)
+        math.subtract(variance, deviation, into: variance)
+        math.sqrt(variance, into: deviation)
+        math.add(deviation, epsilon, into: deviation)
+        math.subtract(input, mean, into: result)
+        math.divide(result, deviation, into: result)
+        math.multiply(result, scale, into: result)
+        math.add(result, shift, into: result)
     }
 
-    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N, accumulating gradients: inout (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?)) {
-        let computed = Composed.normalizationGradients(
-            input: input.detached(),
-            scale: scale.detached(),
-            shiftShape: shift.shape,
-            outputGradient: outputGradient.detached(),
+    static func batchNormalizationBackward<N: NumericType>(
+        input: ShapedBuffer<N, Device>,
+        scale: ShapedBuffer<N, Device>,
+        shift: ShapedBuffer<N, Device>,
+        outputGradient: ShapedBuffer<N, Device>,
+        epsilon: N,
+        inputGradient: GradientBuffer<N, Device>?,
+        scaleGradient: GradientBuffer<N, Device>?,
+        shiftGradient: GradientBuffer<N, Device>?,
+    ) {
+        normalizationBackward(
+            input: input,
+            scale: scale,
+            outputGradient: outputGradient,
             axes: [0],
             epsilon: epsilon,
-            computesInput: input.requiresGradient,
-            computesScale: scale.requiresGradient,
-            computesShift: shift.requiresGradient,
+            inputGradient: inputGradient,
+            scaleGradient: scaleGradient,
+            shiftGradient: shiftGradient,
         )
-        Tensor.accumulate(computed.input, into: &gradients.input)
-        Tensor.accumulate(computed.scale, into: &gradients.scale)
-        Tensor.accumulate(computed.shift, into: &gradients.shift)
     }
 
-    static func batchNormalization<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>, epsilon: N) -> Tensor<N, Device> {
-        let normalized = (input.detached() - mean.detached()) / (variance.detached().sqrt() + Tensor(epsilon))
-        return normalized * scale.detached() + shift.detached()
+    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, mean: ShapedBuffer<N, Device>, variance: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let divisor = math.temporary(variance.shape)
+        math.sqrt(variance, into: divisor)
+        math.add(divisor, epsilon, into: divisor)
+        math.subtract(input, mean, into: result)
+        math.divide(result, divisor, into: result)
+        math.multiply(result, scale, into: result)
+        math.add(result, shift, into: result)
     }
 
-    static func batchNormalizationBackward<N: NumericType>(input: Tensor<N, Device>, scale: Tensor<N, Device>, shift: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>, outputGradient: Tensor<N, Device>, epsilon: N, accumulating gradients: inout (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?)) {
-        let computed = Composed.fixedNormalizationGradients(
-            input: input.detached(),
-            scale: scale.detached(),
-            shiftShape: shift.shape,
-            mean: mean.detached(),
-            variance: variance.detached(),
-            outputGradient: outputGradient.detached(),
-            epsilon: epsilon,
-            computesInput: input.requiresGradient,
-            computesScale: scale.requiresGradient,
-            computesShift: shift.requiresGradient,
-        )
-        Tensor.accumulate(computed.input, into: &gradients.input)
-        Tensor.accumulate(computed.scale, into: &gradients.scale)
-        Tensor.accumulate(computed.shift, into: &gradients.shift)
+    static func batchNormalizationBackward<N: NumericType>(
+        input: ShapedBuffer<N, Device>,
+        scale: ShapedBuffer<N, Device>,
+        shift: ShapedBuffer<N, Device>,
+        mean: ShapedBuffer<N, Device>,
+        variance: ShapedBuffer<N, Device>,
+        outputGradient: ShapedBuffer<N, Device>,
+        epsilon: N,
+        inputGradient: GradientBuffer<N, Device>?,
+        scaleGradient: GradientBuffer<N, Device>?,
+        shiftGradient: GradientBuffer<N, Device>?,
+    ) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let divisor = math.temporary(variance.shape)
+        math.sqrt(variance, into: divisor)
+        math.add(divisor, epsilon, into: divisor)
+        // outputGradient * scale / divisor
+        math.write(inputGradient) { dx in
+            math.multiply(outputGradient, scale, into: dx)
+            math.divide(dx, divisor, into: dx)
+        }
+        if scaleGradient != nil {
+            // outputGradient * (input - mean) / divisor
+            let products = math.temporary(input.shape)
+            math.subtract(input, mean, into: products)
+            math.divide(products, divisor, into: products)
+            math.multiply(products, outputGradient, into: products)
+            math.writeSum(of: products, into: scaleGradient)
+        }
+        math.writeSum(of: outputGradient, into: shiftGradient)
     }
 }
 
-// MARK: Composed gradients
-
-extension Composed {
-    /// Number of elements that a reduction along the given axes combines into one.
-    static func elementCount(of shape: [Int], along axes: [Int]) -> Int {
-        axes.map { shape[$0] }.reduce(1, *)
-    }
-
-    /// Shape of the input with every reduced axis replaced by 1.
-    static func keptShape(of shape: [Int], along axes: [Int]) -> [Int] {
-        var keptShape = shape
-        for axis in axes {
-            keptShape[axis] = 1
-        }
-        return keptShape
-    }
-
-    static func reduceMeanGradient<N, Device>(inputShape: [Int], outputGradient: Tensor<N, Device>, axes: [Int]) -> Tensor<N, Device> {
-        let weights = Tensor<N, Device>(repeating: N.one / N(elementCount(of: inputShape, along: axes)), shape: inputShape)
-        return weights * outputGradient.view(as: keptShape(of: inputShape, along: axes))
-    }
-
-    static func varianceGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int]) -> Tensor<N, Device> {
-        let keptShape = keptShape(of: input.shape, along: axes)
-        let centered = input - input.reduceMean(along: axes).view(as: keptShape)
-        let factor = Tensor<N, Device>(N(2) / N(elementCount(of: input.shape, along: axes)))
-        return factor * centered * outputGradient.view(as: keptShape)
-    }
-
-    /// Trailing axes of the input that layer normalization reduces along.
-    static func layerNormalizationAxes<N, Device>(input: Tensor<N, Device>, scale: Tensor<N, Device>) -> [Int] {
-        Array(input.dim - scale.dim ..< input.dim)
-    }
-
-    /// Normalizes the input along the axes to `(input - mean) / (sqrt(variance) + epsilon)`.
-    static func normalized<N, Device>(_ input: Tensor<N, Device>, along axes: [Int], epsilon: N) -> Tensor<N, Device> {
-        let keptShape = keptShape(of: input.shape, along: axes)
-        let mean = input.reduceMean(along: axes).view(as: keptShape)
-        let variance = (input * input).reduceMean(along: axes).view(as: keptShape) - mean * mean
-        return (input - mean) / (variance.sqrt() + Tensor(epsilon))
-    }
-
-    /// Computes the gradients of a normalization with the statistics of the input along the given axes,
-    /// followed by a scale and a shift.
-    static func normalizationGradients<N, Device>(
-        input: Tensor<N, Device>,
-        scale: Tensor<N, Device>,
-        shiftShape: [Int],
-        outputGradient: Tensor<N, Device>,
+extension FusedOperationsType {
+    /// Computes the gradients of a normalization with the statistics of the input along the given axes, followed by a scale and a shift.
+    static func normalizationBackward<N: NumericType>(
+        input: ShapedBuffer<N, Device>,
+        scale: ShapedBuffer<N, Device>,
+        outputGradient: ShapedBuffer<N, Device>,
         axes: [Int],
         epsilon: N,
-        computesInput: Bool,
-        computesScale: Bool,
-        computesShift: Bool,
-    ) -> (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?) {
-        let keptShape = keptShape(of: input.shape, along: axes)
-        let centered = input - input.reduceMean(along: axes).view(as: keptShape)
+        inputGradient: GradientBuffer<N, Device>?,
+        scaleGradient: GradientBuffer<N, Device>?,
+        shiftGradient: GradientBuffer<N, Device>?,
+    ) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        math.writeSum(of: outputGradient, into: shiftGradient)
+        guard inputGradient != nil || scaleGradient != nil else {
+            return
+        }
+        let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
+        let statistic = math.temporary(keptShape)
+        let standardDeviation = math.temporary(keptShape)
+        let divisor = math.temporary(keptShape)
+        let normalized = math.temporary(input.shape)
+        let products = math.temporary(input.shape)
         // The variance of the centered values equals the variance of the forward pass up to rounding, and needs fewer operations.
-        let standardDeviation = (centered * centered).reduceMean(along: axes).view(as: keptShape).sqrt()
-        let divisor = standardDeviation + Tensor(epsilon)
-        let normalized = centered / divisor
-
-        let scaleGradient = computesScale ? (outputGradient * normalized).reducingBroadcast(to: scale.shape) : nil
-        let shiftGradient = computesShift ? outputGradient.reducingBroadcast(to: shiftShape) : nil
-
-        guard computesInput else {
-            return (nil, scaleGradient, shiftGradient)
+        math.mean(input, along: axes, into: statistic)
+        math.subtract(input, statistic, into: normalized)
+        math.multiply(normalized, normalized, into: products)
+        math.mean(products, along: axes, into: standardDeviation)
+        math.sqrt(standardDeviation, into: standardDeviation)
+        math.add(standardDeviation, epsilon, into: divisor)
+        math.divide(normalized, divisor, into: normalized)
+        if scaleGradient != nil {
+            math.multiply(outputGradient, normalized, into: products)
+            math.writeSum(of: products, into: scaleGradient)
         }
         // With n = (x - mean) / d and d = sqrt(variance) + epsilon:
         // dx = (dn - mean(dn) - n * mean(dn * n) * d / sqrt(variance)) / d
-        let normalizedGradient = (outputGradient * scale).reducingBroadcast(to: input.shape)
-        let meanGradient = normalizedGradient.reduceMean(along: axes).view(as: keptShape)
-        let correlation = (normalizedGradient * normalized).reduceMean(along: axes).view(as: keptShape) * divisor / standardDeviation
-        let inputGradient = (normalizedGradient - meanGradient - normalized * correlation) / divisor
-        return (inputGradient, scaleGradient, shiftGradient)
-    }
-
-    /// Computes the gradients of a normalization with fixed statistics, followed by a scale and a shift.
-    static func fixedNormalizationGradients<N, Device>(
-        input: Tensor<N, Device>,
-        scale: Tensor<N, Device>,
-        shiftShape: [Int],
-        mean: Tensor<N, Device>,
-        variance: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        epsilon: N,
-        computesInput: Bool,
-        computesScale: Bool,
-        computesShift: Bool,
-    ) -> (input: Tensor<N, Device>?, scale: Tensor<N, Device>?, shift: Tensor<N, Device>?) {
-        let divisor = variance.sqrt() + Tensor(epsilon)
-        let inputGradient = computesInput ? (outputGradient * scale / divisor).reducingBroadcast(to: input.shape) : nil
-        let scaleGradient = computesScale ? (outputGradient * (input - mean) / divisor).reducingBroadcast(to: scale.shape) : nil
-        let shiftGradient = computesShift ? outputGradient.reducingBroadcast(to: shiftShape) : nil
-        return (inputGradient, scaleGradient, shiftGradient)
+        math.write(inputGradient) { dx in
+            let normalizedGradient = products
+            math.multiply(outputGradient, scale, into: normalizedGradient)
+            math.mean(normalizedGradient, along: axes, into: statistic)
+            math.subtract(normalizedGradient, statistic, into: dx)
+            math.multiply(normalizedGradient, normalized, into: normalizedGradient)
+            math.mean(normalizedGradient, along: axes, into: statistic)
+            math.multiply(statistic, divisor, into: statistic)
+            math.divide(statistic, standardDeviation, into: statistic)
+            math.multiply(normalized, statistic, into: normalizedGradient)
+            math.subtract(dx, normalizedGradient, into: dx)
+            math.divide(dx, divisor, into: dx)
+        }
     }
 }

@@ -28,162 +28,205 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func binaryCrossEntropy<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>) -> Tensor<N, Device> {
-        let e = expected.detached().view(as: [-1])
-        let a = actual.detached().view(as: [-1])
-        return (-(e * a.log() + (1 - e) * (1 - a).log())).reduceMean()
+    static func binaryCrossEntropy<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // -mean(expected * log(actual) + (1 - expected) * log(1 - actual)), with the elements in memory order
+        let count = actual.count
+        let (e, a) = (expected.reshaped(to: [count]), actual.reshaped(to: [count]))
+        let terms = math.temporary([count])
+        let complementTerms = math.temporary([count])
+        let complementExpected = math.temporary([count])
+        math.log(a, into: terms)
+        math.multiply(terms, e, into: terms)
+        math.subtract(1, a, into: complementTerms)
+        math.log(complementTerms, into: complementTerms)
+        math.subtract(1, e, into: complementExpected)
+        math.multiply(complementTerms, complementExpected, into: complementTerms)
+        math.add(terms, complementTerms, into: terms)
+        math.mean(terms, along: [0], into: result)
+        math.negate(result, into: result)
     }
 
-    static func binaryCrossEntropyBackward<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradients: inout (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?)) {
-        let computed = Composed.binaryCrossEntropyGradients(
-            expected: expected.detached(),
-            actual: actual.detached(),
-            outputGradient: outputGradient.detached(),
-            computesExpected: expected.requiresGradient,
-            computesActual: actual.requiresGradient,
-        )
-        Tensor.accumulate(computed.expected, into: &gradients.expected)
-        Tensor.accumulate(computed.actual, into: &gradients.actual)
+    static func binaryCrossEntropyBackward<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let count = actual.count
+        let (e, a) = (expected.reshaped(to: [count]), actual.reshaped(to: [count]))
+        let factor = math.temporary([])
+        math.multiply(outputGradient, 1 / N(count), into: factor)
+        // factor * (actual - expected) / (actual * (1 - actual))
+        math.write(actualGradient) { da in
+            let (gradient, divisor) = (da.reshaped(to: [count]), math.temporary([count]))
+            math.subtract(a, e, into: gradient)
+            math.subtract(1, a, into: divisor)
+            math.multiply(divisor, a, into: divisor)
+            math.divide(gradient, divisor, into: gradient)
+            math.multiply(gradient, factor, into: gradient)
+        }
+        // factor * (log(1 - actual) - log(actual))
+        math.write(expectedGradient) { de in
+            let (gradient, complementLogarithms) = (de.reshaped(to: [count]), math.temporary([count]))
+            math.subtract(1, a, into: complementLogarithms)
+            math.log(complementLogarithms, into: complementLogarithms)
+            math.log(a, into: gradient)
+            math.subtract(complementLogarithms, gradient, into: gradient)
+            math.multiply(gradient, factor, into: gradient)
+        }
     }
 
-    static func categoricalCrossEntropy<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
-        -Composed.selectedProbabilities(expected: expected, actual: actual.detached(), ignoreIndex: ignoreIndex).log().reduceMean()
+    static func categoricalCrossEntropy<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // The gather yields 0 for the rows with the ignored label, so these rows add 0 to the loss.
+        let logarithms = math.temporary(actual.shape)
+        math.log(actual, into: logarithms)
+        categoricalNegativeLogLikelihood(expected: expected, actual: ShapedBuffer(logarithms), ignoreIndex: ignoreIndex, result: result)
     }
 
-    static func categoricalCrossEntropyBackward<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.categoricalCrossEntropyGradient(expected: expected, actual: actual.detached(), outputGradient: outputGradient.detached(), ignoreIndex: ignoreIndex),
-            into: &gradient,
-        )
+    static func categoricalCrossEntropyBackward<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let rows = expected.count
+        let (labels, predictions) = (expected.reshaped(to: [rows]), actual.reshaped(to: [rows, actual.count / rows]))
+        // -outputGradient / rows / selected, scattered to the labels. The rows with the ignored label select 0,
+        // and the scatter drops their quotients.
+        math.write(actualGradient) { da in
+            let selected = math.temporary([rows])
+            let factor = math.temporary([])
+            Device.Engine.gather(expanded: predictions, context: labels, result: selected, axis: 1, ignoreIndex: ignoreIndex)
+            math.multiply(outputGradient, -1 / N(rows), into: factor)
+            math.divide(factor, selected, into: selected)
+            Device.Engine.scatter(reduced: ShapedBuffer(selected), context: labels, result: da.reshaped(to: predictions.shape), axis: 1, ignoreIndex: ignoreIndex)
+        }
     }
 
-    static func categoricalNegativeLogLikelihood<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
-        let expected = expected.flattened()
-        return -actual.detached()
-            .view(as: [expected.count, -1])
-            .gather(using: expected, alongAxis: 1, ignoreIndex: ignoreIndex)
-            .reduceMean()
+    static func categoricalNegativeLogLikelihood<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let rows = expected.count
+        let selected = math.temporary([rows])
+        Device.Engine.gather(expanded: actual.reshaped(to: [rows, actual.count / rows]), context: expected.reshaped(to: [rows]), result: selected, axis: 1, ignoreIndex: ignoreIndex)
+        math.mean(selected, along: [0], into: result)
+        math.negate(result, into: result)
     }
 
-    static func categoricalNegativeLogLikelihoodBackward<N: NumericType>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.categoricalNegativeLogLikelihoodGradient(expected: expected, actualShape: actual.shape, outputGradient: outputGradient.detached(), ignoreIndex: ignoreIndex),
-            into: &gradient,
-        )
+    static func categoricalNegativeLogLikelihoodBackward<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let rows = expected.count
+        // -outputGradient / rows at the label of every row, and 0 elsewhere
+        math.write(actualGradient) { da in
+            let rowGradient = math.temporary([rows])
+            math.multiply(math.constant(-1 / N(rows), shape: [rows]), outputGradient, into: rowGradient)
+            Device.Engine.scatter(reduced: ShapedBuffer(rowGradient), context: expected.reshaped(to: [rows]), result: da.reshaped(to: [rows, actual.count / rows]), axis: 1, ignoreIndex: ignoreIndex)
+        }
     }
 
-    static func meanSquaredError<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>) -> Tensor<N, Device> {
-        let difference = expected.detached() - actual.detached()
-        return (difference * difference).reduceSum() / Tensor(Composed.meanSquaredErrorDivisor(expected: expected))
+    static func meanSquaredError<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let differences = math.temporary(shapeForBroadcastedOperands(expected.shape, actual.shape))
+        math.subtract(expected, actual, into: differences)
+        math.multiply(differences, differences, into: differences)
+        math.sum(differences, along: Array(differences.shape.indices), into: result)
+        math.multiply(result, 1 / N(meanSquaredErrorDivisor(expectedShape: expected.shape)), into: result)
     }
 
-    static func meanSquaredErrorBackward<N: NumericType>(expected: Tensor<N, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, accumulating gradients: inout (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?)) {
-        let computed = Composed.meanSquaredErrorGradients(
-            expected: expected.detached(),
-            actual: actual.detached(),
-            outputGradient: outputGradient.detached(),
-            computesExpected: expected.requiresGradient,
-            computesActual: actual.requiresGradient,
-        )
-        Tensor.accumulate(computed.expected, into: &gradients.expected)
-        Tensor.accumulate(computed.actual, into: &gradients.actual)
+    static func meanSquaredErrorBackward<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // 2 * (expected - actual) * outputGradient / divisor for the expected values, and its negative for the predictions
+        let differences = math.temporary(shapeForBroadcastedOperands(expected.shape, actual.shape))
+        let factor = math.temporary([])
+        math.multiply(outputGradient, 2 / N(meanSquaredErrorDivisor(expectedShape: expected.shape)), into: factor)
+        math.subtract(expected, actual, into: differences)
+        math.multiply(differences, factor, into: differences)
+        math.writeSum(of: differences, into: expectedGradient)
+        if actualGradient != nil {
+            math.negate(differences, into: differences)
+            math.writeSum(of: differences, into: actualGradient)
+        }
     }
 
-    static func l1Loss<N: NumericType>(input: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
-        let input = input.detached()
-        return (input.rectifiedLinear() + (-input).rectifiedLinear()).reduceMean() * Tensor(scale)
+    static func l1Loss<N: NumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // mean(relu(input) + relu(-input)) * scale
+        let magnitudes = math.temporary(input.shape)
+        let negativePart = math.temporary(input.shape)
+        math.relu(input, into: magnitudes)
+        math.negate(input, into: negativePart)
+        math.relu(negativePart, into: negativePart)
+        math.add(magnitudes, negativePart, into: magnitudes)
+        math.mean(magnitudes, along: Array(input.shape.indices), into: result)
+        math.multiply(result, scale, into: result)
     }
 
-    static func l1LossBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.l1LossGradient(input: input.detached(), outputGradient: outputGradient.detached(), scale: scale),
-            into: &gradient,
-        )
+    static func l1LossBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // (heaviside(input) - heaviside(-input)) * outputGradient * scale / count. The gradient at 0 is 0.
+        math.write(inputGradient) { dx in
+            let negative = math.temporary(input.shape)
+            let factor = math.temporary([])
+            math.negate(input, into: negative)
+            math.heaviside(negative, into: negative)
+            math.heaviside(input, into: dx)
+            math.subtract(dx, negative, into: dx)
+            math.multiply(outputGradient, scale / N(input.count), into: factor)
+            math.multiply(dx, factor, into: dx)
+        }
     }
 
-    static func l2Loss<N: NumericType>(input: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
-        let input = input.detached()
-        return (input * input).reduceMean() * Tensor(scale)
+    static func l2Loss<N: NumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        let squares = math.temporary(input.shape)
+        math.multiply(input, input, into: squares)
+        math.mean(squares, along: Array(input.shape.indices), into: result)
+        math.multiply(result, scale, into: result)
     }
 
-    static func l2LossBackward<N: NumericType>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, accumulating gradient: inout Tensor<N, Device>?) {
-        Tensor.accumulate(
-            Composed.l2LossGradient(input: input.detached(), outputGradient: outputGradient.detached(), scale: scale),
-            into: &gradient,
-        )
+    static func l2LossBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
+        }
+        // input * outputGradient * 2 * scale / count
+        math.write(inputGradient) { dx in
+            let factor = math.temporary([])
+            math.multiply(outputGradient, N(2) * scale / N(input.count), into: factor)
+            math.multiply(input, factor, into: dx)
+        }
     }
 }
 
-// MARK: Composed gradients
-
-extension Composed {
-    static func binaryCrossEntropyGradients<N, Device>(
-        expected: Tensor<N, Device>,
-        actual: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        computesExpected: Bool,
-        computesActual: Bool,
-    ) -> (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?) {
-        let factor = outputGradient / Tensor(N(actual.count))
-        let expectedGradient = computesExpected ? factor * ((1 - actual).log() - actual.log()) : nil
-        let actualGradient = computesActual ? factor * (actual - expected) / (actual * (1 - actual)) : nil
-        return (expectedGradient, actualGradient)
-    }
-
-    /// Returns the probability of the expected label of every row, shape [count], and 1 for rows with the ignored label.
-    ///
-    /// Rows with the ignored label then add log(1) = 0 to the loss.
-    static func selectedProbabilities<N, Device>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
-        let expected = expected.flattened()
-        let selected = actual
-            .view(as: [expected.count, -1])
-            .gather(using: expected, alongAxis: 1, ignoreIndex: ignoreIndex)
-        let ignoredRows = Tensor<N, Device>(expected.elements.map { $0 == ignoreIndex ? N.one : N.zero })
-        return selected + ignoredRows
-    }
-
-    static func categoricalCrossEntropyGradient<N, Device>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
-        let selected = selectedProbabilities(expected: expected, actual: actual, ignoreIndex: ignoreIndex)
-        let classCount = actual.shape[actual.dim - 1]
-        return (-outputGradient / Tensor(N(selected.count)) / selected)
-            .scatter(using: expected.flattened(), alongAxis: 1, withSize: classCount, ignoreIndex: ignoreIndex)
-            .view(as: actual.shape)
-    }
-
-    static func categoricalNegativeLogLikelihoodGradient<N, Device>(expected: Tensor<Int32, Device>, actualShape: [Int], outputGradient: Tensor<N, Device>, ignoreIndex: Int32) -> Tensor<N, Device> {
-        let rowCount = expected.count
-        let rowGradient = Tensor<N, Device>(repeating: N(-1) / N(rowCount), shape: [rowCount]) * outputGradient
-        return rowGradient
-            .scatter(using: expected.flattened(), alongAxis: 1, withSize: actualShape[actualShape.count - 1], ignoreIndex: ignoreIndex)
-            .view(as: actualShape)
-    }
-
-    /// Divisor of the sum of squared differences: the number of rows of `expected`, or 1 for a vector or a scalar.
-    static func meanSquaredErrorDivisor<N, Device>(expected: Tensor<N, Device>) -> N {
-        N(expected.dim > 1 ? expected.shape[0] : 1)
-    }
-
-    static func meanSquaredErrorGradients<N, Device>(
-        expected: Tensor<N, Device>,
-        actual: Tensor<N, Device>,
-        outputGradient: Tensor<N, Device>,
-        computesExpected: Bool,
-        computesActual: Bool,
-    ) -> (expected: Tensor<N, Device>?, actual: Tensor<N, Device>?) {
-        let expectedGradient = 2 * (expected - actual) * outputGradient / Tensor(meanSquaredErrorDivisor(expected: expected))
-        return (
-            computesExpected ? expectedGradient.reducingBroadcast(to: expected.shape) : nil,
-            computesActual ? (-expectedGradient).reducingBroadcast(to: actual.shape) : nil,
-        )
-    }
-
-    static func l1LossGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
-        let factor = outputGradient * Tensor(scale / N(input.count))
-        return (input.heaviside() - (-input).heaviside()) * factor
-    }
-
-    static func l2LossGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N) -> Tensor<N, Device> {
-        let factor = outputGradient * Tensor(N(2) * scale / N(input.count))
-        return input * factor
+extension FusedOperationsType {
+    /// Divisor of the sum of squared differences: the number of rows of the expected values, or 1 for a vector or a scalar.
+    static func meanSquaredErrorDivisor(expectedShape: [Int]) -> Int {
+        expectedShape.count > 1 ? expectedShape[0] : 1
     }
 }

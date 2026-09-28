@@ -403,6 +403,43 @@ struct EngineV2Tests {
             zip(mean.elements, reference(axes: axes, combine: +)).forEach { expectEqual($0, $1 / count, accuracy: 1e-12) }
         }
 
+        // Maxima and minima along several axes, with the positions of the extrema in row-major order of the reduced axes.
+        for subset in 1 ..< 16 {
+            let axes = (0 ..< 4).filter { subset & (1 << $0) != 0 }
+            let keptAxes = (0 ..< 4).filter { !axes.contains($0) }
+            let resultShape = keptAxes.map { shape[$0] }
+            for (isMaximum, combine) in [(true, Swift.max as (Double, Double) -> Double), (false, Swift.min)] {
+                let result = CPU.Memory.allocateBuffer(withShape: resultShape, type: Double.self)
+                let positions = CPU.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
+                defer {
+                    CPU.Memory.free(result)
+                    CPU.Memory.free(positions)
+                }
+                if isMaximum {
+                    CPU.Engine.reduceMax(values: values.values, result: result, context: positions, axes: axes)
+                } else {
+                    CPU.Engine.reduceMin(values: values.values, result: result, context: positions, axes: axes)
+                }
+                let extrema = Buffer(result.values).array
+                #expect(extrema == reference(axes: axes, combine: combine), "axes \(axes), maximum \(isMaximum)")
+                for (index, position) in Buffer(positions.values).array.enumerated() {
+                    // The index of the result gives the kept coordinates, and the position gives the reduced coordinates.
+                    var (remainingIndex, remainingPosition, offset) = (index, Int(position), 0)
+                    for axis in (0 ..< 4).reversed() {
+                        let coordinate: Int
+                        if axes.contains(axis) {
+                            (coordinate, remainingPosition) = (remainingPosition % shape[axis], remainingPosition / shape[axis])
+                        } else {
+                            (coordinate, remainingIndex) = (remainingIndex % shape[axis], remainingIndex / shape[axis])
+                        }
+                        offset += coordinate * strides[axis]
+                    }
+                    #expect(elements[offset] == extrema[index], "axes \(axes), maximum \(isMaximum), result \(index)")
+                }
+                #expect(values.reduceMax(along: axes).elements == reference(axes: axes, combine: Swift.max), "axes \(axes)")
+            }
+        }
+
         var tracked = values
         tracked.requiresGradient = true
         for axis in 0 ..< 4 {
@@ -422,6 +459,16 @@ struct EngineV2Tests {
         #expect(a.reduceMax(along: 0).detached() == Tensor([-2, 5]))
         #expect(a.detached().reduceMax(along: [0]) == Tensor([-2, 5]))
         #expect(a.detached().reduceSum(along: 0) == Tensor([-9, 8]))
+
+        let positive = Tensor<Float, CPU>([[3, 1], [2, 5], [4, 2]])
+        let minimum = CPU.Memory.allocateBuffer(withShape: [2], type: Float.self)
+        defer {
+            CPU.Memory.free(minimum)
+        }
+        withExtendedLifetime(positive) {
+            CPU.Engine.reduceMin(values: positive.values, result: minimum, context: nil, axis: 0)
+        }
+        #expect(Buffer(minimum.values).array == [2, 1])
     }
 
     @Test func testDiagonal() {
