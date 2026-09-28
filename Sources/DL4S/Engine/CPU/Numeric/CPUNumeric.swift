@@ -52,6 +52,8 @@ public protocol CPUNumeric: Numeric, Comparable {
 
     static func sum(val: UnsafeBufferPointer<Self>, count: Int) -> Self
     static func sum(val: UnsafeBufferPointer<Self>, stride: Int, count: Int) -> Self
+    /// Returns the sum of the products of the elements, `lhs[0] * rhs[0] + ... + lhs[count - 1] * rhs[count - 1]`.
+    static func dot(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, count: Int) -> Self
 
     static func argmax(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)
     static func argmin(values: UnsafeBufferPointer<Self>, count: Int) -> (Int, Self)

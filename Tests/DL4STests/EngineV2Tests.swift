@@ -338,6 +338,139 @@ struct EngineV2Tests {
         #expect(a.reduceMax(along: 1) == a.detached().reduceMax(along: 1))
     }
 
+    /// Permutations match their definition for every arrangement, including axes of size 1 and swaps of the last two axes.
+    @Test(arguments: [[2, 3, 4, 5], [3, 1, 4, 2], [1, 5, 1, 3]])
+    func testPermutationsMatchDefinition(shape: [Int]) throws {
+        var generator = WyHash(seed: 5)
+        let values = Tensor<Double, CPU>(uniformlyDistributedWithShape: shape, min: -1, max: 1, using: &generator)
+        let elements = values.elements
+        let strides = (0 ..< 4).map { axis in shape[(axis + 1)...].reduce(1, *) }
+
+        func permutations(_ axes: [Int]) -> [[Int]] {
+            axes.count <= 1 ? [axes] : axes.flatMap { axis in permutations(axes.filter { $0 != axis }).map { [axis] + $0 } }
+        }
+        for arrangement in permutations([0, 1, 2, 3]) {
+            var resultShape = [Int](repeating: 0, count: 4)
+            for axis in 0 ..< 4 {
+                resultShape[arrangement[axis]] = shape[axis]
+            }
+            var expected = [Double](repeating: 0, count: elements.count)
+            for (index, value) in elements.enumerated() {
+                let sourceIndex = (0 ..< 4).map { (index / strides[$0]) % shape[$0] }
+                var target = 0
+                for axis in 0 ..< 4 {
+                    target = try target * resultShape[axis] + sourceIndex[#require(arrangement.firstIndex(of: axis))]
+                }
+                expected[target] = value
+            }
+            let permuted = values.permuted(to: arrangement)
+            #expect(permuted.shape == resultShape, "arrangement \(arrangement)")
+            #expect(permuted.elements == expected, "arrangement \(arrangement)")
+
+            var accumulator = Tensor<Double, CPU>(repeating: 1, shape: resultShape)
+            accumulator.addingPermuted(values, permutation: arrangement)
+            #expect(accumulator.elements == expected.map { $0 + 1 }, "accumulated arrangement \(arrangement)")
+        }
+    }
+
+    /// Sums along every subset of axes match their definition, and so do maxima along one axis with their positions.
+    @Test func testReductionsMatchDefinition() {
+        let shape = [3, 4, 1, 5]
+        var generator = WyHash(seed: 7)
+        let values = Tensor<Double, CPU>(uniformlyDistributedWithShape: shape, min: -1, max: 1, using: &generator)
+        let elements = values.elements
+        let strides = (0 ..< 4).map { axis in shape[(axis + 1)...].reduce(1, *) }
+
+        func reference(axes: [Int], combine: (Double, Double) -> Double) -> [Double] {
+            let keptShape = (0 ..< 4).map { axes.contains($0) ? 1 : shape[$0] }
+            var result = [Double?](repeating: nil, count: keptShape.reduce(1, *))
+            for (index, value) in elements.enumerated() {
+                var target = 0
+                for axis in 0 ..< 4 {
+                    target = target * keptShape[axis] + (axes.contains(axis) ? 0 : (index / strides[axis]) % shape[axis])
+                }
+                result[target] = result[target].map { combine($0, value) } ?? value
+            }
+            return result.map { $0! }
+        }
+
+        for subset in 1 ..< 16 {
+            let axes = (0 ..< 4).filter { subset & (1 << $0) != 0 }
+            let sum = values.reduceSum(along: axes)
+            zip(sum.elements, reference(axes: axes, combine: +)).forEach { expectEqual($0, $1, accuracy: 1e-12) }
+            let mean = values.reduceMean(along: axes)
+            let count = Double(axes.map { shape[$0] }.reduce(1, *))
+            zip(mean.elements, reference(axes: axes, combine: +)).forEach { expectEqual($0, $1 / count, accuracy: 1e-12) }
+        }
+
+        // Maxima and minima along several axes, with the positions of the extrema in row-major order of the reduced axes.
+        for subset in 1 ..< 16 {
+            let axes = (0 ..< 4).filter { subset & (1 << $0) != 0 }
+            let keptAxes = (0 ..< 4).filter { !axes.contains($0) }
+            let resultShape = keptAxes.map { shape[$0] }
+            for (isMaximum, combine) in [(true, Swift.max as (Double, Double) -> Double), (false, Swift.min)] {
+                let result = CPU.Memory.allocateBuffer(withShape: resultShape, type: Double.self)
+                let positions = CPU.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
+                defer {
+                    CPU.Memory.free(result)
+                    CPU.Memory.free(positions)
+                }
+                if isMaximum {
+                    CPU.Engine.reduceMax(values: values.values, result: result, context: positions, axes: axes)
+                } else {
+                    CPU.Engine.reduceMin(values: values.values, result: result, context: positions, axes: axes)
+                }
+                let extrema = Buffer(result.values).array
+                #expect(extrema == reference(axes: axes, combine: combine), "axes \(axes), maximum \(isMaximum)")
+                for (index, position) in Buffer(positions.values).array.enumerated() {
+                    // The index of the result gives the kept coordinates, and the position gives the reduced coordinates.
+                    var (remainingIndex, remainingPosition, offset) = (index, Int(position), 0)
+                    for axis in (0 ..< 4).reversed() {
+                        let coordinate: Int
+                        if axes.contains(axis) {
+                            (coordinate, remainingPosition) = (remainingPosition % shape[axis], remainingPosition / shape[axis])
+                        } else {
+                            (coordinate, remainingIndex) = (remainingIndex % shape[axis], remainingIndex / shape[axis])
+                        }
+                        offset += coordinate * strides[axis]
+                    }
+                    #expect(elements[offset] == extrema[index], "axes \(axes), maximum \(isMaximum), result \(index)")
+                }
+                #expect(values.reduceMax(along: axes).elements == reference(axes: axes, combine: Swift.max), "axes \(axes)")
+            }
+        }
+
+        var tracked = values
+        tracked.requiresGradient = true
+        for axis in 0 ..< 4 {
+            let maximum = tracked.reduceMax(along: [axis])
+            #expect(maximum.elements == reference(axes: [axis], combine: Swift.max), "axis \(axis)")
+            // The gradient of the maximum is 1 at the position of the maximum, so the gradient sums to the number of maxima.
+            let gradient = maximum.reduceSum().gradients(of: [tracked])[0]
+            #expect(gradient.elements.reduce(0, +) == Double(maximum.count), "axis \(axis)")
+            #expect(zip(gradient.elements, elements).allSatisfy { $0 == 0 || maximum.elements.contains($1) }, "axis \(axis)")
+        }
+    }
+
+    /// The reductions along the first axis start with the first row, so negative maxima and positive minima are correct.
+    @Test func testReduceAlongFirstAxis() {
+        let a = Tensor<Float, CPU>([[-3, 1], [-2, 5], [-4, 2]], requiresGradient: true)
+        // With a gradient, the maxima come from the kernel that also returns their positions.
+        #expect(a.reduceMax(along: 0).detached() == Tensor([-2, 5]))
+        #expect(a.detached().reduceMax(along: [0]) == Tensor([-2, 5]))
+        #expect(a.detached().reduceSum(along: 0) == Tensor([-9, 8]))
+
+        let positive = Tensor<Float, CPU>([[3, 1], [2, 5], [4, 2]])
+        let minimum = CPU.Memory.allocateBuffer(withShape: [2], type: Float.self)
+        defer {
+            CPU.Memory.free(minimum)
+        }
+        withExtendedLifetime(positive) {
+            CPU.Engine.reduceMin(values: positive.values, result: minimum, context: nil, axis: 0)
+        }
+        #expect(Buffer(minimum.values).array == [2, 1])
+    }
+
     @Test func testDiagonal() {
         let a = Tensor<Float, CPU>([
             [1, 2, 3],

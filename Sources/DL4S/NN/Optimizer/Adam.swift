@@ -34,16 +34,16 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
     /// Whether the maximum of the past second moments normalizes the step, as in AMSGrad
     public let useAMSGrad: Bool
 
-    /// Learning rate scaling factor
+    /// Learning rate scaling factor, a scalar
     public var learningRate: ParamTensor
 
-    /// Exponential decay rate for first moment
+    /// Exponential decay rate for first moment, a scalar
     public var beta1: ParamTensor
 
-    /// Exponential decay rate for second moment
+    /// Exponential decay rate for second moment, a scalar
     public var beta2: ParamTensor
 
-    /// Normalization scalar added to divisors
+    /// Normalization scalar added to divisors, a scalar
     public var epsilon: ParamTensor
 
     private var beta1t: ParamTensor
@@ -51,17 +51,18 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
 
     private var firstMoments: [ParamTensor] = []
     private var secondMoments: [ParamTensor] = []
-    private var secondMomentMax: [ParamTensor] = []
+    /// Maxima of the second moments, one per weight with AMSGrad, and nil without AMSGrad.
+    private var secondMomentMax: [ParamTensor?] = []
 
     /// Adam optimizer (Adaptive moment estimation)
     ///
     /// Follows [Kingma et al. - Adam: A method for stochastic optimization](https://arxiv.org/pdf/1412.6980.pdf)
     /// - Parameters:
-    ///   - learningRate: Learning rate scaling factor
+    ///   - learningRate: Learning rate scaling factor, a scalar
     ///   - useAMSGrad: Whether the maximum of the past second moments normalizes the step, as in AMSGrad
-    ///   - beta1: Exponential decay rate for first moment
-    ///   - beta2: Exponential decay rate for second moment
-    ///   - epsilon: Normalization scalar added to divisors
+    ///   - beta1: Exponential decay rate for first moment, a scalar
+    ///   - beta2: Exponential decay rate for second moment, a scalar
+    ///   - epsilon: Normalization scalar added to divisors, a scalar
     public init(learningRate: ParamTensor, useAMSGrad: Bool = false, beta1: ParamTensor = 0.9, beta2: ParamTensor = 0.999, epsilon: ParamTensor = 1e-8) {
         self.useAMSGrad = useAMSGrad
 
@@ -90,7 +91,9 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
         visitor.frozen(&firstMoments, named: "firstMoments")
         visitor.frozen(&secondMoments, named: "secondMoments")
         if useAMSGrad {
-            visitor.frozen(&secondMomentMax, named: "secondMomentMax")
+            var maxima = secondMomentMax.compactMap(\.self)
+            visitor.frozen(&maxima, named: "secondMomentMax")
+            secondMomentMax = maxima
         }
         visitor.frozen(&beta1t, named: "beta1t")
         visitor.frozen(&beta2t, named: "beta2t")
@@ -104,38 +107,35 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
     }
 
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
+        precondition([learningRate, beta1, beta2, epsilon].allSatisfy { $0.count == 1 }, "The hyperparameters of Adam must be scalars.")
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&firstMoments, for: parameters)
         Self.initializeStateIfNeeded(&secondMoments, for: parameters)
-        if useAMSGrad {
-            Self.initializeStateIfNeeded(&secondMomentMax, for: parameters)
+        if secondMomentMax.count != parameters.count {
+            precondition(secondMomentMax.isEmpty, "Adam has state for \(secondMomentMax.count) weights but received \(parameters.count). Call reset() after the set of trainable weights changed.")
+            secondMomentMax = parameters.map { useAMSGrad ? Tensor(repeating: 0, shape: $0.shape) : nil }
         }
 
+        let (rate, decay1, decay2, divisorOffset, power1, power2) = (learningRate.item, beta1.item, beta2.item, epsilon.item, beta1t.item, beta2t.item)
         for index in parameters.indices {
-            let grad = gradients[index].detached()
-
-            let addedToFirstMoment = grad * (1 - beta1)
-            firstMoments[index] = firstMoments[index] * beta1 + addedToFirstMoment
-
-            let addedToSecondMoment = (grad * grad) * (1 - beta2)
-            secondMoments[index] = secondMoments[index] * beta2 + addedToSecondMoment
-
-            let v_t_norm: ParamTensor
-            if useAMSGrad {
-                secondMomentMax[index] = Tensor.max(secondMomentMax[index], secondMoments[index])
-                v_t_norm = secondMomentMax[index]
-            } else {
-                v_t_norm = secondMoments[index]
-            }
-
-            let m_car_t = firstMoments[index] / (1 - beta1t)
-            let v_car_t = v_t_norm / (1 - beta2t)
-
-            let delta = learningRate / (v_car_t.sqrt() + epsilon) * m_car_t
-            parameters[index] -= delta
-            parameters[index].discardContext()
+            // The model holds a reference to the parameter, so the step writes the new parameter into a new tensor instead of copying it.
+            var updated = ParamTensor(uninitializedShape: parameters[index].shape)
+            Device.FusedOperations.adamUpdate(
+                parameter: parameters[index].values,
+                gradient: gradients[index].values,
+                firstMoment: firstMoments[index].mutableValues,
+                secondMoment: secondMoments[index].mutableValues,
+                secondMomentMax: secondMomentMax[index]?.mutableValues,
+                learningRate: rate,
+                beta1: decay1,
+                beta2: decay2,
+                epsilon: divisorOffset,
+                beta1Power: power1,
+                beta2Power: power2,
+                result: updated.mutableValues,
+            )
+            parameters[index] = updated
         }
-
         beta1t *= beta1
         beta2t *= beta2
     }

@@ -186,4 +186,61 @@ struct ConvTests {
         #expect(filtered.shape == [8, 2, 55, 55])
         expectClose(filtered, referenceTransposedConvolution(batch, filters: filters, inset: 1, stride: 2), tolerance: 1e-6)
     }
+
+    /// Window matrix with plain loops, as a reference for img2col: row (channel, kernel row, kernel column), column (image, output row, output column).
+    private func referenceWindows(_ input: [Double], shape: [Int], kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int) -> [Double] {
+        let (batch, channels, height, width) = (shape[0], shape[1], shape[2], shape[3])
+        let outputHeight = (height + 2 * padding - kernelHeight) / stride + 1
+        let outputWidth = (width + 2 * padding - kernelWidth) / stride + 1
+        let columnCount = batch * outputHeight * outputWidth
+        var result = [Double](repeating: 0, count: channels * kernelHeight * kernelWidth * columnCount)
+        for channel in 0 ..< channels {
+            for kernelRow in 0 ..< kernelHeight {
+                for kernelColumn in 0 ..< kernelWidth {
+                    let row = (channel * kernelHeight + kernelRow) * kernelWidth + kernelColumn
+                    for image in 0 ..< batch {
+                        for outputRow in 0 ..< outputHeight {
+                            for outputColumn in 0 ..< outputWidth {
+                                let (y, x) = (outputRow * stride - padding + kernelRow, outputColumn * stride - padding + kernelColumn)
+                                guard y >= 0, y < height, x >= 0, x < width else {
+                                    continue
+                                }
+                                let column = (image * outputHeight + outputRow) * outputWidth + outputColumn
+                                result[row * columnCount + column] = input[((image * channels + channel) * height + y) * width + x]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    /// img2col matches its definition, and col2img is its adjoint: `<img2col(x), c> == <x, col2img(c)>`.
+    @Test(arguments: [
+        (kernel: (3, 3), padding: 1, stride: 1),
+        (kernel: (3, 2), padding: 0, stride: 1),
+        (kernel: (5, 5), padding: 2, stride: 2),
+        (kernel: (4, 4), padding: 1, stride: 3),
+        (kernel: (7, 7), padding: 3, stride: 2),
+        (kernel: (1, 1), padding: 0, stride: 2),
+        // Stride 1 with an output as wide as the input, with an output height that differs from the input height.
+        (kernel: (5, 3), padding: 1, stride: 1),
+        (kernel: (3, 5), padding: 2, stride: 1),
+        // Some kernel columns move the window completely out of the image.
+        (kernel: (1, 13), padding: 6, stride: 1),
+    ])
+    func testWindowsMatchDefinition(kernel: (height: Int, width: Int), padding: Int, stride: Int) {
+        let shape = [2, 3, 7, 6]
+        var generator = WyHash(seed: 3)
+        let input = Tensor<Double, CPU>(uniformlyDistributedWithShape: shape, min: -1, max: 1, using: &generator)
+        let windows = input.img2col(kernelWidth: kernel.width, kernelHeight: kernel.height, padding: padding, stride: stride)
+        #expect(windows.elements == referenceWindows(input.elements, shape: shape, kernelHeight: kernel.height, kernelWidth: kernel.width, padding: padding, stride: stride))
+
+        let columns = Tensor<Double, CPU>(uniformlyDistributedWithShape: windows.shape, min: -1, max: 1, using: &generator)
+        let image = columns.col2img(kernelWidth: kernel.width, kernelHeight: kernel.height, padding: padding, stride: stride, resultShape: shape)
+        let lhs = zip(windows.elements, columns.elements).map(*).reduce(0, +)
+        let rhs = zip(input.elements, image.elements).map(*).reduce(0, +)
+        expectEqual(lhs, rhs, accuracy: 1e-9)
+    }
 }

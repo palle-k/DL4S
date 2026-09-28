@@ -98,13 +98,13 @@ public extension Tensor {
 
         return Tensor(
             using: resultBuffer,
-            context: TensorContext(
+            context: requiresGradient ? TensorContext(
                 tag: "col2im",
                 sources: [self],
                 backpropagate: [{ resultGradient in
                     resultGradient.img2col(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
                 }],
-            ),
+            ) : nil,
         )
     }
 }
@@ -114,71 +114,66 @@ public extension Tensor {
 public extension Tensor {
     /// Performs a 2d convolution
     ///
-    /// the source tensor is expected to have a shape of [batchSize, channels, width, height]
-    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelWidth, kernelHeight]
+    /// the source tensor is expected to have a shape of [batchSize, channels, height, width]
+    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelHeight, kernelWidth]
     ///
     /// - Parameters:
     ///   - filters: Filters to convolve the tensor with
+    ///   - bias: Bias with one value per output channel, which is added to the result, or nil for no bias. Any shape with `outputChannels` elements, such as [1, outputChannels, 1, 1], is valid.
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
-    func convolved2d(filters: Tensor<Element, Device>, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
+    func convolved2d(filters: Tensor<Element, Device>, bias: Tensor<Element, Device>? = nil, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let padding = padding ?? ((filters.shape[2] - 1) / 2)
-
-        let outputShape = [
+        let bias = bias.map { bias in
+            precondition(bias.count == filters.shape[0], "The bias must have one element per output channel.")
+            return bias.view(as: [filters.shape[0]])
+        }
+        var result = Self(uninitializedShape: [
             shape[0],
             filters.shape[0],
-            (shape[2] + 2 * padding - filters.shape[2]) / stride + 1,
-            (shape[3] + 2 * padding - filters.shape[3]) / stride + 1,
-        ]
+            ConvUtil.outputSize(inputSize: shape[2], kernelSize: filters.shape[2], padding: padding, stride: stride),
+            ConvUtil.outputSize(inputSize: shape[3], kernelSize: filters.shape[3], padding: padding, stride: stride),
+        ])
+        Device.FusedOperations.convolution2d(input: values, filters: filters.values, bias: bias?.values, padding: padding, stride: stride, result: result.mutableValues)
 
-        // => [channels * kernelWidth * kernelHeight, outputWidth * outputHeight * batchSize]
-        let cols = img2col(kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
-        let conv = filters
-            .view(as: [filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3]]) // [outputChannels, inputChannels * kernelWidth * kernelHeight]
-            // [outputChannels, inputChannels * kernelWidth * kernelHeight] x [inputChannels * kernelWidth * kernelHeight, outputWidth * outputHeight * batchSize]
-            // => [outputChannels, outputWidth * outputHeight * batchSize]
-            .matrixMultiplied(with: cols)
-            // => [batchSize, outputChannels, outputHeight, outputWidth]
-            .view(as: [outputShape[1], outputShape[0], outputShape[2], outputShape[3]])
-
-        return conv.permuted(to: [1, 0, 2, 3])
+        return result.attachingContext(tag: "conv2d", sources: self, filters, bias) { resultGradient, inputGradient, filterGradient, biasGradient in
+            Composed.convolution2dBackward(input: self, filters: filters, outputGradient: resultGradient, padding: padding, stride: stride, inputGradient: &inputGradient, filterGradient: &filterGradient, biasGradient: &biasGradient)
+        } fused: { resultGradient, inputGradient, filterGradient, biasGradient in
+            Device.FusedOperations.convolution2dBackward(input: self.values, filters: filters.values, bias: bias?.values, outputGradient: resultGradient, padding: padding, stride: stride, inputGradient: inputGradient, filterGradient: filterGradient, biasGradient: biasGradient)
+        }
     }
 
     /// Performs a transposed 2d convolution (also called fractionally strided convolution).
     ///
-    /// The source tensor is expected to have a shape of [batchSize, channels, width, height]
-    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelWidth, kernelHeight]
+    /// The source tensor is expected to have a shape of [batchSize, channels, height, width]
+    /// the filters tensor is expected to have a shape of [outputChannels, inputChannels, kernelHeight, kernelWidth]
     ///
     /// - Parameters:
     ///   - filters: Filters to convolve the tensor with
+    ///   - bias: Bias with one value per output channel, which is added to the result, or nil for no bias. Any shape with `outputChannels` elements, such as [1, outputChannels, 1, 1], is valid.
     ///   - inset: Inset from edge of the source tensor
     ///   - stride: Stride, with which the kernel moves over the result image. Larger strides result in larger output shapes.
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height - 1) * stride - 2 \* padding + kernelHeight, (width - 1) * stride - 2 \* padding + kernelWidth]
-    func transposedConvolved2d(filters: Tensor<Element, Device>, inset: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
-        let padding = inset ?? ((filters.shape[2] - 1) / 2)
-        // transposed convolution is equivalent to the backwards pass of convolution
-        let outputShape = [
+    func transposedConvolved2d(filters: Tensor<Element, Device>, bias: Tensor<Element, Device>? = nil, inset: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
+        let inset = inset ?? ((filters.shape[2] - 1) / 2)
+        let bias = bias.map { bias in
+            precondition(bias.count == filters.shape[0], "The bias must have one element per output channel.")
+            return bias.view(as: [filters.shape[0]])
+        }
+        var result = Self(uninitializedShape: [
             shape[0],
             filters.shape[0],
-            (shape[2] - 1) * stride - 2 * padding + filters.shape[2],
-            (shape[3] - 1) * stride - 2 * padding + filters.shape[3],
-        ]
-        let permuted = permuted(to: [1, 0, 2, 3])
-        let preMulView = permuted.view(as: [shape[1], shape[0] * shape[2] * shape[3]])
+            ConvUtil.transposedOutputSize(inputSize: shape[2], kernelSize: filters.shape[2], inset: inset, stride: stride),
+            ConvUtil.transposedOutputSize(inputSize: shape[3], kernelSize: filters.shape[3], inset: inset, stride: stride),
+        ])
+        Device.FusedOperations.transposedConvolution2d(input: values, filters: filters.values, bias: bias?.values, inset: inset, stride: stride, result: result.mutableValues)
 
-        let filterView = filters.view(as: [filters.shape[1], filters.shape[0] * filters.shape[2] * filters.shape[3]])
-        let multiplied = filterView
-            .transposed()
-            .matrixMultiplied(with: preMulView)
-
-        return multiplied.col2img(
-            kernelWidth: filters.shape[3],
-            kernelHeight: filters.shape[2],
-            padding: padding,
-            stride: stride,
-            resultShape: outputShape,
-        )
+        return result.attachingContext(tag: "transposedConv2d", sources: self, filters, bias) { resultGradient, inputGradient, filterGradient, biasGradient in
+            Composed.transposedConvolution2dBackward(input: self, filters: filters, outputGradient: resultGradient, inset: inset, stride: stride, inputGradient: &inputGradient, filterGradient: &filterGradient, biasGradient: &biasGradient)
+        } fused: { resultGradient, inputGradient, filterGradient, biasGradient in
+            Device.FusedOperations.transposedConvolution2dBackward(input: self.values, filters: filters.values, bias: bias?.values, outputGradient: resultGradient, inset: inset, stride: stride, inputGradient: inputGradient, filterGradient: filterGradient, biasGradient: biasGradient)
+        }
     }
 }
 
@@ -187,7 +182,7 @@ public extension Tensor {
 public extension Tensor {
     /// Performs max pooling on the tensor. Max pooling selects the maximum value for every given window of a tensor.
     ///
-    /// The source tensor is expected to have a shape of [batchSize, channels, width, height].
+    /// The source tensor is expected to have a shape of [batchSize, channels, height, width].
     ///
     /// - Parameters:
     ///   - windowSize: Window size
@@ -195,33 +190,26 @@ public extension Tensor {
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
     func maxPooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "MaxPool2D") {
-            let padding = padding ?? ((windowSize - 1) / 2)
-            let stride = stride ?? windowSize
+        let padding = padding ?? ((windowSize - 1) / 2)
+        let stride = stride ?? windowSize
+        var result = Self(uninitializedShape: [
+            shape[0],
+            shape[1],
+            ConvUtil.outputSize(inputSize: shape[2], kernelSize: windowSize, padding: padding, stride: stride),
+            ConvUtil.outputSize(inputSize: shape[3], kernelSize: windowSize, padding: padding, stride: stride),
+        ])
+        Device.FusedOperations.maxPooling2d(input: values, windowSize: windowSize, padding: padding, stride: stride, result: result.mutableValues)
 
-            let outputShape = [
-                shape[0],
-                shape[1],
-                (shape[2] + 2 * padding - windowSize) / stride + 1,
-                (shape[3] + 2 * padding - windowSize) / stride + 1,
-            ]
-
-            let cols = self
-                .view(as: [shape[0] * shape[1], 1, shape[2], shape[3]])
-                .img2col(
-                    kernelWidth: windowSize,
-                    kernelHeight: windowSize,
-                    padding: padding,
-                    stride: stride,
-                )
-            let pooled = cols.reduceMax(along: [0])
-            return pooled.view(as: outputShape)
+        return result.attachingContext(tag: "maxPool2d", source: self) { resultGradient, gradient in
+            Composed.maxPooling2dBackward(input: self, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.maxPooling2dBackward(input: self.values, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride, inputGradient: gradient)
         }
     }
 
     /// Performs average pooling on the tensor. Average pooling computes the average of every given window of a tensor.
     ///
-    /// The source tensor is expected to have a shape of [batchSize, channels, width, height].
+    /// The source tensor is expected to have a shape of [batchSize, channels, height, width].
     ///
     /// - Parameters:
     ///   - windowSize: Window size
@@ -229,27 +217,20 @@ public extension Tensor {
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
     func averagePooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "AveragePool2D") {
-            let padding = padding ?? ((windowSize - 1) / 2)
-            let stride = stride ?? windowSize
+        let padding = padding ?? ((windowSize - 1) / 2)
+        let stride = stride ?? windowSize
+        var result = Self(uninitializedShape: [
+            shape[0],
+            shape[1],
+            ConvUtil.outputSize(inputSize: shape[2], kernelSize: windowSize, padding: padding, stride: stride),
+            ConvUtil.outputSize(inputSize: shape[3], kernelSize: windowSize, padding: padding, stride: stride),
+        ])
+        Device.FusedOperations.averagePooling2d(input: values, windowSize: windowSize, padding: padding, stride: stride, result: result.mutableValues)
 
-            let outputShape = [
-                shape[0],
-                shape[1],
-                (shape[2] + 2 * padding - windowSize) / stride + 1,
-                (shape[3] + 2 * padding - windowSize) / stride + 1,
-            ]
-
-            let cols = self
-                .view(as: [shape[0] * shape[1], 1, shape[2], shape[3]])
-                .img2col(
-                    kernelWidth: windowSize,
-                    kernelHeight: windowSize,
-                    padding: padding,
-                    stride: stride,
-                )
-            let pooled = cols.reduceMean(along: [0])
-            return pooled.view(as: outputShape)
+        return result.attachingContext(tag: "averagePool2d", source: self) { resultGradient, gradient in
+            Composed.averagePooling2dBackward(inputShape: self.shape, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.averagePooling2dBackward(input: self.values, outputGradient: resultGradient, windowSize: windowSize, padding: padding, stride: stride, inputGradient: gradient)
         }
     }
 }

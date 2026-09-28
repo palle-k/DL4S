@@ -41,28 +41,20 @@ public extension Tensor {
     /// ```
     subscript(index: [Int?]) -> Self {
         get {
-            let index = zip(index, shape).map { idx, dim -> Int? in
-                if let idx, idx < 0 {
-                    dim + idx
-                } else {
-                    idx
-                }
-            }
+            let index = Self.resolvingNegativeIndices(index, shape: shape)
             let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
             let handle = TensorHandle(values: val, parent: isCopy ? nil : handle)
+            let sourceShape = self.shape
 
+            // Subscripts are small operations that run in loops, so they use the context with one closure per source directly.
             return Tensor(
                 handle: handle,
                 shape: shape,
                 context: requiresGradient ? TensorContext(
                     tag: "read",
                     sources: [self],
-                    backpropagateAccumulate: [{ resultGradient, acc in
-                        var result = acc ?? Self(repeating: 0, shape: self.shape)
-                        // The slice view must be released before the write, or the write copies the whole accumulator.
-                        let slice = result[index] + resultGradient
-                        result[index] = slice
-                        return result
+                    backpropagateAccumulate: [{ resultGradient, accumulated in
+                        Self.addingSlice(resultGradient, to: accumulated, shape: sourceShape, contiguousOffset: Self.contiguousOffset(of: index, shape: sourceShape), read: { $0[index] }, write: { $0[index] = $1 })
                     }],
                 ) : nil,
             )
@@ -71,13 +63,7 @@ public extension Tensor {
         set(slice) {
             precondition(!requiresGradient, "Cannot write into tensor that requires gradient.")
 
-            let index = zip(index, shape).map { idx, dim -> Int? in
-                if let idx, idx < 0 {
-                    dim + idx
-                } else {
-                    idx
-                }
-            }
+            let index = Self.resolvingNegativeIndices(index, shape: shape)
             if slice.dim == 0, dim - index.filter({ $0 != nil }).count > 0 {
                 fatalError("Assigning from a single value not supported yet.")
             }
@@ -134,19 +120,17 @@ public extension Tensor {
             } else {
                 TensorHandle(values: val, parent: self.handle)
             }
+            let sourceShape = self.shape
 
+            // Subscripts are small operations that run in loops, so they use the context with one closure per source directly.
             return Tensor(
                 handle: handle,
                 shape: shape,
                 context: requiresGradient ? TensorContext(
                     tag: "SubscriptRangeRead",
                     sources: [self],
-                    backpropagateAccumulate: [{ resultGradient, acc in
-                        var result = acc ?? Self(repeating: 0, shape: self.shape)
-                        // The slice view must be released before the write, or the write copies the whole accumulator.
-                        let slice = result[index] + resultGradient
-                        result[index] = slice
-                        return result
+                    backpropagateAccumulate: [{ resultGradient, accumulated in
+                        Self.addingSlice(resultGradient, to: accumulated, shape: sourceShape, contiguousOffset: Self.contiguousOffset(of: index, shape: sourceShape), read: { $0[index] }, write: { $0[index] = $1 })
                     }],
                 ) : nil,
             )
@@ -187,5 +171,76 @@ public extension Tensor {
     subscript(index: Range<Int>?...) -> Self {
         get { self[index] }
         set(slice) { self[index] = slice }
+    }
+}
+
+extension Tensor {
+    /// Offset of the slice at an index of leading integers, which is contiguous in memory, or nil for other indices.
+    static func contiguousOffset(of index: [Int?], shape: [Int]) -> Int? {
+        var count = index.count
+        while count > 0, index[count - 1] == nil {
+            count -= 1
+        }
+        let strides = MemoryOps.strides(from: shape)
+        var offset = 0
+        for axis in 0 ..< count {
+            guard let position = index[axis] else {
+                return nil
+            }
+            offset += position * strides[axis]
+        }
+        return offset
+    }
+
+    /// Offset of the slice at an index with one range on the first axis, which is contiguous in memory, or nil for other indices.
+    static func contiguousOffset(of index: [Range<Int>?], shape: [Int]) -> Int? {
+        guard let first = index.first, let range = first, index.dropFirst().allSatisfy({ $0 == nil }) else {
+            return nil
+        }
+        return range.lowerBound * shape.dropFirst().reduce(1, *)
+    }
+
+    /// Replaces negative indices, which count from the end of their axis, with the corresponding positive indices.
+    @inline(__always)
+    static func resolvingNegativeIndices(_ index: [Int?], shape: [Int]) -> [Int?] {
+        guard index.contains(where: { ($0 ?? 0) < 0 }) else {
+            return index
+        }
+        return zip(index, shape).map { position, size in
+            position.map { $0 < 0 ? size + $0 : $0 }
+        }
+    }
+}
+
+private extension Tensor {
+    /// Adds the gradient of a slice of the source to the accumulated gradient of the source, which has the given shape.
+    ///
+    /// `read` reads the slice from, and `write` writes it into, a tensor with the shape of the source. Without a gradient graph,
+    /// the gradient is added in place: with one addition for a slice that is contiguous in memory, which starts at
+    /// `contiguousOffset`, and with a subscript write otherwise.
+    static func addingSlice(
+        _ sliceGradient: Self,
+        to accumulated: consuming Self?,
+        shape: [Int],
+        contiguousOffset: Int?,
+        read: (Self) -> Self,
+        write: (inout Self, Self) -> Void,
+    ) -> Self {
+        guard !sliceGradient.requiresGradient, !(accumulated?.requiresGradient ?? false) else {
+            var scattered = Self(repeating: 0, shape: shape)
+            write(&scattered, sliceGradient)
+            return accumulated.map { $0 + scattered } ?? scattered
+        }
+        var result = accumulated ?? Self(repeating: 0, shape: shape)
+        if let contiguousOffset {
+            // The accumulated gradient is uniquely referenced, so the write does not copy it.
+            let target = Device.Memory.advance(buffer: result.mutableValues.values, by: contiguousOffset)
+            Device.Engine.vAdd(lhs: Buffer(target), rhs: sliceGradient.values.values, result: target, count: sliceGradient.count)
+        } else {
+            // The slice view must be released before the write, or the write copies the whole accumulated gradient.
+            let sum = read(result) + sliceGradient
+            write(&result, sum)
+        }
+        return result
     }
 }

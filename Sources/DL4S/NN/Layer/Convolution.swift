@@ -82,9 +82,7 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Coda
     }
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "Conv2D") {
-            inputs.convolved2d(filters: filters, padding: padding, stride: stride) + bias
-        }
+        inputs.convolved2d(filters: filters, bias: bias, padding: padding, stride: stride)
     }
 }
 
@@ -148,9 +146,6 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
     }
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "TransposedConv2D") {
-            let t_conv = inputs.transposedConvolved2d(filters: filters, inset: inset, stride: stride)
-            return t_conv + bias
-        }
+        inputs.transposedConvolved2d(filters: filters, bias: bias, inset: inset, stride: stride)
     }
 }

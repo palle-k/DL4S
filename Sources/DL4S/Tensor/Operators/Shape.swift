@@ -133,7 +133,7 @@ public extension Tensor {
 
         return Tensor(
             using: resultBuffer,
-            context: TensorContext(
+            context: requiresGradient ? TensorContext(
                 tag: "permute\(axisArangement)",
                 sources: [self],
                 backpropagateAccumulate: [{ resultGradient, acc in
@@ -148,7 +148,7 @@ public extension Tensor {
                         return resultGradient.permuted(to: invArangement)
                     }
                 }],
-            ),
+            ) : nil,
         )
     }
 

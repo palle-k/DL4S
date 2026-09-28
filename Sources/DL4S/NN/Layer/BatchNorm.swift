@@ -54,12 +54,6 @@ public struct BatchNorm<Element: RandomizableType, Device: DeviceType>: Codable,
     }
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "BatchNorm") {
-            let x = inputs
-            let mean = x.reduceMean(along: [0])
-            let variance = x.variance(along: [0])
-            let normalized = (x - mean) / (sqrt(variance) + 1e-5)
-            return normalized * scale + shift
-        }
+        inputs.batchNormalized(scale: scale, shift: shift).output
     }
 }

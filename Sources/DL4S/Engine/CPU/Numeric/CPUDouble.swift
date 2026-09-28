@@ -227,8 +227,24 @@ extension Double: CPUNumeric {
         return dst
     }
 
+    public static func dot(lhs: UnsafeBufferPointer<Double>, rhs: UnsafeBufferPointer<Double>, count: Int) -> Double {
+        let (a, b) = (lhs.pointer(capacity: count), rhs.pointer(capacity: count))
+        var dst: Double = 0
+
+        #if MKL_ENABLE
+        ippsDotProd_64f(a, b, Int32(count), &dst)
+        #elseif canImport(Accelerate)
+        vDSP_dotprD(a, 1, b, 1, &dst, UInt(count))
+        #else
+        for i in 0 ..< count {
+            dst += a[i] * b[i]
+        }
+        #endif
+        return dst
+    }
+
     public static func sum(val: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> Double {
-        let src = val.pointer(capacity: count * stride)
+        let src = val.pointer(capacity: (count - 1) * stride + 1)
         var dst: Double = 0
 
         #if MKL_ENABLE
@@ -342,12 +358,12 @@ extension Double: CPUNumeric {
         #if canImport(Accelerate) && !MKL_ENABLE
         var maxI: UInt = 0
         var maxV: Double = 0
-        vDSP_maxviD(values.pointer(capacity: count * stride), stride, &maxV, &maxI, UInt(count))
+        vDSP_maxviD(values.pointer(capacity: (count - 1) * stride + 1), stride, &maxV, &maxI, UInt(count))
         return (Int(maxI) / stride, maxV)
         #else
         var maxI = 0
         var maxV: Double = -Double.infinity
-        let src = values.pointer(capacity: stride * count)
+        let src = values.pointer(capacity: (count - 1) * stride + 1)
         for i in 0 ..< count {
             let v = src[i &* stride]
             if v > maxV {
@@ -367,12 +383,12 @@ extension Double: CPUNumeric {
         #if canImport(Accelerate) && !MKL_ENABLE
         var minI: UInt = 0
         var minV: Double = 0
-        vDSP_minviD(values.pointer(capacity: count * stride), stride, &minV, &minI, UInt(count))
+        vDSP_minviD(values.pointer(capacity: (count - 1) * stride + 1), stride, &minV, &minI, UInt(count))
         return (Int(minI) / stride, minV)
         #else
         var minI = 0
         var minV = Double.infinity
-        let src = values.pointer(capacity: stride * count)
+        let src = values.pointer(capacity: (count - 1) * stride + 1)
         for i in 0 ..< count {
             let v = src[i &* stride]
             if v < minV {

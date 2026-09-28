@@ -38,16 +38,15 @@ import Foundation
 /// - Parameters:
 ///   - expected: Expected values
 ///   - actual: Predicted values
-///   - ignoreIndex: Value in expected, which is ignored.
 /// - Returns: Loss, scalar value
 public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    OperationGroup.capture(named: "BinaryCrossEntropy") {
-        let e = expected.view(as: [-1])
-        let a = actual.view(as: [-1])
-
-        let p1 = e * a.log()
-        let p2 = (1 - e) * (1 - a).log()
-        return (-(p1 + p2)).reduceMean()
+    precondition(expected.count == actual.count, "Expected and predicted values must have the same number of elements.")
+    var result = Tensor<Element, Device>(uninitializedShape: [])
+    Device.FusedOperations.binaryCrossEntropy(expected: expected.values, actual: actual.values, result: result.mutableValues)
+    return result.attachingContext(tag: "binaryCrossEntropy", sources: expected, actual) { resultGradient, expectedGradient, actualGradient in
+        Composed.binaryCrossEntropyBackward(expected: expected, actual: actual, outputGradient: resultGradient, expectedGradient: &expectedGradient, actualGradient: &actualGradient)
+    } fused: { resultGradient, expectedGradient, actualGradient in
+        Device.FusedOperations.binaryCrossEntropyBackward(expected: expected.values, actual: actual.values, outputGradient: resultGradient, expectedGradient: expectedGradient, actualGradient: actualGradient)
     }
 }
 
@@ -62,16 +61,18 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
 /// - Parameters:
 ///   - expected: Expected labels
 ///   - actual: Predicted values
-///   - ignoreIndex: Value in expected, which is ignored.
+///   - ignoreIndex: Value in expected, which is ignored. Ignored labels add 0 to the loss, but count for the mean.
 /// - Returns: Loss, scalar value
 public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
-    OperationGroup.capture(named: "CategoricalCrossEntropy") {
-        precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
-        precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
+    precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
+    precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
 
-        let expectedFlat = expected.flattened()
-        let actualFlat = actual.view(as: expectedFlat.count, -1)
-        return -log(actualFlat.gather(using: expectedFlat, alongAxis: 1, ignoreIndex: ignoreIndex)).reduceMean()
+    var result = Tensor<Element, Device>(uninitializedShape: [])
+    Device.FusedOperations.categoricalCrossEntropy(expected: expected.values, actual: actual.values, ignoreIndex: ignoreIndex, result: result.mutableValues)
+    return result.attachingContext(tag: "categoricalCrossEntropy", source: actual) { resultGradient, actualGradient in
+        Composed.categoricalCrossEntropyBackward(expected: expected, actual: actual, outputGradient: resultGradient, ignoreIndex: ignoreIndex, actualGradient: &actualGradient)
+    } fused: { resultGradient, actualGradient in
+        Device.FusedOperations.categoricalCrossEntropyBackward(expected: expected.values, actual: actual.values, outputGradient: resultGradient, ignoreIndex: ignoreIndex, actualGradient: actualGradient)
     }
 }
 
@@ -88,44 +89,63 @@ public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(ex
 /// - Parameters:
 ///   - expected: Expected labels
 ///   - actual: Predicted values
+///   - ignoreIndex: Value in expected, which is ignored. Ignored labels add 0 to the loss, but count for the mean.
 /// - Returns: Loss, scalar value
 public func categoricalNegativeLogLikelihood<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
-    OperationGroup.capture(named: "NLLLoss") {
-        precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
-        precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
+    precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
+    precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
 
-        let expectedFlat = expected.flattened()
-        let actualFlat = actual.view(as: expectedFlat.count, -1)
-        return -actualFlat.gather(using: expectedFlat, alongAxis: 1, ignoreIndex: ignoreIndex).reduceMean()
+    var result = Tensor<Element, Device>(uninitializedShape: [])
+    Device.FusedOperations.categoricalNegativeLogLikelihood(expected: expected.values, actual: actual.values, ignoreIndex: ignoreIndex, result: result.mutableValues)
+    let actualShape = actual.shape
+    return result.attachingContext(tag: "negativeLogLikelihood", source: actual) { resultGradient, actualGradient in
+        Composed.categoricalNegativeLogLikelihoodBackward(expected: expected, actualShape: actualShape, outputGradient: resultGradient, ignoreIndex: ignoreIndex, actualGradient: &actualGradient)
+    } fused: { resultGradient, actualGradient in
+        Device.FusedOperations.categoricalNegativeLogLikelihoodBackward(expected: expected.values, actual: actual.values, outputGradient: resultGradient, ignoreIndex: ignoreIndex, actualGradient: actualGradient)
     }
 }
 
-/// Computes the element-wise mean squared error between the given predicted and expected values
+/// Computes the sum of squared differences between the given predicted and expected values, divided by the number of rows.
+///
+/// The divisor is `expected.shape[0]` when `expected` has two or more axes, and 1 otherwise.
 ///
 /// - Parameters:
 ///   - expected: Expected values
-///   - actual: Predicted values
+///   - actual: Predicted values, broadcastable with the expected values
 public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    OperationGroup.capture(named: "MeanSquaredError") {
-        let diff = expected - actual
-        let s = sum(diff * diff)
-        return s / Tensor(Element(expected.dim > 1 ? expected.shape[0] : 1))
+    var result = Tensor<Element, Device>(uninitializedShape: [])
+    Device.FusedOperations.meanSquaredError(expected: expected.values, actual: actual.values, result: result.mutableValues)
+    return result.attachingContext(tag: "meanSquaredError", sources: expected, actual) { resultGradient, expectedGradient, actualGradient in
+        Composed.meanSquaredErrorBackward(expected: expected, actual: actual, outputGradient: resultGradient, expectedGradient: &expectedGradient, actualGradient: &actualGradient)
+    } fused: { resultGradient, expectedGradient, actualGradient in
+        Device.FusedOperations.meanSquaredErrorBackward(expected: expected.values, actual: actual.values, outputGradient: resultGradient, expectedGradient: expectedGradient, actualGradient: actualGradient)
     }
 }
 
-/// Computes the L2 loss of the given tensor.
+/// Computes the L2 loss of the given tensor, `mean(vector * vector) * loss`.
 /// - Parameters:
 ///   - vector: Tensor to apply weight decay on
 ///   - loss: Weight decay importance scaling factor
 public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
-    mean(vector * vector) * Tensor(loss)
+    var result = Tensor<Element, Device>(uninitializedShape: [])
+    Device.FusedOperations.l2Loss(input: vector.values, scale: loss, result: result.mutableValues)
+    return result.attachingContext(tag: "l2loss", source: vector) { resultGradient, gradient in
+        Composed.l2LossBackward(input: vector, outputGradient: resultGradient, scale: loss, inputGradient: &gradient)
+    } fused: { resultGradient, gradient in
+        Device.FusedOperations.l2LossBackward(input: vector.values, outputGradient: resultGradient, scale: loss, inputGradient: gradient)
+    }
 }
 
-/// Computes the L1 loss of the given tensor.
+/// Computes the L1 loss of the given tensor, `mean(abs(vector)) * loss`. The gradient at 0 is 0.
 /// - Parameters:
 ///   - vector: Tensor to apply weight decay on
 ///   - loss: Weight decay importance scaling factor
 public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
-    // max(x, -x)
-    leakyRelu(vector, leakage: -1).reduceMean() * Tensor(loss)
+    var result = Tensor<Element, Device>(uninitializedShape: [])
+    Device.FusedOperations.l1Loss(input: vector.values, scale: loss, result: result.mutableValues)
+    return result.attachingContext(tag: "l1loss", source: vector) { resultGradient, gradient in
+        Composed.l1LossBackward(input: vector, outputGradient: resultGradient, scale: loss, inputGradient: &gradient)
+    } fused: { resultGradient, gradient in
+        Device.FusedOperations.l1LossBackward(input: vector.values, outputGradient: resultGradient, scale: loss, inputGradient: gradient)
+    }
 }

@@ -85,7 +85,20 @@ public extension Tensor {
     /// - Parameter axes: Axes to compute the mean of
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func reduceMean(along axes: [Int]) -> Self {
-        reduceSum(along: axes) / Tensor(integerLiteral: axes.map { shape[$0] }.reduce(1, *))
+        if axes.isEmpty {
+            return self
+        }
+        var resultShape = shape
+        for axis in axes.sorted(by: >) {
+            resultShape.remove(at: axis)
+        }
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
+        Device.Engine.reduceMean(values: values, result: resultBuffer, axes: axes)
+        let inputShape = shape
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "mean\(axes)", source: self) { resultGradient, gradient in
+            // The gradient does not depend on the values of the tensor, so it is differentiable with respect to the gradient of the result.
+            gradient.add(Self.reduceMeanGradient(inputShape: inputShape, outputGradient: resultGradient, axes: axes))
+        }
     }
 
     /// Computes the mean of the elements along the given axes
@@ -100,13 +113,18 @@ public extension Tensor {
         reduceMean(along: Array(0 ..< dim))
     }
 
-    /// Computes the variance of the tensor along the given axes.
+    /// Computes the biased variance of the tensor along the given axes, `mean(x * x) - mean(x) * mean(x)`.
     ///
     /// - Parameter axes: Axes to compute the variance along.
     /// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
     func variance(along axes: [Int]) -> Self {
-        let m = reduceMean(along: axes)
-        return (self * self).reduceMean(along: axes) - m * m
+        var result = Self(uninitializedShape: ShapeUtil.reducedShape(of: shape, along: axes))
+        Device.FusedOperations.variance(input: values, axes: axes, result: result.mutableValues)
+        return result.attachingContext(tag: "variance\(axes)", source: self) { resultGradient, gradient in
+            Composed.varianceBackward(input: self, outputGradient: resultGradient, axes: axes, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.varianceBackward(input: self.values, outputGradient: resultGradient, axes: axes, inputGradient: gradient)
+        }
     }
 
     /// Computes the variance of the tensor along the given axes.
@@ -127,6 +145,21 @@ public extension Tensor {
     /// Returns the index of the largest element in the tensor.
     func argmax() -> Int {
         Device.Engine.argmax(values: values.values, count: count).0
+    }
+}
+
+extension Tensor {
+    /// Returns the positions of the largest elements along the given axis.
+    /// - Parameter axis: Axis to reduce along
+    /// - Returns: Positions along the axis, with the shape of the tensor without the axis.
+    func argmax(along axis: Int) -> Tensor<Int32, Device> {
+        var resultShape = shape
+        resultShape.remove(at: axis)
+        let maximumBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
+        let positionBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
+        Device.Engine.reduceMax(values: values, result: maximumBuffer, context: positionBuffer, axis: axis)
+        Device.Memory.free(maximumBuffer)
+        return Tensor<Int32, Device>(using: positionBuffer, context: nil)
     }
 }
 
@@ -266,5 +299,12 @@ public extension Tensor {
     /// - Returns: Scalar, maximum of all elements.
     func reduceMax() -> Self {
         reduceMax(along: Array(0 ..< dim))
+    }
+}
+
+private extension Tensor {
+    static func reduceMeanGradient(inputShape: [Int], outputGradient: Self, axes: [Int]) -> Self {
+        let weights = Self(repeating: Element.one / Element(ShapeUtil.elementCount(of: inputShape, along: axes)), shape: inputShape)
+        return weights * outputGradient.view(as: ShapeUtil.keptShape(of: inputShape, along: axes))
     }
 }

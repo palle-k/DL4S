@@ -196,3 +196,22 @@ public extension Tensor {
         self.requiresGradient = requiresGradient
     }
 }
+
+// MARK: Dropout
+
+public extension Tensor {
+    /// Sets random elements of the tensor to zero. The other elements keep their values.
+    ///
+    /// - Parameter rate: Probability, with which an element is set to zero
+    /// - Returns: Tensor with the shape of the tensor
+    func droppedOut(rate: Float) -> Self {
+        var result = Self(uninitializedShape: shape)
+        var mask = Self(uninitializedShape: shape)
+        Device.FusedOperations.dropout(input: values, rate: rate, result: result.mutableValues, mask: mask.mutableValues)
+        return result.attachingContext(tag: "dropout", source: self) { [mask] resultGradient, gradient in
+            Composed.dropoutBackward(mask: mask, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { [mask] resultGradient, gradient in
+            Device.FusedOperations.dropoutBackward(mask: mask.values, outputGradient: resultGradient, inputGradient: gradient)
+        }
+    }
+}

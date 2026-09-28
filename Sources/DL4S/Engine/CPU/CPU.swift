@@ -31,6 +31,16 @@ import Synchronization
 public struct CPU: DeviceType {
     public typealias Memory = CPUMemoryOperators
     public typealias Engine = CPUEngine
+    public typealias FusedOperations = CPUFusedOperations
+}
+
+/// Fused operations of the CPU.
+///
+/// The CPU has fused kernels for the activations, softmax, normalization, convolution and pooling, attention, and dropout.
+/// The kernels process the data in blocks or rows that fit into the cache and use the accelerated primitives of ``CPUNumeric``.
+/// The other operations, and shapes that the kernels do not support, use the default implementations.
+public struct CPUFusedOperations: FusedOperationsType {
+    public typealias Device = CPU
 }
 
 public struct CPUMemoryOperators: MemoryOperatorsType {
@@ -103,15 +113,19 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
 
         // Prevent unneccessary copies when index ends with nil
-        let slice = slice.reversed().drop(while: { $0 == nil }).reversed()
-
-        let nonNilIndices = slice.compactMap(\.self)
+        var sliceCount = slice.count
+        while sliceCount > 0, slice[sliceCount - 1] == nil {
+            sliceCount -= 1
+        }
         let strides = CPUMemoryOperators.strides(from: shape)
 
-        if nonNilIndices.count == slice.count {
+        if slice.prefix(sliceCount).allSatisfy({ $0 != nil }) {
             // Simple offset into storage
-            let offset = zip(nonNilIndices, strides).map(*).reduce(0, +)
-            let resultShape = Array(shape.dropFirst(nonNilIndices.count))
+            var offset = 0
+            for axis in 0 ..< sliceCount {
+                offset += slice[axis]! * strides[axis]
+            }
+            let resultShape = Array(shape.dropFirst(sliceCount))
 
             let bound = buffer.memory
                 .bindMemory(to: Element.self)
@@ -121,7 +135,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
             let advancedRaw = UnsafeMutableRawBufferPointer(advanced)
             return (MutableBuffer<Element, CPU>(memory: advancedRaw), false, resultShape)
         } else {
-            let padded = slice + [Int?](repeating: nil, count: shape.count - slice.count)
+            let padded = Array(slice.prefix(sliceCount)) + [Int?](repeating: nil, count: shape.count - sliceCount)
 
             let resultShape = zip(padded, shape).map { el -> Int? in
                 let (index, dimSize) = el

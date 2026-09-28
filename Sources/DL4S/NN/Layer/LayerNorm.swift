@@ -50,21 +50,6 @@ public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: Codable,
     }
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "LayerNorm") {
-            let x = inputs
-            let sampleDim = x.dim - shift.dim
-            let axes = Array(sampleDim ..< x.dim)
-            let statisticsShape = Array(x.shape.prefix(sampleDim)) + Array(repeating: 1, count: shift.dim)
-            let mean = x
-                .reduceMean(along: axes)
-                .view(as: statisticsShape)
-
-            let variance = x
-                .variance(along: axes)
-                .view(as: statisticsShape)
-
-            let normalized = (x - mean) / (sqrt(variance) + 1e-5)
-            return normalized * scale + shift
-        }
+        inputs.layerNormalized(scale: scale, shift: shift)
     }
 }

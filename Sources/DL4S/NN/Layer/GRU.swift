@@ -130,19 +130,16 @@ public struct GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable, 
     }
 
     public func step(_ preparedInput: (Tensor<Element, Device>, Tensor<Element, Device>, Tensor<Element, Device>), previousState: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "GRUCell") {
-            let (x_z, x_r, x_h) = preparedInput
-
-            let h_p = previousState.view(as: [x_z.shape[0], hiddenSize])
-
-            let z_t = sigmoid(x_z + matMul(h_p, Uz))
-            let r_t = sigmoid(x_r + matMul(h_p, Ur))
-
-            let h_t_partial_1 = (1 - z_t) * h_p
-            let h_t_partial_2 = tanh(x_h + matMul(r_t * h_p, Uh))
-
-            return h_t_partial_1 + z_t * h_t_partial_2
-        }
+        let (x_z, x_r, x_h) = preparedInput
+        return gatedRecurrentUnitStep(
+            updateInput: x_z,
+            resetInput: x_r,
+            candidateInput: x_h,
+            state: previousState.view(as: [x_z.shape[0], hiddenSize]),
+            updateWeights: Uz,
+            resetWeights: Ur,
+            candidateWeights: Uh,
+        )
     }
 
     public func concatenate(_ states: [Tensor<Element, Device>]) -> Tensor<Element, Device> {

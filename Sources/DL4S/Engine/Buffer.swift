@@ -149,6 +149,23 @@ public struct MutableShapedBuffer<Element, Device: DeviceType> {
         self.shape = shape
         self.values = values
     }
+
+    /// Returns the region that starts `offset` elements later in the same memory, with the given shape.
+    func slice(offset: Int, shape: [Int]) -> MutableShapedBuffer<Element, Device> {
+        MutableShapedBuffer(values: Device.Memory.advance(buffer: values, by: offset), shape: shape)
+    }
+
+    func reshaped(to shape: [Int]) -> MutableShapedBuffer<Element, Device> {
+        precondition(shape.reduce(1, *) == self.shape.reduce(1, *))
+        return MutableShapedBuffer(values: values, shape: shape)
+    }
+}
+
+extension ShapedBuffer {
+    /// Returns the region that starts `offset` elements later in the same memory, with the given shape.
+    func slice(offset: Int, shape: [Int]) -> ShapedBuffer<Element, Device> {
+        ShapedBuffer(values: Device.Memory.advance(buffer: values, by: offset), shape: shape)
+    }
 }
 
 public extension MemoryOperatorsType {
