@@ -129,6 +129,18 @@ extension GPUTests {
             }
         }
 
+        // The inputs are mostly negative, so that windows at the borders take their maximum from the zeros of the padding.
+        @Test(arguments: [([2, 3, 7, 7], 3, 1, 2), ([2, 3, 8, 8], 2, 0, 2), ([2, 3, 9, 7], 2, 0, 2), ([1, 2, 5, 6], 3, 0, 1), ([2, 2, 6, 6], 3, 1, 3), ([4, 16, 33, 40], 3, 1, 2)])
+        func poolingMatchesCPU(shape: [Int], windowSize: Int, padding: Int, stride: Int) {
+            let x = GPUTest.random(shape, seed: 17, min: -3, max: 1, requiresGradient: true)
+            GPUTest.compare("max pooling \(shape) window \(windowSize) padding \(padding) stride \(stride)") { gpu in
+                GPUTest.run(on: gpu, [x], cpu: { Self.resultAndGradients($0) { $0[0].maxPooled2d(windowSize: windowSize, padding: padding, stride: stride) } }, gpu: { GPUTest.host(Self.resultAndGradients($0) { $0[0].maxPooled2d(windowSize: windowSize, padding: padding, stride: stride) }) })
+            }
+            GPUTest.compare("average pooling \(shape) window \(windowSize) padding \(padding) stride \(stride)") { gpu in
+                GPUTest.run(on: gpu, [x], cpu: { Self.resultAndGradients($0) { $0[0].averagePooled2d(windowSize: windowSize, padding: padding, stride: stride) } }, gpu: { GPUTest.host(Self.resultAndGradients($0) { $0[0].averagePooled2d(windowSize: windowSize, padding: padding, stride: stride) }) })
+            }
+        }
+
         @Test(arguments: [([32, 8, 4, 4], [8, 1, 1]), ([32, 8, 4, 4], [8, 4, 4]), ([256, 40], [40]), ([5, 3], [3])])
         func batchNormalizationMatchesCPU(shape: [Int], scaleShape: [Int]) {
             let x = GPUTest.random(shape, seed: 12, min: -2, max: 3, requiresGradient: true)

@@ -41,10 +41,11 @@ struct GPUShaderSource: Sendable {
     static let reduction = GPUShaderSource(name: "reduction")
     static let matrix = GPUShaderSource(name: "matrix")
     static let fused = GPUShaderSource(name: "fused")
+    static let convolution = GPUShaderSource(name: "convolution")
 
     /// All kernel groups of the package.
     static var all: [GPUShaderSource] {
-        [.elementwise, .copy, .reduction, .matrix, .fused]
+        [.elementwise, .copy, .reduction, .matrix, .fused, .convolution]
     }
 
     /// Source of the group, after the declarations of `prelude.metal` that all groups share.

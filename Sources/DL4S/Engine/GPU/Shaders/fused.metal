@@ -427,3 +427,124 @@ kernel void gru_backward_reset(device const float* reset [[buffer(0)]], device c
     resetGradient[i] = gradient * state[i] * r * (1.0f - r);
     stateGradient[i] += gradient * r;
 }
+
+// MARK: Pooling
+
+// Pooling works on planes, one per image and channel. The forward kernels run one thread per output element, and the
+// backward kernels one thread per input element, which adds the gradients of the windows that contain it. The backward
+// pass needs no atomics and no zeroed gradient. Padding elements are zeros that take part in the maximum and count for the mean.
+struct PoolingParameters {
+    uint height;
+    uint width;
+    uint outputHeight;
+    uint outputWidth;
+    uint windowSize;
+    int padding;
+    uint stride;
+    uint accumulate;
+    float scale;
+    float inverseStride;
+};
+
+inline float pooling_element(device const float* image, int row, int column, constant PoolingParameters& p) {
+    bool inside = row >= 0 && row < int(p.height) && column >= 0 && column < int(p.width);
+    return inside ? image[row * int(p.width) + column] : 0.0f;
+}
+
+// floor(n / stride) for n >= 0, as a multiplication: an integer division costs about as much as the memory accesses of
+// a backward thread. Adding 0.5 keeps the quotient of a multiple of the stride away from the rounding error.
+inline int pooling_quotient(int n, float inverseStride) {
+    return int((float(n) + 0.5f) * inverseStride);
+}
+
+// The windows along one axis that contain the given position: [first, last], empty when first > last.
+inline int2 pooling_windows(int position, uint windowSize, int padding, uint stride, float inverseStride, uint outputSize) {
+    int start = position + padding - int(windowSize) + 1;
+    int first = start <= 0 ? 0 : pooling_quotient(start + int(stride) - 1, inverseStride);
+    int last = min(pooling_quotient(position + padding, inverseStride), int(outputSize) - 1);
+    return int2(first, last);
+}
+
+kernel void max_pool_forward(device const float* input [[buffer(0)]], device float* result [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],
+                             uint3 position [[thread_position_in_grid]]) {
+    if (position.x >= p.outputWidth || position.y >= p.outputHeight) { return; }
+    device const float* image = input + position.z * p.height * p.width;
+    int firstRow = int(position.y * p.stride) - p.padding, firstColumn = int(position.x * p.stride) - p.padding;
+    float best = -INFINITY;
+    for (uint i = 0; i < p.windowSize; i++) {
+        for (uint j = 0; j < p.windowSize; j++) {
+            best = max(best, pooling_element(image, firstRow + int(i), firstColumn + int(j), p));
+        }
+    }
+    result[(position.z * p.outputHeight + position.y) * p.outputWidth + position.x] = best;
+}
+
+// Writes the position in its window of the first largest value of every window in row-major order, as on the CPU, or 255
+// for a padding element, whose gradient is dropped. The backward kernel reads the positions, so it scans every window once.
+// A position takes one byte, which limits the windows to 15 x 15 elements.
+kernel void max_pool_positions(device const float* input [[buffer(0)]], device uchar* positions [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],
+                               uint3 position [[thread_position_in_grid]]) {
+    if (position.x >= p.outputWidth || position.y >= p.outputHeight) { return; }
+    device const float* image = input + position.z * p.height * p.width;
+    int firstRow = int(position.y * p.stride) - p.padding, firstColumn = int(position.x * p.stride) - p.padding;
+    float best = -INFINITY;
+    uint winner = 255;
+    for (uint i = 0; i < p.windowSize; i++) {
+        for (uint j = 0; j < p.windowSize; j++) {
+            int row = firstRow + int(i), column = firstColumn + int(j);
+            bool inside = row >= 0 && row < int(p.height) && column >= 0 && column < int(p.width);
+            float value = inside ? image[row * int(p.width) + column] : 0.0f;
+            bool larger = value > best;
+            best = larger ? value : best;
+            winner = larger ? (inside ? i * p.windowSize + j : 255) : winner;
+        }
+    }
+    positions[(position.z * p.outputHeight + position.y) * p.outputWidth + position.x] = winner;
+}
+
+kernel void max_pool_backward(device const uchar* positions [[buffer(0)]], device const float* outputGradient [[buffer(1)]], device float* result [[buffer(2)]],
+                              constant PoolingParameters& p [[buffer(3)]], uint3 position [[thread_position_in_grid]]) {
+    if (position.x >= p.width || position.y >= p.height) { return; }
+    uint windowsOffset = position.z * p.outputHeight * p.outputWidth;
+    int2 rows = pooling_windows(int(position.y), p.windowSize, p.padding, p.stride, p.inverseStride, p.outputHeight);
+    int2 columns = pooling_windows(int(position.x), p.windowSize, p.padding, p.stride, p.inverseStride, p.outputWidth);
+    float sum = 0.0f;
+    for (int outputRow = rows.x; outputRow <= rows.y; outputRow++) {
+        for (int outputColumn = columns.x; outputColumn <= columns.y; outputColumn++) {
+            uint window = windowsOffset + uint(outputRow) * p.outputWidth + uint(outputColumn);
+            // The position of the element in the window
+            uint own = uint(int(position.y) - (outputRow * int(p.stride) - p.padding)) * p.windowSize + uint(int(position.x) - (outputColumn * int(p.stride) - p.padding));
+            sum += positions[window] == own ? outputGradient[window] : 0.0f;
+        }
+    }
+    store(result, (position.z * p.height + position.y) * p.width + position.x, sum, p.accumulate);
+}
+
+kernel void average_pool_forward(device const float* input [[buffer(0)]], device float* result [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],
+                                 uint3 position [[thread_position_in_grid]]) {
+    if (position.x >= p.outputWidth || position.y >= p.outputHeight) { return; }
+    device const float* image = input + position.z * p.height * p.width;
+    int firstRow = int(position.y * p.stride) - p.padding, firstColumn = int(position.x * p.stride) - p.padding;
+    float sum = 0.0f;
+    for (uint i = 0; i < p.windowSize; i++) {
+        for (uint j = 0; j < p.windowSize; j++) {
+            sum += pooling_element(image, firstRow + int(i), firstColumn + int(j), p);
+        }
+    }
+    result[(position.z * p.outputHeight + position.y) * p.outputWidth + position.x] = sum * p.scale;
+}
+
+kernel void average_pool_backward(device const float* outputGradient [[buffer(0)]], device float* result [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],
+                                  uint3 position [[thread_position_in_grid]]) {
+    if (position.x >= p.width || position.y >= p.height) { return; }
+    device const float* gradient = outputGradient + position.z * p.outputHeight * p.outputWidth;
+    int2 rows = pooling_windows(int(position.y), p.windowSize, p.padding, p.stride, p.inverseStride, p.outputHeight);
+    int2 columns = pooling_windows(int(position.x), p.windowSize, p.padding, p.stride, p.inverseStride, p.outputWidth);
+    float sum = 0.0f;
+    for (int outputRow = rows.x; outputRow <= rows.y; outputRow++) {
+        for (int outputColumn = columns.x; outputColumn <= columns.y; outputColumn++) {
+            sum += gradient[outputRow * int(p.outputWidth) + outputColumn];
+        }
+    }
+    store(result, (position.z * p.height + position.y) * p.width + position.x, sum * p.scale, p.accumulate);
+}

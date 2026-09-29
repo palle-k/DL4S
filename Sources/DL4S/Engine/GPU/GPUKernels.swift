@@ -35,8 +35,12 @@ enum GPUKernels {
 
     /// Allocates a GPU buffer for the given number of temporary 32-bit values.
     static func temporary(count: Int) -> GPUBuffer {
-        let byteCount = count * 4
-        return GPUBuffer(storage: GPUStorage(byteCount: byteCount), byteOffset: 0, byteCount: byteCount)
+        temporary(byteCount: count * 4)
+    }
+
+    /// A buffer of the given number of bytes, for kernels that work on elements of another size.
+    static func temporary(byteCount: Int) -> GPUBuffer {
+        GPUBuffer(storage: GPUStorage(byteCount: byteCount), byteOffset: 0, byteCount: byteCount)
     }
 
     // MARK: Element-wise

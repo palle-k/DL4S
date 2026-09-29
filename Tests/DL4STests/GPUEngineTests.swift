@@ -221,7 +221,12 @@ extension GPUTests {
             }
         }
 
-        @Test(arguments: [(1, 3, 8, 8, 4, 3, 1, 1), (2, 5, 13, 11, 7, 3, 2, 1), (3, 2, 9, 9, 3, 5, 1, 2)])
+        // The strided cases cover every path of the GPU: implicit products for the forward pass with few input channels and for
+        // the data gradient with many, the window matrix for the data gradient with few, and the graphs for the other passes.
+        @Test(arguments: [
+            (1, 3, 8, 8, 4, 3, 1, 1), (2, 5, 13, 11, 7, 3, 2, 1), (3, 2, 9, 9, 3, 5, 1, 2), (2, 3, 23, 21, 8, 7, 2, 3),
+            (2, 20, 12, 11, 24, 3, 2, 1), (2, 18, 9, 10, 6, 1, 2, 0), (1, 17, 13, 13, 5, 4, 3, 2),
+        ])
         func convolutionsMatchCPU(batch: Int, channels: Int, height: Int, width: Int, filters: Int, kernel: Int, stride: Int, padding: Int) {
             let input = Tensor<Float, CPU>(random([batch, channels, height, width], seed: 18), requiresGradient: true)
             let weights = Tensor<Float, CPU>(random([filters, channels, kernel, kernel], seed: 19), requiresGradient: true)
