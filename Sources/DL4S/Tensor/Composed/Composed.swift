@@ -1,8 +1,8 @@
 //
-//  CPUFusedDropout.swift
+//  Composed.swift
 //  DL4S
 //
-//  Created by Palle Klewitz on 23.09.26.
+//  Created by Palle Klewitz on 28.09.26.
 //  Copyright (c) 2026 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,26 +25,10 @@
 
 import Foundation
 
-public extension CPUFusedOperations {
-    @_specialize(where N == Float)
-    @_specialize(where N == Double)
-    static func dropout<N: NumericType>(input: ShapedBuffer<N, CPU>, rate: Float, result: MutableShapedBuffer<N, CPU>, mask: MutableShapedBuffer<N, CPU>) {
-        let (x, y, m) = (input.elementPointer, result.elementPointer, mask.elementPointer)
-        let probability = Double(1 - rate)
-
-        // An element is kept when a uniform 64-bit random number is below the threshold, which happens with the given probability.
-        if probability >= 1 {
-            CPUKernels.fill(m, with: 1, count: input.count)
-            y.update(from: x, count: input.count)
-            return
-        }
-        let threshold = probability <= 0 ? 0 : UInt64(Swift.min(probability, 1 - 0x1p-53) * 0x1p64)
-        var generator = WyHash()
-        for i in 0 ..< input.count {
-            let factor: N = generator.next() < threshold ? 1 : 0
-            let value = x[i]
-            m[i] = factor
-            y[i] = value * factor
-        }
-    }
-}
+/// Fused operations and their gradients, composed from differentiable tensor operations.
+///
+/// When the backward pass records a gradient graph, a tensor operation computes the gradients of its fused operation with
+/// these functions on the tensors of the compute graph, so that autograd can derive higher derivatives. A backward function
+/// has the parameters of its backward requirement in ``FusedOperationsType``, with tensors in place of buffers, and adds the
+/// gradient of every requested source to its accumulator.
+enum Composed {}

@@ -165,9 +165,9 @@ extension GPUTests {
         @Test func accumulatedProductsAddToResult() {
             let (a, b, c) = (random([40, 30], seed: 10), random([30, 50], seed: 11), random([40, 50], seed: 12))
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>, _ c: Tensor<Float, D>) -> [Tensor<Float, D>] {
-                var accumulator: Tensor<Float, D>? = c + 0
-                Tensor.accumulateProduct(a, b, into: &accumulator)
-                return [accumulator!]
+                var accumulator = c + 0
+                D.Engine.gemm(lhs: a.values, rhs: b.values, result: accumulator.mutableValues, alpha: 1, beta: 1, transposeFirst: false, transposeSecond: false)
+                return [accumulator]
             }
             compare("gemm beta") { gpu in
                 run(on: gpu, [a, b, c], cpu: { body($0[0], $0[1], $0[2]) }, gpu: { body($0[0], $0[1], $0[2]).map { Tensor<Float, CPU>($0) } })

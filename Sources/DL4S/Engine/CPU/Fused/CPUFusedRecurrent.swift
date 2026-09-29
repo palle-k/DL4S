@@ -27,141 +27,138 @@ import Foundation
 
 // A step of a gated recurrent unit writes the input projections into the gate buffers and adds the products with the
 // state weights with GEMMs (beta 1), so the sums need no separate pass. The activations and the new state are
-// element-wise loops over blocks.
+// element-wise loops.
 
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
     static func gatedRecurrentUnitStep<N: NumericType>(
-        updateInput: Tensor<N, CPU>,
-        resetInput: Tensor<N, CPU>,
-        candidateInput: Tensor<N, CPU>,
-        state: Tensor<N, CPU>,
-        updateWeights: Tensor<N, CPU>,
-        resetWeights: Tensor<N, CPU>,
-        candidateWeights: Tensor<N, CPU>,
-    ) -> Tensor<N, CPU> {
-        guard let geometry = GatedRecurrentUnitGeometry(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights) else {
-            return DefaultFusedOperations<CPU>.gatedRecurrentUnitStep(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights)
+        updateInput: ShapedBuffer<N, CPU>,
+        resetInput: ShapedBuffer<N, CPU>,
+        candidateInput: ShapedBuffer<N, CPU>,
+        state: ShapedBuffer<N, CPU>,
+        updateWeights: ShapedBuffer<N, CPU>,
+        resetWeights: ShapedBuffer<N, CPU>,
+        candidateWeights: ShapedBuffer<N, CPU>,
+        result: MutableShapedBuffer<N, CPU>,
+    ) {
+        let geometry = GatedRecurrentUnitGeometry(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights)
+        let output = result.elementPointer
+        let gates = GatedRecurrentUnitScratch<N>(count: geometry.count)
+        defer {
+            gates.deallocate()
         }
-        let (result, output) = CPUKernels.makeTensor(shape: state.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let count = geometry.count
-        CPUKernels.withScratch(N.self, count: 3 * count + CPUKernels.blockSize) { scratch in
-            let (update, reset, resetState) = (scratch, scratch + count, scratch + 2 * count)
-            let blockScratch = scratch + 3 * count
-            geometry.gates(
-                updateInput: updateInput.elementPointer, resetInput: resetInput.elementPointer, candidateInput: candidateInput.elementPointer,
-                state: state.elementPointer, updateWeights: updateWeights.elementPointer, resetWeights: resetWeights.elementPointer, candidateWeights: candidateWeights.elementPointer,
-                update: update, reset: reset, resetState: resetState, candidate: output, scratch: blockScratch,
-            )
-            let h = state.elementPointer
-            for i in 0 ..< count {
-                let (previous, candidate) = (h[i], output[i])
-                output[i] = previous + update[i] * (candidate - previous)
-            }
+        // The candidate state is written into the result, which becomes the new state.
+        geometry.computeGates(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, into: gates, candidate: output)
+        let (h, z) = (state.elementPointer, gates.update)
+        for i in 0 ..< geometry.count {
+            let (previous, candidate) = (h[i], output[i])
+            output[i] = previous + z[i] * (candidate - previous)
         }
-        return result
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
     static func gatedRecurrentUnitStepBackward<N: NumericType>(
-        updateInput: Tensor<N, CPU>,
-        resetInput: Tensor<N, CPU>,
-        candidateInput: Tensor<N, CPU>,
-        state: Tensor<N, CPU>,
-        updateWeights: Tensor<N, CPU>,
-        resetWeights: Tensor<N, CPU>,
-        candidateWeights: Tensor<N, CPU>,
-        outputGradient: Tensor<N, CPU>,
-        accumulating gradients: inout GatedRecurrentUnitGradients<N, CPU>,
+        updateInput: ShapedBuffer<N, CPU>,
+        resetInput: ShapedBuffer<N, CPU>,
+        candidateInput: ShapedBuffer<N, CPU>,
+        state: ShapedBuffer<N, CPU>,
+        updateWeights: ShapedBuffer<N, CPU>,
+        resetWeights: ShapedBuffer<N, CPU>,
+        candidateWeights: ShapedBuffer<N, CPU>,
+        outputGradient: ShapedBuffer<N, CPU>,
+        gradients: GatedRecurrentUnitGradients<GradientBuffer<N, CPU>?>,
     ) {
-        guard let geometry = GatedRecurrentUnitGeometry(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights),
-              outputGradient.shape == state.shape
-        else {
-            DefaultFusedOperations<CPU>.gatedRecurrentUnitStepBackward(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, outputGradient: outputGradient, accumulating: &gradients)
-            return
-        }
+        let geometry = GatedRecurrentUnitGeometry(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights)
+        precondition(outputGradient.shape == state.shape, "The gradient of the new state must have the shape of the state.")
         let (count, batchSize, hiddenSize) = (geometry.count, geometry.batchSize, geometry.hiddenSize)
-        let (stateShape, weightShape) = (state.shape, [hiddenSize, hiddenSize])
         let (h, g) = (state.elementPointer, outputGradient.elementPointer)
         let (uz, ur, uh) = (updateWeights.elementPointer, resetWeights.elementPointer, candidateWeights.elementPointer)
-
-        CPUKernels.withScratch(N.self, count: 6 * count + CPUKernels.blockSize) { scratch in
-            let (update, reset, resetState, candidate) = (scratch, scratch + count, scratch + 2 * count, scratch + 3 * count)
-            let (updateActivationGradient, candidateActivationGradient) = (scratch + 4 * count, scratch + 5 * count)
-            // The gates are computed again instead of being kept alive between the forward and the backward pass.
-            geometry.gates(
-                updateInput: updateInput.elementPointer, resetInput: resetInput.elementPointer, candidateInput: candidateInput.elementPointer,
-                state: h, updateWeights: uz, resetWeights: ur, candidateWeights: uh,
-                update: update, reset: reset, resetState: resetState, candidate: candidate, scratch: scratch + 6 * count,
-            )
-            // The new state is state + update * (candidate - state).
-            for i in 0 ..< count {
-                let (gradient, z, c, previous) = (g[i], update[i], candidate[i], h[i])
-                updateActivationGradient[i] = gradient * (c - previous) * z * (1 - z)
-                candidateActivationGradient[i] = gradient * z * (1 - c * c)
-            }
-            // The weight gradients are added to the accumulated gradients with GEMMs, so a weight that every time step uses needs no temporary gradient.
-            if updateInput.requiresGradient {
-                CPUKernels.accumulate(into: &gradients.updateInput, shape: stateShape) { target, beta in
-                    CPUKernels.store(updateActivationGradient, into: target, beta: beta, count: count)
-                }
-            }
-            if candidateInput.requiresGradient {
-                CPUKernels.accumulate(into: &gradients.candidateInput, shape: stateShape) { target, beta in
-                    CPUKernels.store(candidateActivationGradient, into: target, beta: beta, count: count)
-                }
-            }
-            if updateWeights.requiresGradient {
-                CPUKernels.accumulate(into: &gradients.updateWeights, shape: weightShape) { target, beta in
-                    CPUKernels.gemm(h, shape: (batchSize, hiddenSize), lhsTransposed: true, updateActivationGradient, shape: (batchSize, hiddenSize), into: target, beta: beta)
-                }
-            }
-            if candidateWeights.requiresGradient {
-                CPUKernels.accumulate(into: &gradients.candidateWeights, shape: weightShape) { target, beta in
-                    CPUKernels.gemm(resetState, shape: (batchSize, hiddenSize), lhsTransposed: true, candidateActivationGradient, shape: (batchSize, hiddenSize), into: target, beta: beta)
-                }
-            }
-            guard resetInput.requiresGradient || state.requiresGradient || resetWeights.requiresGradient else {
-                return
-            }
-            // The gate buffers of the reset state and the candidate are free now.
-            let resetStateGradient = candidate
-            CPUKernels.gemm(candidateActivationGradient, shape: (batchSize, hiddenSize), uh, shape: (hiddenSize, hiddenSize), rhsTransposed: true, into: resetStateGradient)
-            let resetActivationGradient = resetState
-            for i in 0 ..< count {
-                let (gradient, r) = (resetStateGradient[i], reset[i])
-                resetActivationGradient[i] = gradient * h[i] * r * (1 - r)
-            }
-            if resetInput.requiresGradient {
-                CPUKernels.accumulate(into: &gradients.resetInput, shape: stateShape) { target, beta in
-                    CPUKernels.store(resetActivationGradient, into: target, beta: beta, count: count)
-                }
-            }
-            if resetWeights.requiresGradient {
-                CPUKernels.accumulate(into: &gradients.resetWeights, shape: weightShape) { target, beta in
-                    CPUKernels.gemm(h, shape: (batchSize, hiddenSize), lhsTransposed: true, resetActivationGradient, shape: (batchSize, hiddenSize), into: target, beta: beta)
-                }
-            }
-            if state.requiresGradient {
-                CPUKernels.accumulate(into: &gradients.state, shape: stateShape) { target, beta in
-                    if beta == 0 {
-                        for i in 0 ..< count {
-                            let (gradient, z, fromResetState, r) = (g[i], update[i], resetStateGradient[i], reset[i])
-                            target[i] = gradient * (1 - z) + fromResetState * r
-                        }
-                    } else {
-                        for i in 0 ..< count {
-                            let (gradient, z, fromResetState, r) = (g[i], update[i], resetStateGradient[i], reset[i])
-                            target[i] += gradient * (1 - z) + fromResetState * r
-                        }
-                    }
-                    CPUKernels.gemm(resetActivationGradient, shape: (batchSize, hiddenSize), ur, shape: (hiddenSize, hiddenSize), rhsTransposed: true, into: target, beta: 1)
-                    CPUKernels.gemm(updateActivationGradient, shape: (batchSize, hiddenSize), uz, shape: (hiddenSize, hiddenSize), rhsTransposed: true, into: target, beta: 1)
-                }
-            }
+        let gates = GatedRecurrentUnitScratch<N>(count: count)
+        let candidate = UnsafeMutablePointer<N>.allocate(capacity: count)
+        let updateActivationGradient = UnsafeMutablePointer<N>.allocate(capacity: count)
+        let candidateActivationGradient = UnsafeMutablePointer<N>.allocate(capacity: count)
+        defer {
+            gates.deallocate()
+            candidate.deallocate()
+            updateActivationGradient.deallocate()
+            candidateActivationGradient.deallocate()
         }
+        // The gates are computed again instead of being kept alive between the forward and the backward pass.
+        geometry.computeGates(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, into: gates, candidate: candidate)
+        let (update, reset, resetState) = (gates.update, gates.reset, gates.resetState)
+        // The new state is state + update * (candidate - state).
+        for i in 0 ..< count {
+            let (gradient, z, c, previous) = (g[i], update[i], candidate[i], h[i])
+            updateActivationGradient[i] = gradient * (c - previous) * z * (1 - z)
+            candidateActivationGradient[i] = gradient * z * (1 - c * c)
+        }
+        // The weight gradients are added to the accumulated gradients with GEMMs, so a weight that every time step uses needs no temporary gradient.
+        let matrixShape = (batchSize, hiddenSize)
+        let weightShape = (hiddenSize, hiddenSize)
+        if let (target, beta) = gradients.updateInput?.elementsToWrite() {
+            CPUKernels.store(updateActivationGradient, into: target, beta: beta, count: count)
+        }
+        if let (target, beta) = gradients.candidateInput?.elementsToWrite() {
+            CPUKernels.store(candidateActivationGradient, into: target, beta: beta, count: count)
+        }
+        if let (target, beta) = gradients.updateWeights?.elementsToWrite() {
+            CPUKernels.gemm(h, shape: matrixShape, lhsTransposed: true, updateActivationGradient, shape: matrixShape, into: target, beta: beta)
+        }
+        if let (target, beta) = gradients.candidateWeights?.elementsToWrite() {
+            CPUKernels.gemm(resetState, shape: matrixShape, lhsTransposed: true, candidateActivationGradient, shape: matrixShape, into: target, beta: beta)
+        }
+        guard gradients.resetInput != nil || gradients.state != nil || gradients.resetWeights != nil else {
+            return
+        }
+        // The candidate and the reset state are not needed anymore, so their buffers take the gradients of the reset path.
+        let resetStateGradient = candidate
+        CPUKernels.gemm(candidateActivationGradient, shape: matrixShape, uh, shape: weightShape, rhsTransposed: true, into: resetStateGradient)
+        let resetActivationGradient = resetState
+        for i in 0 ..< count {
+            let (gradient, r) = (resetStateGradient[i], reset[i])
+            resetActivationGradient[i] = gradient * h[i] * r * (1 - r)
+        }
+        if let (target, beta) = gradients.resetInput?.elementsToWrite() {
+            CPUKernels.store(resetActivationGradient, into: target, beta: beta, count: count)
+        }
+        if let (target, beta) = gradients.resetWeights?.elementsToWrite() {
+            CPUKernels.gemm(h, shape: matrixShape, lhsTransposed: true, resetActivationGradient, shape: matrixShape, into: target, beta: beta)
+        }
+        if let (target, beta) = gradients.state?.elementsToWrite() {
+            // The element-wise part of the state gradient replaces the gradient of the reset state, which it reads first.
+            let elementwise = resetStateGradient
+            for i in 0 ..< count {
+                let (gradient, z, fromResetState, r) = (g[i], update[i], resetStateGradient[i], reset[i])
+                elementwise[i] = gradient * (1 - z) + fromResetState * r
+            }
+            CPUKernels.store(elementwise, into: target, beta: beta, count: count)
+            CPUKernels.gemm(resetActivationGradient, shape: matrixShape, ur, shape: weightShape, rhsTransposed: true, into: target, beta: 1)
+            CPUKernels.gemm(updateActivationGradient, shape: matrixShape, uz, shape: weightShape, rhsTransposed: true, into: target, beta: 1)
+        }
+    }
+}
+
+/// Scratch buffers of the gates of one step of a gated recurrent unit.
+struct GatedRecurrentUnitScratch<N: NumericType> {
+    /// Update gate
+    let update: UnsafeMutablePointer<N>
+    /// Reset gate
+    let reset: UnsafeMutablePointer<N>
+    /// Reset state, `reset * state`
+    let resetState: UnsafeMutablePointer<N>
+
+    init(count: Int) {
+        update = .allocate(capacity: count)
+        reset = .allocate(capacity: count)
+        resetState = .allocate(capacity: count)
+    }
+
+    func deallocate() {
+        update.deallocate()
+        reset.deallocate()
+        resetState.deallocate()
     }
 }
 
@@ -174,70 +171,48 @@ struct GatedRecurrentUnitGeometry {
         batchSize * hiddenSize
     }
 
-    /// Returns nil for shapes that the kernels do not support.
-    init?<N>(updateInput: Tensor<N, CPU>, resetInput: Tensor<N, CPU>, candidateInput: Tensor<N, CPU>, state: Tensor<N, CPU>, updateWeights: Tensor<N, CPU>, resetWeights: Tensor<N, CPU>, candidateWeights: Tensor<N, CPU>) {
-        guard state.dim == 2, state.count > 0, [updateInput, resetInput, candidateInput].allSatisfy({ $0.shape == state.shape }) else {
-            return nil
-        }
+    /// The shapes of a step. The arguments must have the shapes that ``FusedOperationsType/gatedRecurrentUnitStep(updateInput:resetInput:candidateInput:state:updateWeights:resetWeights:candidateWeights:result:)`` states.
+    init<N>(updateInput: ShapedBuffer<N, CPU>, resetInput: ShapedBuffer<N, CPU>, candidateInput: ShapedBuffer<N, CPU>, state: ShapedBuffer<N, CPU>, updateWeights: ShapedBuffer<N, CPU>, resetWeights: ShapedBuffer<N, CPU>, candidateWeights: ShapedBuffer<N, CPU>) {
+        precondition(state.dim == 2, "The state must be a matrix.")
+        precondition([updateInput, resetInput, candidateInput].allSatisfy { $0.shape == state.shape }, "The inputs of the gates must have the shape of the state.")
         let weightShape = [state.shape[1], state.shape[1]]
-        guard [updateWeights, resetWeights, candidateWeights].allSatisfy({ $0.shape == weightShape }) else {
-            return nil
-        }
+        precondition([updateWeights, resetWeights, candidateWeights].allSatisfy { $0.shape == weightShape }, "The weights must have the shape [hiddenSize, hiddenSize].")
         batchSize = state.shape[0]
         hiddenSize = state.shape[1]
     }
 
-    /// Computes the update gate, the reset gate, the reset state `reset * state`, and the candidate state.
-    /// `scratch` holds `CPUKernels.blockSize` elements.
+    /// Computes the update gate, the reset gate, the reset state, and the candidate state.
     @inline(__always)
-    func gates<N: NumericType>(
-        updateInput: UnsafePointer<N>,
-        resetInput: UnsafePointer<N>,
-        candidateInput: UnsafePointer<N>,
-        state: UnsafePointer<N>,
-        updateWeights: UnsafePointer<N>,
-        resetWeights: UnsafePointer<N>,
-        candidateWeights: UnsafePointer<N>,
-        update: UnsafeMutablePointer<N>,
-        reset: UnsafeMutablePointer<N>,
-        resetState: UnsafeMutablePointer<N>,
+    func computeGates<N: NumericType>(
+        updateInput: ShapedBuffer<N, CPU>,
+        resetInput: ShapedBuffer<N, CPU>,
+        candidateInput: ShapedBuffer<N, CPU>,
+        state: ShapedBuffer<N, CPU>,
+        updateWeights: ShapedBuffer<N, CPU>,
+        resetWeights: ShapedBuffer<N, CPU>,
+        candidateWeights: ShapedBuffer<N, CPU>,
+        into gates: GatedRecurrentUnitScratch<N>,
         candidate: UnsafeMutablePointer<N>,
-        scratch: UnsafeMutablePointer<N>,
     ) {
         let shape = (batchSize, hiddenSize)
         let weightShape = (hiddenSize, hiddenSize)
-        update.update(from: updateInput, count: count)
-        CPUKernels.gemm(state, shape: shape, updateWeights, shape: weightShape, into: update, beta: 1)
-        reset.update(from: resetInput, count: count)
-        CPUKernels.gemm(state, shape: shape, resetWeights, shape: weightShape, into: reset, beta: 1)
-        applySigmoid(update, scratch: scratch)
-        applySigmoid(reset, scratch: scratch)
+        let h = state.elementPointer
+        let (update, reset, resetState) = (gates.update, gates.reset, gates.resetState)
+        update.update(from: updateInput.elementPointer, count: count)
+        CPUKernels.gemm(h, shape: shape, updateWeights.elementPointer, shape: weightShape, into: update, beta: 1)
+        reset.update(from: resetInput.elementPointer, count: count)
+        CPUKernels.gemm(h, shape: shape, resetWeights.elementPointer, shape: weightShape, into: reset, beta: 1)
+        // The activations run in blocks, so that the passes of the sigmoid over a block stay in the cache.
+        CPUKernels.forEachBlock(count: count) { offset, length in
+            CPUKernels.sigmoid(update + offset, into: update + offset, count: length)
+            CPUKernels.sigmoid(reset + offset, into: reset + offset, count: length)
+        }
         for i in 0 ..< count {
-            resetState[i] = reset[i] * state[i]
+            resetState[i] = reset[i] * h[i]
         }
-        // The candidate starts as its pre-activation, and tanh writes through the scratch buffer.
-        candidate.update(from: candidateInput, count: count)
-        CPUKernels.gemm(resetState, shape: shape, candidateWeights, shape: weightShape, into: candidate, beta: 1)
-        CPUKernels.forEachBlock(count: count) { offset, length in
-            let block = candidate + offset
-            scratch.update(from: block, count: length)
-            CPUKernels.tanh(scratch, into: block, count: length)
-        }
-    }
-
-    /// Replaces the values with their sigmoid, `tanh(x / 2) / 2 + 1 / 2`.
-    @inline(__always)
-    private func applySigmoid<N: NumericType>(_ values: UnsafeMutablePointer<N>, scratch: UnsafeMutablePointer<N>) {
-        let half = N(0.5)
-        CPUKernels.forEachBlock(count: count) { offset, length in
-            let block = values + offset
-            for i in 0 ..< length {
-                scratch[i] = block[i] * half
-            }
-            CPUKernels.tanh(scratch, into: block, count: length)
-            for i in 0 ..< length {
-                block[i] = block[i] * half + half
-            }
-        }
+        // The candidate starts as its pre-activation.
+        candidate.update(from: candidateInput.elementPointer, count: count)
+        CPUKernels.gemm(resetState, shape: shape, candidateWeights.elementPointer, shape: weightShape, into: candidate, beta: 1)
+        CPUKernels.tanh(candidate, into: candidate, count: count)
     }
 }

@@ -205,14 +205,13 @@ public extension Tensor {
     /// - Parameter rate: Probability, with which an element is set to zero
     /// - Returns: Tensor with the shape of the tensor
     func droppedOut(rate: Float) -> Self {
-        let (result, mask) = Device.FusedOperations.dropout(input: self, rate: rate)
-        return result.attachingContext(tag: "dropout", sources: [self]) { resultGradient, gradients in
-            // The mask is a constant, so the product is differentiable with respect to the gradient of the result.
-            if resultGradient.requiresGradient {
-                Tensor.accumulate(resultGradient * mask, into: &gradients[0])
-            } else {
-                Device.FusedOperations.dropoutBackward(mask: mask, outputGradient: resultGradient, accumulating: &gradients[0])
-            }
+        var result = Self(uninitializedShape: shape)
+        var mask = Self(uninitializedShape: shape)
+        Device.FusedOperations.dropout(input: values, rate: rate, result: result.mutableValues, mask: mask.mutableValues)
+        return result.attachingContext(tag: "dropout", source: self) { [mask] resultGradient, gradient in
+            Composed.dropoutBackward(mask: mask, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { [mask] resultGradient, gradient in
+            Device.FusedOperations.dropoutBackward(mask: mask.values, outputGradient: resultGradient, inputGradient: gradient)
         }
     }
 }

@@ -29,29 +29,43 @@ import Foundation
 
 public extension FusedOperationsType {
     static func adamUpdate<N: NumericType>(
-        parameter: Tensor<N, Device>,
-        gradient: Tensor<N, Device>,
-        firstMoment: inout Tensor<N, Device>,
-        secondMoment: inout Tensor<N, Device>,
-        secondMomentMax: inout Tensor<N, Device>?,
+        parameter: ShapedBuffer<N, Device>,
+        gradient: ShapedBuffer<N, Device>,
+        firstMoment: MutableShapedBuffer<N, Device>,
+        secondMoment: MutableShapedBuffer<N, Device>,
+        secondMomentMax: MutableShapedBuffer<N, Device>?,
         learningRate: N,
         beta1: N,
         beta2: N,
         epsilon: N,
         beta1Power: N,
         beta2Power: N,
-    ) -> Tensor<N, Device> {
-        let gradient = gradient.detached()
-        firstMoment = firstMoment.detached() * Tensor(beta1) + gradient * Tensor(1 - beta1)
-        secondMoment = secondMoment.detached() * Tensor(beta2) + gradient * gradient * Tensor(1 - beta2)
-
-        var normalizer = secondMoment
-        if let maximum = secondMomentMax {
-            normalizer = Tensor.max(maximum.detached(), secondMoment)
-            secondMomentMax = normalizer
+        result: MutableShapedBuffer<N, Device>,
+    ) {
+        let math = BufferMath<N, Device>()
+        defer {
+            math.release()
         }
-        let correctedFirstMoment = firstMoment / Tensor(1 - beta1Power)
-        let correctedSecondMoment = normalizer / Tensor(1 - beta2Power)
-        return parameter.detached() - Tensor(learningRate) / (correctedSecondMoment.sqrt() + Tensor(epsilon)) * correctedFirstMoment
+        let scaled = math.temporary(gradient.shape)
+        math.multiply(firstMoment, beta1, into: firstMoment)
+        math.multiply(gradient, 1 - beta1, into: scaled)
+        math.add(firstMoment, scaled, into: firstMoment)
+        math.multiply(secondMoment, beta2, into: secondMoment)
+        math.multiply(gradient, gradient, into: scaled)
+        math.multiply(scaled, 1 - beta2, into: scaled)
+        math.add(secondMoment, scaled, into: secondMoment)
+        var normalizer = secondMoment
+        if let secondMomentMax {
+            math.maximum(secondMomentMax, secondMoment, into: secondMomentMax)
+            normalizer = secondMomentMax
+        }
+        // parameter - learningRate * m / (sqrt(v) + epsilon) with the corrected moments m and v
+        let divisor = scaled
+        math.multiply(normalizer, 1 / (1 - beta2Power), into: divisor)
+        math.sqrt(divisor, into: divisor)
+        math.add(divisor, epsilon, into: divisor)
+        math.multiply(firstMoment, learningRate / (1 - beta1Power), into: result)
+        math.divide(result, divisor, into: result)
+        math.subtract(parameter, result, into: result)
     }
 }

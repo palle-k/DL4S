@@ -80,123 +80,55 @@ public extension Tensor {
         precondition(dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
         precondition(Array(shape.suffix(2))[transposeSelf ? 0 : 1] == Array(other.shape.suffix(2))[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
 
-        let result = Self.batchedMatrixProduct(detached(), other.detached(), transposeLhs: transposeSelf, transposeRhs: transposeOther)
-        return result.attachingContext(tag: "broadcastMatMul", sources: [self, other]) { resultGradient, gradients in
+        var result = Self(uninitializedShape: ShapeUtil.batchedProductShape(shape, other.shape, lhsTransposed: transposeSelf, rhsTransposed: transposeOther))
+        BufferMath<Element, Device>().multiplyBatchedMatrices(values, other.values, lhsTransposed: transposeSelf, rhsTransposed: transposeOther, into: result.mutableValues)
+        return result.attachingContext(tag: "broadcastMatMul", sources: self, other) { resultGradient, selfGradient, otherGradient in
             // The gradients use the batched product themselves, so they are differentiable for higher derivatives.
-            if self.requiresGradient {
+            if selfGradient.isRequested {
                 let gradient = if transposeSelf {
                     other.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: transposeOther, transposeOther: true)
                 } else {
                     resultGradient.broadcastMatrixMultiplied(with: other, transposeOther: !transposeOther)
                 }
-                Tensor.accumulate(gradient.reducingBroadcast(to: self.shape), into: &gradients[0])
+                selfGradient.add(gradient.reducingBroadcast(to: self.shape))
             }
-            if other.requiresGradient {
-                if other.dim == 2, !transposeSelf {
-                    // The right operand is shared by every matrix of the left operand, so its gradient is one product over all rows,
-                    // which is added to the accumulated gradient in place.
-                    let rows = self.view(as: [-1, self.shape[self.dim - 1]])
-                    let gradient = resultGradient.view(as: [-1, resultGradient.shape[resultGradient.dim - 1]])
-                    if transposeOther {
-                        Tensor.accumulateProduct(gradient, rows, transposeLhs: true, into: &gradients[1])
-                    } else {
-                        Tensor.accumulateProduct(rows, gradient, transposeLhs: true, into: &gradients[1])
-                    }
+            if otherGradient.isRequested {
+                let gradient = if transposeOther {
+                    resultGradient.broadcastMatrixMultiplied(with: self, transposeSelf: true, transposeOther: transposeSelf)
                 } else {
-                    let gradient = if transposeOther {
-                        resultGradient.broadcastMatrixMultiplied(with: self, transposeSelf: true, transposeOther: transposeSelf)
-                    } else {
-                        self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf)
-                    }
-                    Tensor.accumulate(gradient.reducingBroadcast(to: other.shape), into: &gradients[1])
+                    self.broadcastMatrixMultiplied(with: resultGradient, transposeSelf: !transposeSelf)
                 }
+                otherGradient.add(gradient.reducingBroadcast(to: other.shape))
+            }
+        } fused: { resultGradient, selfGradient, otherGradient in
+            let math = BufferMath<Element, Device>()
+            defer {
+                math.release()
+            }
+            let (lhs, rhs) = (self.values, other.values)
+            if transposeSelf {
+                math.writeBatchedProduct(rhs, resultGradient, lhsTransposed: transposeOther, rhsTransposed: true, into: selfGradient)
+            } else {
+                math.writeBatchedProduct(resultGradient, rhs, rhsTransposed: !transposeOther, into: selfGradient)
+            }
+            guard let otherGradient else {
+                return
+            }
+            if rhs.dim == 2, !transposeSelf {
+                // The right operand is shared by every matrix of the left operand, so its gradient is one product over all rows.
+                let rows = lhs.reshaped(to: [lhs.count / lhs.shape[lhs.dim - 1], lhs.shape[lhs.dim - 1]])
+                let gradientRows = resultGradient.reshaped(to: [resultGradient.count / resultGradient.shape[resultGradient.dim - 1], resultGradient.shape[resultGradient.dim - 1]])
+                if transposeOther {
+                    math.multiplyMatrices(gradientRows, rows, lhsTransposed: true, into: otherGradient.values, beta: otherGradient.beta)
+                } else {
+                    math.multiplyMatrices(rows, gradientRows, lhsTransposed: true, into: otherGradient.values, beta: otherGradient.beta)
+                }
+            } else if transposeOther {
+                math.writeBatchedProduct(resultGradient, lhs, lhsTransposed: true, rhsTransposed: transposeSelf, into: otherGradient)
+            } else {
+                math.writeBatchedProduct(lhs, resultGradient, lhsTransposed: !transposeSelf, into: otherGradient)
             }
         }
-    }
-
-    /// Multiplies the matrices of two tensors without context, with broadcasting along all axes except the last two.
-    ///
-    /// Every product is one GEMM into its slice of the result. When the right operand is a single matrix and the left one
-    /// is not transposed, the rows of all left matrices form one matrix, and the product is a single GEMM.
-    private static func batchedMatrixProduct(_ lhs: Self, _ rhs: Self, transposeLhs: Bool, transposeRhs: Bool) -> Self {
-        let dim = Swift.max(lhs.dim, rhs.dim)
-        let lhsShape = Array(repeating: 1, count: dim - lhs.dim) + lhs.shape
-        let rhsShape = Array(repeating: 1, count: dim - rhs.dim) + rhs.shape
-        let (lhsMatrix, rhsMatrix) = (Array(lhsShape.suffix(2)), Array(rhsShape.suffix(2)))
-        let (lhsBatch, rhsBatch) = (Array(lhsShape.dropLast(2)), Array(rhsShape.dropLast(2)))
-        let batchShape = shapeForBroadcastedOperands(lhsBatch, rhsBatch)
-        let rows = transposeLhs ? lhsMatrix[1] : lhsMatrix[0]
-        let columns = transposeRhs ? rhsMatrix[0] : rhsMatrix[1]
-        let result = Device.Memory.allocateBuffer(withShape: batchShape + [rows, columns], type: Element.self)
-
-        if rhsBatch.allSatisfy({ $0 == 1 }), !transposeLhs {
-            let batchCount = batchShape.reduce(1, *)
-            Device.Engine.gemm(
-                lhs: lhs.values.reshaped(to: [batchCount * rows, lhsMatrix[1]]),
-                rhs: rhs.values.reshaped(to: rhsMatrix),
-                result: result.slice(offset: 0, shape: [batchCount * rows, columns]),
-                alpha: 1,
-                beta: 0,
-                transposeFirst: false,
-                transposeSecond: transposeRhs,
-            )
-            return Tensor(using: result, context: nil)
-        }
-
-        // A broadcast axis has the stride 0, so every product of the batch reads the same matrix.
-        func batchStrides(_ batch: [Int], matrixSize: Int) -> [Int] {
-            var strides = [Int](repeating: 0, count: batch.count)
-            var stride = matrixSize
-            for axis in batch.indices.reversed() {
-                strides[axis] = batch[axis] == 1 ? 0 : stride
-                stride *= batch[axis]
-            }
-            return strides
-        }
-        let lhsStrides = batchStrides(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1])
-        let rhsStrides = batchStrides(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
-
-        // When every operand is either complete or one matrix for the whole batch, the matrices of an operand have a
-        // constant stride, and the engine computes all products in one call.
-        let batchCount = batchShape.reduce(1, *)
-        func uniformStride(_ batch: [Int], matrixSize: Int) -> Int? {
-            if batch.allSatisfy({ $0 == 1 }) {
-                return 0
-            }
-            return batch == batchShape ? matrixSize : nil
-        }
-        if let lhsStride = uniformStride(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1]),
-           let rhsStride = uniformStride(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
-        {
-            Device.Engine.gemmBatched(
-                lhs: lhs.values.slice(offset: 0, shape: lhsMatrix),
-                lhsStride: lhsStride,
-                rhs: rhs.values.slice(offset: 0, shape: rhsMatrix),
-                rhsStride: rhsStride,
-                result: result.slice(offset: 0, shape: [rows, columns]),
-                count: batchCount,
-                alpha: 1,
-                beta: 0,
-                transposeFirst: transposeLhs,
-                transposeSecond: transposeRhs,
-            )
-            return Tensor(using: result, context: nil)
-        }
-
-        var resultOffset = 0
-        StridedIteration.forEachOffset(shape: batchShape, strides: lhsStrides, rhsStrides) { lhsOffset, rhsOffset in
-            Device.Engine.gemm(
-                lhs: lhs.values.slice(offset: lhsOffset, shape: lhsMatrix),
-                rhs: rhs.values.slice(offset: rhsOffset, shape: rhsMatrix),
-                result: result.slice(offset: resultOffset, shape: [rows, columns]),
-                alpha: 1,
-                beta: 0,
-                transposeFirst: transposeLhs,
-                transposeSecond: transposeRhs,
-            )
-            resultOffset += rows * columns
-        }
-        return Tensor(using: result, context: nil)
     }
 
     private func _matMul(_ other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
@@ -302,54 +234,15 @@ public extension Tensor {
         precondition(shape[dim - 1] == weights.shape[0], "The tensor must have one element per row of the weights.")
         precondition(bias.map { $0.shape == [weights.shape[1]] } ?? true, "The bias must have one element per column of the weights.")
         let input = dim == 1 ? view(as: [1, -1]) : self
-        let result = Device.FusedOperations.linear(input: input, weights: weights, bias: bias)
+        var result = Self(uninitializedShape: [input.shape[0], weights.shape[1]])
+        Device.FusedOperations.linear(input: input.values, weights: weights.values, bias: bias?.values, result: result.mutableValues)
 
-        let output = result.attachingContext(tag: "linear", sources: [input, weights] + (bias.map { [$0] } ?? [])) { resultGradient, gradients in
-            if resultGradient.requiresGradient {
-                let computed = Composed.linearGradients(
-                    input: input,
-                    weights: weights,
-                    outputGradient: resultGradient,
-                    computesInput: input.requiresGradient,
-                    computesWeights: weights.requiresGradient,
-                    computesBias: bias?.requiresGradient ?? false,
-                )
-                Tensor.accumulate(computed.input, into: &gradients[0])
-                Tensor.accumulate(computed.weights, into: &gradients[1])
-                if bias != nil {
-                    Tensor.accumulate(computed.bias, into: &gradients[2])
-                }
-            } else {
-                var accumulated = (input: gradients[0].take(), weights: gradients[1].take(), bias: bias == nil ? nil : gradients[2].take())
-                Device.FusedOperations.linearBackward(input: input, weights: weights, bias: bias, outputGradient: resultGradient, accumulating: &accumulated)
-                gradients[0] = accumulated.input
-                gradients[1] = accumulated.weights
-                if bias != nil {
-                    gradients[2] = accumulated.bias
-                }
-            }
+        let output = result.attachingContext(tag: "linear", sources: input, weights, bias) { resultGradient, inputGradient, weightGradient, biasGradient in
+            Composed.linearBackward(input: input, weights: weights, outputGradient: resultGradient, inputGradient: &inputGradient, weightGradient: &weightGradient, biasGradient: &biasGradient)
+        } fused: { resultGradient, inputGradient, weightGradient, biasGradient in
+            Device.FusedOperations.linearBackward(input: input.values, weights: weights.values, bias: bias?.values, outputGradient: resultGradient, inputGradient: inputGradient, weightGradient: weightGradient, biasGradient: biasGradient)
         }
         return dim == 1 ? output.view(as: [weights.shape[1]]) : output
-    }
-}
-
-extension Tensor {
-    /// Adds the matrix product `op(lhs) × op(rhs)` to an accumulated gradient, or stores it when there is no accumulated gradient yet.
-    ///
-    /// When no tensor records a gradient graph, the product is added in place with a GEMM, so no temporary tensor is needed.
-    static func accumulateProduct(_ lhs: Self, _ rhs: Self, transposeLhs: Bool = false, transposeRhs: Bool = false, into accumulator: inout Self?) {
-        precondition(lhs.dim == 2 && rhs.dim == 2, "The operands of the product must be matrices.")
-        let shape = [lhs.shape[transposeLhs ? 1 : 0], rhs.shape[transposeRhs ? 0 : 1]]
-        // The accumulated gradient is taken out of the optional, so that it is the only reference to its storage during the write.
-        if var target = accumulator.take() {
-            if !target.requiresGradient, !lhs.requiresGradient, !rhs.requiresGradient, target.shape == shape {
-                Device.Engine.gemm(lhs: lhs.values, rhs: rhs.values, result: target.mutableValues, alpha: 1, beta: 1, transposeFirst: transposeLhs, transposeSecond: transposeRhs)
-                accumulator = target
-                return
-            }
-            accumulator = target
-        }
-        accumulate(lhs.matrixMultiplied(with: rhs, transposeSelf: transposeLhs, transposeOther: transposeRhs), into: &accumulator)
     }
 }
 

@@ -1,8 +1,8 @@
 //
-//  CPUFusedDropout.swift
+//  CPUFusedLayers.swift
 //  DL4S
 //
-//  Created by Palle Klewitz on 23.09.26.
+//  Created by Palle Klewitz on 26.09.26.
 //  Copyright (c) 2026 - Palle Klewitz
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,23 +28,19 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func dropout<N: NumericType>(input: ShapedBuffer<N, CPU>, rate: Float, result: MutableShapedBuffer<N, CPU>, mask: MutableShapedBuffer<N, CPU>) {
-        let (x, y, m) = (input.elementPointer, result.elementPointer, mask.elementPointer)
-        let probability = Double(1 - rate)
-
-        // An element is kept when a uniform 64-bit random number is below the threshold, which happens with the given probability.
-        if probability >= 1 {
-            CPUKernels.fill(m, with: 1, count: input.count)
-            y.update(from: x, count: input.count)
-            return
+    static func linear<N: NumericType>(input: ShapedBuffer<N, CPU>, weights: ShapedBuffer<N, CPU>, bias: ShapedBuffer<N, CPU>?, result: MutableShapedBuffer<N, CPU>) {
+        precondition(input.dim == 2 && weights.dim == 2, "The input and the weights must be matrices.")
+        precondition(input.shape[1] == weights.shape[0], "The input must have one column for every row of the weights.")
+        precondition(bias.map { $0.shape == [weights.shape[1]] } ?? true, "The bias must have one element for every column of the weights.")
+        let (rows, inputSize, outputSize) = (input.shape[0], weights.shape[0], weights.shape[1])
+        let y = result.elementPointer
+        // Every row of the result starts with the bias, and the product is added to it.
+        if let bias {
+            let b = bias.elementPointer
+            for row in 0 ..< rows {
+                (y + row * outputSize).update(from: b, count: outputSize)
+            }
         }
-        let threshold = probability <= 0 ? 0 : UInt64(Swift.min(probability, 1 - 0x1p-53) * 0x1p64)
-        var generator = WyHash()
-        for i in 0 ..< input.count {
-            let factor: N = generator.next() < threshold ? 1 : 0
-            let value = x[i]
-            m[i] = factor
-            y[i] = value * factor
-        }
+        CPUKernels.gemm(input.elementPointer, shape: (rows, inputSize), weights.elementPointer, shape: (inputSize, outputSize), into: y, beta: bias == nil ? 0 : 1)
     }
 }

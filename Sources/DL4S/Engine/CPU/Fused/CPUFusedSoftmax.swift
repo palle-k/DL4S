@@ -32,122 +32,119 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softmax<N: NumericType>(input: Tensor<N, CPU>, axis: Int) -> Tensor<N, CPU> {
-        guard input.count > 0, axis == input.dim - 1 else {
-            return DefaultFusedOperations<CPU>.softmax(input: input, axis: axis)
+    static func softmax<N: NumericType>(input: ShapedBuffer<N, CPU>, axis: Int, result: MutableShapedBuffer<N, CPU>) {
+        // The kernel supports the last axis.
+        guard axis == input.dim - 1 else {
+            DefaultFusedOperations<CPU>.softmax(input: input, axis: axis, result: result)
+            return
         }
         let rowLength = input.shape[axis]
-        let (result, y) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let x = input.elementPointer
-        CPUKernels.withScratch(N.self, count: Swift.max(CPUKernels.blockSize, rowLength)) { t in
-            CPUKernels.forEachRowBlock(rows: input.count / rowLength, rowLength: rowLength) { firstRow, rowCount in
-                let offset = firstRow * rowLength
-                subtractRowMaxima(x + offset, into: t, rows: rowCount, rowLength: rowLength)
-                CPUKernels.exp(t, into: y + offset, count: rowCount * rowLength)
-                for row in 0 ..< rowCount {
-                    let values = y + offset + row * rowLength
-                    let inverseSum = 1 / CPUKernels.sum(values, count: rowLength)
-                    for j in 0 ..< rowLength {
-                        values[j] *= inverseSum
-                    }
-                }
-            }
+        let (x, y) = (input.elementPointer, result.elementPointer)
+        let shifted = UnsafeMutablePointer<N>.allocate(capacity: Swift.max(CPUKernels.blockSize, rowLength))
+        defer {
+            shifted.deallocate()
         }
-        return result
+        CPUKernels.forEachRowBlock(rows: input.count / rowLength, rowLength: rowLength) { firstRow, rowCount in
+            let offset = firstRow * rowLength
+            CPUKernels.softmaxRows(x + offset, into: y + offset, scratch: shifted, rows: rowCount, rowLength: rowLength)
+        }
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softmaxBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, axis: Int, accumulating gradient: inout Tensor<N, CPU>?) {
-        guard output.count > 0, axis == output.dim - 1, output.shape == outputGradient.shape else {
-            DefaultFusedOperations<CPU>.softmaxBackward(output: output, outputGradient: outputGradient, axis: axis, accumulating: &gradient)
+    static func softmaxBackward<N: NumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, axis: Int, inputGradient: GradientBuffer<N, CPU>?) {
+        guard let inputGradient else {
+            return
+        }
+        precondition(outputGradient.shape == output.shape, "The gradient of the result must have the shape of the result.")
+        // The kernel supports the last axis.
+        guard axis == output.dim - 1 else {
+            DefaultFusedOperations<CPU>.softmaxBackward(output: output, outputGradient: outputGradient, axis: axis, inputGradient: inputGradient)
             return
         }
         let rowLength = output.shape[axis]
-        let (result, dx) = CPUKernels.makeTensor(shape: output.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let y = output.elementPointer
-        let g = outputGradient.elementPointer
-        CPUKernels.withScratch(N.self, count: Swift.max(CPUKernels.blockSize, rowLength)) { t in
-            CPUKernels.forEachRowBlock(rows: output.count / rowLength, rowLength: rowLength) { firstRow, rowCount in
-                let offset = firstRow * rowLength
-                for i in 0 ..< rowCount * rowLength {
-                    t[i] = g[offset + i] * y[offset + i]
-                }
-                for row in 0 ..< rowCount {
-                    let start = offset + row * rowLength
-                    let product = CPUKernels.sum(t + row * rowLength, count: rowLength)
-                    for j in start ..< start + rowLength {
-                        dx[j] = y[j] * (g[j] - product)
-                    }
-                }
-            }
+        let (y, g) = (output.elementPointer, outputGradient.elementPointer)
+        let (dx, beta) = inputGradient.elementsToWrite()
+        let products = UnsafeMutablePointer<N>.allocate(capacity: rowLength)
+        let rowGradient = UnsafeMutablePointer<N>.allocate(capacity: rowLength)
+        defer {
+            products.deallocate()
+            rowGradient.deallocate()
         }
-        Tensor.accumulate(result, into: &gradient)
-    }
-
-    @_specialize(where N == Float)
-    @_specialize(where N == Double)
-    static func logSoftmax<N: NumericType>(input: Tensor<N, CPU>, axis: Int) -> Tensor<N, CPU> {
-        guard input.count > 0, axis == input.dim - 1 else {
-            return DefaultFusedOperations<CPU>.logSoftmax(input: input, axis: axis)
-        }
-        let rowLength = input.shape[axis]
-        let (result, y) = CPUKernels.makeTensor(shape: input.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let x = input.elementPointer
-        CPUKernels.withScratch(N.self, count: Swift.max(CPUKernels.blockSize, rowLength)) { e in
-            CPUKernels.forEachRowBlock(rows: input.count / rowLength, rowLength: rowLength) { firstRow, rowCount in
-                let offset = firstRow * rowLength
-                subtractRowMaxima(x + offset, into: y + offset, rows: rowCount, rowLength: rowLength)
-                CPUKernels.exp(y + offset, into: e, count: rowCount * rowLength)
-                for row in 0 ..< rowCount {
-                    let values = y + offset + row * rowLength
-                    let logSum = CPUKernels.sum(e + row * rowLength, count: rowLength).log()
-                    for j in 0 ..< rowLength {
-                        values[j] -= logSum
-                    }
-                }
-            }
-        }
-        return result
-    }
-
-    @_specialize(where N == Float)
-    @_specialize(where N == Double)
-    static func logSoftmaxBackward<N: NumericType>(output: Tensor<N, CPU>, outputGradient: Tensor<N, CPU>, axis: Int, accumulating gradient: inout Tensor<N, CPU>?) {
-        guard output.count > 0, axis == output.dim - 1, output.shape == outputGradient.shape else {
-            DefaultFusedOperations<CPU>.logSoftmaxBackward(output: output, outputGradient: outputGradient, axis: axis, accumulating: &gradient)
-            return
-        }
-        let rowLength = output.shape[axis]
-        let (result, dx) = CPUKernels.makeTensor(shape: output.shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        let y = output.elementPointer
-        let g = outputGradient.elementPointer
-        CPUKernels.withScratch(N.self, count: Swift.max(CPUKernels.blockSize, rowLength)) { e in
-            CPUKernels.forEachRowBlock(rows: output.count / rowLength, rowLength: rowLength) { firstRow, rowCount in
-                let offset = firstRow * rowLength
-                CPUKernels.exp(y + offset, into: e, count: rowCount * rowLength)
-                for row in 0 ..< rowCount {
-                    let start = offset + row * rowLength
-                    let gradientSum = CPUKernels.sum(g + start, count: rowLength)
-                    for j in 0 ..< rowLength {
-                        dx[start + j] = g[start + j] - e[row * rowLength + j] * gradientSum
-                    }
-                }
-            }
-        }
-        Tensor.accumulate(result, into: &gradient)
-    }
-}
-
-extension CPUFusedOperations {
-    /// Subtracts the maximum of every row from the row, so that the exponentials do not overflow.
-    @inline(__always)
-    static func subtractRowMaxima<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, rows: Int, rowLength: Int) {
-        for row in 0 ..< rows {
+        for row in 0 ..< output.count / rowLength {
             let start = row * rowLength
-            let maximum = CPUKernels.maximum(values + start, count: rowLength)
-            for j in start ..< start + rowLength {
-                result[j] = values[j] - maximum
+            let target = beta == 0 ? dx + start : rowGradient
+            CPUKernels.softmaxRowsBackward(output: y + start, outputGradient: g + start, into: target, scratch: products, rows: 1, rowLength: rowLength)
+            if beta != 0 {
+                CPUKernels.store(rowGradient, into: dx + start, beta: 1, count: rowLength)
+            }
+        }
+    }
+
+    @_specialize(where N == Float)
+    @_specialize(where N == Double)
+    static func logSoftmax<N: NumericType>(input: ShapedBuffer<N, CPU>, axis: Int, result: MutableShapedBuffer<N, CPU>) {
+        // The kernel supports the last axis.
+        guard axis == input.dim - 1 else {
+            DefaultFusedOperations<CPU>.logSoftmax(input: input, axis: axis, result: result)
+            return
+        }
+        let rowLength = input.shape[axis]
+        let (x, y) = (input.elementPointer, result.elementPointer)
+        let exponentials = UnsafeMutablePointer<N>.allocate(capacity: Swift.max(CPUKernels.blockSize, rowLength))
+        defer {
+            exponentials.deallocate()
+        }
+        CPUKernels.forEachRowBlock(rows: input.count / rowLength, rowLength: rowLength) { firstRow, rowCount in
+            let offset = firstRow * rowLength
+            CPUKernels.subtractRowMaxima(x + offset, into: y + offset, rows: rowCount, rowLength: rowLength)
+            CPUKernels.exp(y + offset, into: exponentials, count: rowCount * rowLength)
+            for row in 0 ..< rowCount {
+                let values = y + offset + row * rowLength
+                let logSum = CPUKernels.sum(exponentials + row * rowLength, count: rowLength).log()
+                for j in 0 ..< rowLength {
+                    values[j] -= logSum
+                }
+            }
+        }
+    }
+
+    @_specialize(where N == Float)
+    @_specialize(where N == Double)
+    static func logSoftmaxBackward<N: NumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, axis: Int, inputGradient: GradientBuffer<N, CPU>?) {
+        guard let inputGradient else {
+            return
+        }
+        precondition(outputGradient.shape == output.shape, "The gradient of the result must have the shape of the result.")
+        // The kernel supports the last axis.
+        guard axis == output.dim - 1 else {
+            DefaultFusedOperations<CPU>.logSoftmaxBackward(output: output, outputGradient: outputGradient, axis: axis, inputGradient: inputGradient)
+            return
+        }
+        let rowLength = output.shape[axis]
+        let (y, g) = (output.elementPointer, outputGradient.elementPointer)
+        let (dx, beta) = inputGradient.elementsToWrite()
+        let exponentials = UnsafeMutablePointer<N>.allocate(capacity: Swift.max(CPUKernels.blockSize, rowLength))
+        defer {
+            exponentials.deallocate()
+        }
+        CPUKernels.forEachRowBlock(rows: output.count / rowLength, rowLength: rowLength) { firstRow, rowCount in
+            let offset = firstRow * rowLength
+            CPUKernels.exp(y + offset, into: exponentials, count: rowCount * rowLength)
+            for row in 0 ..< rowCount {
+                let start = offset + row * rowLength
+                let (gr, er, target) = (g + start, exponentials + row * rowLength, dx + start)
+                let gradientSum = CPUKernels.sum(gr, count: rowLength)
+                // dx = g - exp(y) * sum(g)
+                if beta == 0 {
+                    for j in 0 ..< rowLength {
+                        target[j] = gr[j] - er[j] * gradientSum
+                    }
+                } else {
+                    for j in 0 ..< rowLength {
+                        target[j] += gr[j] - er[j] * gradientSum
+                    }
+                }
             }
         }
     }

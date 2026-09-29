@@ -48,31 +48,13 @@ public func scaledDotProductAttention<Element, Device>(
 ) -> Tensor<Element, Device> {
     precondition(queries.dim == 4 && keys.dim == 4 && values.dim == 4, "Queries, keys and values must have 4 axes.")
     let mask = mask?.detached()
-    let result = Device.FusedOperations.scaledDotProductAttention(queries: queries, keys: keys, values: values, mask: mask, temperature: temperature)
+    var result = Tensor<Element, Device>(uninitializedShape: [queries.shape[0], queries.shape[1], queries.shape[2], values.shape[3]])
+    Device.FusedOperations.scaledDotProductAttention(queries: queries.values, keys: keys.values, values: values.values, mask: mask?.values, temperature: temperature, result: result.mutableValues)
 
-    return result.attachingContext(tag: "scaledDotProductAttention", sources: [queries, keys, values]) { resultGradient, gradients in
-        if resultGradient.requiresGradient {
-            let computed = Composed.scaledDotProductAttentionGradients(
-                queries: queries,
-                keys: keys,
-                values: values,
-                mask: mask,
-                outputGradient: resultGradient,
-                temperature: temperature,
-                computesQueries: queries.requiresGradient,
-                computesKeys: keys.requiresGradient,
-                computesValues: values.requiresGradient,
-            )
-            Tensor.accumulate(computed.queries, into: &gradients[0])
-            Tensor.accumulate(computed.keys, into: &gradients[1])
-            Tensor.accumulate(computed.values, into: &gradients[2])
-        } else {
-            var accumulated = (queries: gradients[0].take(), keys: gradients[1].take(), values: gradients[2].take())
-            Device.FusedOperations.scaledDotProductAttentionBackward(queries: queries, keys: keys, values: values, mask: mask, outputGradient: resultGradient, temperature: temperature, accumulating: &accumulated)
-            gradients[0] = accumulated.queries
-            gradients[1] = accumulated.keys
-            gradients[2] = accumulated.values
-        }
+    return result.attachingContext(tag: "scaledDotProductAttention", sources: queries, keys, values) { resultGradient, queryGradient, keyGradient, valueGradient in
+        Composed.scaledDotProductAttentionBackward(queries: queries, keys: keys, values: values, mask: mask, outputGradient: resultGradient, temperature: temperature, queryGradient: &queryGradient, keyGradient: &keyGradient, valueGradient: &valueGradient)
+    } fused: { resultGradient, queryGradient, keyGradient, valueGradient in
+        Device.FusedOperations.scaledDotProductAttentionBackward(queries: queries.values, keys: keys.values, values: values.values, mask: mask?.values, outputGradient: resultGradient, temperature: temperature, queryGradient: queryGradient, keyGradient: keyGradient, valueGradient: valueGradient)
     }
 }
 
@@ -110,66 +92,53 @@ public func multiHeadAttention<Element, Device>(
     precondition(queries.dim == 3 && keys.dim == 3 && values.dim == 3, "Queries, keys and values must have 3 axes.")
     precondition(queryWeights.shape[1].isMultiple(of: heads) && valueWeights.shape[1].isMultiple(of: heads), "The projections must have a multiple of the number of heads as outputs.")
     let mask = mask?.detached()
-    let result = Device.FusedOperations.multiHeadAttention(
-        queries: queries,
-        keys: keys,
-        values: values,
-        mask: mask,
-        queryWeights: queryWeights,
-        keyWeights: keyWeights,
-        valueWeights: valueWeights,
-        outputWeights: outputWeights,
+    var result = Tensor<Element, Device>(uninitializedShape: [queries.shape[0], queries.shape[1], outputWeights.shape[1]])
+    Device.FusedOperations.multiHeadAttention(
+        queries: queries.values,
+        keys: keys.values,
+        values: values.values,
+        mask: mask?.values,
+        queryWeights: queryWeights.values,
+        keyWeights: keyWeights.values,
+        valueWeights: valueWeights.values,
+        outputWeights: outputWeights.values,
         heads: heads,
         temperature: temperature,
+        result: result.mutableValues,
     )
 
-    let sources = [queries, keys, values, queryWeights, keyWeights, valueWeights, outputWeights]
-    return result.attachingContext(tag: "multiHeadAttention", sources: sources) { resultGradient, gradients in
-        if resultGradient.requiresGradient {
-            let computed = Composed.multiHeadAttentionGradients(
-                queries: queries,
-                keys: keys,
-                values: values,
-                mask: mask,
-                queryWeights: queryWeights,
-                keyWeights: keyWeights,
-                valueWeights: valueWeights,
-                outputWeights: outputWeights,
-                outputGradient: resultGradient,
-                heads: heads,
-                temperature: temperature,
-                computes: sources.map(\.requiresGradient),
-            )
-            for (index, gradient) in computed.inSourceOrder.enumerated() {
-                Tensor.accumulate(gradient, into: &gradients[index])
-            }
-        } else {
-            // The struct takes the references out of the array, so the accumulated gradients stay uniquely referenced.
-            var accumulated = MultiHeadAttentionGradients(
-                queries: gradients[0].take(),
-                keys: gradients[1].take(),
-                values: gradients[2].take(),
-                queryWeights: gradients[3].take(),
-                keyWeights: gradients[4].take(),
-                valueWeights: gradients[5].take(),
-                outputWeights: gradients[6].take(),
-            )
-            Device.FusedOperations.multiHeadAttentionBackward(
-                queries: queries,
-                keys: keys,
-                values: values,
-                mask: mask,
-                queryWeights: queryWeights,
-                keyWeights: keyWeights,
-                valueWeights: valueWeights,
-                outputWeights: outputWeights,
-                outputGradient: resultGradient,
-                heads: heads,
-                temperature: temperature,
-                accumulating: &accumulated,
-            )
-            gradients = accumulated.inSourceOrder
-        }
+    return result.attachingContext(tag: "multiHeadAttention", sources: [queries, keys, values, queryWeights, keyWeights, valueWeights, outputWeights]) { resultGradient, gradients in
+        var accumulated = MultiHeadAttentionGradients(inSourceOrder: gradients.indices.map { gradients[$0].take() })
+        Composed.multiHeadAttentionBackward(
+            queries: queries,
+            keys: keys,
+            values: values,
+            queryWeights: queryWeights,
+            keyWeights: keyWeights,
+            valueWeights: valueWeights,
+            outputWeights: outputWeights,
+            outputGradient: resultGradient,
+            heads: heads,
+            mask: mask,
+            temperature: temperature,
+            gradients: &accumulated,
+        )
+        gradients = accumulated.inSourceOrder
+    } fused: { resultGradient, gradients in
+        Device.FusedOperations.multiHeadAttentionBackward(
+            queries: queries.values,
+            keys: keys.values,
+            values: values.values,
+            mask: mask?.values,
+            queryWeights: queryWeights.values,
+            keyWeights: keyWeights.values,
+            valueWeights: valueWeights.values,
+            outputWeights: outputWeights.values,
+            outputGradient: resultGradient,
+            heads: heads,
+            temperature: temperature,
+            gradients: MultiHeadAttentionGradients(inSourceOrder: gradients),
+        )
     }
 }
 
@@ -184,7 +153,7 @@ public extension Tensor {
     ///   - hiddenSize: Number of elements per position, a multiple of 2
     init(positionalEncodingWithLength length: Int, hiddenSize: Int) {
         precondition(hiddenSize.isMultiple(of: 2), "Hidden size must be multiple of 2")
-        let encoding: Self = Device.FusedOperations.positionalEncoding(length: length, hiddenSize: hiddenSize)
-        self.init(handle: encoding.handle, shape: encoding.shape, context: nil)
+        self.init(uninitializedShape: [length, hiddenSize])
+        Device.FusedOperations.positionalEncoding(length: length, hiddenSize: hiddenSize, result: mutableValues)
     }
 }

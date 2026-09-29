@@ -152,17 +152,28 @@ extension GPUTests {
             GPU.hostExecutionLimit = 0
             defer { GPU.hostExecutionLimit = 4096 }
             let x = Tensor<Float, GPU>(GPUTest.random([256, 1024], seed: 7, min: 1, max: 2), requiresGradient: true)
-            let (output, mask) = GPU.FusedOperations.dropout(input: x, rate: 0.3)
+            let (output, mask) = dropout(x, rate: 0.3)
             let (values, maskValues, outputValues) = (x.elements, mask.elements, output.elements)
             let kept = Float(maskValues.reduce(0, +)) / Float(maskValues.count)
             #expect(Swift.abs(kept - 0.7) < 0.01, "kept fraction \(kept)")
             #expect(maskValues.allSatisfy { $0 == 0 || $0 == 1 })
             #expect(zip(zip(values, maskValues), outputValues).allSatisfy { $0.0 * $0.1 == $1 })
-            var gradient: Tensor<Float, GPU>?
-            GPU.FusedOperations.dropoutBackward(mask: mask, outputGradient: x, accumulating: &gradient)
-            #expect(gradient?.elements == outputValues)
+            var gradient = Tensor<Float, GPU>(uninitializedShape: x.shape)
+            withExtendedLifetime((mask, x)) {
+                GPU.FusedOperations.dropoutBackward(mask: mask.values, outputGradient: x.values, inputGradient: GradientBuffer(values: gradient.mutableValues, adds: false))
+            }
+            #expect(gradient.elements == outputValues)
             // Two calls use different random numbers.
-            #expect(GPU.FusedOperations.dropout(input: x, rate: 0.3).mask.elements != maskValues)
+            #expect(dropout(x, rate: 0.3).mask.elements != maskValues)
+        }
+
+        /// The result and the mask of the dropout kernel of the GPU.
+        private func dropout(_ input: Tensor<Float, GPU>, rate: Float) -> (output: Tensor<Float, GPU>, mask: Tensor<Float, GPU>) {
+            var (output, mask) = (Tensor<Float, GPU>(uninitializedShape: input.shape), Tensor<Float, GPU>(uninitializedShape: input.shape))
+            withExtendedLifetime(input) {
+                GPU.FusedOperations.dropout(input: input.values, rate: rate, result: output.mutableValues, mask: mask.mutableValues)
+            }
+            return (output, mask)
         }
 
         @Test(arguments: [false, true])

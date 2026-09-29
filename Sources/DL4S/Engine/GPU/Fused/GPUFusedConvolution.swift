@@ -33,13 +33,13 @@ import MetalPerformanceShadersGraph
 // Strided convolutions use the default implementation, with the window matrix and the matrix kernels.
 
 public extension GPUFusedOperations {
-    static func convolution2d<N: NumericType>(input: Tensor<N, GPU>, filters: Tensor<N, GPU>, bias: Tensor<N, GPU>?, padding: Int, stride: Int) -> Tensor<N, GPU> {
+    static func convolution2d<N: NumericType>(input: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, bias: ShapedBuffer<N, GPU>?, padding: Int, stride: Int, result: MutableShapedBuffer<N, GPU>) {
         guard let geometry = GPUConvolution(input: input, filters: filters, bias: bias, padding: padding, stride: stride),
-              GPUFused.runsKernel(N.self, elements: geometry.outputShape.reduce(1, *), reading: [input, filters] + (bias.map { [$0] } ?? []))
+              GPUFused.runsKernel(N.self, elements: result.count, reading: [input.gpuBuffer, filters.gpuBuffer] + (bias.map { [$0.gpuBuffer] } ?? []))
         else {
-            return DefaultFusedOperations<GPU>.convolution2d(input: input, filters: filters, bias: bias, padding: padding, stride: stride)
+            DefaultFusedOperations<GPU>.convolution2d(input: input, filters: filters, bias: bias, padding: padding, stride: stride, result: result)
+            return
         }
-        let result: Tensor<N, GPU> = GPUFused.makeTensor(shape: geometry.outputShape)
         let graph = GPUGraphCache.graph(for: geometry.key(outputs: [])) {
             GPUGraph(inputShapes: [input.shape, filters.shape] + (bias.map { [$0.shape] } ?? [])) { graph, inputs in
                 let convolved = graph.convolution2D(inputs[0], weights: inputs[1], descriptor: geometry.descriptor, name: nil)
@@ -54,22 +54,41 @@ public extension GPUFusedOperations {
             inputs: [(input.gpuBuffer, input.shape), (filters.gpuBuffer, filters.shape)] + (bias.map { [($0.gpuBuffer, $0.shape)] } ?? []),
             results: [(result.gpuBuffer, result.shape)],
         )
-        return result
     }
 
-    static func convolution2dBackward<N: NumericType>(input: Tensor<N, GPU>, filters: Tensor<N, GPU>, bias: Tensor<N, GPU>?, outputGradient: Tensor<N, GPU>, padding: Int, stride: Int, accumulating gradients: inout (input: Tensor<N, GPU>?, filters: Tensor<N, GPU>?, bias: Tensor<N, GPU>?)) {
-        guard let geometry = GPUConvolution(input: input, filters: filters, bias: bias, padding: padding, stride: stride), outputGradient.shape == geometry.outputShape,
-              GPUFused.runsKernel(N.self, elements: outputGradient.count, reading: [input, filters, outputGradient])
+    static func convolution2dBackward<N: NumericType>(
+        input: ShapedBuffer<N, GPU>,
+        filters: ShapedBuffer<N, GPU>,
+        bias: ShapedBuffer<N, GPU>?,
+        outputGradient: ShapedBuffer<N, GPU>,
+        padding: Int,
+        stride: Int,
+        inputGradient: GradientBuffer<N, GPU>?,
+        filterGradient: GradientBuffer<N, GPU>?,
+        biasGradient: GradientBuffer<N, GPU>?,
+    ) {
+        guard let geometry = GPUConvolution(input: input, filters: filters, bias: bias, padding: padding, stride: stride),
+              GPUFused.runsKernel(N.self, elements: outputGradient.count, reading: [input.gpuBuffer, filters.gpuBuffer, outputGradient.gpuBuffer])
         else {
-            DefaultFusedOperations<GPU>.convolution2dBackward(input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: padding, stride: stride, accumulating: &gradients)
+            DefaultFusedOperations<GPU>.convolution2dBackward(
+                input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: padding, stride: stride,
+                inputGradient: inputGradient, filterGradient: filterGradient, biasGradient: biasGradient,
+            )
             return
         }
-        let outputs = [input.requiresGradient, filters.requiresGradient, bias?.requiresGradient ?? false]
+        precondition(outputGradient.shape == geometry.outputShape, "The gradient of the result must have the shape of the result.")
+        let requested = [inputGradient, filterGradient, biasGradient]
+        let outputs = requested.map { $0 != nil }
         guard outputs.contains(true) else {
             return
         }
-        let shapes = [input.shape, filters.shape, [filters.shape[0]]]
-        let computed: [Tensor<N, GPU>?] = zip(outputs, shapes).map { computes, shape in computes ? GPUFused.makeTensor(shape: shape) : nil }
+        let math = BufferMath<N, GPU>()
+        defer {
+            math.release()
+        }
+        // The graph stores its results, so a gradient that is added to the accumulated gradient goes through an intermediate buffer.
+        let gradients = requested.compactMap(\.self)
+        let targets = gradients.map { $0.adds ? math.temporary($0.shape) : $0.values }
         let graph = GPUGraphCache.graph(for: geometry.key(outputs: outputs)) {
             GPUGraph(inputShapes: [input.shape, filters.shape, outputGradient.shape]) { graph, inputs in
                 let (x, w, g) = (inputs[0], inputs[1], inputs[2])
@@ -89,11 +108,11 @@ public extension GPUFusedOperations {
         }
         graph.encode(
             inputs: [(input.gpuBuffer, input.shape), (filters.gpuBuffer, filters.shape), (outputGradient.gpuBuffer, outputGradient.shape)],
-            results: computed.compactMap { $0.map { ($0.gpuBuffer, $0.shape) } },
+            results: targets.map { ($0.gpuBuffer, $0.shape) },
         )
-        Tensor.accumulate(computed[0], into: &gradients.input)
-        Tensor.accumulate(computed[1], into: &gradients.filters)
-        Tensor.accumulate(computed[2], into: &gradients.bias)
+        for (gradient, target) in zip(gradients, targets) where gradient.adds {
+            math.add(gradient.values, target, into: gradient.values)
+        }
     }
 }
 
@@ -106,23 +125,27 @@ private struct GPUConvolution {
     let padding: Int
     let stride: Int
 
-    /// Describes the convolution, or returns nil when the graphs do not support the shapes.
-    init?(input: Tensor<some Any, GPU>, filters: Tensor<some Any, GPU>, bias: Tensor<some Any, GPU>?, padding: Int, stride: Int) {
+    /// Describes the convolution, or returns nil for a stride other than 1, which the graphs do not support.
+    ///
+    /// The arguments must have the shapes that ``FusedOperationsType/convolution2d(input:filters:bias:padding:stride:result:)`` states.
+    init?(input: ShapedBuffer<some Any, GPU>, filters: ShapedBuffer<some Any, GPU>, bias: ShapedBuffer<some Any, GPU>?, padding: Int, stride: Int) {
+        precondition(input.dim == 4 && filters.dim == 4, "The images and the filters must have 4 axes.")
+        precondition(input.shape[1] == filters.shape[1], "The images must have one channel for every input channel of the filters.")
+        precondition(bias.map { $0.shape == [filters.shape[0]] } ?? true, "The bias must have one element for every output channel.")
+        precondition(stride > 0 && padding >= 0, "The stride must be positive, and the padding must not be negative.")
+        precondition(input.shape[2] + 2 * padding >= filters.shape[2] && input.shape[3] + 2 * padding >= filters.shape[3], "The filters must fit into the padded images.")
         // The graphs reach a low throughput for strided convolutions, for which the window matrix and the matrix kernels are faster.
-        guard input.dim == 4, filters.dim == 4, input.shape[1] == filters.shape[1], stride == 1, padding >= 0 else {
-            return nil
-        }
-        if let bias, bias.shape != [filters.shape[0]] {
-            return nil
-        }
-        let outputHeight = (input.shape[2] + 2 * padding - filters.shape[2]) / stride + 1
-        let outputWidth = (input.shape[3] + 2 * padding - filters.shape[3]) / stride + 1
-        guard outputHeight > 0, outputWidth > 0 else {
+        guard stride == 1 else {
             return nil
         }
         inputShape = input.shape
         filterShape = filters.shape
-        outputShape = [input.shape[0], filters.shape[0], outputHeight, outputWidth]
+        outputShape = [
+            input.shape[0],
+            filters.shape[0],
+            ConvUtil.outputSize(inputSize: input.shape[2], kernelSize: filters.shape[2], padding: padding, stride: stride),
+            ConvUtil.outputSize(inputSize: input.shape[3], kernelSize: filters.shape[3], padding: padding, stride: stride),
+        ]
         hasBias = bias != nil
         self.padding = padding
         self.stride = stride

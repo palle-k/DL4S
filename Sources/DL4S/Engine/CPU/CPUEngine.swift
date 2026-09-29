@@ -269,24 +269,8 @@ public struct CPUEngine: EngineType {
             resultStrides[axis] = resultStride
             resultStride *= shape[axis]
         }
-        let valueStrides = CPU.Memory.strides(from: shape)
-        var mergedShape: [Int] = []
-        var mergedValueStrides: [Int] = []
-        var mergedResultStrides: [Int] = []
-        for axis in shape.indices where shape[axis] != 1 {
-            if let lastValueStride = mergedValueStrides.last, let lastResultStride = mergedResultStrides.last,
-               lastValueStride == valueStrides[axis] * shape[axis], lastResultStride == resultStrides[axis] * shape[axis],
-               (lastResultStride == 0) == (resultStrides[axis] == 0)
-            {
-                mergedShape[mergedShape.count - 1] *= shape[axis]
-                mergedValueStrides[mergedValueStrides.count - 1] = valueStrides[axis]
-                mergedResultStrides[mergedResultStrides.count - 1] = resultStrides[axis]
-            } else {
-                mergedShape.append(shape[axis])
-                mergedValueStrides.append(valueStrides[axis])
-                mergedResultStrides.append(resultStrides[axis])
-            }
-        }
+        let merged = StridedIteration.mergingAxes(shape: shape, strides: [CPU.Memory.strides(from: shape), resultStrides])
+        let (mergedShape, mergedValueStrides, mergedResultStrides) = (merged.shape, merged.strides[0], merged.strides[1])
         guard let rowLength = mergedShape.last, let rowResultStride = mergedResultStrides.last else {
             destination[0] = source[0]
             return
@@ -327,119 +311,56 @@ public struct CPUEngine: EngineType {
         }
     }
 
-    // @available(*, deprecated, message: "Don't use this one, it is slow")
+    /// Reduces along several axes to the extremum of every reduced slice, and writes its position in the slice to the context.
+    ///
+    /// The position counts the elements of the slice in row-major order of the reduced axes. Neighboring reduced axes that are
+    /// contiguous in memory are merged. When one reduced axis remains, `extremum` reduces it with a stride. Otherwise the slice is
+    /// visited element by element, and `isBetter` compares a value with the extremum so far, so that the first extremum wins.
     @inline(__always)
-    @_specialize(where N == Float)
-    private static func reduceMultiAxis<N>(
+    private static func reduceExtremum<N: NumericType>(
         values: ShapedBuffer<N, CPU>,
         result: MutableShapedBuffer<N, CPU>,
+        context: MutableShapedBuffer<Int32, CPU>?,
         axes: [Int],
-        reduceOperator: (UnsafeBufferPointer<N>, Int) -> N,
+        extremum: (_ values: UnsafeBufferPointer<N>, _ stride: Int, _ count: Int) -> (Int, N),
+        isBetter: (_ value: N, _ extremum: N) -> Bool,
     ) {
+        let shape = values.shape
         #if DEBUG
-        var shape = values.shape
-        for axis in axes.reversed() {
-            shape.remove(at: axis)
-        }
-        precondition(shape == result.shape)
+        precondition(result.shape == shape.indices.filter { !axes.contains($0) }.map { shape[$0] })
         #endif
-
-        let dstStrides = CPU.Memory.strides(from: result.shape)
-        let sliceCount = axes.map { values.shape[$0] }.reduce(1, *)
-
-        for idx in iterate(result.shape) {
-            var srcIdx: [Int?] = idx
-
-            for axis in axes {
-                srcIdx.insert(nil, at: axis)
-            }
-
-            let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
-
-            let reduced = reduceOperator(slice.immutable, sliceCount)
-
-            let linearIndex = zip(dstStrides, idx).map(*).reduce(0, +)
-            result.values[linearIndex] = reduced
-
-            if isCopy {
-                CPU.Memory.free(slice)
-            }
+        guard values.count > 0 else {
+            return
         }
-    }
+        let strides = CPU.Memory.strides(from: shape)
+        let keptAxes = shape.indices.filter { !axes.contains($0) }
+        let keptShape = keptAxes.map { shape[$0] }
+        let sortedAxes = axes.sorted()
+        let reduced = StridedIteration.mergingAxes(shape: sortedAxes.map { shape[$0] }, strides: [sortedAxes.map { strides[$0] }])
+        let (reducedShape, reducedStrides) = (reduced.shape, reduced.strides[0])
+        let source = values.immutable.pointer(capacity: values.count)
+        let destination = result.pointer.pointer(capacity: result.count)
+        let positions = context.map { $0.pointer.pointer(capacity: $0.count) }
 
-    @inline(__always)
-    @_specialize(where N == Float)
-    private static func reduceMultiAxis<N: ZeroableType>(
-        values: ShapedBuffer<N, CPU>,
-        result: MutableShapedBuffer<N, CPU>,
-        axes: [Int],
-        reduceOperator: (_ buffer: UnsafeBufferPointer<N>, _ stride: Int, _ count: Int) -> N,
-        reduceCombine: (N, N) -> N,
-    ) {
-        #if DEBUG
-        var shape = values.shape
-        for axis in axes.reversed() {
-            shape.remove(at: axis)
-        }
-        precondition(shape == result.shape)
-        #endif
-
-        let srcStrides = CPU.Memory.strides(from: values.shape)
-        let dstStrides = CPU.Memory.strides(from: result.shape)
-
-        var reducedShape = [Int]()
-        var reducedStrides = [Int]()
-        var srcStridesDstIdx = srcStrides
-
-        // reducedShape.reserveCapacity(axes.count)
-        // reducedStrides.reserveCapacity(axes.count)
-        for a in axes {
-            reducedShape.append(values.shape[a])
-            reducedStrides.append(srcStrides[a])
-        }
-
-        let reductionStride = reducedStrides.last ?? 1
-        let reductionCount = reducedShape.last ?? 1
-
-        for a in axes.reversed() {
-            srcStridesDstIdx.remove(at: a)
-        }
-
-        let srcReduceIndices = iterate(reducedShape.dropLast())
-
-        let dstPtr = result.values.pointer.pointer(capacity: result.count)
-
-        var dstIdx: Int
-        var srcOffset: Int
-        var srcAddOffset: Int
-
-        for idx in iterate(result.shape) {
-            dstIdx = 0
-            srcOffset = 0
-            for i in 0 ..< idx.count {
-                dstIdx += dstStrides[i] * idx[i]
-                srcOffset += srcStridesDstIdx[i] * idx[i]
-            }
-
-            var reduced: N = .zero
-
-            for srcReduceIndex in srcReduceIndices {
-                srcAddOffset = 0
-                for i in 0 ..< srcReduceIndex.count {
-                    srcAddOffset += reducedStrides[i] * srcReduceIndex[i]
+        StridedIteration.forEachOffset(shape: keptShape, strides: keptAxes.map { strides[$0] }, CPU.Memory.strides(from: keptShape)) { sourceOffset, destinationOffset in
+            let slice = source + sourceOffset
+            var (position, best): (Int, N)
+            if reducedShape.count <= 1 {
+                let (count, stride) = (reducedShape.first ?? 1, reducedStrides.first ?? 1)
+                (position, best) = extremum(UnsafeBufferPointer(start: slice, count: (count - 1) * stride + 1), stride, count)
+            } else {
+                (position, best) = (0, slice[0])
+                var index = 0
+                StridedIteration.forEachOffset(shape: reducedShape, strides: reducedStrides, reducedStrides) { offset, _ in
+                    let value = slice[offset]
+                    if isBetter(value, best) {
+                        (position, best) = (index, value)
+                    }
+                    index += 1
                 }
-
-                reduced = reduceCombine(
-                    reduced,
-                    reduceOperator(
-                        values.immutable.advanced(by: srcOffset + srcAddOffset),
-                        reductionStride,
-                        reductionCount,
-                    ),
-                )
             }
-
-            dstPtr[dstIdx] = reduced
+            destination[destinationOffset] = best
+            positions?[destinationOffset] = Int32(position)
         }
     }
 
@@ -501,50 +422,6 @@ public struct CPUEngine: EngineType {
             let (value, position) = reduceOperator(srcPtr.advanced(by: sourceOffset), reductionStride, reductionCount)
             dstPtr[destinationOffset] = value
             ctxPtr[destinationOffset] = position
-        }
-    }
-
-    // @available(*, deprecated, message: "Don't use this one, it is slow")
-    @inline(__always)
-    @_specialize(where N == Float, Context == Int32)
-    private static func reduceMultiAxisWithContext<N, Context>(
-        values: ShapedBuffer<N, CPU>,
-        result: MutableShapedBuffer<N, CPU>,
-        context: MutableShapedBuffer<Context, CPU>,
-        axes: [Int],
-        reduceOperator: (UnsafeBufferPointer<N>, Int) -> (N, Context),
-    ) {
-        #if DEBUG
-        precondition(result.shape == context.shape)
-
-        var shape = values.shape
-        for axis in axes.reversed() {
-            shape.remove(at: axis)
-        }
-        precondition(shape == result.shape)
-        #endif
-
-        let dstStrides = CPU.Memory.strides(from: result.shape)
-        let sliceCount = axes.map { values.shape[$0] }.reduce(1, *)
-
-        for idx in iterate(result.shape) {
-            var srcIdx: [Int?] = idx
-
-            for axis in axes {
-                srcIdx.insert(nil, at: axis)
-            }
-
-            let (slice, isCopy, _) = CPU.Memory.get(slice: srcIdx, of: values.values, with: values.shape)
-
-            let (reduced, ctxValue) = reduceOperator(slice.immutable, sliceCount)
-
-            let linearIndex = zip(dstStrides, idx).map(*).reduce(0, +)
-            result.values[linearIndex] = reduced
-            context.values[linearIndex] = ctxValue
-
-            if isCopy {
-                CPU.Memory.free(slice)
-            }
         }
     }
 
@@ -787,42 +664,12 @@ public struct CPUEngine: EngineType {
 
     @_specialize(where N == Float)
     public static func reduceMax<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, context: MutableShapedBuffer<Int32, CPU>?, axes: [Int]) {
-        if let context {
-            reduceMultiAxisWithContext(
-                values: values,
-                result: result,
-                context: context,
-                axes: axes,
-                reduceOperator: { buffer, count -> (N, Int32) in
-                    let (arg, max) = N.argmax(values: buffer, count: count)
-                    return (max, Int32(arg))
-                },
-            )
-        } else {
-            reduceMultiAxis(values: values, result: result, axes: axes) {
-                N.argmax(values: $0, count: $1).1
-            }
-        }
+        reduceExtremum(values: values, result: result, context: context, axes: axes, extremum: { N.argmax(values: $0, stride: $1, count: $2) }, isBetter: { $0 > $1 })
     }
 
     @_specialize(where N == Float)
     public static func reduceMin<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, context: MutableShapedBuffer<Int32, CPU>?, axes: [Int]) {
-        if let context {
-            reduceMultiAxisWithContext(
-                values: values,
-                result: result,
-                context: context,
-                axes: axes,
-                reduceOperator: { buffer, count -> (N, Int32) in
-                    let (arg, min) = N.argmin(values: buffer, count: count)
-                    return (min, Int32(arg))
-                },
-            )
-        } else {
-            reduceMultiAxis(values: values, result: result, axes: axes) {
-                N.argmin(values: $0, count: $1).1
-            }
-        }
+        reduceExtremum(values: values, result: result, context: context, axes: axes, extremum: { N.argmin(values: $0, stride: $1, count: $2) }, isBetter: { $0 < $1 })
     }
 
     public static func scatter<N: NumericType>(reduced: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: MutableShapedBuffer<N, CPU>, axis: Int, ignoreIndex: Int32) {

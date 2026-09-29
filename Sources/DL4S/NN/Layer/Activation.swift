@@ -43,9 +43,7 @@ public struct Sigmoid<Element: NumericType, Device: DeviceType>: Codable, Sendab
     public init() {}
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "Sigmoid") {
-            inputs.sigmoid()
-        }
+        inputs.sigmoid()
     }
 }
 
@@ -71,9 +69,7 @@ public struct LeakyRelu<Element: NumericType, Device: DeviceType>: Codable, Send
     }
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "LeakyRelu") {
-            inputs.leakyRectifiedLinear(leakage: Tensor(leakage))
-        }
+        inputs.leakyRectifiedLinear(leakage: Tensor(leakage))
     }
 }
 
@@ -84,9 +80,7 @@ public struct LogSoftmax<Element: NumericType, Device: DeviceType>: Codable, Sen
     public init() {}
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "LogSoftmax") {
-            inputs.logSoftmax()
-        }
+        inputs.logSoftmax()
     }
 }
 
@@ -97,9 +91,7 @@ public struct Softmax<Element: NumericType, Device: DeviceType>: Codable, Sendab
     public init() {}
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "Softmax") {
-            inputs.softmax()
-        }
+        inputs.softmax()
     }
 }
 
@@ -110,9 +102,7 @@ public struct Gelu<Element: NumericType, Device: DeviceType>: Codable, Sendable 
     public init() {}
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "gelu") {
-            inputs.gaussianErrorLinear()
-        }
+        inputs.gaussianErrorLinear()
     }
 }
 
@@ -145,9 +135,7 @@ public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codabl
     }
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "swish") {
-            inputs.swishActivated(beta: beta)
-        }
+        inputs.swishActivated(beta: beta)
     }
 }
 
@@ -158,9 +146,7 @@ public struct Mish<Element: NumericType, Device: DeviceType>: Codable, Sendable 
     public init() {}
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "mish") {
-            inputs.mishActivated()
-        }
+        inputs.mishActivated()
     }
 }
 
@@ -171,9 +157,7 @@ public struct LiSHT<Element: NumericType, Device: DeviceType>: Codable, Sendable
     public init() {}
 
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        OperationGroup.capture(named: "lisht") {
-            inputs.lishtActivated()
-        }
+        inputs.lishtActivated()
     }
 }
 

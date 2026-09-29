@@ -52,49 +52,42 @@ public func gatedRecurrentUnitStep<Element, Device>(
 ) -> Tensor<Element, Device> {
     precondition(state.dim == 2 && [updateInput, resetInput, candidateInput].allSatisfy { $0.shape == state.shape }, "The inputs must have the shape of the state, [batchSize, hiddenSize].")
     precondition([updateWeights, resetWeights, candidateWeights].allSatisfy { $0.shape == [state.shape[1], state.shape[1]] }, "The weights must have the shape [hiddenSize, hiddenSize].")
-    let result = Device.FusedOperations.gatedRecurrentUnitStep(
-        updateInput: updateInput,
-        resetInput: resetInput,
-        candidateInput: candidateInput,
-        state: state,
-        updateWeights: updateWeights,
-        resetWeights: resetWeights,
-        candidateWeights: candidateWeights,
+    var result = Tensor<Element, Device>(uninitializedShape: state.shape)
+    Device.FusedOperations.gatedRecurrentUnitStep(
+        updateInput: updateInput.values,
+        resetInput: resetInput.values,
+        candidateInput: candidateInput.values,
+        state: state.values,
+        updateWeights: updateWeights.values,
+        resetWeights: resetWeights.values,
+        candidateWeights: candidateWeights.values,
+        result: result.mutableValues,
     )
-    let sources = [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights]
-    return result.attachingContext(tag: "gruStep", sources: sources) { resultGradient, gradients in
-        if resultGradient.requiresGradient {
-            let computed = Composed.gatedRecurrentUnitGradients(
-                updateInput: updateInput,
-                resetInput: resetInput,
-                candidateInput: candidateInput,
-                state: state,
-                updateWeights: updateWeights,
-                resetWeights: resetWeights,
-                candidateWeights: candidateWeights,
-                outputGradient: resultGradient,
-                computes: sources.map(\.requiresGradient),
-            )
-            for (index, gradient) in computed.inSourceOrder.enumerated() {
-                Tensor.accumulate(gradient, into: &gradients[index])
-            }
-        } else {
-            // The array gives up its references, so the accumulated gradients stay uniquely referenced.
-            let taken = gradients
-            gradients = Array(repeating: nil, count: taken.count)
-            var accumulated = GatedRecurrentUnitGradients(inSourceOrder: consume taken)
-            Device.FusedOperations.gatedRecurrentUnitStepBackward(
-                updateInput: updateInput,
-                resetInput: resetInput,
-                candidateInput: candidateInput,
-                state: state,
-                updateWeights: updateWeights,
-                resetWeights: resetWeights,
-                candidateWeights: candidateWeights,
-                outputGradient: resultGradient,
-                accumulating: &accumulated,
-            )
-            gradients = accumulated.inSourceOrder
-        }
+    return result.attachingContext(tag: "gruStep", sources: [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights]) { resultGradient, gradients in
+        var accumulated = GatedRecurrentUnitGradients(inSourceOrder: gradients.indices.map { gradients[$0].take() })
+        Composed.gatedRecurrentUnitStepBackward(
+            updateInput: updateInput,
+            resetInput: resetInput,
+            candidateInput: candidateInput,
+            state: state,
+            updateWeights: updateWeights,
+            resetWeights: resetWeights,
+            candidateWeights: candidateWeights,
+            outputGradient: resultGradient,
+            gradients: &accumulated,
+        )
+        gradients = accumulated.inSourceOrder
+    } fused: { resultGradient, gradients in
+        Device.FusedOperations.gatedRecurrentUnitStepBackward(
+            updateInput: updateInput.values,
+            resetInput: resetInput.values,
+            candidateInput: candidateInput.values,
+            state: state.values,
+            updateWeights: updateWeights.values,
+            resetWeights: resetWeights.values,
+            candidateWeights: candidateWeights.values,
+            outputGradient: resultGradient,
+            gradients: GatedRecurrentUnitGradients(inSourceOrder: gradients),
+        )
     }
 }

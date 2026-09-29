@@ -36,7 +36,8 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     public var vDense: Tensor<Element, Device>
     /// Matrix multiplied with result from dot product attention layer
     public var fc: Tensor<Element, Device>
-    public var attn: ScaledDotProductAttention<Element, Device>
+    /// Divisor of the dot products of the queries and the keys
+    public var temperature: Element
     public var norm: LayerNorm<Element, Device>
     public var dropout: Dropout<Element, Device>
 
@@ -75,7 +76,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         self.valueDim = valueDim
         self.hiddenDim = hiddenDim
 
-        attn = ScaledDotProductAttention(temperature: Element(keyDim).sqrt())
+        temperature = Element(keyDim).sqrt()
         qDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
         kDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
         vDense = Tensor(xavierNormalWithShape: [hiddenDim, valueDim * heads], requiresGradient: true, using: &generator)
@@ -112,7 +113,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
                 valueWeights: vDense,
                 outputWeights: fc,
                 heads: heads,
-                temperature: attn.temperature,
+                temperature: temperature,
             ) // [batchSize, queryCount, hiddenDim]
             return norm(dropout(attended) + q)
         }

@@ -29,6 +29,7 @@ import Foundation
 ///
 /// The kernels process tensors in blocks or rows that fit into the L1 cache. Each block goes through the
 /// accelerated primitives of ``CPUNumeric`` and through element-wise loops, so intermediate values do not leave the cache.
+/// Scratch buffers are allocated for one call of a kernel and released at its end.
 enum CPUKernels {
     /// Number of elements of a block. Some kernels keep a few scratch buffers of this size, which together fit into the L1 cache.
     static let blockSize = 4096
@@ -56,31 +57,15 @@ enum CPUKernels {
         forEachBlock(count: rows, blockSize: rowsPerBlock, body)
     }
 
-    /// Allocates an uninitialized scratch buffer for the duration of `body`.
-    @inline(__always)
-    static func withScratch<N, Result>(_ type: N.Type, count: Int, _ body: (UnsafeMutablePointer<N>) -> Result) -> Result {
-        let scratch = UnsafeMutablePointer<N>.allocate(capacity: Swift.max(count, 1))
-        defer {
-            scratch.deallocate()
-        }
-        return body(scratch)
-    }
-
-    /// Creates a tensor without context and returns it together with a pointer to its uninitialized elements.
+    /// Computes an element-wise function in blocks.
     ///
-    /// The pointer is valid while the tensor is alive.
+    /// `body` receives the input and the result of a block, offset to the block, and the length of the block.
     @inline(__always)
-    static func makeTensor<N: NumericType>(shape: [Int]) -> (Tensor<N, CPU>, UnsafeMutablePointer<N>) {
-        let buffer = CPU.Memory.allocateBuffer(withShape: shape, type: N.self)
-        return (Tensor(using: buffer, context: nil), buffer.pointer.baseAddress!)
-    }
-
-    /// Creates a tensor without context whose elements are 0.
-    @inline(__always)
-    static func makeZeroTensor<N: NumericType>(shape: [Int]) -> (Tensor<N, CPU>, UnsafeMutablePointer<N>) {
-        let (tensor, pointer) = makeTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        fill(pointer, with: 0, count: tensor.count)
-        return (tensor, pointer)
+    static func map<N: NumericType>(_ input: ShapedBuffer<N, CPU>, into result: MutableShapedBuffer<N, CPU>, _ body: (_ x: UnsafePointer<N>, _ y: UnsafeMutablePointer<N>, _ length: Int) -> Void) {
+        let (x, y) = (input.elementPointer, result.elementPointer)
+        forEachBlock(count: input.count) { offset, length in
+            body(x + offset, y + offset, length)
+        }
     }
 
     @inline(__always)
@@ -91,6 +76,11 @@ enum CPUKernels {
     @inline(__always)
     static func sum<N: NumericType>(_ pointer: UnsafePointer<N>, count: Int) -> N {
         N.sum(val: UnsafeBufferPointer(start: pointer, count: count), count: count)
+    }
+
+    @inline(__always)
+    static func dot<N: NumericType>(_ lhs: UnsafePointer<N>, _ rhs: UnsafePointer<N>, count: Int) -> N {
+        N.dot(lhs: UnsafeBufferPointer(start: lhs, count: count), rhs: UnsafeBufferPointer(start: rhs, count: count), count: count)
     }
 
     @inline(__always)
@@ -118,25 +108,83 @@ enum CPUKernels {
         N.sqrt(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
-    /// Writes a gradient into an accumulated gradient.
+    /// Computes `tanh(scale * x / 2)`, from which `sigmoid(scale * x) = tanh(scale * x / 2) / 2 + 1 / 2` follows without an overflow
+    /// for large magnitudes. Kernels that use the sigmoid in a further loop apply the last step there.
     ///
-    /// `write` receives the elements and a factor for their current values: 1 when the elements hold the accumulated
-    /// gradient, to which the gradient is added, and 0 for a new tensor, whose elements are not initialized.
-    /// An accumulated gradient with a gradient graph gets the sum without an in-place write.
+    /// The input and the result can be the same memory.
     @inline(__always)
-    static func accumulate<N: NumericType>(into accumulator: inout Tensor<N, CPU>?, shape: [Int], _ write: (_ elements: UnsafeMutablePointer<N>, _ beta: N) -> Void) {
-        // The accumulated gradient is taken out of the optional, so that it is the only reference to its storage during the write.
-        if var target = accumulator.take() {
-            if !target.requiresGradient, target.shape == shape {
-                write(target.mutableValues.pointer.baseAddress!, 1)
-                accumulator = target
-                return
-            }
-            accumulator = target
+    static func tanhOfHalf<N: NumericType>(_ x: UnsafePointer<N>, scale: N = 1, into result: UnsafeMutablePointer<N>, count: Int) {
+        let factor = scale * N(0.5)
+        for i in 0 ..< count {
+            result[i] = x[i] * factor
         }
-        let (gradient, elements) = makeTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        write(elements, 0)
-        Tensor.accumulate(gradient, into: &accumulator)
+        tanh(result, into: result, count: count)
+    }
+
+    /// Computes `sigmoid(x)` as `tanh(x / 2) / 2 + 1 / 2`, which does not overflow for large magnitudes.
+    ///
+    /// The input and the result can be the same memory.
+    @inline(__always)
+    static func sigmoid<N: NumericType>(_ x: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+        let half = N(0.5)
+        tanhOfHalf(x, into: result, count: count)
+        for i in 0 ..< count {
+            result[i] = result[i] * half + half
+        }
+    }
+
+    /// Computes the softmax of every row: `exp(x - max(x)) / sum(exp(x - max(x)))`.
+    ///
+    /// `scratch` holds `rows * rowLength` elements. The values and the scratch buffer can be the same memory.
+    @inline(__always)
+    static func softmaxRows<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, scratch: UnsafeMutablePointer<N>, rows: Int, rowLength: Int) {
+        subtractRowMaxima(values, into: scratch, rows: rows, rowLength: rowLength)
+        exp(scratch, into: result, count: rows * rowLength)
+        for row in 0 ..< rows {
+            let rowResult = result + row * rowLength
+            let inverseSum = 1 / sum(rowResult, count: rowLength)
+            for j in 0 ..< rowLength {
+                rowResult[j] *= inverseSum
+            }
+        }
+    }
+
+    /// Computes the gradient of the softmax of every row, `scale * output * (outputGradient - sum(outputGradient * output))`.
+    ///
+    /// `scratch` holds `rowLength` elements. The gradient of the result and the result can be the same memory.
+    @inline(__always)
+    static func softmaxRowsBackward<N: NumericType>(
+        output: UnsafePointer<N>,
+        outputGradient: UnsafePointer<N>,
+        scale: N = 1,
+        into result: UnsafeMutablePointer<N>,
+        scratch: UnsafeMutablePointer<N>,
+        rows: Int,
+        rowLength: Int,
+    ) {
+        for row in 0 ..< rows {
+            let start = row * rowLength
+            let (y, g, dx) = (output + start, outputGradient + start, result + start)
+            for j in 0 ..< rowLength {
+                scratch[j] = g[j] * y[j]
+            }
+            let product = sum(scratch, count: rowLength)
+            for j in 0 ..< rowLength {
+                dx[j] = y[j] * (g[j] - product) * scale
+            }
+        }
+    }
+
+    /// Subtracts the maximum of every row from the row, so that the exponentials do not overflow.
+    @inline(__always)
+    static func subtractRowMaxima<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, rows: Int, rowLength: Int) {
+        for row in 0 ..< rows {
+            let (source, target) = (values + row * rowLength, result + row * rowLength)
+            let maximum = maximum(source, count: rowLength)
+            for j in 0 ..< rowLength {
+                target[j] = source[j] - maximum
+            }
+        }
     }
 
     /// Computes `target = values + beta * target` for a beta of 0 or 1. With beta 0, the target need not be initialized.
@@ -147,6 +195,56 @@ enum CPUKernels {
         } else {
             for i in 0 ..< count {
                 target[i] += values[i]
+            }
+        }
+    }
+
+    /// Copies rows between the layouts [first, second, length] and [second, first, length], and computes `target = values + beta * target` for a beta of 0 or 1.
+    ///
+    /// With offsets, every row of the first index `i` gets `offsets[i]` added. Convolutions use it to move between the layout of
+    /// a matrix product, [channels, images, pixels], and the layout of images, [images, channels, pixels].
+    @inline(__always)
+    static func swapLeadingAxes<N: NumericType>(_ values: UnsafePointer<N>, first: Int, second: Int, length: Int, adding offsets: UnsafePointer<N>? = nil, into target: UnsafeMutablePointer<N>, beta: N = 0) {
+        // The rows of the target are written in order.
+        for j in 0 ..< second {
+            for i in 0 ..< first {
+                let (source, destination) = (values + (i * second + j) * length, target + (j * first + i) * length)
+                guard let offsets else {
+                    store(source, into: destination, beta: beta, count: length)
+                    continue
+                }
+                let offset = offsets[i]
+                if beta == 0 {
+                    for k in 0 ..< length {
+                        destination[k] = source[k] + offset
+                    }
+                } else {
+                    for k in 0 ..< length {
+                        destination[k] += source[k] + offset
+                    }
+                }
+            }
+        }
+    }
+
+    /// Repeats the values along the axes that broadcast the shape of the values to the shape of the result.
+    /// The shape of the values must broadcast to the shape of the result.
+    static func broadcast<N: NumericType>(_ values: ShapedBuffer<N, CPU>, into result: MutableShapedBuffer<N, CPU>) {
+        precondition(ShapeUtil.broadcasts(values.shape, to: result.shape), "The values do not broadcast to the result.")
+        let shape = result.shape
+        let sourceShape = Array(repeating: 1, count: shape.count - values.dim) + values.shape
+        // A broadcast axis has the stride 0, so every position along it reads the same element.
+        // The last axis is copied or filled as a row.
+        let denseStrides = MemoryOps.strides(from: sourceShape)
+        let sourceStrides = zip(sourceShape, denseStrides).map { $0 == 1 ? 0 : $1 }
+        let (source, target) = (values.elementPointer, result.elementPointer)
+        let rowLength = shape.last ?? 1
+        let rowStride = sourceStrides.last ?? 0
+        StridedIteration.forEachOffset(shape: Array(shape.dropLast()), strides: Array(sourceStrides.dropLast()), Array(MemoryOps.strides(from: shape).dropLast())) { sourceOffset, targetOffset in
+            if rowStride == 0 {
+                fill(target + targetOffset, with: source[sourceOffset], count: rowLength)
+            } else {
+                (target + targetOffset).update(from: source + sourceOffset, count: rowLength)
             }
         }
     }
@@ -180,53 +278,65 @@ enum CPUKernels {
     }
 }
 
-/// A gradient that a kernel writes over several steps: the accumulated gradient of a source, or a new tensor.
-struct GradientTarget<N: NumericType> {
-    /// Tensor that receives the gradient
-    private(set) var tensor: Tensor<N, CPU>
-    /// Elements of the tensor
-    let pointer: UnsafeMutablePointer<N>
-    /// Factor of the current elements for the first write: 1 when they hold the accumulated gradient, 0 for a new tensor.
-    let beta: N
-    /// Accumulated gradient with a gradient graph, which gets the sum without an in-place write.
-    private var graphAccumulator: Tensor<N, CPU>?
-
-    /// Takes the accumulated gradient, or creates a new tensor when there is none or when it has a gradient graph.
-    /// - Parameters:
-    ///   - accumulator: Accumulated gradient, which is nil until ``finish(into:)``
-    ///   - shape: Shape of the gradient
-    ///   - zeroed: Whether a new tensor starts at 0, for kernels that add to the elements in every step
-    init(taking accumulator: inout Tensor<N, CPU>?, shape: [Int], zeroed: Bool = false) {
-        // The accumulated gradient is taken out of the optional, so that it is the only reference to its storage.
-        var existing = accumulator.take()
-        if var inPlace = existing.take() {
-            if !inPlace.requiresGradient, inPlace.shape == shape {
-                pointer = inPlace.mutableValues.pointer.baseAddress!
-                tensor = inPlace
-                beta = 1
-                graphAccumulator = nil
-                return
-            }
-            existing = inPlace
-        }
-        graphAccumulator = existing
-        let (created, elements) = zeroed
-            ? CPUKernels.makeZeroTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-            : CPUKernels.makeTensor(shape: shape) as (Tensor<N, CPU>, UnsafeMutablePointer<N>)
-        (tensor, pointer) = (created, elements)
-        beta = zeroed ? 1 : 0
+extension GradientBuffer where Device == CPU {
+    /// The elements of the gradient and the factor of their current values, for a kernel that writes every element once:
+    /// `elements = gradient + beta * elements`.
+    func elementsToWrite() -> (elements: UnsafeMutablePointer<Element>, beta: Element) {
+        (values.elementPointer, beta)
     }
 
-    /// Stores the gradient in the accumulated gradient.
-    consuming func finish(into accumulator: inout Tensor<N, CPU>?) {
-        accumulator = graphAccumulator
-        Tensor.accumulate(tensor, into: &accumulator)
+    /// The elements of the gradient for a kernel that adds to them in several steps. A gradient that is not added to starts at 0.
+    func elementsToAddTo() -> UnsafeMutablePointer<Element> {
+        if !adds {
+            CPUKernels.fill(values.elementPointer, with: 0, count: values.count)
+        }
+        return values.elementPointer
+    }
+
+    /// Writes the given values into the gradient, or adds them.
+    func write(_ gradient: UnsafePointer<Element>) {
+        CPUKernels.store(gradient, into: values.elementPointer, beta: beta, count: values.count)
+    }
+
+    /// Writes the gradient in blocks of ``CPUKernels/blockSize`` elements.
+    ///
+    /// `body` receives the offset and the length of a block and writes the gradient of the elements of the block to the given memory.
+    /// The helper adds it to the elements, or stores it.
+    @inline(__always)
+    func writeBlocks(_ body: (_ offset: Int, _ length: Int, _ block: UnsafeMutablePointer<Element>) -> Void) {
+        let elements = values.elementPointer
+        guard adds else {
+            CPUKernels.forEachBlock(count: values.count) { offset, length in
+                body(offset, length, elements + offset)
+            }
+            return
+        }
+        let block = UnsafeMutablePointer<Element>.allocate(capacity: CPUKernels.blockSize)
+        defer {
+            block.deallocate()
+        }
+        CPUKernels.forEachBlock(count: values.count) { offset, length in
+            body(offset, length, block)
+            CPUKernels.store(block, into: elements + offset, beta: 1, count: length)
+        }
     }
 }
 
-extension Tensor where Device == CPU {
-    /// Pointer to the elements of the tensor. It is valid while the tensor is alive.
+// The fused operations do not accept empty buffers, see `FusedOperationsType`. Every kernel reads its buffers through
+// `elementPointer`, so this is the one place that checks it.
+
+extension ShapedBuffer where Device == CPU {
+    /// Pointer to the elements of the buffer. The buffer must not be empty.
     var elementPointer: UnsafePointer<Element> {
-        UnsafePointer(handle.values.pointer.baseAddress!)
+        precondition(count > 0, "The fused operations do not accept empty buffers.")
+        return immutable.baseAddress!
+    }
+}
+
+extension MutableShapedBuffer where Device == CPU {
+    /// Pointer to the elements of the buffer. The buffer must not be empty.
+    var elementPointer: UnsafeMutablePointer<Element> {
+        precondition(count > 0, "The fused operations do not accept empty buffers.")
+        return pointer.baseAddress!
     }
 }

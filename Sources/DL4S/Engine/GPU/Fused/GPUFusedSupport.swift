@@ -27,17 +27,34 @@
 import Foundation
 import Metal
 
-extension Tensor where Device == GPU {
-    /// Region of the storage that holds the elements of the tensor.
+// The fused operations do not accept empty buffers, see `FusedOperationsType`. Every kernel reads its buffers through
+// `gpuBuffer`, so this is the one place that checks it.
+
+extension ShapedBuffer where Device == GPU {
+    /// Region of the storage that holds the elements of the buffer. The buffer must not be empty.
     var gpuBuffer: GPUBuffer {
-        handle.values.memory
+        precondition(count > 0, "The fused operations do not accept empty buffers.")
+        return values.memory
+    }
+}
+
+extension MutableShapedBuffer where Device == GPU {
+    /// Region of the storage that holds the elements of the buffer. The buffer must not be empty.
+    var gpuBuffer: GPUBuffer {
+        precondition(count > 0, "The fused operations do not accept empty buffers.")
+        return values.memory
+    }
+}
+
+extension GradientBuffer where Device == GPU {
+    /// Region of the storage that holds the elements of the gradient.
+    var gpuBuffer: GPUBuffer {
+        values.gpuBuffer
     }
 
-    /// Writable region of the storage of the tensor. The storage is copied first when another tensor shares it.
-    var mutableGPUBuffer: GPUBuffer {
-        mutating get {
-            mutableValues.values.memory
-        }
+    /// Value of the `accumulate` parameter of a kernel: 1 when the kernel adds to the elements, 0 when it stores into them.
+    var accumulateFlag: UInt32 {
+        adds ? 1 : 0
     }
 }
 
@@ -47,20 +64,15 @@ enum GPUFused {
     ///
     /// The kernels exist for floats. A small operation whose operands are available on the host uses the default implementation,
     /// whose basic operations then run on the host.
-    static func runsKernel<N>(_: N.Type, elements: Int, reading tensors: [Tensor<N, GPU>]) -> Bool {
-        guard N.self == Float.self, elements > 0 else {
+    static func runsKernel<N>(_: N.Type, elements: Int, reading buffers: [GPUBuffer]) -> Bool {
+        guard N.self == Float.self else {
             return false
         }
         let context = GPUContext.current
         guard elements <= context.hostExecutionLimit else {
             return true
         }
-        return !context.isHostAccessible(reading: tensors.map(\.gpuBuffer), writing: [])
-    }
-
-    /// Creates a tensor with undefined elements.
-    static func makeTensor<N>(shape: [Int]) -> Tensor<N, GPU> {
-        Tensor(using: GPU.Memory.allocateBuffer(withShape: shape, type: N.self), context: nil)
+        return !context.isHostAccessible(reading: buffers, writing: [])
     }
 
     /// Number of threads of a threadgroup that processes one row of the given length.
@@ -71,7 +83,7 @@ enum GPUFused {
     /// Length of the parameter of an element-wise kernel, or nil when the kernel does not support the shape of the parameter.
     ///
     /// The kernels support a parameter with one element and a parameter with the shape of the last axes of the input.
-    static func parameterLength(_ parameter: Tensor<some Any, GPU>, input: Tensor<some Any, GPU>) -> Int? {
+    static func parameterLength(_ parameter: ShapedBuffer<some Any, GPU>, input: ShapedBuffer<some Any, GPU>) -> Int? {
         if parameter.count == 1 {
             return 1
         }
@@ -87,9 +99,8 @@ enum GPUFused {
         var accumulate: UInt32
     }
 
-    /// Records the forward kernel of an activation and returns its result.
-    static func activation<N>(_ name: String, input: Tensor<N, GPU>, parameter: Tensor<N, GPU>? = nil, parameterLength: Int = 1) -> Tensor<N, GPU> {
-        let result: Tensor<N, GPU> = makeTensor(shape: input.shape)
+    /// Records the forward kernel of an activation.
+    static func activation<N>(_ name: String, input: ShapedBuffer<N, GPU>, parameter: ShapedBuffer<N, GPU>? = nil, parameterLength: Int = 1, result: MutableShapedBuffer<N, GPU>) {
         let (x, y, a) = (input.gpuBuffer, result.gpuBuffer, parameter?.gpuBuffer ?? input.gpuBuffer)
         let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(parameterLength), accumulate: 0)
         let pipeline = GPUKernels.pipeline("\(name)_forward", in: .fused)
@@ -100,16 +111,14 @@ enum GPUFused {
             arguments.value(parameters)
             arguments.dispatch(count: input.count)
         }
-        return result
     }
 
     /// Records the backward kernel of an activation, which adds the gradient to the accumulated gradient or stores it.
     ///
     /// - Parameter input: Input of the forward operation, or its result for activations whose gradient uses the result.
-    static func activationBackward<N>(_ name: String, input: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, parameter: Tensor<N, GPU>? = nil, parameterLength: Int = 1, accumulating gradient: inout Tensor<N, GPU>?) {
-        let target = GPUGradientTarget(taking: &gradient, shape: input.shape)
-        let (x, g, dx, a) = (input.gpuBuffer, outputGradient.gpuBuffer, target.buffer, parameter?.gpuBuffer ?? input.gpuBuffer)
-        let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(parameterLength), accumulate: target.accumulates ? 1 : 0)
+    static func activationBackward<N>(_ name: String, input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, parameter: ShapedBuffer<N, GPU>? = nil, parameterLength: Int = 1, inputGradient: GradientBuffer<N, GPU>) {
+        let (x, g, dx, a) = (input.gpuBuffer, outputGradient.gpuBuffer, inputGradient.gpuBuffer, parameter?.gpuBuffer ?? input.gpuBuffer)
+        let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(parameterLength), accumulate: inputGradient.accumulateFlag)
         let pipeline = GPUKernels.pipeline("\(name)_backward", in: .fused)
         GPUContext.current.compute(pipeline, reading: [x, g, a, dx], writing: [dx]) { arguments in
             arguments.buffer(x)
@@ -119,55 +128,12 @@ enum GPUFused {
             arguments.value(parameters)
             arguments.dispatch(count: input.count)
         }
-        target.finish(into: &gradient)
     }
 
     struct RowParameters {
         var length: UInt32
         var accumulate: UInt32
         var epsilon: Float
-    }
-}
-
-/// Receives the gradient of a GPU kernel: the accumulated gradient itself, or a new tensor.
-///
-/// The accumulated gradient is used when it has no gradient graph and the shape of the gradient. The kernel then adds to it.
-struct GPUGradientTarget<N: NumericType>: ~Copyable {
-    private var tensor: Tensor<N, GPU>
-    /// Whether the kernel adds to the elements of the buffer. It stores into them otherwise.
-    let accumulates: Bool
-    /// Buffer that the kernel writes.
-    let buffer: GPUBuffer
-    /// Accumulated gradient with a gradient graph, which gets the sum without an in-place write.
-    private let graphAccumulator: Tensor<N, GPU>?
-
-    /// Takes the accumulated gradient, or creates a new tensor when there is none or when it cannot be written in place.
-    /// - Parameters:
-    ///   - accumulator: Accumulated gradient, which is nil until ``finish(into:)``
-    ///   - shape: Shape of the gradient
-    init(taking accumulator: inout Tensor<N, GPU>?, shape: [Int]) {
-        // The accumulated gradient is taken out of the optional, so that it is the only reference to its storage.
-        if var existing = accumulator.take() {
-            if !existing.requiresGradient, existing.shape == shape {
-                buffer = existing.mutableGPUBuffer
-                tensor = existing
-                accumulates = true
-                graphAccumulator = nil
-                return
-            }
-            graphAccumulator = existing
-        } else {
-            graphAccumulator = nil
-        }
-        tensor = GPUFused.makeTensor(shape: shape)
-        buffer = tensor.gpuBuffer
-        accumulates = false
-    }
-
-    /// Stores the gradient in the accumulated gradient.
-    consuming func finish(into accumulator: inout Tensor<N, GPU>?) {
-        accumulator = graphAccumulator
-        Tensor.accumulate(tensor, into: &accumulator)
     }
 }
 #endif

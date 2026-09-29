@@ -138,18 +138,39 @@ enum StridedIteration {
             shape[arrangement[axis]] = sourceShape[axis]
             strides[arrangement[axis]] = sourceStrides[axis]
         }
+        // The destination is contiguous, so axes merge when they are also contiguous in the source.
+        let merged = mergingAxes(shape: shape, strides: [strides])
+        return merged.shape.isEmpty ? ([1], [1]) : (merged.shape, merged.strides[0])
+    }
+
+    /// Merges neighboring axes that are contiguous in every layout, and drops the axes of size 1.
+    ///
+    /// An axis and the axis after it are contiguous in a layout when the stride of the first axis is the stride of the second
+    /// axis times its size. The merged axes visit the same offsets in the same order.
+    /// - Parameters:
+    ///   - shape: Shape of the iteration
+    ///   - strides: Strides of every layout for the shape
+    /// - Returns: The merged shape, and the strides of every layout for it
+    static func mergingAxes(shape: [Int], strides: [[Int]]) -> (shape: [Int], strides: [[Int]]) {
         var mergedShape: [Int] = []
-        var mergedStrides: [Int] = []
-        for (size, stride) in zip(shape, strides) where size != 1 {
-            if let lastStride = mergedStrides.last, lastStride == stride * size {
-                mergedShape[mergedShape.count - 1] *= size
-                mergedStrides[mergedStrides.count - 1] = stride
+        var mergedStrides = [[Int]](repeating: [], count: strides.count)
+        for axis in shape.indices where shape[axis] != 1 {
+            let isContiguous = !mergedShape.isEmpty && strides.indices.allSatisfy { layout in
+                mergedStrides[layout][mergedShape.count - 1] == strides[layout][axis] * shape[axis]
+            }
+            if isContiguous {
+                mergedShape[mergedShape.count - 1] *= shape[axis]
+                for layout in strides.indices {
+                    mergedStrides[layout][mergedShape.count - 1] = strides[layout][axis]
+                }
             } else {
-                mergedShape.append(size)
-                mergedStrides.append(stride)
+                mergedShape.append(shape[axis])
+                for layout in strides.indices {
+                    mergedStrides[layout].append(strides[layout][axis])
+                }
             }
         }
-        return mergedShape.isEmpty ? ([1], [1]) : (mergedShape, mergedStrides)
+        return (mergedShape, mergedStrides)
     }
 }
 
@@ -322,13 +343,64 @@ public extension Sequence {
     }
 }
 
+/// Shapes of reductions and broadcasts.
+enum ShapeUtil {
+    /// The shape without the given axes.
+    static func reducedShape(of shape: [Int], along axes: [Int]) -> [Int] {
+        shape.indices.filter { !axes.contains($0) }.map { shape[$0] }
+    }
+
+    /// The shape with the size 1 for every one of the given axes.
+    static func keptShape(of shape: [Int], along axes: [Int]) -> [Int] {
+        shape.indices.map { axes.contains($0) ? 1 : shape[$0] }
+    }
+
+    /// Number of elements that a reduction along the given axes combines into one.
+    static func elementCount(of shape: [Int], along axes: [Int]) -> Int {
+        axes.map { shape[$0] }.reduce(1, *)
+    }
+
+    /// Shape of the product of the matrices of two operands, with broadcasting along all axes except the last two.
+    static func batchedProductShape(_ lhs: [Int], _ rhs: [Int], lhsTransposed: Bool, rhsTransposed: Bool) -> [Int] {
+        let dim = Swift.max(lhs.count, rhs.count)
+        let batchShape = shapeForBroadcastedOperands(
+            Array(repeating: 1, count: dim - lhs.count) + lhs.dropLast(2),
+            Array(repeating: 1, count: dim - rhs.count) + rhs.dropLast(2),
+        )
+        return batchShape + [lhs[lhs.count - (lhsTransposed ? 1 : 2)], rhs[rhs.count - (rhsTransposed ? 2 : 1)]]
+    }
+
+    /// Whether a shape is broadcastable to another shape.
+    static func broadcasts(_ shape: [Int], to target: [Int]) -> Bool {
+        shape.count <= target.count && zip(shape.reversed(), target.reversed()).allSatisfy { $0 == $1 || $0 == 1 }
+    }
+
+    /// Axes of `target` that broadcasting expands from `shape`.
+    static func broadcastAxes(from shape: [Int], to target: [Int]) -> [Int] {
+        let padded = Array(repeating: 1, count: target.count - shape.count) + shape
+        return target.indices.filter { padded[$0] == 1 && target[$0] > 1 }
+    }
+}
+
 public enum ConvUtil {
     public static func outputShape(for inputShape: [Int], kernelCount: Int, kernelWidth: Int, kernelHeight: Int, stride: Int, padding: Int) -> [Int] {
         [
             kernelCount,
-            (inputShape[1] + 2 * padding - kernelHeight) / stride + 1,
-            (inputShape[2] + 2 * padding - kernelWidth) / stride + 1,
+            outputSize(inputSize: inputShape[1], kernelSize: kernelHeight, padding: padding, stride: stride),
+            outputSize(inputSize: inputShape[2], kernelSize: kernelWidth, padding: padding, stride: stride),
         ]
+    }
+
+    /// Number of positions of a window along an axis of a convolution or of pooling.
+    @inline(__always)
+    static func outputSize(inputSize: Int, kernelSize: Int, padding: Int, stride: Int) -> Int {
+        (inputSize + 2 * padding - kernelSize) / stride + 1
+    }
+
+    /// Size of the result of a transposed convolution along an axis.
+    @inline(__always)
+    static func transposedOutputSize(inputSize: Int, kernelSize: Int, inset: Int, stride: Int) -> Int {
+        (inputSize - 1) * stride - 2 * inset + kernelSize
     }
 }
 

@@ -26,186 +26,238 @@
 #if canImport(Metal) && canImport(MetalPerformanceShaders)
 import Foundation
 
-// Every activation is one element-wise kernel for the forward pass and one for the backward pass.
-// Parameters with a gradient, and parameters with other shapes than a scalar or the last axes of the input, use the default implementations.
+// Every activation is one element-wise kernel for the forward pass and one for the backward pass. Parameters with a
+// requested gradient, and parameters with other shapes than a scalar or the last axes of the input, use the default implementations.
 
 public extension GPUFusedOperations {
-    static func tanhBackward<N: NumericType>(output: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard output.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: output.count, reading: [output, outputGradient]) else {
-            DefaultFusedOperations<GPU>.tanhBackward(output: output, outputGradient: outputGradient, accumulating: &gradient)
+    static func tanhBackward<N: NumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
             return
         }
-        GPUFused.activationBackward("tanh", input: output, outputGradient: outputGradient, accumulating: &gradient)
-    }
-
-    static func reluBackward<N: NumericType>(input: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard input.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: input.count, reading: [input, outputGradient]) else {
-            DefaultFusedOperations<GPU>.reluBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+        precondition(outputGradient.shape == output.shape, "The gradient of the result must have the shape of the result.")
+        guard GPUFused.runsKernel(N.self, elements: output.count, reading: [output.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.tanhBackward(output: output, outputGradient: outputGradient, inputGradient: inputGradient)
             return
         }
-        GPUFused.activationBackward("relu", input: input, outputGradient: outputGradient, accumulating: &gradient)
+        GPUFused.activationBackward("tanh", input: output, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 
-    static func sigmoid<N: NumericType>(input: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input]) else {
-            return DefaultFusedOperations<GPU>.sigmoid(input: input)
-        }
-        return GPUFused.activation("sigmoid", input: input)
-    }
-
-    static func sigmoidBackward<N: NumericType>(output: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard output.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: output.count, reading: [output, outputGradient]) else {
-            DefaultFusedOperations<GPU>.sigmoidBackward(output: output, outputGradient: outputGradient, accumulating: &gradient)
+    static func reluBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
             return
         }
-        GPUFused.activationBackward("sigmoid", input: output, outputGradient: outputGradient, accumulating: &gradient)
-    }
-
-    static func leakyRelu<N: NumericType>(input: Tensor<N, GPU>, leakage: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard let length = GPUFused.parameterLength(leakage, input: input), GPUFused.runsKernel(N.self, elements: input.count, reading: [input, leakage]) else {
-            return DefaultFusedOperations<GPU>.leakyRelu(input: input, leakage: leakage)
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.reluBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
         }
-        return GPUFused.activation("leaky_relu", input: input, parameter: leakage, parameterLength: length)
+        GPUFused.activationBackward("relu", input: input, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 
-    static func leakyReluBackward<N: NumericType>(input: Tensor<N, GPU>, leakage: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradients: inout (input: Tensor<N, GPU>?, leakage: Tensor<N, GPU>?)) {
-        guard !leakage.requiresGradient, input.shape == outputGradient.shape, let length = GPUFused.parameterLength(leakage, input: input),
-              GPUFused.runsKernel(N.self, elements: input.count, reading: [input, leakage, outputGradient])
+    static func sigmoid<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.sigmoid(input: input, result: result)
+            return
+        }
+        GPUFused.activation("sigmoid", input: input, result: result)
+    }
+
+    static func sigmoidBackward<N: NumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
+            return
+        }
+        precondition(outputGradient.shape == output.shape, "The gradient of the result must have the shape of the result.")
+        guard GPUFused.runsKernel(N.self, elements: output.count, reading: [output.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.sigmoidBackward(output: output, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
+        }
+        GPUFused.activationBackward("sigmoid", input: output, outputGradient: outputGradient, inputGradient: inputGradient)
+    }
+
+    static func leakyRelu<N: NumericType>(input: ShapedBuffer<N, GPU>, leakage: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        precondition(ShapeUtil.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
+        guard let length = GPUFused.parameterLength(leakage, input: input), GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, leakage.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.leakyRelu(input: input, leakage: leakage, result: result)
+            return
+        }
+        GPUFused.activation("leaky_relu", input: input, parameter: leakage, parameterLength: length, result: result)
+    }
+
+    static func leakyReluBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, leakage: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?, leakageGradient: GradientBuffer<N, GPU>?) {
+        precondition(ShapeUtil.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        // The kernel does not compute the gradient of the leakage.
+        guard leakageGradient == nil, let length = GPUFused.parameterLength(leakage, input: input),
+              GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, leakage.gpuBuffer, outputGradient.gpuBuffer])
         else {
-            DefaultFusedOperations<GPU>.leakyReluBackward(input: input, leakage: leakage, outputGradient: outputGradient, accumulating: &gradients)
+            DefaultFusedOperations<GPU>.leakyReluBackward(input: input, leakage: leakage, outputGradient: outputGradient, inputGradient: inputGradient, leakageGradient: leakageGradient)
             return
         }
-        if input.requiresGradient {
-            GPUFused.activationBackward("leaky_relu", input: input, outputGradient: outputGradient, parameter: leakage, parameterLength: length, accumulating: &gradients.input)
+        if let inputGradient {
+            GPUFused.activationBackward("leaky_relu", input: input, outputGradient: outputGradient, parameter: leakage, parameterLength: length, inputGradient: inputGradient)
         }
     }
 
-    static func gelu<N: NumericType>(input: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input]) else {
-            return DefaultFusedOperations<GPU>.gelu(input: input)
-        }
-        return GPUFused.activation("gelu", input: input)
-    }
-
-    static func geluBackward<N: NumericType>(input: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard input.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: input.count, reading: [input, outputGradient]) else {
-            DefaultFusedOperations<GPU>.geluBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+    static func gelu<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.gelu(input: input, result: result)
             return
         }
-        GPUFused.activationBackward("gelu", input: input, outputGradient: outputGradient, accumulating: &gradient)
+        GPUFused.activation("gelu", input: input, result: result)
     }
 
-    static func swish<N: NumericType>(input: Tensor<N, GPU>, beta: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard let length = GPUFused.parameterLength(beta, input: input), GPUFused.runsKernel(N.self, elements: input.count, reading: [input, beta]) else {
-            return DefaultFusedOperations<GPU>.swish(input: input, beta: beta)
+    static func geluBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
+            return
         }
-        return GPUFused.activation("swish", input: input, parameter: beta, parameterLength: length)
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.geluBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
+        }
+        GPUFused.activationBackward("gelu", input: input, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 
-    static func swishBackward<N: NumericType>(input: Tensor<N, GPU>, beta: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradients: inout (input: Tensor<N, GPU>?, beta: Tensor<N, GPU>?)) {
-        guard !beta.requiresGradient, input.shape == outputGradient.shape, let length = GPUFused.parameterLength(beta, input: input),
-              GPUFused.runsKernel(N.self, elements: input.count, reading: [input, beta, outputGradient])
+    static func swish<N: NumericType>(input: ShapedBuffer<N, GPU>, beta: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        precondition(ShapeUtil.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
+        guard let length = GPUFused.parameterLength(beta, input: input), GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, beta.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.swish(input: input, beta: beta, result: result)
+            return
+        }
+        GPUFused.activation("swish", input: input, parameter: beta, parameterLength: length, result: result)
+    }
+
+    static func swishBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, beta: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?, betaGradient: GradientBuffer<N, GPU>?) {
+        precondition(ShapeUtil.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        // The kernel does not compute the gradient of the beta.
+        guard betaGradient == nil, let length = GPUFused.parameterLength(beta, input: input),
+              GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, beta.gpuBuffer, outputGradient.gpuBuffer])
         else {
-            DefaultFusedOperations<GPU>.swishBackward(input: input, beta: beta, outputGradient: outputGradient, accumulating: &gradients)
+            DefaultFusedOperations<GPU>.swishBackward(input: input, beta: beta, outputGradient: outputGradient, inputGradient: inputGradient, betaGradient: betaGradient)
             return
         }
-        if input.requiresGradient {
-            GPUFused.activationBackward("swish", input: input, outputGradient: outputGradient, parameter: beta, parameterLength: length, accumulating: &gradients.input)
+        if let inputGradient {
+            GPUFused.activationBackward("swish", input: input, outputGradient: outputGradient, parameter: beta, parameterLength: length, inputGradient: inputGradient)
         }
     }
 
-    static func mish<N: NumericType>(input: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input]) else {
-            return DefaultFusedOperations<GPU>.mish(input: input)
-        }
-        return GPUFused.activation("mish", input: input)
-    }
-
-    static func mishBackward<N: NumericType>(input: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard input.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: input.count, reading: [input, outputGradient]) else {
-            DefaultFusedOperations<GPU>.mishBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+    static func mish<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.mish(input: input, result: result)
             return
         }
-        GPUFused.activationBackward("mish", input: input, outputGradient: outputGradient, accumulating: &gradient)
+        GPUFused.activation("mish", input: input, result: result)
     }
 
-    static func lisht<N: NumericType>(input: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input]) else {
-            return DefaultFusedOperations<GPU>.lisht(input: input)
-        }
-        return GPUFused.activation("lisht", input: input)
-    }
-
-    static func lishtBackward<N: NumericType>(input: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard input.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: input.count, reading: [input, outputGradient]) else {
-            DefaultFusedOperations<GPU>.lishtBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+    static func mishBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
             return
         }
-        GPUFused.activationBackward("lisht", input: input, outputGradient: outputGradient, accumulating: &gradient)
-    }
-
-    static func elu<N: NumericType>(input: Tensor<N, GPU>, alpha: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard let length = GPUFused.parameterLength(alpha, input: input), GPUFused.runsKernel(N.self, elements: input.count, reading: [input, alpha]) else {
-            return DefaultFusedOperations<GPU>.elu(input: input, alpha: alpha)
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.mishBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
         }
-        return GPUFused.activation("elu", input: input, parameter: alpha, parameterLength: length)
+        GPUFused.activationBackward("mish", input: input, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 
-    static func eluBackward<N: NumericType>(input: Tensor<N, GPU>, alpha: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradients: inout (input: Tensor<N, GPU>?, alpha: Tensor<N, GPU>?)) {
-        guard !alpha.requiresGradient, input.shape == outputGradient.shape, let length = GPUFused.parameterLength(alpha, input: input),
-              GPUFused.runsKernel(N.self, elements: input.count, reading: [input, alpha, outputGradient])
+    static func lisht<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.lisht(input: input, result: result)
+            return
+        }
+        GPUFused.activation("lisht", input: input, result: result)
+    }
+
+    static func lishtBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
+            return
+        }
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.lishtBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
+        }
+        GPUFused.activationBackward("lisht", input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+    }
+
+    static func elu<N: NumericType>(input: ShapedBuffer<N, GPU>, alpha: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        precondition(ShapeUtil.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
+        guard let length = GPUFused.parameterLength(alpha, input: input), GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, alpha.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.elu(input: input, alpha: alpha, result: result)
+            return
+        }
+        GPUFused.activation("elu", input: input, parameter: alpha, parameterLength: length, result: result)
+    }
+
+    static func eluBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, alpha: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?, alphaGradient: GradientBuffer<N, GPU>?) {
+        precondition(ShapeUtil.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        // The kernel does not compute the gradient of the alpha.
+        guard alphaGradient == nil, let length = GPUFused.parameterLength(alpha, input: input),
+              GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, alpha.gpuBuffer, outputGradient.gpuBuffer])
         else {
-            DefaultFusedOperations<GPU>.eluBackward(input: input, alpha: alpha, outputGradient: outputGradient, accumulating: &gradients)
+            DefaultFusedOperations<GPU>.eluBackward(input: input, alpha: alpha, outputGradient: outputGradient, inputGradient: inputGradient, alphaGradient: alphaGradient)
             return
         }
-        if input.requiresGradient {
-            GPUFused.activationBackward("elu", input: input, outputGradient: outputGradient, parameter: alpha, parameterLength: length, accumulating: &gradients.input)
+        if let inputGradient {
+            GPUFused.activationBackward("elu", input: input, outputGradient: outputGradient, parameter: alpha, parameterLength: length, inputGradient: inputGradient)
         }
     }
 
-    static func softplus<N: NumericType>(input: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input]) else {
-            return DefaultFusedOperations<GPU>.softplus(input: input)
-        }
-        return GPUFused.activation("softplus", input: input)
-    }
-
-    static func softplusBackward<N: NumericType>(input: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard input.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: input.count, reading: [input, outputGradient]) else {
-            DefaultFusedOperations<GPU>.softplusBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+    static func softplus<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.softplus(input: input, result: result)
             return
         }
-        GPUFused.activationBackward("softplus", input: input, outputGradient: outputGradient, accumulating: &gradient)
+        GPUFused.activation("softplus", input: input, result: result)
     }
 
-    static func squareplus<N: NumericType>(input: Tensor<N, GPU>) -> Tensor<N, GPU> {
-        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input]) else {
-            return DefaultFusedOperations<GPU>.squareplus(input: input)
-        }
-        return GPUFused.activation("squareplus", input: input)
-    }
-
-    static func squareplusBackward<N: NumericType>(input: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard input.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: input.count, reading: [input, outputGradient]) else {
-            DefaultFusedOperations<GPU>.squareplusBackward(input: input, outputGradient: outputGradient, accumulating: &gradient)
+    static func softplusBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
             return
         }
-        GPUFused.activationBackward("squareplus", input: input, outputGradient: outputGradient, accumulating: &gradient)
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.softplusBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
+        }
+        GPUFused.activationBackward("softplus", input: input, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 
-    static func dropout<N: NumericType>(input: Tensor<N, GPU>, rate: Float) -> (output: Tensor<N, GPU>, mask: Tensor<N, GPU>) {
+    static func squareplus<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.squareplus(input: input, result: result)
+            return
+        }
+        GPUFused.activation("squareplus", input: input, result: result)
+    }
+
+    static func squareplusBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
+            return
+        }
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.squareplusBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
+        }
+        GPUFused.activationBackward("squareplus", input: input, outputGradient: outputGradient, inputGradient: inputGradient)
+    }
+
+    static func dropout<N: NumericType>(input: ShapedBuffer<N, GPU>, rate: Float, result: MutableShapedBuffer<N, GPU>, mask: MutableShapedBuffer<N, GPU>) {
         let probability = 1 - rate
-        guard probability < 1, GPUFused.runsKernel(N.self, elements: input.count, reading: [input]) else {
-            return DefaultFusedOperations<GPU>.dropout(input: input, rate: rate)
+        guard probability < 1, GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.dropout(input: input, rate: rate, result: result, mask: mask)
+            return
         }
-        let output: Tensor<N, GPU> = GPUFused.makeTensor(shape: input.shape)
-        let mask: Tensor<N, GPU> = GPUFused.makeTensor(shape: input.shape)
         // An element is kept when a uniform 32-bit random number is below the threshold, which happens with the given probability.
         let threshold = probability <= 0 ? 0 : UInt32(Swift.min(Double(probability) * 0x1p32, Double(UInt32.max)))
         var generator = WyHash()
         let seed = generator.next()
         let parameters = DropoutParameters(count: UInt32(input.count), threshold: threshold, seed: SIMD2(UInt32(truncatingIfNeeded: seed), UInt32(truncatingIfNeeded: seed >> 32)))
-        let (x, y, m) = (input.gpuBuffer, output.gpuBuffer, mask.gpuBuffer)
+        let (x, y, m) = (input.gpuBuffer, result.gpuBuffer, mask.gpuBuffer)
         let pipeline = GPUKernels.pipeline("dropout_forward", in: .fused)
         GPUContext.current.compute(pipeline, reading: [x], writing: [y, m]) { arguments in
             arguments.buffer(x)
@@ -214,15 +266,18 @@ public extension GPUFusedOperations {
             arguments.value(parameters)
             arguments.dispatch(count: input.count)
         }
-        return (output, mask)
     }
 
-    static func dropoutBackward<N: NumericType>(mask: Tensor<N, GPU>, outputGradient: Tensor<N, GPU>, accumulating gradient: inout Tensor<N, GPU>?) {
-        guard mask.shape == outputGradient.shape, GPUFused.runsKernel(N.self, elements: mask.count, reading: [mask, outputGradient]) else {
-            DefaultFusedOperations<GPU>.dropoutBackward(mask: mask, outputGradient: outputGradient, accumulating: &gradient)
+    static func dropoutBackward<N: NumericType>(mask: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+        guard let inputGradient else {
             return
         }
-        GPUFused.activationBackward("dropout", input: mask, outputGradient: outputGradient, accumulating: &gradient)
+        precondition(outputGradient.shape == mask.shape, "The gradient of the values must have the shape of the mask.")
+        guard GPUFused.runsKernel(N.self, elements: mask.count, reading: [mask.gpuBuffer, outputGradient.gpuBuffer]) else {
+            DefaultFusedOperations<GPU>.dropoutBackward(mask: mask, outputGradient: outputGradient, inputGradient: inputGradient)
+            return
+        }
+        GPUFused.activationBackward("dropout", input: mask, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 }
 
