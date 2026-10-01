@@ -317,6 +317,18 @@ extension GPUTests {
             #expect(dropout(x, rate: 0.3).mask.elements != maskValues)
         }
 
+        @Test func dropoutWithoutDroppedElementsKeepsTheInput() {
+            GPUTest.withHostExecutionLimit(0) {
+                let x = Tensor<Float, GPU>(GPUTest.random([64, 100], seed: 8))
+                let (output, mask) = dropout(x, rate: 0)
+                #expect(output.elements == x.elements)
+                #expect(mask.elements.allSatisfy { $0 == 1 })
+                // Double has no GPU kernels, so it uses the default implementation.
+                let doubles = Tensor<Double, GPU>(Tensor<Double, CPU>(x.elements.map { Double($0) }, shape: x.shape))
+                #expect(doubles.droppedOut(rate: 0).elements == doubles.elements)
+            }
+        }
+
         /// The result and the mask of the dropout kernel of the GPU.
         private func dropout(_ input: Tensor<Float, GPU>, rate: Float) -> (output: Tensor<Float, GPU>, mask: Tensor<Float, GPU>) {
             var (output, mask) = (Tensor<Float, GPU>(uninitializedShape: input.shape), Tensor<Float, GPU>(uninitializedShape: input.shape))

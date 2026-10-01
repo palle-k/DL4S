@@ -67,7 +67,7 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
     /// - Returns: Batch of encoder outputs with shape [inputs.count, maxLen, hiddenSize]
     public func callAsFunction(_ inputs: (input: Tensor<Element, Device>, sequenceLengths: [Int])) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Encoder") {
-            let mask: Tensor<Element, Device> = makeEncoderMasks(sequenceLengths: inputs.sequenceLengths)
+            let mask: Tensor<Element, Device> = makeEncoderMasks(sequenceLengths: inputs.sequenceLengths, length: inputs.input.shape[1])
 
             return encoderLayers.reduce(inputs.input) { acc, layer in
                 layer((inputs: acc, mask: mask))

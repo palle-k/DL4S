@@ -313,7 +313,7 @@ Default implementations are provided for the following architectures:
 - [x] ResNet18
 - [x] VGG (11, 13, 16, 19)
 - [x] AlexNet
-- [x] Transformer
+- [x] Transformer (Encoder-Decoder, Decoder-only)
 
 </p>
 </details>

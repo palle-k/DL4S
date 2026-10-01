@@ -130,3 +130,67 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         }
     }
 }
+
+// MARK: Autoregressive decoding
+
+public extension MultiHeadAttention {
+    /// Projects keys and values and splits them into heads, for ``callAsFunction(queries:cache:mask:)``.
+    /// - Parameters:
+    ///   - keys: Keys with the shape [batchSize, count, hiddenDim]
+    ///   - values: Values with the shape [batchSize, count, hiddenDim]
+    /// - Returns: Cache with `count` positions
+    func cache(keys: Tensor<Element, Device>, values: Tensor<Element, Device>) -> AttentionCache<Element, Device> {
+        precondition(keys.dim == 3 && values.dim == 3 && keys.shape.dropLast() == values.shape.dropLast(), "The keys and values must have the shape [batchSize, count, hiddenDim].")
+        return AttentionCache(
+            keys: projectedHeads(keys, weights: kDense, heads: keyValueHeads),
+            values: projectedHeads(values, weights: vDense, heads: keyValueHeads),
+        )
+    }
+
+    /// Computes multi-head attention of queries to cached keys and values.
+    ///
+    /// The result is the result of ``callAsFunction(_:)`` with keys and values whose projections are in the cache:
+    /// the operation projects the queries, attends to the cache, and applies the output projection, dropout,
+    /// the residual connection, and layer normalization.
+    ///
+    /// - Parameters:
+    ///   - queries: Queries with the shape [batchSize, queryCount, hiddenDim]
+    ///   - cache: Keys and values from ``cache(keys:values:)``, with the batch size of the queries or 1
+    ///   - mask: Mask with 1 for every cached position that a query must not attend to and 0 elsewhere,
+    ///     broadcastable to [batchSize, heads, queryCount, cache.count], or nil for no mask
+    /// - Returns: Attended values with the shape [batchSize, queryCount, hiddenDim]
+    func callAsFunction(queries: Tensor<Element, Device>, cache: AttentionCache<Element, Device>, mask: Tensor<Element, Device>?) -> Tensor<Element, Device> {
+        OperationGroup.capture(named: "MultiHeadAttention") {
+            precondition(queries.dim == 3, "The queries must have the shape [batchSize, queryCount, hiddenDim].")
+            precondition(cache.batchSize == 1 || cache.batchSize == queries.shape[0], "The cache must have the batch size of the queries or 1.")
+            let (batchSize, queryCount) = (queries.shape[0], queries.shape[1])
+            let projected = projectedHeads(queries, weights: qDense, heads: heads)
+            let attended = scaledDotProductAttention(queries: projected, keys: cache.keys, values: cache.values, mask: mask, temperature: temperature) // [batchSize, heads, queryCount, valueDim]
+            let joined = Self.swappingHeadsAndPositions(of: attended).view(as: batchSize * queryCount, heads * valueDim)
+            let result = joined.matrixMultiplied(with: fc).view(as: batchSize, queryCount, -1)
+            return norm(dropout(result) + queries)
+        }
+    }
+
+    /// Projects inputs with the shape [batchSize, count, hiddenDim] and splits the projection into heads with the shape
+    /// [batchSize, heads, count, size], the layout of the heads in
+    /// ``multiHeadAttention(queries:keys:values:mask:queryWeights:keyWeights:valueWeights:outputWeights:heads:temperature:)``.
+    private func projectedHeads(_ inputs: Tensor<Element, Device>, weights: Tensor<Element, Device>, heads: Int) -> Tensor<Element, Device> {
+        let (batchSize, count) = (inputs.shape[0], inputs.shape[1])
+        let projected = inputs
+            .view(as: batchSize * count, hiddenDim)
+            .matrixMultiplied(with: weights)
+            .view(as: batchSize, count, heads, -1)
+        return Self.swappingHeadsAndPositions(of: projected)
+    }
+
+    /// Swaps the second and third axes of a tensor with 4 axes, such as [batchSize, count, heads, size].
+    private static func swappingHeadsAndPositions(of tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        // With one position or one head, both layouts have the same memory order, so a decoding step of one position
+        // needs no copies.
+        guard tensor.shape[1] > 1, tensor.shape[2] > 1 else {
+            return tensor.view(as: tensor.shape[0], tensor.shape[2], tensor.shape[1], tensor.shape[3])
+        }
+        return tensor.permuted(to: [0, 2, 1, 3])
+    }
+}

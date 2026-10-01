@@ -248,8 +248,14 @@ public extension GPUFusedOperations {
 
     static func dropout<N: NumericType>(input: ShapedBuffer<N, GPU>, rate: Float, result: MutableShapedBuffer<N, GPU>, mask: MutableShapedBuffer<N, GPU>) {
         let probability = 1 - rate
-        guard probability < 1, GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
+        guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.dropout(input: input, rate: rate, result: result, mask: mask)
+            return
+        }
+        // The kernel would drop an element whose random number is UInt32.max, so a rate of 0 keeps every element without it.
+        guard probability < 1 else {
+            GPUKernels.fill(mask.gpuBuffer, word: Float(1).bitPattern, count: mask.count)
+            GPUKernels.copyWords(from: input.gpuBuffer, to: result.gpuBuffer, byteCount: input.count * MemoryLayout<Float>.stride)
             return
         }
         // An element is kept when a uniform 32-bit random number is below the threshold, which happens with the given probability.
