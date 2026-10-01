@@ -493,6 +493,28 @@ public protocol EngineType {
     ///   - axis: Axis to gather along
     static func gather<N: NumericType>(expanded: ShapedBuffer<N, Device>, context: ShapedBuffer<Int32, Device>, result: MutableShapedBuffer<N, Device>, axis: Int, ignoreIndex: Int32)
 
+    /// Copies the rows of a buffer that the indices select.
+    ///
+    /// A row is a slice along the first axis. Row `i` of the result is row `indices[i]` of the values, or zeros when
+    /// `indices[i]` is equal to `ignoreIndex`. Every other index must be in `0 ..< values.shape[0]`.
+    /// - Parameters:
+    ///   - values: Buffer with the shape [rows, ...]
+    ///   - indices: Index of the row of the values for each row of the result, in any shape
+    ///   - result: Buffer with the shape [indices.count, ...] and the row shape of the values
+    ///   - ignoreIndex: Index for which the row of the result is zero
+    static func gatherRows<N: NumericType>(values: ShapedBuffer<N, Device>, indices: ShapedBuffer<Int32, Device>, result: MutableShapedBuffer<N, Device>, ignoreIndex: Int32)
+
+    /// Adds the rows of a buffer to the rows of the result that the indices select.
+    ///
+    /// Row `i` of the values is added to row `indices[i]` of the result. Rows with the same index are all added, and rows
+    /// whose index is equal to `ignoreIndex` are not added. Every other index must be in `0 ..< result.shape[0]`.
+    /// - Parameters:
+    ///   - values: Buffer with the shape [indices.count, ...]
+    ///   - indices: Index of the row of the result for each row of the values, in any shape
+    ///   - result: Buffer with the shape [rows, ...] and the row shape of the values, which the rows are added to
+    ///   - ignoreIndex: Index of rows that are not added
+    static func scatterAddRows<N: NumericType>(values: ShapedBuffer<N, Device>, indices: ShapedBuffer<Int32, Device>, result: MutableShapedBuffer<N, Device>, ignoreIndex: Int32)
+
     /// Performs an axis permutation / transpose oepration
     /// - Parameters:
     ///   - values: Buffer of values to permute
@@ -507,36 +529,6 @@ public protocol EngineType {
     ///   - result: Result buffer
     ///   - arangement: Arangement of axes.
     static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, arangement: [Int])
-
-    /// Reads elements from the given index
-    /// - Parameters:
-    ///   - values: Buffer of values to read
-    ///   - result: Buffer to write the values to
-    ///   - index: Index to read from, nil values indicate that all values along the corresponding axis should be read
-    static func subscriptRead<N>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, index: [Int?])
-
-    /// Writes elements to the result tensor at the given index
-    /// - Parameters:
-    ///   - values: Values to write
-    ///   - result: Buffer to write to
-    ///   - index: Index to write to, nil values indicate that all values along the corresponding axis should be written
-    static func subscriptWrite<N>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, index: [Int?])
-
-    /// Reads elements from the given index and adds a second vector
-    /// - Parameters:
-    ///   - values: Buffer of values to read
-    ///   - add: Buffer to add
-    ///   - result: Buffer to write the values to
-    ///   - index: Index to read from, nil values indicate that all values along the corresponding axis should be read
-    static func subscriptReadAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, index: [Int?])
-
-    /// Writes elements to the result tensor at the given index and adds a second vector
-    /// - Parameters:
-    ///   - values: Values to write
-    ///   - add: Buffer to add
-    ///   - result: Buffer to write to
-    ///   - index: Index to write to, nil values indicate that all values along the corresponding axis should be written
-    static func subscriptWriteAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, index: [Int?])
 
     /// Reverses the order of elements along the first dimension of the buffer
     /// - Parameters:
@@ -573,10 +565,11 @@ public protocol EngineType {
     ///   - axis: Axis to unstack along
     static func unstack<N: NumericType>(stacked: ShapedBuffer<N, Device>, result: [MutableShapedBuffer<N, Device>], axis: Int)
 
-    /// Writes linear interpolation values from lowerBound to upperBound into the result buffer.
+    /// Writes evenly spaced values from lowerBound up to upperBound into the result buffer: element i is
+    /// `lowerBound + i * (upperBound - lowerBound) / count`, so the last element is less than upperBound.
     /// - Parameters:
-    ///   - lowerBound: Start value
-    ///   - upperBound: End value
+    ///   - lowerBound: First value
+    ///   - upperBound: Value after the last value
     ///   - result: Result buffer
     static func arange<N: NumericType>(lowerBound: N, upperBound: N, result: MutableShapedBuffer<N, Device>)
 

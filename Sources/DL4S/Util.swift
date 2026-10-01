@@ -375,6 +375,17 @@ enum ShapeUtil {
         shape.count <= target.count && zip(shape.reversed(), target.reversed()).allSatisfy { $0 == $1 || $0 == 1 }
     }
 
+    /// Strides of the axes of a contiguous shape, with 0 for the axes with one element, along which the shape broadcasts.
+    static func broadcastStrides(_ shape: [Int]) -> [Int] {
+        var strides = [Int](repeating: 0, count: shape.count)
+        var stride = 1
+        for axis in shape.indices.reversed() {
+            strides[axis] = shape[axis] == 1 ? 0 : stride
+            stride *= shape[axis]
+        }
+        return strides
+    }
+
     /// Axes of `target` that broadcasting expands from `shape`.
     static func broadcastAxes(from shape: [Int], to target: [Int]) -> [Int] {
         let padded = Array(repeating: 1, count: target.count - shape.count) + shape

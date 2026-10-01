@@ -61,18 +61,18 @@ struct GPUGraph: @unchecked Sendable {
     /// Records the graph.
     ///
     /// - Parameters:
-    ///   - inputs: Buffers and shapes of the inputs, in the order of the inputs of the builder.
-    ///   - results: Buffers and shapes of the results, in the order of the results of the builder.
-    func encode(inputs: [(GPUBuffer, [Int])], results: [(GPUBuffer, [Int])]) {
-        GPUContext.current.graph(reading: inputs.map(\.0), writing: results.map(\.0)) { commandBuffer in
+    ///   - inputs: Inputs, in the order of the inputs of the builder.
+    ///   - results: Results, in the order of the results of the builder.
+    func encode<N>(inputs: [ShapedBuffer<N, GPU>], results: [MutableShapedBuffer<N, GPU>]) {
+        GPUContext.current.graph(reading: inputs.map(\.gpuBuffer), writing: results.map(\.gpuBuffer)) { commandBuffer in
             // The data objects are created while the stream is locked, because a new storage can still replace its buffer.
             var inputData = [MPSGraphTensorData?](repeating: nil, count: inputs.count)
             for (index, input) in inputs.enumerated() {
-                inputData[inputOrder[index]] = Self.data(input.0, shape: input.1)
+                inputData[inputOrder[index]] = Self.data(input.gpuBuffer, shape: input.shape)
             }
             var resultData = [MPSGraphTensorData?](repeating: nil, count: results.count)
             for (index, result) in results.enumerated() {
-                resultData[resultOrder[index]] = Self.data(result.0, shape: result.1)
+                resultData[resultOrder[index]] = Self.data(result.gpuBuffer, shape: result.shape)
             }
             let descriptor = MPSGraphExecutableExecutionDescriptor()
             descriptor.waitUntilCompleted = false
@@ -98,6 +98,8 @@ enum GPUGraphCache {
     }
 
     private static let graphs = Mutex<[Key: GPUGraph]>([:])
+    /// Number of graphs that the cache keeps.
+    private static let maximumCachedGraphs = 256
 
     /// Returns the graph for the key, and compiles it when the cache has none.
     static func graph(for key: some Hashable & Sendable, compile: () -> GPUGraph) -> GPUGraph {
@@ -107,7 +109,13 @@ enum GPUGraphCache {
         }
         // The compilation runs without the lock. When two threads compile the same graph, the second result is kept.
         let graph = autoreleasepool(invoking: compile)
-        graphs.withLock { $0[key] = graph }
+        graphs.withLock { graphs in
+            // Shapes that change in every step, such as the sizes of padded batches, would let the cache grow without a limit.
+            if graphs.count >= maximumCachedGraphs {
+                graphs.removeAll()
+            }
+            graphs[key] = graph
+        }
         return graph
     }
 }

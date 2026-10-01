@@ -29,8 +29,9 @@
 // A threadgroup of four or eight SIMD groups computes a 64 x 64 or 128 x 64 tile of C: every SIMD group computes 32 x 32
 // elements, as in the matrix kernels. The taller tile uses every loaded element of B for twice as many products, which
 // matters because the elements of B are gathered one at a time. The columns n enumerate the
-// pixels of a grid of `heightN` x `widthN` per image. A row k of B has an entry in a table: the offset of its element from
-// the element of a column, and the displacement of its position in the image, which decides whether it lies in the padding.
+// pixels of a grid of `heightN` x `widthN` per image. The rows of A are contiguous. A row k of B has an entry in a table: the
+// offset of its element from the element of a column, and the displacement of its position in the image, which decides
+// whether it lies in the padding.
 // Every thread loads the same column of every tile of B, so it decomposes its column once.
 //
 // The forward pass uses A = filters, [outputChannels, inputChannels * kernelHeight * kernelWidth], and B = the windows of
@@ -46,11 +47,7 @@ struct ImplicitGemmParameters {
     // Element of row m and column (b, uy, ux) of C: m * cRowStride + b * cBatch + (uy * cStrideY + cOffsetY) * cWidth + ux * cStrideX + cOffsetX
     int cRowStride, cBatch, cStrideY, cOffsetY, cStrideX, cOffsetX, cWidth;
     int accumulate, hasBias;
-    // Whether row m of A is contiguous from m * aRowStride, with the table entry of row k equal to k.
-    int contiguousA;
 };
-
-#define UNROLL _Pragma("clang loop unroll(full)")
 
 constant constexpr int TILE = 64;
 constant constexpr int BK = 32;
@@ -61,8 +58,7 @@ constant constexpr int B_STRIDE = TILE + 4;
 // TM is the height of the tile, 64 or 128, with TM * 2 threads.
 template <int TM>
 kernel void implicit_gemm(device const float* A [[buffer(0)]], device const float* B [[buffer(1)]], device float* C [[buffer(2)]],
-                          device const int* aTable [[buffer(3)]], device const int4* bTable [[buffer(4)]], device const float* bias [[buffer(5)]],
-                          constant ImplicitGemmParameters& p [[buffer(6)]],
+                          device const int4* bTable [[buffer(3)]], device const float* bias [[buffer(4)]], constant ImplicitGemmParameters& p [[buffer(5)]],
                           uint3 group [[threadgroup_position_in_grid]], uint thread_index [[thread_index_in_threadgroup]],
                           uint simd [[simdgroup_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]]) {
     constexpr int THREADS = TM * 2;
@@ -80,12 +76,11 @@ kernel void implicit_gemm(device const float* A [[buffer(0)]], device const floa
     const bool nValid = n < p.N;
     const int b = nValid ? n / pixels : 0;
     const int pixel = n - b * pixels;
-    const int uy = pixel / p.widthN, ux = pixel - (pixel / p.widthN) * p.widthN;
+    const int uy = pixel / p.widthN, ux = pixel - uy * p.widthN;
     const int ny = uy * p.bStrideY + p.bOffsetY, nx = ux * p.bStrideX + p.bOffsetX;
     const long bBase = long(b) * p.bBatch + long(ny) * p.bWidth + nx;
     // The column of A that this thread loads.
     const int aColumn = int(thread_index) % BK;
-    (void)THREADS;
 
     simdgroup_float8x8 accumulators[BLOCKS][BLOCKS];
     UNROLL for (int i = 0; i < BLOCKS; i++) {
@@ -99,8 +94,8 @@ kernel void implicit_gemm(device const float* A [[buffer(0)]], device const floa
             int k = k0 + int(thread_index);
             rowEntries[thread_index] = k < p.K ? bTable[k] : int4(0, INT_MIN / 2, 0, 0);
         }
-        if (p.contiguousA && m0 + TM <= p.M && k0 + BK <= p.K) {
-            // The rows of A are contiguous, as for the filters of the forward pass: every thread loads four elements at a time.
+        if (m0 + TM <= p.M && k0 + BK <= p.K) {
+            // Tiles in the interior of A: every thread loads four elements at a time.
             UNROLL for (int e = int(thread_index) * 4; e < TM * BK; e += THREADS * 4) {
                 int r = e / BK, c = e % BK;
                 float4 v = float4(*(device const packed_float4*)(A + long(m0 + r) * p.aRowStride + k0 + c));
@@ -109,11 +104,10 @@ kernel void implicit_gemm(device const float* A [[buffer(0)]], device const floa
             }
         } else {
             const int ka = k0 + aColumn;
-            const int aOffset = ka < p.K ? (p.contiguousA ? ka : aTable[ka]) : 0;
             UNROLL for (int step = 0; step < TM * BK / THREADS; step++) {
                 int r = int(thread_index) / BK + step * (THREADS / BK);
                 int m = m0 + r;
-                As[r * A_STRIDE + aColumn] = m < p.M && ka < p.K ? A[long(m) * p.aRowStride + aOffset] : 0.0f;
+                As[r * A_STRIDE + aColumn] = m < p.M && ka < p.K ? A[long(m) * p.aRowStride + ka] : 0.0f;
             }
         }
         threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -153,7 +147,7 @@ kernel void implicit_gemm(device const float* A [[buffer(0)]], device const floa
             if (column >= p.N) { continue; }
             int cb = column / pixels;
             int cp = column - cb * pixels;
-            int cy = cp / p.widthN, cx = cp - (cp / p.widthN) * p.widthN;
+            int cy = cp / p.widthN, cx = cp - cy * p.widthN;
             long columnOffset = long(cb) * p.cBatch + long(cy * p.cStrideY + p.cOffsetY) * p.cWidth + cx * p.cStrideX + p.cOffsetX;
             UNROLL for (int i = 0; i < BLOCKS; i++) {
                 int row = m0 + sm + i * 8 + blockRow;
@@ -166,8 +160,8 @@ kernel void implicit_gemm(device const float* A [[buffer(0)]], device const floa
     }
 }
 
-template [[host_name("implicit_gemm_64")]] kernel void implicit_gemm<64>(device const float*, device const float*, device float*, device const int*, device const int4*, device const float*, constant ImplicitGemmParameters&, uint3, uint, uint, uint);
-template [[host_name("implicit_gemm_128")]] kernel void implicit_gemm<128>(device const float*, device const float*, device float*, device const int*, device const int4*, device const float*, constant ImplicitGemmParameters&, uint3, uint, uint, uint);
+template [[host_name("implicit_gemm_64")]] kernel void implicit_gemm<64>(device const float*, device const float*, device float*, device const int4*, device const float*, constant ImplicitGemmParameters&, uint3, uint, uint, uint);
+template [[host_name("implicit_gemm_128")]] kernel void implicit_gemm<128>(device const float*, device const float*, device float*, device const int4*, device const float*, constant ImplicitGemmParameters&, uint3, uint, uint, uint);
 
 // Writes the rows of a matrix that the tables of the implicit products describe as a contiguous matrix:
 // result[m, k] = source[m * rowStride + table[k]]. The data gradient uses it for the filters of every phase of the stride.

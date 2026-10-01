@@ -45,10 +45,10 @@ public extension Tensor where Element == Int32 {
 }
 
 public extension Tensor {
-    /// Linearly interpolates between the lower and upper bound (both including).
+    /// Creates the values from the lower bound up to the upper bound, which is not included, with the given increment.
     /// - Parameters:
-    ///   - lowerBound: Start
-    ///   - upperBound: End
+    ///   - lowerBound: First value
+    ///   - upperBound: Value after the last value
     ///   - stride: Increment between elements
     init(linearRampWithLowerBound lowerBound: Element = 0, upperBound: Element, by stride: Element = 1) {
         let buffer = Device.Memory.allocateBuffer(withShape: [((upperBound - lowerBound) / stride).toInt()], type: Element.self)

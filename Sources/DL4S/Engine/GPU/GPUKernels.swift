@@ -27,7 +27,8 @@
 import Foundation
 import Metal
 
-/// Records the kernels of the GPU. The functions do not check whether the host could compute the result in less time.
+/// Records the kernels of the GPU. Except for the copies of regions, the functions do not check whether the host could compute
+/// the result in less time.
 enum GPUKernels {
     static func pipeline(_ name: String, in source: GPUShaderSource) -> any MTLComputePipelineState {
         GPUContext.current.kernels.pipeline(name, in: source)
@@ -60,7 +61,7 @@ enum GPUKernels {
 
     /// Records a command that contains the given bytes and writes them to the result.
     static func write(_ bytes: UnsafeRawBufferPointer, to result: GPUBuffer) {
-        precondition(bytes.count % 4 == 0 && bytes.count <= maximumImmediateByteCount, "A command contains at most 4096 bytes in 32-bit words.")
+        precondition(bytes.count % 4 == 0 && bytes.count <= maximumImmediateByteCount, "A command contains at most \(maximumImmediateByteCount) bytes in 32-bit words.")
         let count = bytes.count / 4
         let pipeline = pipeline("copy_u32", in: .elementwise)
         GPUContext.current.compute(pipeline, reading: [], writing: [result]) { arguments in
@@ -138,37 +139,45 @@ enum GPUKernels {
 
     // MARK: Copies
 
-    /// Copies a strided region of 32-bit elements, and adds a strided summand when one is given.
+    /// Copies a strided region of 32-bit elements.
     ///
     /// - Parameters:
     ///   - source: Source, with the offset of the first element of the region.
     ///   - result: Result, with the offset of the first element of the region.
-    ///   - summand: Summand, with the offset of its first element, and the element type for the addition.
-    ///   - layout: Layout with the strides of the source, the result, and the summand.
-    static func stridedCopy(source: GPUBuffer, result: GPUBuffer, summand: (buffer: GPUBuffer, element: GPUElement)? = nil, layout: GPULayout) {
+    ///   - layout: Layout with the strides of the source and the result.
+    static func stridedCopy(source: GPUBuffer, result: GPUBuffer, layout: GPULayout) {
         let count = layout.shape.reduce(1, *)
         guard count > 0 else {
             return
         }
-        if let summand {
-            let pipeline = pipeline("strided_copy_add_\(summand.element.rawValue)", in: .copy)
-            GPUContext.current.compute(pipeline, reading: [source, summand.buffer], writing: [result]) { arguments in
-                arguments.buffer(source)
-                arguments.buffer(result)
-                arguments.buffer(summand.buffer)
-                arguments.values(layout.arguments)
-                arguments.value(UInt32(count))
-                arguments.dispatch(count: count)
-            }
-        } else {
-            let pipeline = pipeline("strided_copy_u32", in: .copy)
-            GPUContext.current.compute(pipeline, reading: [source], writing: [result]) { arguments in
-                arguments.buffer(source)
-                arguments.buffer(result)
-                arguments.values(layout.arguments)
-                arguments.value(UInt32(count))
-                arguments.dispatch(count: count)
-            }
+        GPUContext.current.compute(pipeline("strided_copy_u32", in: .copy), reading: [source], writing: [result]) { arguments in
+            arguments.buffer(source)
+            arguments.buffer(result)
+            arguments.values(layout.arguments)
+            arguments.value(UInt32(count))
+            arguments.dispatch(count: count)
+        }
+    }
+
+    /// Copies a strided region and adds a strided summand of the given element type.
+    ///
+    /// - Parameters:
+    ///   - source: Source, with the offset of the first element of the region.
+    ///   - summand: Summand, with the offset of its first element.
+    ///   - result: Result, with the offset of the first element of the region.
+    ///   - layout: Layout with the strides of the source, the result, and the summand.
+    static func stridedCopy(source: GPUBuffer, adding summand: GPUBuffer, element: GPUElement, result: GPUBuffer, layout: GPULayout) {
+        let count = layout.shape.reduce(1, *)
+        guard count > 0 else {
+            return
+        }
+        GPUContext.current.compute(pipeline("strided_copy_add_\(element.rawValue)", in: .copy), reading: [source, summand], writing: [result]) { arguments in
+            arguments.buffer(source)
+            arguments.buffer(result)
+            arguments.buffer(summand)
+            arguments.values(layout.arguments)
+            arguments.value(UInt32(count))
+            arguments.dispatch(count: count)
         }
     }
 
@@ -274,6 +283,8 @@ enum GPUKernels {
             reduceRows(rows, values: partial, result: result, outer: outer, length: segments, segments: 1, scale: scale, accumulate: accumulate)
             return
         }
+        // Few columns with long reductions are split into segments of the reduced axis: with fewer than 32768 columns, one
+        // thread per column does not occupy all GPU cores. The segments give about 65536 threads, and each has 32 elements or more.
         let columnCount = outer * inner
         guard columnCount < 32768, length >= 128 else {
             reduceColumns(columns, values: values, result: result, outer: outer, length: length, inner: inner, segments: 1, scale: scale, accumulate: accumulate)
@@ -336,6 +347,60 @@ enum GPUKernels {
                 threadgroup: MTLSize(width: width, height: height, depth: 1),
             )
         }
+    }
+}
+
+/// Builds the layout of a strided region for up to three operands and merges axes that are contiguous in all operands.
+struct GPULayout {
+    var shape: [Int]
+    var strides: [[Int]]
+
+    init(shape: [Int], strides: [[Int]]) {
+        precondition(strides.count <= 3, "A layout has at most three operands.")
+        var mergedShape: [Int] = []
+        var mergedStrides = [[Int]](repeating: [], count: strides.count)
+        for axis in shape.indices where shape[axis] != 1 {
+            // An axis merges into the axis before it when the stride of that axis spans the axis in every operand.
+            let isContiguous = !mergedShape.isEmpty && strides.indices.allSatisfy { operand in
+                mergedStrides[operand][mergedStrides[operand].count - 1] == strides[operand][axis] * shape[axis]
+            }
+            if isContiguous {
+                mergedShape[mergedShape.count - 1] *= shape[axis]
+                for operand in strides.indices {
+                    mergedStrides[operand][mergedStrides[operand].count - 1] = strides[operand][axis]
+                }
+            } else {
+                mergedShape.append(shape[axis])
+                for operand in strides.indices {
+                    mergedStrides[operand].append(strides[operand][axis])
+                }
+            }
+        }
+        self.shape = mergedShape
+        self.strides = mergedStrides
+    }
+
+    /// Whether the kernels support the layout.
+    var isSupported: Bool {
+        shape.count <= 8
+    }
+
+    /// The layout in the memory layout of the `Layout` struct of the kernels.
+    var arguments: [Int32] {
+        var values = [Int32](repeating: 0, count: 1 + 8 + 3 * 8)
+        values[0] = Int32(shape.count)
+        for axis in shape.indices {
+            values[1 + axis] = Int32(shape[axis])
+            for operand in strides.indices {
+                values[9 + operand * 8 + axis] = Int32(strides[operand][axis])
+            }
+        }
+        return values
+    }
+
+    /// Row-major strides of a shape.
+    static func contiguousStrides(_ shape: [Int]) -> [Int] {
+        CPUMemoryOperators.strides(from: shape)
     }
 }
 #endif

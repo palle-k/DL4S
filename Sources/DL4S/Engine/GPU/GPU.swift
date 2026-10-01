@@ -66,9 +66,13 @@ public struct GPU: DeviceType {
         GPUContext.shared?.clearCache()
     }
 
+    // A GPU command costs a few microseconds of host time, in which the host computes an operation of about this size.
+    /// Default of ``hostExecutionLimit``.
+    public static let defaultHostExecutionLimit = 4096
+
     /// Number of elements up to which an operation runs on the CPU when all of its operands are available on the host.
     ///
-    /// Set it to 0 to run all supported operations on the GPU.
+    /// The default is ``defaultHostExecutionLimit``. Set it to 0 to run all supported operations on the GPU.
     public static var hostExecutionLimit: Int {
         get {
             GPUContext.shared?.hostExecutionLimit ?? 0
@@ -81,8 +85,8 @@ public struct GPU: DeviceType {
 
 /// Fused operations of the GPU.
 ///
-/// The GPU has fused kernels for the activations, softmax, normalization, and the optimizer step.
-/// The other operations use the default implementations, which run on the GPU through the basic operations of ``GPUEngine``.
+/// The GPU has kernels for some fused operations and uses the default implementations, which run on the GPU through the
+/// basic operations of ``GPUEngine``, for the others.
 public struct GPUFusedOperations: FusedOperationsType {
     public typealias Device = GPU
 }

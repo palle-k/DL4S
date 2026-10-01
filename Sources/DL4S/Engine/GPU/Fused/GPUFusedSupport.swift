@@ -60,19 +60,11 @@ extension GradientBuffer where Device == GPU {
 
 /// Helpers of the fused operations of the GPU.
 enum GPUFused {
-    /// Whether a fused operation runs its GPU kernel.
-    ///
-    /// The kernels exist for floats. A small operation whose operands are available on the host uses the default implementation,
-    /// whose basic operations then run on the host.
+    // A small operation whose operands are available on the host uses the default implementation, whose basic operations then
+    // run on the host.
+    /// Whether a fused operation runs its GPU kernel: for floats, unless the operation runs on the host, see ``GPUPlacement``.
     static func runsKernel<N>(_: N.Type, elements: Int, reading buffers: [GPUBuffer]) -> Bool {
-        guard N.self == Float.self else {
-            return false
-        }
-        let context = GPUContext.current
-        guard elements <= context.hostExecutionLimit else {
-            return true
-        }
-        return !context.isHostAccessible(reading: buffers, writing: [])
+        N.self == Float.self && !GPUPlacement.runsOnHost(elements: elements, reading: buffers, writing: [])
     }
 
     /// Number of threads of a threadgroup that processes one row of the given length.

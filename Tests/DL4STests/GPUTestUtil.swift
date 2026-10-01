@@ -55,16 +55,16 @@ enum GPUPlacementMode: String, CaseIterable, CustomTestStringConvertible {
 
 /// Helpers that run an operation on the CPU and on the GPU and compare the results.
 enum GPUTest {
-    /// Runs `body` on the CPU, then on the GPU in every placement mode, and records an issue when a result differs.
+    /// Runs `body` on the CPU, then on the GPU in the placement modes, and records an issue when a result differs.
     ///
     /// - Parameters:
     ///   - tolerance: Largest difference of an element, relative to the magnitude of the expected element when it is larger than 1.
+    ///   - modes: Placement modes in which `body` runs on the GPU
     ///   - body: Computes the results on the GPU when its argument is true, on the CPU otherwise.
-    static func compare(_ name: String, tolerance: Float = 1e-3, _ body: (Bool) -> [Tensor<Float, CPU>], sourceLocation: SourceLocation = #_sourceLocation) {
+    static func compare(_ name: String, tolerance: Float = 1e-3, modes: [GPUPlacementMode] = GPUPlacementMode.allCases, _ body: (Bool) -> [Tensor<Float, CPU>], sourceLocation: SourceLocation = #_sourceLocation) {
         let expected = body(false)
-        for mode in GPUPlacementMode.allCases {
-            GPU.hostExecutionLimit = mode.hostExecutionLimit
-            let actual = body(true)
+        for mode in modes {
+            let actual = withHostExecutionLimit(mode.hostExecutionLimit) { body(true) }
             #expect(actual.count == expected.count, "\(name) [\(mode)]: result count", sourceLocation: sourceLocation)
             for (index, (a, e)) in zip(actual, expected).enumerated() {
                 guard a.shape == e.shape else {
@@ -75,9 +75,19 @@ enum GPUTest {
                 #expect(difference <= tolerance, "\(name) [\(mode)]: result \(index) has the relative difference \(difference)", sourceLocation: sourceLocation)
             }
         }
-        GPU.hostExecutionLimit = 4096
     }
 
+    /// Runs `body` with the given ``GPU/hostExecutionLimit`` and restores the previous limit afterwards.
+    static func withHostExecutionLimit<Result>(_ limit: Int, _ body: () throws -> Result) rethrows -> Result {
+        let previous = GPU.hostExecutionLimit
+        GPU.hostExecutionLimit = limit
+        defer {
+            GPU.hostExecutionLimit = previous
+        }
+        return try body()
+    }
+
+    /// A tensor with uniformly distributed elements from a generator with the given seed.
     static func random(_ shape: [Int], seed: UInt64, min: Float = -1, max: Float = 1, requiresGradient: Bool = false) -> Tensor<Float, CPU> {
         var generator = WyHash(seed: seed)
         return Tensor<Float, CPU>(uniformlyDistributedWithShape: shape, min: min, max: max, requiresGradient: requiresGradient, using: &generator)

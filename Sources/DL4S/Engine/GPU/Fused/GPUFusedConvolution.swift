@@ -46,6 +46,7 @@ import MetalPerformanceShadersGraph
 public extension GPUFusedOperations {
     static func convolution2d<N: NumericType>(input: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, bias: ShapedBuffer<N, GPU>?, padding: Int, stride: Int, result: MutableShapedBuffer<N, GPU>) {
         let geometry = GPUConvolution(input: input, filters: filters, bias: bias, padding: padding, stride: stride)
+        precondition(result.shape == geometry.outputShape, "The result must have the shape of the convolved images.")
         guard GPUFused.runsKernel(N.self, elements: result.count, reading: [input.gpuBuffer, filters.gpuBuffer] + (bias.map { [$0.gpuBuffer] } ?? []))
         else {
             DefaultFusedOperations<GPU>.convolution2d(input: input, filters: filters, bias: bias, padding: padding, stride: stride, result: result)
@@ -65,10 +66,7 @@ public extension GPUFusedOperations {
                 return [graph.addition(convolved, bias, name: nil)]
             }
         }
-        graph.encode(
-            inputs: [(input.gpuBuffer, input.shape), (filters.gpuBuffer, filters.shape)] + (bias.map { [($0.gpuBuffer, $0.shape)] } ?? []),
-            results: [(result.gpuBuffer, result.shape)],
-        )
+        graph.encode(inputs: [input, filters] + (bias.map { [$0] } ?? []), results: [result])
     }
 
     static func convolution2dBackward<N: NumericType>(
@@ -136,10 +134,7 @@ public extension GPUFusedOperations {
                 return results
             }
         }
-        graph.encode(
-            inputs: [(input.gpuBuffer, input.shape), (filters.gpuBuffer, filters.shape), (outputGradient.gpuBuffer, outputGradient.shape)],
-            results: targets.map { ($0.gpuBuffer, $0.shape) },
-        )
+        graph.encode(inputs: [input, filters, outputGradient], results: targets)
         for (gradient, target) in zip(gradients, targets) where gradient.adds {
             math.add(gradient.values, target, into: gradient.values)
         }

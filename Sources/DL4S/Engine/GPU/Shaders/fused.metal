@@ -32,7 +32,7 @@ inline float sigmoid_(float x) { return 0.5f * precise::tanh(0.5f * x) + 0.5f; }
 // log(1 + exp(x)) without an overflow for large x.
 inline float softplus_(float x) { return max(x, 0.0f) + precise::log(1.0f + precise::exp(-abs(x))); }
 
-inline void store(device float* result, uint i, float value, uint accumulate) {
+inline void store(device float* result, ulong i, float value, uint accumulate) {
     result[i] = accumulate ? result[i] + value : value;
 }
 
@@ -295,7 +295,7 @@ kernel void batch_norm_backward(device const float* input [[buffer(0)]], device 
     for (uint row = 0; row < p.rows; row++) {
         ulong index = ulong(row) * p.columns + j;
         float normalized = (input[index] - mu) * inverse;
-        store(inputGradient, uint(index), (outputGradient[index] * gamma - meanGradient - normalized * correlation) * inverse, p.accumulate);
+        store(inputGradient, index, (outputGradient[index] * gamma - meanGradient - normalized * correlation) * inverse, p.accumulate);
     }
 }
 
@@ -320,7 +320,7 @@ kernel void batch_norm_fixed_backward(device const float* input [[buffer(0)]], d
         float g = outputGradient[index];
         scaleSum += g * (input[index] - mu) * inverse;
         shiftSum += g;
-        if (computesInput != 0) { store(inputGradient, uint(index), g * factor, p.accumulate); }
+        if (computesInput != 0) { store(inputGradient, index, g * factor, p.accumulate); }
     }
     scaleSums[j] = scaleSum;
     shiftSums[j] = shiftSum;

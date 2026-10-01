@@ -44,7 +44,6 @@ struct ReduceParameters {
 #define MAX_COMBINE(a, b) max((a), (b))
 #define MIN_COMBINE(a, b) min((a), (b))
 #define SCALE_float(value, scale) ((value) * (scale))
-#define SCALE_int(value, scale) (value)
 #define NO_SCALE(value, scale) (value)
 
 // Rows: the threadgroup has the size (width, height). A row segment is reduced by `width` threads: by one SIMD group
@@ -142,14 +141,14 @@ kernel void reduce_columns_arg##NAME##_##T(device const T* values [[buffer(0)]],
 REDUCE_ROWS(sum, float, 0.0f, SUM_COMBINE, simd_sum, SCALE_float)
 REDUCE_ROWS(max, float, -INFINITY, MAX_COMBINE, simd_max, NO_SCALE)
 REDUCE_ROWS(min, float, INFINITY, MIN_COMBINE, simd_min, NO_SCALE)
-REDUCE_ROWS(sum, int, 0, SUM_COMBINE, simd_sum, SCALE_int)
+REDUCE_ROWS(sum, int, 0, SUM_COMBINE, simd_sum, NO_SCALE)
 REDUCE_ROWS(max, int, INT_MIN, MAX_COMBINE, simd_max, NO_SCALE)
 REDUCE_ROWS(min, int, INT_MAX, MIN_COMBINE, simd_min, NO_SCALE)
 
 REDUCE_COLUMNS(sum, float, 0.0f, SUM_COMBINE, SCALE_float)
 REDUCE_COLUMNS(max, float, -INFINITY, MAX_COMBINE, NO_SCALE)
 REDUCE_COLUMNS(min, float, INFINITY, MIN_COMBINE, NO_SCALE)
-REDUCE_COLUMNS(sum, int, 0, SUM_COMBINE, SCALE_int)
+REDUCE_COLUMNS(sum, int, 0, SUM_COMBINE, NO_SCALE)
 REDUCE_COLUMNS(max, int, INT_MIN, MAX_COMBINE, NO_SCALE)
 REDUCE_COLUMNS(min, int, INT_MAX, MIN_COMBINE, NO_SCALE)
 

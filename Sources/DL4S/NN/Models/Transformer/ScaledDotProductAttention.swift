@@ -35,7 +35,8 @@ public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType
     }
 
     /// Performs scaled dot product attention.
-    /// - Parameter inputs: Tuple containing queries of shape [batchSize, heads, queryCount, keyDim], keys of shape [batchSize, heads, keyCount, keyDim] and values of shape [batchSize, heads, valueCount, valueDim]
+    /// - Parameter inputs: Tuple containing queries of shape [batchSize, heads, queryCount, keyDim], keys of shape [batchSize, keyHeads, keyCount, keyDim] and values of shape [batchSize, valueHeads, keyCount, valueDim],
+    ///       where `keyHeads` and `valueHeads` divide `heads` and a group of query heads shares one key head and one value head (grouped-query attention),
     ///       as well as an optional mask that may be used to prevent attention to certain elements outside of the batch or in future timesteps. Mask must be broadcastable to shape [batchSize, heads, queryCount, keyCount]
     /// - Returns: Attended values tensor of shape [batchSize, heads, queryCount, valueDim]
     public func callAsFunction(_ inputs: (q: Tensor<Element, Device>, k: Tensor<Element, Device>, v: Tensor<Element, Device>, mask: Tensor<Element, Device>?)) -> Tensor<Element, Device> {

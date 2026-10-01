@@ -23,7 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-// Kernels that move elements: strided copies, gather and scatter along an axis, and the window matrix of a convolution.
+// Kernels that move elements: strided copies, gather and scatter along an axis, gather and scatter of rows, and the window
+// matrix of a convolution.
 //
 // Kernels that only move elements work on 32-bit words, so they serve all element types with GPU kernels.
 
@@ -85,6 +86,30 @@ kernel void scatter_u32(device const uint* values [[buffer(0)]], device const in
     int outer = int(i) / inner, position = int(i) % inner;
     result[(outer * axisSize + index) * inner + position] = values[i];
 }
+
+// Copies the rows that the indices select. The sizes are the element count of the result, the row count of the source, the
+// row length, and the ignored index. The result row of an ignored index or of an index outside of the source is zero.
+kernel void gather_rows_u32(device const uint* source [[buffer(0)]], device const int* indices [[buffer(1)]], device uint* result [[buffer(2)]], constant int4& sizes [[buffer(3)]], uint i [[thread_position_in_grid]]) {
+    int count = sizes.x, rowCount = sizes.y, rowLength = sizes.z, ignoreIndex = sizes.w;
+    if (int(i) >= count) { return; }
+    int row = int(i) / rowLength, index = indices[row];
+    bool valid = index != ignoreIndex && index >= 0 && index < rowCount;
+    result[i] = valid ? source[ulong(index) * rowLength + (int(i) - row * rowLength)] : 0;
+}
+
+// Adds rows to the rows of the result that the indices select, with atomics, because several rows can have the same index.
+// The sizes are the element count of the values, the row count of the result, the row length, and the ignored index. Rows
+// with an ignored index or an index outside of the result are not added.
+#define SCATTER_ADD_ROWS(T, A) \
+kernel void scatter_add_rows_##T(device const T* values [[buffer(0)]], device const int* indices [[buffer(1)]], device A* result [[buffer(2)]], constant int4& sizes [[buffer(3)]], uint i [[thread_position_in_grid]]) { \
+    int count = sizes.x, rowCount = sizes.y, rowLength = sizes.z, ignoreIndex = sizes.w; \
+    if (int(i) >= count) { return; } \
+    int row = int(i) / rowLength, index = indices[row]; \
+    if (index == ignoreIndex || index < 0 || index >= rowCount) { return; } \
+    atomic_fetch_add_explicit(result + ulong(index) * rowLength + (int(i) - row * rowLength), values[i], memory_order_relaxed); \
+}
+SCATTER_ADD_ROWS(float, atomic_float)
+SCATTER_ADD_ROWS(int, atomic_int)
 
 struct WindowGeometry {
     int batchSize, channels, height, width;

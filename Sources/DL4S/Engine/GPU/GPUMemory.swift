@@ -27,11 +27,10 @@
 import Foundation
 import Metal
 
+// The queue runs the command buffers in order, so later commands that reuse the buffer run after the commands that used it before.
 /// A Metal buffer in memory that the host and the GPU share.
 ///
-/// The buffer returns to the pool of the context when the storage is released.
-/// The GPU can still use the buffer at that time: the queue runs the command buffers in order, so later commands
-/// that reuse the buffer run after the commands that used it before.
+/// The buffer returns to the pool of the context when the storage is released, also when the GPU still uses it.
 final class GPUStorage: @unchecked Sendable {
     // `@unchecked Sendable`: The mutable state is only accessed while the stream lock of the context is held,
     // or by the host after a wait for the GPU, when no command can use the storage.
@@ -93,7 +92,7 @@ public struct GPUMemoryOperators: MemoryOperatorsType {
             return
         }
         let context = GPUContext.current
-        if context.isHostWritableWithoutReplacement(destination.memory) {
+        if context.makeHostWritableWithoutWait(destination.memory) {
             memcpy(destination.memory.hostMemory.baseAddress!, source.baseAddress!, byteCount)
             return
         }

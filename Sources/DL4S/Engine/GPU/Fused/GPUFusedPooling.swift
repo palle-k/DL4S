@@ -34,6 +34,7 @@ import Metal
 public extension GPUFusedOperations {
     static func maxPooling2d<N: NumericType>(input: ShapedBuffer<N, GPU>, windowSize: Int, padding: Int, stride: Int, result: MutableShapedBuffer<N, GPU>) {
         let pooling = GPUPooling(input: input, windowSize: windowSize, padding: padding, stride: stride)
+        precondition(result.shape == pooling.outputShape, "The result must have the shape of the pooled images.")
         guard GPUFused.runsKernel(N.self, elements: result.count, reading: [input.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.maxPooling2d(input: input, windowSize: windowSize, padding: padding, stride: stride, result: result)
             return
@@ -61,6 +62,7 @@ public extension GPUFusedOperations {
 
     static func averagePooling2d<N: NumericType>(input: ShapedBuffer<N, GPU>, windowSize: Int, padding: Int, stride: Int, result: MutableShapedBuffer<N, GPU>) {
         let pooling = GPUPooling(input: input, windowSize: windowSize, padding: padding, stride: stride)
+        precondition(result.shape == pooling.outputShape, "The result must have the shape of the pooled images.")
         guard GPUFused.runsKernel(N.self, elements: result.count, reading: [input.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.averagePooling2d(input: input, windowSize: windowSize, padding: padding, stride: stride, result: result)
             return
@@ -87,7 +89,7 @@ private struct GPUPooling {
     let planes: Int
     let parameters: PoolingParameters
 
-    var outputShape: [Int]
+    let outputShape: [Int]
 
     /// The shapes of a pooling operation. The arguments must have the shapes that ``FusedOperationsType/maxPooling2d(input:windowSize:padding:stride:result:)`` states.
     init(input: ShapedBuffer<some Any, GPU>, windowSize: Int, padding: Int, stride: Int) {
@@ -106,7 +108,6 @@ private struct GPUPooling {
 
     /// Records a kernel with one thread per output element, which writes the result or the positions of the maxima.
     func forward(_ name: String, input: GPUBuffer, result: GPUBuffer) {
-        let parameters = parameters
         let threads = MTLSize(width: Int(parameters.outputWidth), height: Int(parameters.outputHeight), depth: planes)
         GPUContext.current.compute(GPUKernels.pipeline(name, in: .fused), reading: [input], writing: [result]) { arguments in
             arguments.buffer(input)
@@ -118,14 +119,14 @@ private struct GPUPooling {
 
     /// Records a backward kernel with one thread per input element. `windows` is a buffer per window that the kernel reads,
     /// the positions of the maxima for max pooling, and nil for average pooling.
-    func backward<N>(_ name: String, windows input: GPUBuffer?, outputGradient: GPUBuffer, inputGradient: GradientBuffer<N, GPU>) {
+    func backward<N>(_ name: String, windows: GPUBuffer?, outputGradient: GPUBuffer, inputGradient: GradientBuffer<N, GPU>) {
         var parameters = parameters
         parameters.accumulate = inputGradient.accumulateFlag
         let dx = inputGradient.gpuBuffer
         let threads = MTLSize(width: Int(parameters.width), height: Int(parameters.height), depth: planes)
-        GPUContext.current.compute(GPUKernels.pipeline(name, in: .fused), reading: [input, outputGradient, dx].compactMap(\.self), writing: [dx]) { [parameters] arguments in
-            if let input {
-                arguments.buffer(input)
+        GPUContext.current.compute(GPUKernels.pipeline(name, in: .fused), reading: [windows, outputGradient, dx].compactMap(\.self), writing: [dx]) { arguments in
+            if let windows {
+                arguments.buffer(windows)
             }
             arguments.buffer(outputGradient)
             arguments.buffer(dx)

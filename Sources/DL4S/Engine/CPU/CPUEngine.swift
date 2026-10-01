@@ -488,8 +488,8 @@ public struct CPUEngine: EngineType {
 
     @_specialize(where N == Float)
     public static func extractDiagonal<N: NumericType>(values: ShapedBuffer<N, CPU>, target: MutableShapedBuffer<N, CPU>) {
-        precondition(target.dim == 1, "values must be a vector")
-        precondition(values.dim == 2, "target must be a matrix")
+        precondition(values.dim == 2, "The values must be a matrix.")
+        precondition(target.dim == 1, "The target must be a vector.")
 
         let maxIdx = Swift.min(values.shape[0], values.shape[1])
         precondition(target.count == maxIdx, "number of values must be equal to smaller dimension of matrix")
@@ -497,7 +497,8 @@ public struct CPUEngine: EngineType {
         let src = values.immutable.baseAddress!
         let dst = target.pointer.baseAddress!
 
-        let stride = target.shape[0] + 1
+        // The diagonal elements of a matrix with n columns are n + 1 elements apart.
+        let stride = values.shape[1] + 1
 
         var i = 0
         while i < maxIdx {
@@ -678,6 +679,47 @@ public struct CPUEngine: EngineType {
 
     public static func gather<N: NumericType>(expanded: ShapedBuffer<N, CPU>, context: ShapedBuffer<Int32, CPU>, result: MutableShapedBuffer<N, CPU>, axis: Int, ignoreIndex: Int32) {
         N.gather(values: expanded.immutable, context: context.immutable, result: result.pointer, src_shape: expanded.shape, axis: axis, ignoreIndex: ignoreIndex)
+    }
+
+    public static func gatherRows<N: NumericType>(values: ShapedBuffer<N, CPU>, indices: ShapedBuffer<Int32, CPU>, result: MutableShapedBuffer<N, CPU>, ignoreIndex: Int32) {
+        precondition(values.dim >= 1 && result.shape == [indices.count] + values.shape.dropFirst(), "The result must have one row of the values per index.")
+        guard result.count > 0 else {
+            return
+        }
+        let rowLength = result.count / indices.count
+        let rowCount = values.shape[0]
+        let source = values.immutable.baseAddress!
+        let target = result.pointer.baseAddress!
+        for (row, index) in indices.immutable.enumerated() {
+            let destination = target + row * rowLength
+            if index == ignoreIndex {
+                destination.update(repeating: .zero, count: rowLength)
+            } else {
+                precondition(0 ..< Int32(rowCount) ~= index, "The row index \(index) is out of bounds for \(rowCount) rows.")
+                destination.update(from: source + Int(index) * rowLength, count: rowLength)
+            }
+        }
+    }
+
+    public static func scatterAddRows<N: NumericType>(values: ShapedBuffer<N, CPU>, indices: ShapedBuffer<Int32, CPU>, result: MutableShapedBuffer<N, CPU>, ignoreIndex: Int32) {
+        precondition(result.dim >= 1 && values.shape == [indices.count] + result.shape.dropFirst(), "The values must have one row of the result per index.")
+        guard values.count > 0 else {
+            return
+        }
+        let rowLength = values.count / indices.count
+        let rowCount = result.shape[0]
+        let source = values.immutable.baseAddress!
+        let target = result.pointer.baseAddress!
+        for (row, index) in indices.immutable.enumerated() where index != ignoreIndex {
+            precondition(0 ..< Int32(rowCount) ~= index, "The row index \(index) is out of bounds for \(rowCount) rows.")
+            let destination = target + Int(index) * rowLength
+            N.vAdd(
+                lhs: UnsafeBufferPointer(start: destination, count: rowLength),
+                rhs: UnsafeBufferPointer(start: source + row * rowLength, count: rowLength),
+                result: UnsafeMutableBufferPointer(start: destination, count: rowLength),
+                count: rowLength,
+            )
+        }
     }
 
     @_specialize(where N == Float)
@@ -871,28 +913,6 @@ public struct CPUEngine: EngineType {
 
     public static func arange<N: NumericType>(lowerBound: N, upperBound: N, result: MutableShapedBuffer<N, CPU>) {
         N.arange(start: lowerBound, end: upperBound, result: result.pointer, count: result.count)
-    }
-
-    public static func subscriptRead<N>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, index: [Int?]) {
-        let (buffer, isCopy, bufferShape) = CPU.Memory.get(slice: index, of: values.values, with: values.shape)
-
-        result.pointer.assign(from: buffer.immutable, count: bufferShape.reduce(1, *))
-
-        if isCopy {
-            CPU.Memory.free(buffer)
-        }
-    }
-
-    public static func subscriptWrite<N>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, index: [Int?]) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
-
-    public static func subscriptReadAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, index: [Int?]) {
-        fatalError("\(#function) is not implemented for type \(self)")
-    }
-
-    public static func subscriptWriteAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, index: [Int?]) {
-        fatalError("\(#function) is not implemented for type \(self)")
     }
 
     public static func stack<N>(buffers: [ShapedBuffer<N, CPU>], result: MutableShapedBuffer<N, CPU>, axis: Int) {

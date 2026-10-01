@@ -27,8 +27,10 @@
 //
 // A threadgroup of four SIMD groups in a 2 x 2 arrangement computes a tile of TILE x TILE elements of the result,
 // where TILE is 64 or 32. Every SIMD group computes its quarter of the tile as blocks of 8 x 8 elements.
-// The threadgroup loads tiles of TILE x 32 elements of both operands into threadgroup memory, in the layout in which
-// they are stored, and a transposed operand is transposed when the SIMD groups load their blocks.
+// The threadgroup loads tiles of TILE x 16 elements of both operands into threadgroup memory, in the layout in which
+// they are stored, and a transposed operand is transposed when the SIMD groups load their blocks. The tiles are short, so
+// that the tiles of more threadgroups fit into the threadgroup memory of a GPU core: with tiles of TILE x 32 elements, the
+// kernel is 5 to 12 percent slower.
 // Tiles in the interior of the matrices are loaded with vector loads and no bounds checks.
 //
 // The loops over the blocks are unrolled: when the compiler keeps them as loops, the arrays of SIMD group matrices
@@ -47,9 +49,7 @@ struct GemmParameters {
     int splits, splitLength;
 };
 
-#define UNROLL _Pragma("clang loop unroll(full)")
-
-constant constexpr int BK = 32;
+constant constexpr int BK = 16;
 
 template <bool TA, bool TB, int TILE>
 kernel void gemm(device const float* A [[buffer(0)]], device const float* B [[buffer(1)]], device float* C [[buffer(2)]], constant GemmParameters& p [[buffer(3)]],

@@ -117,16 +117,16 @@ public struct GPUEngine: EngineType {
     }
 
     public static func extractDiagonal<N: NumericType>(values: ShapedBuffer<N, GPU>, target: MutableShapedBuffer<N, GPU>) {
-        precondition(target.dim == 1, "values must be a vector")
-        precondition(values.dim == 2, "target must be a matrix")
+        precondition(values.dim == 2, "The values must be a matrix.")
+        precondition(target.dim == 1, "The target must be a vector.")
         let count = Swift.min(values.shape[0], values.shape[1])
         precondition(target.count == count, "number of values must be equal to smaller dimension of matrix")
         guard gpuElement(N.self, elements: count, reading: [values.values.memory], writing: [target.values.memory]) != nil else {
             CPUEngine.extractDiagonal(values: values.host, target: target.host)
             return
         }
-        // The stride matches the CPU implementation, which reads the elements i * (count + 1).
-        diagonal(values: values.values.memory, result: target.values.memory, count: count, stride: target.shape[0] + 1, extracts: true)
+        // The diagonal elements of a matrix with n columns are n + 1 elements apart.
+        diagonal(values: values.values.memory, result: target.values.memory, count: count, stride: values.shape[1] + 1, extracts: true)
     }
 
     private static func diagonal(values: GPUBuffer, result: GPUBuffer, count: Int, stride: Int, extracts: Bool) {
@@ -145,9 +145,7 @@ public struct GPUEngine: EngineType {
         let inner = transposeFirst ? lhs.shape[0] : lhs.shape[1]
         // A product runs on the host when it has at most as many multiplications as a small matrix of 64 x 64 x 64 elements.
         let multiplications = rows * columns * inner
-        guard N.self == Float.self,
-              !GPUPlacement.runsOnHost(elements: multiplications / 64, reading: [lhs.values.memory, rhs.values.memory], writing: [result.values.memory])
-        else {
+        guard gpuElement(N.self, elements: multiplications / 64, reading: [lhs.values.memory, rhs.values.memory], writing: [result.values.memory]) == .float else {
             CPUEngine.gemm(lhs: lhs.host, rhs: rhs.host, result: result.host, alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
             return
         }
@@ -172,16 +170,14 @@ public struct GPUEngine: EngineType {
         let columns = result.shape[1]
         let inner = transposeFirst ? lhs.shape[0] : lhs.shape[1]
         let multiplications = rows * columns * inner * count
-        guard N.self == Float.self,
-              !GPUPlacement.runsOnHost(elements: multiplications / 64, reading: [lhs.values.memory, rhs.values.memory], writing: [result.values.memory])
-        else {
+        guard gpuElement(N.self, elements: multiplications / 64, reading: [lhs.values.memory, rhs.values.memory], writing: [result.values.memory]) == .float else {
             CPUEngine.gemmBatched(lhs: lhs.host, lhsStride: lhsStride, rhs: rhs.host, rhsStride: rhsStride, result: result.host, count: count, alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
             return
         }
         GPUMatrixMultiplication.encodeBatch(
             lhs: lhs.values.memory, rhs: rhs.values.memory, result: result.values.memory,
             count: count, rows: rows, columns: columns, inner: inner,
-            lhsColumns: lhs.shape[1], rhsColumns: rhs.shape[1], strides: (lhsStride, rhsStride, rows * columns),
+            lhsColumns: lhs.shape[1], rhsColumns: rhs.shape[1], strides: GPUBatchStrides(lhs: lhsStride, rhs: rhsStride, result: rows * columns),
             alpha: alpha.floatValue, beta: beta.floatValue, transposeFirst: transposeFirst, transposeSecond: transposeSecond,
         )
     }
@@ -290,12 +286,12 @@ public struct GPUEngine: EngineType {
         let isReduced = values.shape.indices.map { axes.contains($0) }
 
         // Groups of neighboring axes with more than one element that are all reduced or all kept.
-        var groups: [(size: Int, isReduced: Bool)] = []
+        var groups: [GPUAxisGroup] = []
         for axis in values.shape.indices where values.shape[axis] != 1 {
             if let last = groups.last, last.isReduced == isReduced[axis] {
                 groups[groups.count - 1].size *= values.shape[axis]
             } else {
-                groups.append((values.shape[axis], isReduced[axis]))
+                groups.append(GPUAxisGroup(size: values.shape[axis], isReduced: isReduced[axis]))
             }
         }
         let reducedGroups = groups.indices.filter { groups[$0].isReduced }
@@ -495,7 +491,7 @@ public struct GPUEngine: EngineType {
         let axisSize = result.shape[axis]
         let inner = result.shape[(axis + 1)...].reduce(1, *)
         GPUKernels.fill(result.values.memory, word: 0, count: result.count)
-        indexed("scatter_u32", values: reduced.values.memory, indices: context.values.memory, result: result.values.memory, count: context.count, axisSize: axisSize, inner: inner, ignoreIndex: ignoreIndex)
+        indexed("scatter_u32", values: reduced.values.memory, indices: context.values.memory, result: result.values.memory, sizes: SIMD4(Int32(context.count), Int32(axisSize), Int32(inner), ignoreIndex))
     }
 
     public static func gather<N: NumericType>(expanded: ShapedBuffer<N, GPU>, context: ShapedBuffer<Int32, GPU>, result: MutableShapedBuffer<N, GPU>, axis: Int, ignoreIndex: Int32) {
@@ -505,17 +501,50 @@ public struct GPUEngine: EngineType {
         }
         let axisSize = expanded.shape[axis]
         let inner = expanded.shape[(axis + 1)...].reduce(1, *)
-        indexed("gather_u32", values: expanded.values.memory, indices: context.values.memory, result: result.values.memory, count: context.count, axisSize: axisSize, inner: inner, ignoreIndex: ignoreIndex)
+        indexed("gather_u32", values: expanded.values.memory, indices: context.values.memory, result: result.values.memory, sizes: SIMD4(Int32(context.count), Int32(axisSize), Int32(inner), ignoreIndex))
     }
 
-    private static func indexed(_ name: String, values: GPUBuffer, indices: GPUBuffer, result: GPUBuffer, count: Int, axisSize: Int, inner: Int, ignoreIndex: Int32) {
+    public static func gatherRows<N: NumericType>(values: ShapedBuffer<N, GPU>, indices: ShapedBuffer<Int32, GPU>, result: MutableShapedBuffer<N, GPU>, ignoreIndex: Int32) {
+        precondition(values.dim >= 1 && result.shape == [indices.count] + values.shape.dropFirst(), "The result must have one row of the values per index.")
+        guard result.count > 0 else {
+            return
+        }
+        guard gpuElement(N.self, elements: result.count, reading: [values.values.memory, indices.values.memory], writing: [result.values.memory]) != nil else {
+            CPUEngine.gatherRows(values: values.host, indices: indices.host, result: result.host, ignoreIndex: ignoreIndex)
+            return
+        }
+        let rowLength = result.count / indices.count
+        indexed("gather_rows_u32", values: values.values.memory, indices: indices.values.memory, result: result.values.memory, sizes: SIMD4(Int32(result.count), Int32(values.shape[0]), Int32(rowLength), ignoreIndex))
+    }
+
+    public static func scatterAddRows<N: NumericType>(values: ShapedBuffer<N, GPU>, indices: ShapedBuffer<Int32, GPU>, result: MutableShapedBuffer<N, GPU>, ignoreIndex: Int32) {
+        precondition(result.dim >= 1 && values.shape == [indices.count] + result.shape.dropFirst(), "The values must have one row of the result per index.")
+        guard values.count > 0 else {
+            return
+        }
+        guard let element = gpuElement(N.self, elements: values.count, reading: [values.values.memory, indices.values.memory, result.values.memory], writing: [result.values.memory]) else {
+            CPUEngine.scatterAddRows(values: values.host, indices: indices.host, result: result.host, ignoreIndex: ignoreIndex)
+            return
+        }
+        let rowLength = values.count / indices.count
+        indexed("scatter_add_rows_\(element.rawValue)", values: values.values.memory, indices: indices.values.memory, result: result.values.memory, sizes: SIMD4(Int32(values.count), Int32(result.shape[0]), Int32(rowLength), ignoreIndex))
+    }
+
+    /// Records a kernel of the copy group that reads values and indices and writes the result, with one thread per element.
+    /// - Parameters:
+    ///   - name: Name of the kernel
+    ///   - values: Buffer that the kernel reads elements from
+    ///   - indices: Buffer of the indices
+    ///   - result: Buffer that the kernel writes
+    ///   - sizes: Parameters of the kernel. The first one is the number of threads.
+    private static func indexed(_ name: String, values: GPUBuffer, indices: GPUBuffer, result: GPUBuffer, sizes: SIMD4<Int32>) {
         let pipeline = GPUKernels.pipeline(name, in: .copy)
         GPUContext.current.compute(pipeline, reading: [values, indices], writing: [result]) { arguments in
             arguments.buffer(values)
             arguments.buffer(indices)
             arguments.buffer(result)
-            arguments.value(SIMD4<Int32>(Int32(count), Int32(axisSize), Int32(inner), ignoreIndex))
-            arguments.dispatch(count: count)
+            arguments.value(sizes)
+            arguments.dispatch(count: Int(sizes.x))
         }
     }
 
@@ -553,17 +582,16 @@ public struct GPUEngine: EngineType {
             CPUEngine.permuteAxesAdd(values: values.host, add: add.host, result: result.host, arangement: arangement)
             return
         }
-        GPUKernels.stridedCopy(source: values.values.memory, result: result.values.memory, summand: (add.values.memory, element), layout: layout)
+        GPUKernels.stridedCopy(source: values.values.memory, adding: add.values.memory, element: element, result: result.values.memory, layout: layout)
     }
 
     public static func arange<N: NumericType>(lowerBound: N, upperBound: N, result: MutableShapedBuffer<N, GPU>) {
-        guard N.self == Float.self, !GPUPlacement.runsOnHost(elements: result.count, reading: [], writing: [result.values.memory]) else {
+        guard gpuElement(N.self, elements: result.count, reading: [], writing: [result.values.memory]) == .float else {
             CPUEngine.arange(lowerBound: lowerBound, upperBound: upperBound, result: result.host)
             return
         }
-        // The increment matches the CPU implementation.
         let start = lowerBound.floatValue
-        let increment = upperBound.floatValue / Float(result.count)
+        let increment = (upperBound.floatValue - start) / Float(result.count)
         let pipeline = GPUKernels.pipeline("arange_float", in: .elementwise)
         let target = result.values.memory
         GPUContext.current.compute(pipeline, reading: [], writing: [target]) { arguments in
@@ -572,29 +600,6 @@ public struct GPUEngine: EngineType {
             arguments.value(UInt32(result.count))
             arguments.dispatch(count: result.count)
         }
-    }
-
-    /// Ranges of the elements that an index selects, for every axis of the shape.
-    private static func ranges(of index: [Int?], shape: [Int]) -> [Range<Int>] {
-        shape.indices.map { axis in
-            (axis < index.count ? index[axis] : nil).map { $0 ..< $0 + 1 } ?? 0 ..< shape[axis]
-        }
-    }
-
-    public static func subscriptRead<N>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, index: [Int?]) {
-        GPUKernels.copyRegion(of: values.values, shape: values.shape, ranges: ranges(of: index, shape: values.shape), to: result.values)
-    }
-
-    public static func subscriptWrite<N>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, index: [Int?]) {
-        GPUKernels.writeRegion(of: result.values, shape: result.shape, ranges: ranges(of: index, shape: result.shape), from: values.values)
-    }
-
-    public static func subscriptReadAdd<N: NumericType>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, index: [Int?]) {
-        CPUEngine.subscriptReadAdd(values: values.host, add: add.host, result: result.host, index: index)
-    }
-
-    public static func subscriptWriteAdd<N: NumericType>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, index: [Int?]) {
-        CPUEngine.subscriptWriteAdd(values: values.host, add: add.host, result: result.host, index: index)
     }
 
     public static func stack<N>(buffers: [ShapedBuffer<N, GPU>], result: MutableShapedBuffer<N, GPU>, axis: Int) {
@@ -614,10 +619,10 @@ public struct GPUEngine: EngineType {
             let layout = GPULayout(shape: target.shape, strides: [stackedStrides, contiguous, contiguous])
             let source = stacked.values.advanced(by: position * stackedStrides[axis])
             if let element = gpuElement(N.self, elements: target.count, reading: [source.memory, summand.values.memory], writing: [target.values.memory]), layout.isSupported {
-                GPUKernels.stridedCopy(source: source.memory, result: target.values.memory, summand: (summand.values.memory, element), layout: layout)
+                GPUKernels.stridedCopy(source: source.memory, adding: summand.values.memory, element: element, result: target.values.memory, layout: layout)
             } else {
-                let (sourcePointer, summandPointer) = (source.host.memory.bindMemory(to: N.self), summand.values.host.memory.bindMemory(to: N.self))
-                let targetPointer = target.values.host.memory.bindMemory(to: N.self)
+                let (sourcePointer, summandPointer) = (source.host.memory.assumingMemoryBound(to: N.self), summand.values.host.memory.assumingMemoryBound(to: N.self))
+                let targetPointer = target.values.host.memory.assumingMemoryBound(to: N.self)
                 var index = 0
                 StridedIteration.forEachOffset(shape: layout.shape, strides: layout.strides[0], layout.strides[1]) { sourceOffset, targetOffset in
                     targetPointer[targetOffset] = sourcePointer[sourceOffset] + summandPointer[index]
@@ -665,12 +670,13 @@ public struct GPUEngine: EngineType {
             CPUEngine.reverseAdd(values: values.host, add: add.host, result: result.host)
             return
         }
-        GPUKernels.stridedCopy(source: source.memory, result: result.values.memory, summand: (add.values.memory, element), layout: layout)
+        GPUKernels.stridedCopy(source: source.memory, adding: add.values.memory, element: element, result: result.values.memory, layout: layout)
     }
 
     // MARK: Convolution helpers
 
-    private struct WindowGeometry {
+    /// Parameters of the window kernels, with the layout of `WindowGeometry` in `copy.metal`.
+    private struct WindowParameters {
         var batchSize, channels, height, width: Int32
         var kernelHeight, kernelWidth, padding, stride: Int32
         var outputHeight, outputWidth: Int32
@@ -695,9 +701,9 @@ public struct GPUEngine: EngineType {
             CPUEngine.img2col(values: values.host, result: result.host, kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
             return
         }
-        let geometry = WindowGeometry(imageShape: values.shape, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
+        let geometry = WindowParameters(imageShape: values.shape, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
         let rows = values.shape[1] * kernelHeight * kernelWidth
-        let columns = Int(geometry.batchSize * geometry.outputHeight * geometry.outputWidth)
+        let columns = values.shape[0] * Int(geometry.outputHeight) * Int(geometry.outputWidth)
         let pipeline = GPUKernels.pipeline("img2col_u32", in: .copy)
         let (image, matrix) = (values.values.memory, result.values.memory)
         GPUContext.current.compute(pipeline, reading: [image], writing: [matrix]) { arguments in
@@ -710,11 +716,11 @@ public struct GPUEngine: EngineType {
 
     public static func col2img<N: NumericType>(matrix: ShapedBuffer<N, GPU>, image: MutableShapedBuffer<N, GPU>, kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) {
         precondition(image.dim == 4, "im2col input must be 4D tensor (batchSize x channels x height x width)")
-        guard N.self == Float.self, !GPUPlacement.runsOnHost(elements: image.count, reading: [matrix.values.memory], writing: [image.values.memory]) else {
+        guard gpuElement(N.self, elements: image.count, reading: [matrix.values.memory], writing: [image.values.memory]) == .float else {
             CPUEngine.col2img(matrix: matrix.host, image: image.host, kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
             return
         }
-        let geometry = WindowGeometry(imageShape: image.shape, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
+        let geometry = WindowParameters(imageShape: image.shape, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
         let pipeline = GPUKernels.pipeline("col2img_float", in: .copy)
         let (source, target) = (matrix.values.memory, image.values.memory)
         GPUContext.current.compute(pipeline, reading: [source], writing: [target]) { arguments in
@@ -724,5 +730,11 @@ public struct GPUEngine: EngineType {
             arguments.dispatch(count: image.count)
         }
     }
+}
+
+/// Neighboring axes of a reduction that are all reduced or all kept, with the product of their sizes.
+private struct GPUAxisGroup {
+    var size: Int
+    let isReduced: Bool
 }
 #endif

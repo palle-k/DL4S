@@ -75,6 +75,60 @@ enum GPUActivation: String, CaseIterable, CustomTestStringConvertible, Sendable 
     }
 }
 
+/// Shapes and the mask of a case of scaled dot product attention.
+struct GPUAttentionCase: CustomTestStringConvertible, Sendable {
+    enum Mask: String, Sendable {
+        case none
+        /// A causal mask of the shape [queryCount, keyCount]
+        case causal
+        /// A causal mask in which query 5 attends to no key
+        case causalWithMaskedRow
+        /// A mask of the keys of every batch, shape [batchSize, 1, 1, keyCount]
+        case keys
+        /// A mask of every score, shape [batchSize, heads, queryCount, keyCount]
+        case scores
+    }
+
+    let batchSize: Int
+    let heads: Int
+    let keyHeads: Int
+    /// Batch size of the keys and the values: the batch size of the queries, or 1
+    let keyBatchSize: Int
+    let queryCount: Int
+    let keyCount: Int
+    let keyDim: Int
+    let valueDim: Int
+    let mask: Mask
+    /// Whether the queries, the keys, and the values require a gradient
+    let gradients: [Bool]
+
+    init(batchSize: Int, heads: Int, keyHeads: Int, keyBatchSize: Int? = nil, queryCount: Int, keyCount: Int, keyDim: Int, valueDim: Int, mask: Mask, gradients: [Bool] = [true, true, true]) {
+        (self.batchSize, self.heads, self.keyHeads, self.keyBatchSize) = (batchSize, heads, keyHeads, keyBatchSize ?? batchSize)
+        (self.queryCount, self.keyCount, self.keyDim, self.valueDim, self.mask, self.gradients) = (queryCount, keyCount, keyDim, valueDim, mask, gradients)
+    }
+
+    var testDescription: String {
+        let gradientNames = zip(["q", "k", "v"], gradients).filter(\.1).map(\.0).joined()
+        return "\(batchSize)x\(heads)/\(keyBatchSize)x\(keyHeads)x\(queryCount)x\(keyCount), sizes \(keyDim)/\(valueDim), mask \(mask.rawValue), gradients \(gradientNames)"
+    }
+
+    func maskTensor() -> Tensor<Float, CPU>? {
+        switch mask {
+        case .none:
+            return nil
+        case .causal:
+            return Tensor((0 ..< queryCount * keyCount).map { $0 % keyCount > $0 / keyCount ? 1 : 0 }, shape: [queryCount, keyCount])
+        case .causalWithMaskedRow:
+            return Tensor((0 ..< queryCount * keyCount).map { $0 % keyCount > $0 / keyCount || $0 / keyCount == 5 ? 1 : 0 }, shape: [queryCount, keyCount])
+        case .keys:
+            return Tensor((0 ..< batchSize * keyCount).map { $0 % 7 == 3 ? 1 : 0 }, shape: [batchSize, 1, 1, keyCount])
+        case .scores:
+            let count = batchSize * heads * queryCount * keyCount
+            return Tensor((0 ..< count).map { ($0 * 7919) % 10 < 3 ? 1 : 0 }, shape: [batchSize, heads, queryCount, keyCount])
+        }
+    }
+}
+
 extension GPUTests {
     @Suite(.serialized)
     struct GPUFusedOperationTests {
@@ -160,9 +214,93 @@ extension GPUTests {
             }
         }
 
+        @Test(arguments: [
+            GPUAttentionCase(batchSize: 2, heads: 4, keyHeads: 4, queryCount: 77, keyCount: 100, keyDim: 64, valueDim: 64, mask: .none),
+            GPUAttentionCase(batchSize: 2, heads: 4, keyHeads: 2, queryCount: 64, keyCount: 64, keyDim: 64, valueDim: 64, mask: .causal),
+            GPUAttentionCase(batchSize: 3, heads: 6, keyHeads: 3, queryCount: 200, keyCount: 300, keyDim: 64, valueDim: 64, mask: .causal),
+            GPUAttentionCase(batchSize: 1, heads: 8, keyHeads: 1, queryCount: 130, keyCount: 33, keyDim: 32, valueDim: 32, mask: .keys),
+            GPUAttentionCase(batchSize: 2, heads: 2, keyHeads: 2, queryCount: 100, keyCount: 150, keyDim: 32, valueDim: 32, mask: .causalWithMaskedRow),
+            GPUAttentionCase(batchSize: 1, heads: 4, keyHeads: 2, queryCount: 70, keyCount: 90, keyDim: 128, valueDim: 128, mask: .causal),
+            // Few key heads and many queries split the queries of a block of keys between threadgroups.
+            GPUAttentionCase(batchSize: 1, heads: 8, keyHeads: 2, queryCount: 520, keyCount: 100, keyDim: 64, valueDim: 64, mask: .keys),
+            // Keys and values that broadcast along the batch serve the queries of every batch.
+            GPUAttentionCase(batchSize: 3, heads: 4, keyHeads: 2, keyBatchSize: 1, queryCount: 100, keyCount: 80, keyDim: 64, valueDim: 64, mask: .causal),
+            GPUAttentionCase(batchSize: 2, heads: 4, keyHeads: 2, queryCount: 70, keyCount: 90, keyDim: 64, valueDim: 64, mask: .keys, gradients: [false, true, true]),
+            GPUAttentionCase(batchSize: 2, heads: 4, keyHeads: 2, queryCount: 70, keyCount: 90, keyDim: 64, valueDim: 64, mask: .none, gradients: [true, false, false]),
+            GPUAttentionCase(batchSize: 2, heads: 4, keyHeads: 4, queryCount: 70, keyCount: 90, keyDim: 32, valueDim: 32, mask: .causal, gradients: [false, false, true]),
+            GPUAttentionCase(batchSize: 2, heads: 2, keyHeads: 2, queryCount: 40, keyCount: 70, keyDim: 128, valueDim: 128, mask: .none, gradients: [true, false, true]),
+            GPUAttentionCase(batchSize: 2, heads: 2, keyHeads: 2, queryCount: 40, keyCount: 70, keyDim: 128, valueDim: 128, mask: .scores),
+            GPUAttentionCase(batchSize: 2, heads: 2, keyHeads: 1, queryCount: 9, keyCount: 17, keyDim: 16, valueDim: 24, mask: .keys),
+            GPUAttentionCase(batchSize: 1, heads: 2, keyHeads: 2, queryCount: 5, keyCount: 3, keyDim: 12, valueDim: 5, mask: .none),
+        ])
+        func attentionMatchesCPU(_ attention: GPUAttentionCase) {
+            Self.compareAttention(attention)
+        }
+
+        // With the head size 128, the backward kernels run for more than 2^26 scores.
+        // The operations run only on the GPU: with the host limit of the mixed mode, the host would compute the 2^26 scores again.
+        @Test(.releaseBuild)
+        func largeAttentionMatchesCPU() {
+            Self.compareAttention(GPUAttentionCase(batchSize: 1, heads: 16, keyHeads: 4, queryCount: 2048, keyCount: 2049, keyDim: 128, valueDim: 128, mask: .keys), modes: [.gpu])
+        }
+
+        private static func compareAttention(_ attention: GPUAttentionCase, modes: [GPUPlacementMode] = GPUPlacementMode.allCases) {
+            let (batchSize, keyBatchSize, heads, keyHeads) = (attention.batchSize, attention.keyBatchSize, attention.heads, attention.keyHeads)
+            let queries = GPUTest.random([batchSize, heads, attention.queryCount, attention.keyDim], seed: 30, min: -2, max: 2, requiresGradient: attention.gradients[0])
+            let keys = GPUTest.random([keyBatchSize, keyHeads, attention.keyCount, attention.keyDim], seed: 31, min: -2, max: 2, requiresGradient: attention.gradients[1])
+            let values = GPUTest.random([keyBatchSize, keyHeads, attention.keyCount, attention.valueDim], seed: 32, requiresGradient: attention.gradients[2])
+            let mask = attention.maskTensor()
+            let temperature = Float(attention.keyDim).squareRoot()
+            func body<D: DeviceType>(_ sources: [Tensor<Float, D>]) -> [Tensor<Float, D>] {
+                let mask = mask.map { Tensor<Float, D>($0) }
+                return resultAndGradients(sources) { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: mask, temperature: temperature) }
+            }
+            GPUTest.compare("attention \(attention.testDescription)", modes: modes) { gpu in
+                GPUTest.run(on: gpu, [queries, keys, values], cpu: { body($0) }, gpu: { GPUTest.host(body($0)) })
+            }
+        }
+
+        @Test(arguments: [4, 2, 1])
+        func multiHeadAttentionMatchesCPU(keyHeads: Int) {
+            Self.compareMultiHeadAttention(keyHeads: keyHeads, gradients: Array(repeating: true, count: 7))
+        }
+
+        // The gradients of the sources in the order of the operation: queries, keys, values, and the four weights.
+        @Test(arguments: [[false, false, false, true, true, true, true], [true, false, false, false, false, false, true], [false, true, true, false, false, false, false]])
+        func multiHeadAttentionGradientSubsetsMatchCPU(gradients: [Bool]) {
+            Self.compareMultiHeadAttention(keyHeads: 2, gradients: gradients)
+        }
+
+        private static func compareMultiHeadAttention(keyHeads: Int, gradients: [Bool]) {
+            let (heads, hidden, keyDim) = (4, 64, 32)
+            let inputs = [[2, 50, hidden], [2, 70, hidden], [2, 70, hidden]].enumerated().map { index, shape in
+                GPUTest.random(shape, seed: UInt64(40 + index), requiresGradient: gradients[index])
+            }
+            let weights = [[hidden, heads * keyDim], [hidden, keyHeads * keyDim], [hidden, keyHeads * keyDim], [heads * keyDim, hidden]].enumerated().map { index, shape in
+                GPUTest.random(shape, seed: UInt64(43 + index), min: -0.2, max: 0.2, requiresGradient: gradients[3 + index])
+            }
+            let mask = Tensor<Float, CPU>((0 ..< 2 * 70).map { $0 % 9 == 4 ? 1 : 0 }, shape: [2, 1, 1, 70])
+            func body<D: DeviceType>(_ sources: [Tensor<Float, D>]) -> [Tensor<Float, D>] {
+                let mask = Tensor<Float, D>(mask)
+                return Self.resultAndGradients(sources) {
+                    multiHeadAttention(
+                        queries: $0[0], keys: $0[1], values: $0[2], mask: mask,
+                        queryWeights: $0[3], keyWeights: $0[4], valueWeights: $0[5], outputWeights: $0[6], heads: heads, temperature: Float(keyDim).squareRoot(),
+                    )
+                }
+            }
+            GPUTest.compare("multi-head attention with \(keyHeads) key heads, gradients \(gradients)") { gpu in
+                GPUTest.run(on: gpu, inputs + weights, cpu: { body($0) }, gpu: { GPUTest.host(body($0)) })
+            }
+        }
+
         @Test func dropoutKeepsTheExpectedFraction() {
-            GPU.hostExecutionLimit = 0
-            defer { GPU.hostExecutionLimit = 4096 }
+            GPUTest.withHostExecutionLimit(0) {
+                checkDropout()
+            }
+        }
+
+        private func checkDropout() {
             let x = Tensor<Float, GPU>(GPUTest.random([256, 1024], seed: 7, min: 1, max: 2), requiresGradient: true)
             let (output, mask) = dropout(x, rate: 0.3)
             let (values, maskValues, outputValues) = (x.elements, mask.elements, output.elements)
@@ -234,7 +372,12 @@ extension GPUTests {
         }
 
         @Test func trainingStepsDoNotWaitForTheGPU() throws {
-            GPU.hostExecutionLimit = 4096
+            try GPUTest.withHostExecutionLimit(GPU.defaultHostExecutionLimit) {
+                try checkTrainingSteps()
+            }
+        }
+
+        private func checkTrainingSteps() throws {
             var model = Sequential {
                 Dense<Float, GPU>(inputSize: 100, outputSize: 256)
                 Relu<Float, GPU>()

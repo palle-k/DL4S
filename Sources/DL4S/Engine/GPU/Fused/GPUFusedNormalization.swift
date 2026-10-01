@@ -161,7 +161,7 @@ public extension GPUFusedOperations {
         defer {
             math.release()
         }
-        let (gamma, beta) = (columns(of: scale, shape: columnShape, math: math), columns(of: shift, shape: columnShape, math: math))
+        let (gamma, beta) = (math.columns(of: scale, shape: columnShape), math.columns(of: shift, shape: columnShape))
         let parameters = ColumnParameters(input: input, accumulate: false, epsilon: epsilon)
         let (x, g, b, y, m, v) = (input.gpuBuffer, gamma.gpuBuffer, beta.gpuBuffer, result.gpuBuffer, mean.gpuBuffer, variance.gpuBuffer)
         let pipeline = GPUKernels.pipeline("batch_norm_forward", in: .fused)
@@ -188,6 +188,9 @@ public extension GPUFusedOperations {
         let columnShape = Array(input.shape.dropFirst())
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         precondition(ShapeUtil.broadcasts(shift.shape, to: columnShape), "The shift must be broadcastable to the shape of the input without the batch axis.")
+        guard inputGradient != nil || scaleGradient != nil || shiftGradient != nil else {
+            return
+        }
         guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, scale.gpuBuffer, outputGradient.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.batchNormalizationBackward(input: input, scale: scale, shift: shift, outputGradient: outputGradient, epsilon: epsilon, inputGradient: inputGradient, scaleGradient: scaleGradient, shiftGradient: shiftGradient)
             return
@@ -196,7 +199,7 @@ public extension GPUFusedOperations {
         defer {
             math.release()
         }
-        let gamma = columns(of: scale, shape: columnShape, math: math)
+        let gamma = math.columns(of: scale, shape: columnShape)
         let parameters = ColumnParameters(input: input, accumulate: inputGradient?.adds ?? false, epsilon: epsilon)
         let (scaleColumns, shiftColumns) = (math.temporary(columnShape), math.temporary(columnShape))
         let (x, w, g, dx, ds, db) = (input.gpuBuffer, gamma.gpuBuffer, outputGradient.gpuBuffer, inputGradient?.gpuBuffer, scaleColumns.gpuBuffer, shiftColumns.gpuBuffer)
@@ -258,6 +261,9 @@ public extension GPUFusedOperations {
     ) {
         precondition(input.dim >= 1, "The input must have a batch axis.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
+        guard inputGradient != nil || scaleGradient != nil || shiftGradient != nil else {
+            return
+        }
         guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, scale.gpuBuffer, mean.gpuBuffer, variance.gpuBuffer, outputGradient.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.batchNormalizationBackward(input: input, scale: scale, shift: shift, mean: mean, variance: variance, outputGradient: outputGradient, epsilon: epsilon, inputGradient: inputGradient, scaleGradient: scaleGradient, shiftGradient: shiftGradient)
             return
@@ -283,17 +289,6 @@ public extension GPUFusedOperations {
         }
         math.writeSum(of: scaleColumns, into: scaleGradient)
         math.writeSum(of: shiftColumns, into: shiftGradient)
-    }
-
-    /// Values that are broadcastable to the columns, repeated into an intermediate buffer of `math` when the shapes differ.
-    fileprivate static func columns<N: NumericType>(of values: ShapedBuffer<N, GPU>, shape columnShape: [Int], math: BufferMath<N, GPU>) -> ShapedBuffer<N, GPU> {
-        if values.shape == columnShape {
-            return values
-        }
-        precondition(ShapeUtil.broadcasts(values.shape, to: columnShape), "The parameters must be broadcastable to the shape of the input without the batch axis.")
-        let repeated = math.temporary(columnShape)
-        math.add(values, math.constant(0, shape: columnShape), into: repeated)
-        return ShapedBuffer(repeated)
     }
 
     private static func rowForward<N>(_ name: String, input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
@@ -325,7 +320,7 @@ public extension GPUFusedOperations {
 }
 
 /// The columns of a normalization with fixed statistics, in intermediate buffers: the factors `scale / (sqrt(variance) + epsilon)`,
-/// their divisors, the offsets `shift - mean * factor`, and the means.
+/// the inverse divisors `1 / (sqrt(variance) + epsilon)`, the offsets `shift - mean * factor`, and the means.
 private struct GPUFixedNormalizationColumns<N: NumericType> {
     let factors: ShapedBuffer<N, GPU>
     let inverseDivisors: ShapedBuffer<N, GPU>
@@ -334,9 +329,8 @@ private struct GPUFixedNormalizationColumns<N: NumericType> {
 
     /// Computes the columns in intermediate buffers of `math`. The parameters must be broadcastable to the columns.
     init(scale: ShapedBuffer<N, GPU>, shift: ShapedBuffer<N, GPU>, mean: ShapedBuffer<N, GPU>, variance: ShapedBuffer<N, GPU>, columnShape: [Int], epsilon: N, math: BufferMath<N, GPU>) {
-        typealias Columns = GPUFusedOperations
-        let (gamma, beta) = (Columns.columns(of: scale, shape: columnShape, math: math), Columns.columns(of: shift, shape: columnShape, math: math))
-        let (means, variances) = (Columns.columns(of: mean, shape: columnShape, math: math), Columns.columns(of: variance, shape: columnShape, math: math))
+        let (gamma, beta) = (math.columns(of: scale, shape: columnShape), math.columns(of: shift, shape: columnShape))
+        let (means, variances) = (math.columns(of: mean, shape: columnShape), math.columns(of: variance, shape: columnShape))
         let (inverseDivisors, factors, offsets) = (math.temporary(columnShape), math.temporary(columnShape), math.temporary(columnShape))
         math.sqrt(variances, into: inverseDivisors)
         math.add(inverseDivisors, epsilon, into: inverseDivisors)
@@ -348,6 +342,19 @@ private struct GPUFixedNormalizationColumns<N: NumericType> {
         self.inverseDivisors = ShapedBuffer(inverseDivisors)
         self.offsets = ShapedBuffer(offsets)
         self.means = means
+    }
+}
+
+private extension BufferMath where Device == GPU {
+    /// Values that are broadcastable to the columns, repeated into an intermediate buffer when the shapes differ.
+    func columns(of values: ShapedBuffer<N, GPU>, shape columnShape: [Int]) -> ShapedBuffer<N, GPU> {
+        if values.shape == columnShape {
+            return values
+        }
+        precondition(ShapeUtil.broadcasts(values.shape, to: columnShape), "The parameters must be broadcastable to the shape of the input without the batch axis.")
+        let repeated = temporary(columnShape)
+        add(values, constant(0, shape: columnShape), into: repeated)
+        return ShapedBuffer(repeated)
     }
 }
 

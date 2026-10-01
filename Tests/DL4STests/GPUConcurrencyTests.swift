@@ -74,17 +74,17 @@ extension GPUTests {
         func concurrentTrainingMatchesSerialTraining(threadCount: Int) {
             // Whether a small operation runs on the host depends on the timing of the GPU, and the host rounds some functions
             // differently. With all operations on the GPU, the results do not depend on the timing.
-            GPU.hostExecutionLimit = 0
-            defer { GPU.hostExecutionLimit = 4096 }
-            let references = (0 ..< threadCount).map { Self.train(seed: UInt64($0), steps: 10) }
-            let results = Mutex<[Int: [Float]]>([:])
-            run(threadCount: threadCount) { index in
-                let result = Self.train(seed: UInt64(index), steps: 10)
-                results.withLock { $0[index] = result }
-            }
-            let collected = results.withLock { $0 }
-            for index in 0 ..< threadCount {
-                #expect(collected[index] == references[index], "thread \(index) differs from the serial run")
+            GPUTest.withHostExecutionLimit(0) {
+                let references = (0 ..< threadCount).map { Self.train(seed: UInt64($0), steps: 10) }
+                let results = Mutex<[Int: [Float]]>([:])
+                run(threadCount: threadCount) { index in
+                    let result = Self.train(seed: UInt64(index), steps: 10)
+                    results.withLock { $0[index] = result }
+                }
+                let collected = results.withLock { $0 }
+                for index in 0 ..< threadCount {
+                    #expect(collected[index] == references[index], "thread \(index) differs from the serial run")
+                }
             }
         }
 

@@ -23,10 +23,12 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
-// Element-wise kernels: fill, copy, unary functions, and binary operators with broadcasting.
+// Element-wise kernels: fill, copy, unary functions, binary operators with broadcasting, ramps, bands, and diagonals.
 //
 // The kernels are limited by memory bandwidth. One thread processes one element: on Apple GPUs, scalar loads of
 // neighboring threads reach the same bandwidth as vector loads, and they need no alignment.
+//
+// An integer division by zero gives 0, where the CPU traps: a kernel cannot stop the process.
 
 kernel void fill_u32(device uint* result [[buffer(0)]], constant uint& value [[buffer(1)]], constant uint& count [[buffer(2)]], uint i [[thread_position_in_grid]]) {
     if (i < count) { result[i] = value; }

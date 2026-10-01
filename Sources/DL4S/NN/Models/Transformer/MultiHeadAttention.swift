@@ -41,36 +41,47 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     public var norm: LayerNorm<Element, Device>
     public var dropout: Dropout<Element, Device>
 
-    /// Number of attention heads
+    /// Number of query heads
     public let heads: Int
     /// Dimensionality of query and key vectors
     public let keyDim: Int
     /// Dimensionality of value vectors
     public let valueDim: Int
-    /// Lat dimension of keys, queries and values before matrix multiplication
+    /// Last dimension of keys, queries and values before matrix multiplication
     public let hiddenDim: Int
 
-    /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
-    /// - Parameters:
-    ///   - heads: Number of attention heads
-    ///   - hiddenDim: Last dimension of keys, queries and values
-    ///   - keyDim: Last dimesion of keys
-    ///   - valueDim: Intermediate last dimension of values
-    ///   - dropout: Dropout rate
-    public init(heads: Int, hiddenDim: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1) {
-        var generator = WyHash()
-        self.init(heads: heads, hiddenDim: hiddenDim, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
+    /// Number of key and value heads. A group of `heads / keyValueHeads` query heads shares one key head and one value head.
+    public var keyValueHeads: Int {
+        kDense.shape[1] / keyDim
     }
 
     /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     /// - Parameters:
-    ///   - heads: Number of attention heads
+    ///   - heads: Number of query heads
+    ///   - keyValueHeads: Number of key and value heads, which divides `heads`, or nil for one key and value head per query head.
+    ///     With fewer key heads than query heads, a group of query heads shares one key head and one value head (grouped-query attention).
     ///   - hiddenDim: Last dimension of keys, queries and values
-    ///   - keyDim: Last dimesion of keys
+    ///   - keyDim: Last dimension of keys
+    ///   - valueDim: Intermediate last dimension of values
+    ///   - dropout: Dropout rate
+    public init(heads: Int, keyValueHeads: Int? = nil, hiddenDim: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1) {
+        var generator = WyHash()
+        self.init(heads: heads, keyValueHeads: keyValueHeads, hiddenDim: hiddenDim, keyDim: keyDim, valueDim: valueDim, dropout: dropout, using: &generator)
+    }
+
+    /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+    /// - Parameters:
+    ///   - heads: Number of query heads
+    ///   - keyValueHeads: Number of key and value heads, which divides `heads`, or nil for one key and value head per query head.
+    ///     With fewer key heads than query heads, a group of query heads shares one key head and one value head (grouped-query attention).
+    ///   - hiddenDim: Last dimension of keys, queries and values
+    ///   - keyDim: Last dimension of keys
     ///   - valueDim: Intermediate last dimension of values
     ///   - dropout: Dropout rate
     ///   - generator: Random number generator that provides the initial weights.
-    public init<Generator: RandomNumberGenerator>(heads: Int, hiddenDim: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1, using generator: inout Generator) {
+    public init<Generator: RandomNumberGenerator>(heads: Int, keyValueHeads: Int? = nil, hiddenDim: Int, keyDim: Int, valueDim: Int, dropout: Float = 0.1, using generator: inout Generator) {
+        let keyValueHeads = keyValueHeads ?? heads
+        precondition(keyValueHeads > 0 && heads.isMultiple(of: keyValueHeads), "The number of key and value heads must divide the number of query heads.")
         self.heads = heads
         self.keyDim = keyDim
         self.valueDim = valueDim
@@ -78,8 +89,8 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
 
         temperature = Element(keyDim).sqrt()
         qDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
-        kDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
-        vDense = Tensor(xavierNormalWithShape: [hiddenDim, valueDim * heads], requiresGradient: true, using: &generator)
+        kDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * keyValueHeads], requiresGradient: true, using: &generator)
+        vDense = Tensor(xavierNormalWithShape: [hiddenDim, valueDim * keyValueHeads], requiresGradient: true, using: &generator)
         fc = Tensor(xavierNormalWithShape: [valueDim * heads, hiddenDim], requiresGradient: true, using: &generator)
         self.dropout = Dropout(rate: dropout)
         norm = LayerNorm(inputSize: [hiddenDim])
@@ -96,7 +107,7 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     ///
     /// Additionally applies dropout, a residual connection and layer normalization.
     ///
-    /// - Parameter inputs: Tuple containing queries of shape [batchSize, queryCount, hiddenDim], keys of shape [batchSize, keyCount, hiddenDim] and values of shape [batchSize, valueCount, hiddenDim]
+    /// - Parameter inputs: Tuple containing queries of shape [batchSize, queryCount, hiddenDim], keys of shape [batchSize, keyCount, hiddenDim] and values of shape [batchSize, keyCount, hiddenDim]
     ///       as well as an optional mask that may be used to prevent attention to certain elements outside of the batch or in future timesteps. Mask must be broadcastable to shape [batchSize, heads, queryCount, keyCount] and have 1 entries for all elements that should be blocked.
     /// - Returns: Normalized scaled dot product attended values
     public func callAsFunction(_ inputs: (q: Tensor<Element, Device>, k: Tensor<Element, Device>, v: Tensor<Element, Device>, mask: Tensor<Element, Device>?)) -> Tensor<Element, Device> {

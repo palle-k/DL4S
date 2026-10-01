@@ -294,7 +294,7 @@ extension Int32: CPUNumeric {
 
     public static func arange(start: Int32, end: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let dst = result.pointer(capacity: count)
-        let increment = end / Int32(count)
+        let increment = (end - start) / Int32(count)
         #if MKL_ENABLE
         ippsVectorSlope_32s(dst, Int32(count), Double(start), Double(increment))
         #else

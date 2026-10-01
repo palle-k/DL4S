@@ -28,10 +28,10 @@ import Foundation
 import Metal
 import Synchronization
 
+// A package cannot rely on the Metal compiler at build time: it is not part of every toolchain.
 /// A group of kernels in Metal Shading Language, in a `.metal` file in the `Shaders` resource directory.
 ///
 /// The package ships the kernels as source and compiles every group when one of its kernels is used first.
-/// A package cannot rely on the Metal compiler at build time: it is not part of every toolchain.
 struct GPUShaderSource: Sendable {
     /// Name of the `.metal` file without the extension.
     let name: String
@@ -42,10 +42,11 @@ struct GPUShaderSource: Sendable {
     static let matrix = GPUShaderSource(name: "matrix")
     static let fused = GPUShaderSource(name: "fused")
     static let convolution = GPUShaderSource(name: "convolution")
+    static let attention = GPUShaderSource(name: "attention")
 
     /// All kernel groups of the package.
     static var all: [GPUShaderSource] {
-        [.elementwise, .copy, .reduction, .matrix, .fused, .convolution]
+        [.elementwise, .copy, .reduction, .matrix, .fused, .convolution, .attention]
     }
 
     /// Source of the group, after the declarations of `prelude.metal` that all groups share.
@@ -113,14 +114,9 @@ final class GPUKernelLibrary: @unchecked Sendable {
         }
     }
 
-    /// Compiles the given kernel group, or returns the error of the compiler.
-    func compile(_ source: GPUShaderSource) -> (any Error)? {
-        do {
-            _ = try device.makeLibrary(source: source.code(), options: Self.compileOptions)
-            return nil
-        } catch {
-            return error
-        }
+    /// Compiles the given kernel group and throws the error of the compiler.
+    func compile(_ source: GPUShaderSource) throws {
+        _ = try device.makeLibrary(source: source.code(), options: Self.compileOptions)
     }
 
     private static var compileOptions: MTLCompileOptions {
@@ -143,89 +139,4 @@ final class GPUKernelLibrary: @unchecked Sendable {
     }
 }
 
-/// Element types that have GPU kernels.
-enum GPUElement: String {
-    case float
-    case int
-
-    /// The GPU element type of `N`, or nil when the GPU has no kernels for it.
-    init?<N>(of _: N.Type) {
-        if N.self == Float.self {
-            self = .float
-        } else if N.self == Int32.self {
-            self = .int
-        } else {
-            return nil
-        }
-    }
-}
-
-/// Decides whether an operation runs on the host or on the GPU.
-enum GPUPlacement {
-    /// Whether an operation with the given number of result elements runs on the host.
-    ///
-    /// Small operations run on the host when the host can access all operands without waiting for the GPU.
-    /// Then the host computes the result in less time than it takes to record a GPU command, and the result is available on the host.
-    static func runsOnHost(elements: Int, reading: [GPUBuffer], writing: [GPUBuffer]) -> Bool {
-        let context = GPUContext.current
-        guard elements <= context.hostExecutionLimit else {
-            return false
-        }
-        return context.isHostAccessible(reading: reading, writing: writing)
-    }
-}
-
-/// Builds the layout of a strided region for up to three operands and merges axes that are contiguous in all operands.
-struct GPULayout {
-    var shape: [Int]
-    var strides: [[Int]]
-
-    init(shape: [Int], strides: [[Int]]) {
-        precondition(strides.count <= 3, "A layout has at most three operands.")
-        var mergedShape: [Int] = []
-        var mergedStrides = [[Int]](repeating: [], count: strides.count)
-        for axis in shape.indices where shape[axis] != 1 {
-            // An axis merges into the axis before it when the stride of that axis spans the axis in every operand.
-            let isContiguous = !mergedShape.isEmpty && strides.indices.allSatisfy { operand in
-                mergedStrides[operand][mergedStrides[operand].count - 1] == strides[operand][axis] * shape[axis]
-            }
-            if isContiguous {
-                mergedShape[mergedShape.count - 1] *= shape[axis]
-                for operand in strides.indices {
-                    mergedStrides[operand][mergedStrides[operand].count - 1] = strides[operand][axis]
-                }
-            } else {
-                mergedShape.append(shape[axis])
-                for operand in strides.indices {
-                    mergedStrides[operand].append(strides[operand][axis])
-                }
-            }
-        }
-        self.shape = mergedShape
-        self.strides = mergedStrides
-    }
-
-    /// Whether the kernels support the layout.
-    var isSupported: Bool {
-        shape.count <= 8
-    }
-
-    /// The layout in the memory layout of the `Layout` struct of the kernels.
-    var arguments: [Int32] {
-        var values = [Int32](repeating: 0, count: 1 + 8 + 3 * 8)
-        values[0] = Int32(shape.count)
-        for axis in shape.indices {
-            values[1 + axis] = Int32(shape[axis])
-            for operand in strides.indices {
-                values[9 + operand * 8 + axis] = Int32(strides[operand][axis])
-            }
-        }
-        return values
-    }
-
-    /// Row-major strides of a shape.
-    static func contiguousStrides(_ shape: [Int]) -> [Int] {
-        CPUMemoryOperators.strides(from: shape)
-    }
-}
 #endif

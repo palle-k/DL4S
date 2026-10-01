@@ -181,6 +181,7 @@ Transformer:
 - [x] Positional Encoding
 - [x] Scaled Dot Product Attention
 - [x] Multihead Attention
+- [x] Grouped-Query Attention
 - [x] Pointwise Feed Forward
 - [x] Transformer Encoder Block
 - [x] Transformer Decoder Block
@@ -259,6 +260,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] variance
 - [x] scatter
 - [x] gather
+- [x] gather and scatter of rows
 - [x] conv2d
 - [x] transposed conv2d
 - [x] max pool
@@ -277,7 +279,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] linear transformation (matmul plus bias)
 - [x] layer normalization / batch normalization
 - [x] dropout
-- [x] scaled dot product attention / multi-head attention
+- [x] scaled dot product attention / multi-head attention, with grouped-query attention
 - [x] positional encoding
 - [x] diagonal matrix generation
 - [x] diagonal extraction

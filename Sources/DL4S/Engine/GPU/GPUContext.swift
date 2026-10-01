@@ -45,8 +45,10 @@ struct GPUStream: ~Copyable, @unchecked Sendable {
     var sequence: UInt64 = 1
     /// Number of commands in the command buffer that records work.
     var commandCount = 0
+    /// Whether the completion of the command buffer that records work is tracked.
+    var tracksCompletion = false
     /// Committed command buffers that can still run.
-    var inFlight: [(sequence: UInt64, commandBuffer: any MTLCommandBuffer)] = []
+    var inFlight: [GPUCommittedCommandBuffer] = []
 
     mutating func endEncoding() {
         encoder?.endEncoding()
@@ -92,6 +94,19 @@ struct GPUStream: ~Copyable, @unchecked Sendable {
     }
 }
 
+/// Numbers of recorded commands, committed command buffers, and host accesses that waited for the GPU.
+struct GPUStatistics {
+    let commands: Int
+    let commits: Int
+    let waits: Int
+}
+
+/// A committed command buffer with its sequence number.
+struct GPUCommittedCommandBuffer {
+    let sequence: UInt64
+    let commandBuffer: any MTLCommandBuffer
+}
+
 /// A buffer that the pool keeps for reuse.
 struct GPUPooledBuffer {
     let buffer: any MTLBuffer
@@ -113,23 +128,42 @@ struct GPUBufferPool: ~Copyable, @unchecked Sendable {
     /// Removes the buffer that the pool received first.
     mutating func removeOldest() -> GPUPooledBuffer? {
         // The first buffer of every bucket is the oldest buffer of the bucket.
-        guard let capacity = buckets.filter({ !$0.value.isEmpty }).min(by: { $0.value[0].age < $1.value[0].age })?.key else {
+        var oldestCapacity: Int?
+        var oldestAge = UInt64.max
+        for (capacity, bucket) in buckets {
+            if let first = bucket.first, first.age < oldestAge {
+                (oldestCapacity, oldestAge) = (capacity, first.age)
+            }
+        }
+        guard let capacity = oldestCapacity else {
             return nil
         }
         let buffer = buckets[capacity]!.removeFirst()
         cachedBytes -= capacity
         return buffer
     }
+
+    /// Position of the buffer in the bucket of the given capacity that serves a request: the newest buffer for the GPU, and
+    /// for the host the oldest of the first 16 buffers that the GPU no longer uses, or nil when the bucket has none.
+    func index(in capacity: Int, hostWritable: Bool, completedSequence: UInt64) -> Int? {
+        guard let bucket = buckets[capacity], !bucket.isEmpty else {
+            return nil
+        }
+        guard hostWritable else {
+            return bucket.count - 1
+        }
+        return bucket.indices.prefix(16).first { bucket[$0].lastUse <= completedSequence }
+    }
 }
 
-/// The Metal device, its command queue, and the state of the GPU work.
-///
-/// Every function that calls Metal drains an autorelease pool. Metal returns command buffers, encoders, and objects of
-/// Metal Performance Shaders autoreleased, a command buffer keeps all buffers that it uses alive, and `contents()` of a
-/// buffer autoreleases the buffer. A thread without a run loop, such as the main thread of a command line tool, never
-/// drains its autorelease pool, so without the local pools every buffer that a command or the host used would stay allocated.
+/// The Metal device, its command queue, and the state of the GPU work. Every function that calls Metal drains an autorelease pool.
 final class GPUContext: @unchecked Sendable {
     // `@unchecked Sendable`: The mutable state is in mutexes and atomics. Metal devices and queues can be used from any thread.
+
+    // Metal returns command buffers, encoders, and objects of Metal Performance Shaders autoreleased, a command buffer keeps
+    // all buffers that it uses alive, and `contents()` of a buffer autoreleases the buffer. A thread without a run loop, such
+    // as the main thread of a command line tool, never drains its autorelease pool, so without the local pools every buffer
+    // that a command or the host used would stay allocated.
 
     /// The context of the system default Metal device, or nil when the system has none.
     static let shared: GPUContext? = GPUContext()
@@ -142,14 +176,15 @@ final class GPUContext: @unchecked Sendable {
         return shared
     }
 
-    /// Number of commands after which a command buffer is committed, so that the GPU runs while the host records more work.
+    // The GPU runs the committed commands while the host records more work.
+    /// Number of commands after which a command buffer is committed.
     static let commandsPerCommandBuffer = 16
 
     let device: any MTLDevice
     let queue: any MTLCommandQueue
     let kernels: GPUKernelLibrary
-    /// Whether the matrix kernels of the package compute products. They need SIMD group matrices, so on other devices,
-    /// Metal Performance Shaders compute all products. Tests switch the kernels off to check that path.
+    // The kernels need SIMD group matrices. Tests switch the kernels off to check the other path.
+    /// Whether the matrix kernels of the package compute products. Otherwise, Metal Performance Shaders compute all products.
     var supportsMatrixKernels: Bool {
         get {
             matrixKernels.load(ordering: .relaxed)
@@ -174,7 +209,7 @@ final class GPUContext: @unchecked Sendable {
     private let completions = Mutex<Set<UInt64>>([])
     /// Description of the first command buffer that failed.
     private let failure = Mutex<String?>(nil)
-    private let hostLimit = Atomic<Int>(4096)
+    private let hostLimit = Atomic<Int>(GPU.defaultHostExecutionLimit)
     private let commandCounter = Atomic<Int>(0)
     private let commitCounter = Atomic<Int>(0)
     private let waitCounter = Atomic<Int>(0)
@@ -187,6 +222,8 @@ final class GPUContext: @unchecked Sendable {
         self.queue = queue
         kernels = GPUKernelLibrary(device: device)
         matrixKernels = Atomic(device.supportsFamily(.apple7))
+        // The pool keeps at most a quarter of the memory that the GPU can use well, and at most 4 GB, so that released
+        // tensors do not hold memory that other allocations of the process need.
         poolLimit = Int(min(device.recommendedMaxWorkingSetSize / 4, 4 << 30))
     }
 
@@ -248,11 +285,22 @@ final class GPUContext: @unchecked Sendable {
         autoreleasepool {
             stream.withLock { stream in
                 stream.endEncoding()
-                let commandBuffer = MPSCommandBuffer(commandBuffer: stream.openCommandBuffer(queue: queue))
+                let original = stream.openCommandBuffer(queue: queue)
+                // A graph can commit the command buffer and continue in a new one, so the completion of the command buffer is
+                // tracked before the graph encodes.
+                trackCompletion(&stream)
+                let commandBuffer = MPSCommandBuffer(commandBuffer: original)
                 encode(commandBuffer)
-                // A graph can commit the command buffer and continue in a new one. The queue runs the new one after the
-                // committed one, so the new one takes the place of the old one in the stream.
-                stream.commandBuffer = commandBuffer.commandBuffer
+                if commandBuffer.commandBuffer !== original {
+                    // The commands of the committed command buffer keep its sequence number. The new command buffer, which the
+                    // queue runs after it, takes the next one.
+                    commitCounter.add(1, ordering: .relaxed)
+                    stream.inFlight.append(GPUCommittedCommandBuffer(sequence: stream.sequence, commandBuffer: original))
+                    stream.commandBuffer = commandBuffer.commandBuffer
+                    stream.tracksCompletion = false
+                    stream.commandCount = 0
+                    stream.sequence += 1
+                }
                 stream.record(reading: reading, writing: writing)
                 finishCommand(&stream)
             }
@@ -272,6 +320,24 @@ final class GPUContext: @unchecked Sendable {
             return
         }
         stream.endEncoding()
+        trackCompletion(&stream)
+        commandBuffer.commit()
+        commitCounter.add(1, ordering: .relaxed)
+
+        let completedSequence = completed.load(ordering: .sequentiallyConsistent)
+        stream.inFlight.removeAll { $0.sequence <= completedSequence }
+        stream.inFlight.append(GPUCommittedCommandBuffer(sequence: stream.sequence, commandBuffer: commandBuffer))
+        stream.commandBuffer = nil
+        stream.tracksCompletion = false
+        stream.commandCount = 0
+        stream.sequence += 1
+    }
+
+    /// Adds the handler that records the completion of the command buffer that records work, unless it has one.
+    private func trackCompletion(_ stream: inout GPUStream) {
+        guard let commandBuffer = stream.commandBuffer, !stream.tracksCompletion else {
+            return
+        }
         let sequence = stream.sequence
         commandBuffer.addCompletedHandler { [self] commandBuffer in
             if let error = commandBuffer.error {
@@ -281,20 +347,12 @@ final class GPUContext: @unchecked Sendable {
             }
             markCompleted(sequence)
         }
-        commandBuffer.commit()
-        commitCounter.add(1, ordering: .relaxed)
-
-        let completedSequence = completed.load(ordering: .sequentiallyConsistent)
-        stream.inFlight.removeAll { $0.sequence <= completedSequence }
-        stream.inFlight.append((sequence, commandBuffer))
-        stream.commandBuffer = nil
-        stream.commandCount = 0
-        stream.sequence += 1
+        stream.tracksCompletion = true
     }
 
     /// Numbers of recorded commands, committed command buffers, and host accesses that waited for the GPU since the process started.
-    var statistics: (commands: Int, commits: Int, waits: Int) {
-        (commandCounter.load(ordering: .relaxed), commitCounter.load(ordering: .relaxed), waitCounter.load(ordering: .relaxed))
+    var statistics: GPUStatistics {
+        GPUStatistics(commands: commandCounter.load(ordering: .relaxed), commits: commitCounter.load(ordering: .relaxed), waits: waitCounter.load(ordering: .relaxed))
     }
 
     /// Number of bytes of the buffers that the pool keeps for reuse.
@@ -313,10 +371,30 @@ final class GPUContext: @unchecked Sendable {
         }
     }
 
-    /// Whether the GPU completed all work that uses the buffer of the given region, so that the host can write it now.
-    func isHostWritableWithoutReplacement(_ buffer: GPUBuffer) -> Bool {
+    /// Whether the host can write the given region now, without a wait: when the GPU completed all work that uses its buffer,
+    /// or when no command used the storage yet. Such a storage takes a buffer that the GPU no longer uses.
+    func makeHostWritableWithoutWait(_ buffer: GPUBuffer) -> Bool {
         let completedSequence = completed.load(ordering: .sequentiallyConsistent)
-        return stream.withLock { _ in buffer.storage.lastUse <= completedSequence }
+        return stream.withLock { _ in
+            let storage = buffer.storage
+            guard storage.lastUse > completedSequence else {
+                return true
+            }
+            guard storage.isFresh else {
+                return false
+            }
+            replaceBuffer(of: storage)
+            return true
+        }
+    }
+
+    /// Gives a storage that no command used yet a buffer that the host can write at once, and returns its old buffer to the pool.
+    /// The caller holds the lock of the stream.
+    private func replaceBuffer(of storage: GPUStorage) {
+        let replacement = makeBuffer(byteCount: storage.buffer.length, hostWritable: true)
+        recycle(storage.buffer, lastUse: storage.lastUse)
+        storage.buffer = replacement.buffer
+        storage.lastUse = replacement.lastUse
     }
 
     /// Waits until the GPU completed all work that writes the storage.
@@ -335,10 +413,7 @@ final class GPUContext: @unchecked Sendable {
                 return storage.lastUse
             }
             if storage.lastUse > completedSequence {
-                let replacement = makeBuffer(byteCount: storage.buffer.length, hostWritable: true)
-                recycle(storage.buffer, lastUse: storage.lastUse)
-                storage.buffer = replacement.buffer
-                storage.lastUse = replacement.lastUse
+                replaceBuffer(of: storage)
             }
             return 0
         }
@@ -355,9 +430,9 @@ final class GPUContext: @unchecked Sendable {
             return
         }
         waitCounter.add(1, ordering: .relaxed)
-        if let trace = ProcessInfo.processInfo.environment["DL4S_GPU_TRACE_WAITS"], trace == "1" {
-            print("[DL4S GPU wait]", Thread.callStackSymbols.dropFirst(2).prefix(12).joined(separator: "\n"))
-        }
+        #if DL4S_TRACE_WAITS
+        print("[DL4S GPU wait]", Thread.callStackSymbols.dropFirst(2).prefix(12).joined(separator: "\n"))
+        #endif
         autoreleasepool {
             let commandBuffers = stream.withLock { stream in
                 if stream.commandBuffer != nil, stream.sequence <= target {
@@ -418,21 +493,15 @@ final class GPUContext: @unchecked Sendable {
             // such as batches of padded sequences, find buffers in the pool.
             let candidates = pool.buckets.keys.filter { $0 >= capacity && $0 <= 2 * capacity && !pool.buckets[$0]!.isEmpty }.sorted()
             for bucketCapacity in candidates {
-                var bucket = pool.buckets[bucketCapacity]!
                 // Buffers are appended when they are released, so the first buffers of a bucket are the oldest ones.
                 // The GPU reuses the newest buffer, which is likely still in its cache. The host needs a buffer that the GPU
-                // no longer uses, which is most likely one of the oldest ones.
-                let index: Int
-                if hostWritable {
-                    guard let oldest = bucket.indices.prefix(16).first(where: { bucket[$0].lastUse <= completedSequence }) else {
-                        continue
-                    }
-                    index = oldest
-                } else {
-                    index = bucket.count - 1
+                // no longer uses, which is most likely one of the oldest ones. It checks the 16 oldest, so that a search under the
+                // lock stays short.
+                guard let index = pool.index(in: bucketCapacity, hostWritable: hostWritable, completedSequence: completedSequence) else {
+                    continue
                 }
-                let buffer = bucket.remove(at: index)
-                pool.buckets[bucketCapacity] = bucket
+                // The bucket is changed in place: a copy of the bucket would copy all of its buffers for every allocation.
+                let buffer = pool.buckets[bucketCapacity]!.remove(at: index)
                 pool.cachedBytes -= bucketCapacity
                 return buffer
             }
@@ -508,12 +577,6 @@ struct GPUArguments: ~Copyable {
         index += 1
     }
 
-    /// Sets a buffer that starts the given number of bytes after the start of the given buffer.
-    mutating func buffer(_ buffer: GPUBuffer, byteOffset: Int) {
-        encoder.setBuffer(buffer.storage.buffer, offset: buffer.byteOffset + byteOffset, index: index)
-        index += 1
-    }
-
     mutating func value<Value: BitwiseCopyable>(_ value: Value) {
         withUnsafeBytes(of: value) { bytes in
             encoder.setBytes(bytes.baseAddress!, length: bytes.count, index: index)
@@ -527,8 +590,9 @@ struct GPUArguments: ~Copyable {
     }
 
     mutating func values<Value: BitwiseCopyable>(_ values: [Value]) {
+        precondition(!values.isEmpty, "A kernel argument has at least one value.")
         values.withUnsafeBytes { bytes in
-            encoder.setBytes(bytes.baseAddress!, length: max(bytes.count, 4), index: index)
+            encoder.setBytes(bytes.baseAddress!, length: bytes.count, index: index)
         }
         index += 1
     }

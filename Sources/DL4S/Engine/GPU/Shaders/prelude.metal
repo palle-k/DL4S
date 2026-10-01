@@ -29,6 +29,10 @@
 #include <metal_simdgroup_matrix>
 using namespace metal;
 
+// Unrolls a loop fully. The loops over arrays of SIMD group matrices must be unrolled: when the compiler keeps them as loops,
+// it places the matrices in memory instead of registers.
+#define UNROLL _Pragma("clang loop unroll(full)")
+
 // Shape and strides of a strided region with up to eight axes. Strides are in elements and can be negative.
 struct Layout {
     int dim;

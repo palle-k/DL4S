@@ -46,7 +46,7 @@ public extension GPUFusedOperations {
             [gradient.shape, firstMoment.shape, secondMoment.shape, result.shape].allSatisfy { $0 == shape } && (secondMomentMax.map { $0.shape == shape } ?? true),
             "The gradient, the moments, and the result must have the shape of the parameter.",
         )
-        guard GPUFused.runsKernel(N.self, elements: parameter.count, reading: [parameter.gpuBuffer, gradient.gpuBuffer, firstMoment.gpuBuffer, secondMoment.gpuBuffer]) else {
+        guard GPUFused.runsKernel(N.self, elements: parameter.count, reading: [parameter.gpuBuffer, gradient.gpuBuffer, firstMoment.gpuBuffer, secondMoment.gpuBuffer] + (secondMomentMax.map { [$0.gpuBuffer] } ?? [])) else {
             DefaultFusedOperations<GPU>.adamUpdate(
                 parameter: parameter, gradient: gradient, firstMoment: firstMoment, secondMoment: secondMoment, secondMomentMax: secondMomentMax,
                 learningRate: learningRate, beta1: beta1, beta2: beta2, epsilon: epsilon, beta1Power: beta1Power, beta2Power: beta2Power, result: result,
@@ -106,17 +106,7 @@ public extension GPUFusedOperations {
         }
         let gates = GPUGatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, math: math)
         let (z, input, product, h, y) = (gates.update.gpuBuffer, candidateInput.gpuBuffer, gates.candidateProduct.gpuBuffer, state.gpuBuffer, result.gpuBuffer)
-        let count = UInt32(state.count)
-        let pipeline = GPUKernels.pipeline("gru_state", in: .fused)
-        GPUContext.current.compute(pipeline, reading: [z, input, product, h], writing: [y]) { arguments in
-            arguments.buffer(z)
-            arguments.buffer(input)
-            arguments.buffer(product)
-            arguments.buffer(h)
-            arguments.buffer(y)
-            arguments.value(count)
-            arguments.dispatch(count: Int(count))
-        }
+        GPUGatedRecurrentUnitKernel.record("gru_state", buffers: [z, input, product, h, y], reading: [z, input, product, h], writing: [y], count: state.count)
     }
 
     static func gatedRecurrentUnitStepBackward<N: NumericType>(
@@ -145,20 +135,10 @@ public extension GPUFusedOperations {
             math.release()
         }
         let gates = GPUGatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, math: math)
-        let count = UInt32(state.count)
         let (updateGradient, candidateGradient, stateGradient) = (math.temporary(state.shape), math.temporary(state.shape), math.temporary(state.shape))
-        do {
-            let (z, input, product, h, g) = (gates.update.gpuBuffer, candidateInput.gpuBuffer, gates.candidateProduct.gpuBuffer, state.gpuBuffer, outputGradient.gpuBuffer)
-            let (dz, dc, dh) = (updateGradient.gpuBuffer, candidateGradient.gpuBuffer, stateGradient.gpuBuffer)
-            let pipeline = GPUKernels.pipeline("gru_backward_gates", in: .fused)
-            GPUContext.current.compute(pipeline, reading: [z, input, product, h, g], writing: [dz, dc, dh]) { arguments in
-                for buffer in [z, input, product, h, g, dz, dc, dh] {
-                    arguments.buffer(buffer)
-                }
-                arguments.value(count)
-                arguments.dispatch(count: Int(count))
-            }
-        }
+        let (z, input, product, h, g) = (gates.update.gpuBuffer, candidateInput.gpuBuffer, gates.candidateProduct.gpuBuffer, state.gpuBuffer, outputGradient.gpuBuffer)
+        let (dz, dc, dh) = (updateGradient.gpuBuffer, candidateGradient.gpuBuffer, stateGradient.gpuBuffer)
+        GPUGatedRecurrentUnitKernel.record("gru_backward_gates", buffers: [z, input, product, h, g, dz, dc, dh], reading: [z, input, product, h, g], writing: [dz, dc, dh], count: state.count)
         if let weightGradient = gradients.updateWeights {
             math.multiplyMatrices(state, updateGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
         }
@@ -172,17 +152,9 @@ public extension GPUFusedOperations {
         }
         let (resetStateGradient, resetGradient) = (math.temporary(state.shape), math.temporary(state.shape))
         math.multiplyMatrices(candidateGradient, candidateWeights, rhsTransposed: true, into: resetStateGradient)
-        do {
-            let (r, h, drs, dr, dh) = (gates.reset.gpuBuffer, state.gpuBuffer, resetStateGradient.gpuBuffer, resetGradient.gpuBuffer, stateGradient.gpuBuffer)
-            let pipeline = GPUKernels.pipeline("gru_backward_reset", in: .fused)
-            GPUContext.current.compute(pipeline, reading: [r, h, drs, dh], writing: [dr, dh]) { arguments in
-                for buffer in [r, h, drs, dr, dh] {
-                    arguments.buffer(buffer)
-                }
-                arguments.value(count)
-                arguments.dispatch(count: Int(count))
-            }
-        }
+        let (r, drs, dr) = (gates.reset.gpuBuffer, resetStateGradient.gpuBuffer, resetGradient.gpuBuffer)
+        // The kernel adds the gradient through the reset gate to the gradient of the state.
+        GPUGatedRecurrentUnitKernel.record("gru_backward_reset", buffers: [r, h, drs, dr, dh], reading: [r, h, drs, dh], writing: [dr, dh], count: state.count)
         if let weightGradient = gradients.resetWeights {
             math.multiplyMatrices(state, resetGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
         }
@@ -220,20 +192,27 @@ private struct GPUGatedRecurrentUnitGates<N: NumericType> {
         math.multiplyMatrices(state, updateWeights, into: update)
         math.multiplyMatrices(state, resetWeights, into: reset)
         let (zInput, z, rInput, r, h, rs) = (updateInput.gpuBuffer, update.gpuBuffer, resetInput.gpuBuffer, reset.gpuBuffer, state.gpuBuffer, resetState.gpuBuffer)
-        let count = UInt32(state.count)
-        let pipeline = GPUKernels.pipeline("gru_gates", in: .fused)
-        GPUContext.current.compute(pipeline, reading: [zInput, z, rInput, r, h], writing: [z, r, rs]) { arguments in
-            for buffer in [zInput, z, rInput, r, h, rs] {
-                arguments.buffer(buffer)
-            }
-            arguments.value(count)
-            arguments.dispatch(count: Int(count))
-        }
+        GPUGatedRecurrentUnitKernel.record("gru_gates", buffers: [zInput, z, rInput, r, h, rs], reading: [zInput, z, rInput, r, h], writing: [z, r, rs], count: state.count)
         math.multiplyMatrices(resetState, candidateWeights, into: candidateProduct)
         self.update = update
         self.reset = reset
         self.resetState = resetState
         self.candidateProduct = candidateProduct
+    }
+}
+
+/// The element-wise kernels of a gated recurrent unit, with one thread per element of the state.
+private enum GPUGatedRecurrentUnitKernel {
+    /// Records a kernel that receives the buffers in the given order and then the number of elements.
+    static func record(_ name: String, buffers: [GPUBuffer], reading: [GPUBuffer], writing: [GPUBuffer], count: Int) {
+        let elements = UInt32(count)
+        GPUContext.current.compute(GPUKernels.pipeline(name, in: .fused), reading: reading, writing: writing) { arguments in
+            for buffer in buffers {
+                arguments.buffer(buffer)
+            }
+            arguments.value(elements)
+            arguments.dispatch(count: count)
+        }
     }
 }
 
