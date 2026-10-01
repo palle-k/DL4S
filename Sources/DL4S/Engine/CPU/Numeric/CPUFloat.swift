@@ -420,7 +420,7 @@ extension Float: CPUNumeric {
 
     public static func arange(start: Float, end: Float, result: UnsafeMutableBufferPointer<Float>, count: Int) {
         let dst = result.pointer(capacity: count)
-        let increment = end / Float(count)
+        let increment = (end - start) / Float(count)
         #if MKL_ENABLE
         ippsVectorSlope_32f(dst, Int32(count), start, increment)
         #elseif canImport(Accelerate)

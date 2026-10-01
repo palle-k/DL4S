@@ -86,6 +86,28 @@ swift test --traits MKL
 ```
 
 
+#### GPU Support
+
+On Apple devices with Metal, DL4S can run tensor operations on the GPU. Use the `GPU` device instead of `CPU`:
+
+```swift
+if GPU.isAvailable {
+    var model = Sequential {
+        Dense<Float, GPU>(inputSize: 784, outputSize: 256)
+        Relu<Float, GPU>()
+        Dense<Float, GPU>(inputSize: 256, outputSize: 10)
+        LogSoftmax<Float, GPU>()
+    }
+    let batch = Tensor<Float, GPU>(cpuBatch) // copies a CPU tensor to the GPU
+    let prediction = Tensor<Float, CPU>(model(batch)) // copies the result back
+}
+```
+
+The GPU runs operations after they return. A read of tensor values, such as `elements` or `item`, waits for the GPU work that the values depend on.
+Large matrix products and convolutions use Metal Performance Shaders, the other operations use Metal kernels of DL4S.
+Small operations whose inputs are available on the host run on the CPU, see `GPU.hostExecutionLimit`.
+`Double` tensors on the GPU device run on the CPU, because Metal has no double precision arithmetic.
+
 ### TensorBoard Support
 
 [DL4S-Tensorboard](https://github.com/palle-k/DL4S-Tensorboard) provides a summary writer that can write tensorboard compatible logs.
@@ -159,6 +181,7 @@ Transformer:
 - [x] Positional Encoding
 - [x] Scaled Dot Product Attention
 - [x] Multihead Attention
+- [x] Grouped-Query Attention
 - [x] Pointwise Feed Forward
 - [x] Transformer Encoder Block
 - [x] Transformer Decoder Block
@@ -237,6 +260,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] variance
 - [x] scatter
 - [x] gather
+- [x] gather and scatter of rows
 - [x] conv2d
 - [x] transposed conv2d
 - [x] max pool
@@ -255,7 +279,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] linear transformation (matmul plus bias)
 - [x] layer normalization / batch normalization
 - [x] dropout
-- [x] scaled dot product attention / multi-head attention
+- [x] scaled dot product attention / multi-head attention, with grouped-query attention
 - [x] positional encoding
 - [x] diagonal matrix generation
 - [x] diagonal extraction
@@ -273,6 +297,7 @@ Engines
 - [x] CPU (Accelerate framework for Apple Devices)
 - [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
 - [x] CPU (Generic)
+- [x] GPU (Metal and Metal Performance Shaders for Apple Devices)
 
 </p>
 </details>
@@ -288,7 +313,7 @@ Default implementations are provided for the following architectures:
 - [x] ResNet18
 - [x] VGG (11, 13, 16, 19)
 - [x] AlexNet
-- [x] Transformer
+- [x] Transformer (Encoder-Decoder, Decoder-only)
 
 </p>
 </details>

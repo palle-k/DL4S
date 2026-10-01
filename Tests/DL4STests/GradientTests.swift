@@ -229,4 +229,32 @@ struct GradientTests {
             }
         }
     }
+
+    // The matrix is gathered twice, so the second backward visit adds its rows to the accumulated gradient.
+    @Test func testGatherAndScatterRowsGradients() {
+        let matrix = Tensor<Double, CPU>((0 ..< 12).map { Double($0) / 7 - 0.5 }, shape: [4, 3], requiresGradient: true)
+        let first = Tensor<Int32, CPU>([[3, 0, 3], [-1, 1, 3]])
+        let second = Tensor<Int32, CPU>([0, 0, 2])
+        let weights = Tensor<Double, CPU>((0 ..< 18).map { Double($0 % 5) - 1.5 }, shape: [2, 3, 3])
+        let function: (Tensor<Double, CPU>) -> Tensor<Double, CPU> = { m in
+            let gathered = m.gatheringRows(at: first) * weights
+            let scattered = gathered.scatteringRows(at: first, rowCount: 4)
+            return (scattered * scattered).reduceSum() + (m.gatheringRows(at: second) * m.gatheringRows(at: second)).reduceSum()
+        }
+
+        for retainsGraph in [false, true] {
+            let gradient = function(matrix).gradients(of: [matrix], retainBackwardsGraph: retainsGraph)[0]
+            #expect(gradient.requiresGradient == retainsGraph)
+            expectClose(gradient, numericalGradient(of: function, at: matrix), tolerance: 1e-12)
+        }
+
+        let firstDerivative: (Tensor<Double, CPU>) -> Tensor<Double, CPU> = { point in
+            var point = point
+            point.requiresGradient = true
+            return function(point).gradients(of: [point])[0]
+        }
+        let gradient = function(matrix).gradients(of: [matrix], retainBackwardsGraph: true)[0]
+        let secondGradient = gradient.reduceSum().gradients(of: [matrix])[0]
+        expectClose(secondGradient, numericalGradient(of: firstDerivative, at: matrix), tolerance: 1e-8)
+    }
 }

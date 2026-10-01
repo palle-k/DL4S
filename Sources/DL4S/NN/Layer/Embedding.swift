@@ -158,16 +158,7 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: Codable,
 
     public func callAsFunction(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Embedding") {
-            let embedded = (0 ..< inputs.shape[0]).map { i -> Tensor<Element, Device> in
-                let idx = Int(inputs[i].item)
-                if idx == ignoreIndex {
-                    return Tensor(repeating: 0, shape: 1, outputSize)
-                } else {
-                    return embeddingMatrix[idx].unsqueezed(at: 0)
-                }
-            }
-
-            return Tensor(stacking: embedded, along: 0)
+            embeddingMatrix.gatheringRows(at: inputs, ignoreIndex: Int32(ignoreIndex))
         }
     }
 }

@@ -553,13 +553,17 @@ public protocol FusedOperationsType<Device> {
 
     // MARK: Attention
 
-    /// Computes scaled dot product attention, `softmax(queries × keysᵀ / temperature - 10⁹ \* mask) × values`.
+    /// Computes scaled dot product attention, `softmax(queries × keysᵀ / temperature - 10⁹ * mask) × values`.
     ///
-    /// The batch and head axes of the queries, keys, and values are broadcastable, and the result has the broadcast batch and head axes.
+    /// The batch axes of the queries, keys, and values are broadcastable, and the result has the broadcast batch axis.
+    /// The numbers of heads of the keys and of the values divide the number of heads of the queries. Query head `h` uses
+    /// key head `h / (heads / keyHeads)` and value head `h / (heads / valueHeads)`, so a group of query heads shares
+    /// one key head and one value head (grouped-query attention). With one key head and one value head, all query heads
+    /// share them (multi-query attention).
     /// - Parameters:
     ///   - queries: Queries, shape [batchSize, heads, queryCount, keyDim]
-    ///   - keys: Keys, shape [batchSize, heads, keyCount, keyDim]
-    ///   - values: Values, shape [batchSize, heads, keyCount, valueDim]
+    ///   - keys: Keys, shape [batchSize, keyHeads, keyCount, keyDim]
+    ///   - values: Values, shape [batchSize, valueHeads, keyCount, valueDim]
     ///   - mask: Mask with 1 for every key that a query must not attend to and 0 elsewhere,
     ///     broadcastable to [batchSize, heads, queryCount, keyCount], or nil for no mask
     ///   - temperature: Divisor of the dot products
@@ -586,6 +590,10 @@ public protocol FusedOperationsType<Device> {
     /// The operation projects the queries, keys, and values with their weights, splits the projections into heads,
     /// computes ``scaledDotProductAttention(queries:keys:values:mask:temperature:result:)`` for every head,
     /// joins the heads, and multiplies the result with the output weights.
+    ///
+    /// The projections of the keys and the values have `keyHeads` heads, which divides `heads`. The number follows from
+    /// the shapes of the weights. With fewer key heads than query heads, a group of query heads shares one key head and
+    /// one value head (grouped-query attention).
     /// - Parameters:
     ///   - queries: Queries, shape [batchSize, queryCount, hiddenDim]
     ///   - keys: Keys, shape [batchSize, keyCount, hiddenDim]
@@ -593,10 +601,10 @@ public protocol FusedOperationsType<Device> {
     ///   - mask: Mask with 1 for every key that a query must not attend to and 0 elsewhere,
     ///     broadcastable to [batchSize, heads, queryCount, keyCount], or nil for no mask
     ///   - queryWeights: Query projection, shape [hiddenDim, heads \* keyDim]
-    ///   - keyWeights: Key projection, shape [hiddenDim, heads \* keyDim]
-    ///   - valueWeights: Value projection, shape [hiddenDim, heads \* valueDim]
+    ///   - keyWeights: Key projection, shape [hiddenDim, keyHeads \* keyDim]
+    ///   - valueWeights: Value projection, shape [hiddenDim, keyHeads \* valueDim]
     ///   - outputWeights: Output projection, shape [heads \* valueDim, outputDim]
-    ///   - heads: Number of attention heads
+    ///   - heads: Number of query heads
     ///   - temperature: Divisor of the dot products
     ///   - result: Result, shape [batchSize, queryCount, outputDim]
     static func multiHeadAttention<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, queryWeights: ShapedBuffer<N, Device>, keyWeights: ShapedBuffer<N, Device>, valueWeights: ShapedBuffer<N, Device>, outputWeights: ShapedBuffer<N, Device>, heads: Int, temperature: N, result: MutableShapedBuffer<N, Device>)
@@ -614,7 +622,7 @@ public protocol FusedOperationsType<Device> {
     ///   - valueWeights: Value projection of the forward operation
     ///   - outputWeights: Output projection of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
-    ///   - heads: Number of heads of the forward operation
+    ///   - heads: Number of query heads of the forward operation
     ///   - temperature: Temperature of the forward operation
     ///   - gradients: Gradients of the sources, nil for the sources whose gradient is not requested
     static func multiHeadAttentionBackward<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, queryWeights: ShapedBuffer<N, Device>, keyWeights: ShapedBuffer<N, Device>, valueWeights: ShapedBuffer<N, Device>, outputWeights: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, heads: Int, temperature: N, gradients: MultiHeadAttentionGradients<GradientBuffer<N, Device>?>)

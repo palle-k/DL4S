@@ -415,7 +415,7 @@ extension Double: CPUNumeric {
 
     public static func arange(start: Double, end: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         let dst = result.pointer(capacity: count)
-        let increment = end / Double(count)
+        let increment = (end - start) / Double(count)
         #if MKL_ENABLE
         ippsVectorSlope_64f(dst, Int32(count), start, increment)
         #elseif canImport(Accelerate)

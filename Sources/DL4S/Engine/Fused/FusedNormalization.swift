@@ -252,3 +252,11 @@ extension FusedOperationsType {
         }
     }
 }
+
+extension FusedOperationsType {
+    /// Checks that the scale and the shift of a layer normalization have the shape of the trailing axes of the input.
+    static func checkLayerNormalizationShapes<N>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>) {
+        precondition(scale.dim <= input.dim && Array(input.shape.suffix(scale.dim)) == scale.shape, "The scale must have the shape of the trailing axes of the input.")
+        precondition(shift.shape == scale.shape, "The shift must have the shape of the scale.")
+    }
+}

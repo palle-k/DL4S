@@ -92,7 +92,7 @@ public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
     static func leakyRelu<N: NumericType>(input: ShapedBuffer<N, CPU>, leakage: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
-        precondition(CPUKernels.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
         // The kernel supports a scalar leakage.
         guard leakage.count == 1 else {
             DefaultFusedOperations<CPU>.leakyRelu(input: input, leakage: leakage, result: result)
@@ -116,7 +116,7 @@ public extension CPUFusedOperations {
         inputGradient: GradientBuffer<N, CPU>?,
         leakageGradient: GradientBuffer<N, CPU>?,
     ) {
-        precondition(CPUKernels.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         // The kernel supports a scalar leakage.
         guard leakage.count == 1 else {
@@ -195,7 +195,7 @@ public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
     static func swish<N: NumericType>(input: ShapedBuffer<N, CPU>, beta: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
-        precondition(CPUKernels.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
         // The kernel supports a scalar beta and a beta with the shape of the trailing axes of the input.
         guard let rowLength = swishRowLength(input: input, beta: beta) else {
             DefaultFusedOperations<CPU>.swish(input: input, beta: beta, result: result)
@@ -233,7 +233,7 @@ public extension CPUFusedOperations {
         inputGradient: GradientBuffer<N, CPU>?,
         betaGradient: GradientBuffer<N, CPU>?,
     ) {
-        precondition(CPUKernels.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         // The kernel supports a scalar beta and a beta with the shape of the trailing axes of the input.
         guard let rowLength = swishRowLength(input: input, beta: beta) else {
@@ -386,7 +386,7 @@ public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
     static func elu<N: NumericType>(input: ShapedBuffer<N, CPU>, alpha: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
-        precondition(CPUKernels.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
         // The kernel supports a scalar alpha.
         guard alpha.count == 1 else {
             DefaultFusedOperations<CPU>.elu(input: input, alpha: alpha, result: result)
@@ -415,7 +415,7 @@ public extension CPUFusedOperations {
         inputGradient: GradientBuffer<N, CPU>?,
         alphaGradient: GradientBuffer<N, CPU>?,
     ) {
-        precondition(CPUKernels.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         // The kernel supports a scalar alpha.
         guard alpha.count == 1 else {

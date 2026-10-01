@@ -331,6 +331,34 @@ public extension Tensor {
         }
         return array
     }
+
+    /// Creates a tensor with the shape and the values of a tensor on another device.
+    ///
+    /// The new tensor is not part of the compute graph of the source tensor, so no gradient flows back to the source.
+    /// - Parameters:
+    ///   - tensor: Tensor to copy.
+    ///   - requiresGradient: Whether it is desired to compute gradients of the new tensor.
+    init<Source: DeviceType>(_ tensor: Tensor<Element, Source>, requiresGradient: Bool = false) {
+        let buffer = Device.Memory.allocateBuffer(withShape: tensor.shape, type: Element.self)
+        let count = tensor.count
+        if count > 0 {
+            // A read of the source waits for the device that computes it, then the values go to the target in one copy.
+            withUnsafeTemporaryAllocation(of: Element.self, capacity: count) { staging in
+                Source.Memory.assign(from: tensor.values.values, to: staging, count: count)
+                Device.Memory.assign(from: UnsafeBufferPointer(staging), to: buffer.values, count: count)
+            }
+        }
+        self.init(using: buffer, context: nil)
+        self.requiresGradient = requiresGradient
+    }
+
+    /// Returns a copy of the tensor on another device.
+    ///
+    /// The copy is not part of the compute graph of the tensor, so no gradient flows back to the tensor.
+    /// - Parameter device: Device of the copy.
+    func copied<Target: DeviceType>(to device: Target.Type) -> Tensor<Element, Target> {
+        Tensor<Element, Target>(self)
+    }
 }
 
 public extension Tensor {

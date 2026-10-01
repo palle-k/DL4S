@@ -103,8 +103,8 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codabl
         let embeddedEncoderInput = prepareInputs(encoderInput)
         let embeddedDecoderInput = prepareInputs(decoderInput)
 
-        let encoderStates = encoder((embeddedEncoderInput, encInLens))
-        let decoded = decoder((embeddedDecoderInput, encoderStates, encInLens, decInLens)) // [batchSize, maxLen, hiddenSize]
+        let encoded = EncodedSequence(states: encoder((embeddedEncoderInput, encInLens)), lengths: encInLens)
+        let decoded = decoder(TransformerDecoderInputs(input: embeddedDecoderInput, lengths: decInLens, encoded: encoded)) // [batchSize, maxLen, hiddenSize]
 
         // [batchSize, maxLen, hiddenSize] x [vocabSize, hiddenSize]^T --> [batchSize, maxLen, vocabSize]
         let deembedded = decoded.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true) + outputBias
@@ -120,19 +120,22 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codabl
     ///   - maxLength: Maximum length of the decoded sequence. If no endToken occurs after maxLength tokens, decoding is aborted.
     /// - Returns: Most probable output sequence determined by greedy decoding.
     public func callAsFunction(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
-        let encIn = prepareInputs(Tensor([inputSequence]))
-        let encoded = encoder((encIn, [inputSequence.count]))
+        let encoded = EncodedSequence(states: encoder((prepareInputs(Tensor([inputSequence])), [inputSequence.count])), lengths: [inputSequence.count])
+        var state = decoder.makeState(batchSize: 1, encoded: encoded)
 
         var tokens: [Int32] = []
+        var token = startToken
         for _ in 0 ..< maxLength {
-            let tokenInput = [[startToken] + tokens]
-            let decIn = prepareInputs(Tensor(tokenInput))
-            let output = decoder((decIn, encoded, [inputSequence.count], [tokenInput[0].count]))
-            let deembedded = output.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true)
+            // Every position of the step is less than state.count + 1.
+            let positions = positionalEncoding(state.count + 1).gatheringRows(at: state.positions(count: 1)) // [1, 1, embedDim]
+            let embedded = embedding(Tensor([token])).view(as: 1, 1, -1)
+            let input = dropout(embedded * Tensor(Element(embedded.shape[2]).sqrt()) + positions)
+            let decoded = decoder.decode(input, state: &state) // [1, 1, hiddenSize]
 
-            let nextToken = deembedded[0, -1].argmax()
-            tokens.append(Int32(nextToken))
-            if nextToken == endToken {
+            let logits = decoded.view(as: 1, -1).matrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true) + outputBias
+            token = Int32(logits[0].argmax())
+            tokens.append(token)
+            if token == endToken {
                 break
             }
         }

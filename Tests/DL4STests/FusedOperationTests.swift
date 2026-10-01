@@ -165,6 +165,7 @@ private func referenceNormalization(_ input: DoubleTensor, along axes: [Int], sc
 }
 
 private func referenceAttention(queries: DoubleTensor, keys: DoubleTensor, values: DoubleTensor, mask: DoubleTensor?, temperature: Double) -> DoubleTensor {
+    let (keys, values) = (repeatedHeads(keys, to: queries.shape[1]), repeatedHeads(values, to: queries.shape[1]))
     var scores = (queries / DoubleTensor(temperature)).broadcastMatrixMultiplied(with: keys, transposeSelf: false, transposeOther: true)
     if let mask {
         scores -= mask * 1e9
@@ -172,16 +173,26 @@ private func referenceAttention(queries: DoubleTensor, keys: DoubleTensor, value
     return referenceSoftmax(scores, axis: 3).broadcastMatrixMultiplied(with: values)
 }
 
+/// Repeats every head of a [batchSize, groupHeads, count, size] tensor for the query heads of its group.
+private func repeatedHeads(_ tensor: DoubleTensor, to heads: Int) -> DoubleTensor {
+    let groupSize = heads / tensor.shape[1]
+    guard groupSize > 1 else {
+        return tensor
+    }
+    return DoubleTensor(stacking: (0 ..< heads).map { tensor[nil, $0 / groupSize].view(as: tensor.shape[0], 1, tensor.shape[2], tensor.shape[3]) }, along: 1)
+}
+
 private func referenceMultiHeadAttention(_ sources: [DoubleTensor], mask: DoubleTensor?, heads: Int) -> DoubleTensor {
     let (q, k, v) = (sources[0], sources[1], sources[2])
     let (queryWeights, keyWeights, valueWeights, outputWeights) = (sources[3], sources[4], sources[5], sources[6])
     let keyDim = queryWeights.shape[1] / heads
-    let valueDim = valueWeights.shape[1] / heads
+    let keyHeads = keyWeights.shape[1] / keyDim
+    let valueDim = valueWeights.shape[1] / keyHeads
 
     let queryHeads = q.broadcastMatrixMultiplied(with: queryWeights).view(as: q.shape[0], q.shape[1], heads, keyDim).permuted(to: 0, 2, 1, 3)
-    let keyHeads = k.broadcastMatrixMultiplied(with: keyWeights).view(as: k.shape[0], k.shape[1], heads, keyDim).permuted(to: 0, 2, 1, 3)
-    let valueHeads = v.broadcastMatrixMultiplied(with: valueWeights).view(as: v.shape[0], v.shape[1], heads, valueDim).permuted(to: 0, 2, 1, 3)
-    let attended = referenceAttention(queries: queryHeads, keys: keyHeads, values: valueHeads, mask: mask, temperature: Double(keyDim).squareRoot())
+    let keyProjection = k.broadcastMatrixMultiplied(with: keyWeights).view(as: k.shape[0], k.shape[1], keyHeads, keyDim).permuted(to: 0, 2, 1, 3)
+    let valueHeads = v.broadcastMatrixMultiplied(with: valueWeights).view(as: v.shape[0], v.shape[1], keyHeads, valueDim).permuted(to: 0, 2, 1, 3)
+    let attended = referenceAttention(queries: queryHeads, keys: keyProjection, values: valueHeads, mask: mask, temperature: Double(keyDim).squareRoot())
     return attended
         .permuted(to: 0, 2, 1, 3)
         .view(as: q.shape[0], q.shape[1], -1)
@@ -219,13 +230,13 @@ extension FusedOperationCase {
         // Distinct values, so that the maximum of every window is unique.
         FusedOperationCase(
             "maxPooled2d",
-            sources: [DoubleTensor((0 ..< 32).map { Double(($0 * 7) % 32) / 32 + 0.01 }, shape: [2, 1, 4, 4])],
+            sources: [DoubleTensor((0 ..< 32).map { (i: Int) -> Double in Double(i * 7 % 32) / 32 + 0.01 }, shape: [2, 1, 4, 4])],
             fused: { $0[0].maxPooled2d(windowSize: 2, padding: 0, stride: 2) },
             reference: { referencePooling($0[0], windowSize: 2, padding: 0, stride: 2) { $0.reduceMax(along: [0]) } },
         ),
         FusedOperationCase(
             "maxPooled2d with padding and overlapping windows",
-            sources: [DoubleTensor((0 ..< 50).map { Double(($0 * 11) % 50) / 50 + 0.01 }, shape: [1, 2, 5, 5])],
+            sources: [DoubleTensor((0 ..< 50).map { (i: Int) -> Double in Double(i * 11 % 50) / 50 + 0.01 }, shape: [1, 2, 5, 5])],
             fused: { $0[0].maxPooled2d(windowSize: 3, padding: 1, stride: 2) },
             reference: { referencePooling($0[0], windowSize: 3, padding: 1, stride: 2) { $0.reduceMax(along: [0]) } },
         ),
@@ -413,6 +424,32 @@ extension FusedOperationCase {
             sources: [uniform([2, 1, 3, 2], seed: 93), uniform([2, 1, 3, 2], seed: 94), uniform([2, 1, 3, 2], seed: 95)],
             fused: { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 1.5) },
             reference: { referenceAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 1.5) },
+        ),
+        FusedOperationCase(
+            "scaledDotProductAttention with grouped heads",
+            sources: [uniform([2, 4, 3, 4], seed: 103), uniform([2, 2, 5, 4], seed: 104), uniform([2, 1, 5, 3], seed: 105)],
+            fused: { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0], shape: [1, 4, 1, 5]), temperature: 2) },
+            reference: { referenceAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0], shape: [1, 4, 1, 5]), temperature: 2) },
+        ),
+        FusedOperationCase(
+            "scaledDotProductAttention with broadcast queries",
+            sources: [uniform([1, 2, 3, 4], seed: 106), uniform([2, 2, 5, 4], seed: 107), uniform([2, 2, 5, 3], seed: 108)],
+            fused: { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 2) },
+            reference: { referenceAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 2) },
+        ),
+        FusedOperationCase(
+            "multiHeadAttention with grouped heads",
+            sources: [
+                uniform([2, 3, 8], seed: 120), uniform([2, 5, 8], seed: 121), uniform([2, 5, 8], seed: 122),
+                uniform([8, 8], seed: 123), uniform([8, 4], seed: 124), uniform([8, 6], seed: 125), uniform([12, 8], seed: 126),
+            ],
+            fused: {
+                multiHeadAttention(
+                    queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 0, 1, 1], shape: [1, 1, 1, 5]),
+                    queryWeights: $0[3], keyWeights: $0[4], valueWeights: $0[5], outputWeights: $0[6], heads: 4, temperature: 2.0.squareRoot(),
+                )
+            },
+            reference: { referenceMultiHeadAttention($0, mask: DoubleTensor([0, 0, 0, 1, 1], shape: [1, 1, 1, 5]), heads: 4) },
         ),
         FusedOperationCase(
             "multiHeadAttention",

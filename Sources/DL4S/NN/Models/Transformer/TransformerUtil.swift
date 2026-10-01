@@ -25,13 +25,17 @@
 
 import Foundation
 
-func makeEncoderMasks<Element, Device>(sequenceLengths: [Int]) -> Tensor<Element, Device> {
-    let maxInLen = sequenceLengths.reduce(0, max)
+/// Returns the mask of the padding of sequences with the shape [batchSize, 1, 1, length], with 1 for the positions after the length of a sequence.
+/// - Parameters:
+///   - sequenceLengths: Length of each sequence without padding
+///   - length: Number of positions of the padded sequences, or nil for the longest length
+func makeEncoderMasks<Element, Device>(sequenceLengths: [Int], length: Int? = nil) -> Tensor<Element, Device> {
+    let maxInLen = length ?? sequenceLengths.reduce(0, max)
     let batchSize = sequenceLengths.count
 
     return Tensor<Element, Device>(sequenceLengths.map {
         Array(repeating: 0, count: $0) + Array(repeating: 1, count: maxInLen - $0)
-    }).view(as: batchSize, 1, 1, maxInLen) // TODO: Check if maxLen in 3rd or 4th position
+    }).view(as: batchSize, 1, 1, maxInLen)
 }
 
 func makeDecoderMasks<Element, Device>(sequenceLengths: [Int]) -> Tensor<Element, Device> {

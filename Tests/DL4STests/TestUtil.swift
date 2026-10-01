@@ -32,7 +32,7 @@ extension Trait where Self == ConditionTrait {
     ///
     /// Tests that train real models take minutes. CI does not run them. Set `DL4S_LONG_TESTS=1` to run them locally.
     static var longRunning: Self {
-        .enabled(if: ProcessInfo.processInfo.environment["DL4S_LONG_TESTS"] != nil, "Set DL4S_LONG_TESTS=1 to run long tests.")
+        .enabled(if: longTestsEnabled, "Set DL4S_LONG_TESTS=1 to run long tests.")
     }
 
     /// Runs the test only when a short training run completes in reasonable time.
@@ -45,13 +45,26 @@ extension Trait where Self == ConditionTrait {
         #else
         let isAccelerated = false
         #endif
-        #if DEBUG
-        let isDebugBuild = true
-        #else
-        let isDebugBuild = false
-        #endif
-        let longTestsEnabled = ProcessInfo.processInfo.environment["DL4S_LONG_TESTS"] != nil
         return .enabled(if: isAccelerated || !isDebugBuild || longTestsEnabled, "Training runs with the generic fallback in a debug build are too slow. Build in release, or set DL4S_LONG_TESTS=1.")
+    }
+
+    /// Runs the test only in a release build or when `DL4S_LONG_TESTS` is set.
+    ///
+    /// The CPU references of large operations need minutes in a debug build.
+    static var releaseBuild: Self {
+        .enabled(if: !isDebugBuild || longTestsEnabled, "The CPU reference is too slow in a debug build. Build in release, or set DL4S_LONG_TESTS=1.")
+    }
+
+    private static var longTestsEnabled: Bool {
+        ProcessInfo.processInfo.environment["DL4S_LONG_TESTS"] != nil
+    }
+
+    private static var isDebugBuild: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
     }
 }
 

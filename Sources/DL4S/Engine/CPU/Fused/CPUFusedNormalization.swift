@@ -209,7 +209,7 @@ public extension CPUFusedOperations {
         }
         precondition(input.dim >= 1, "The input must have a batch axis.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
-        precondition(CPUKernels.broadcasts(shift.shape, to: columnShape), "The shift must be broadcastable to the shape of the input without the batch axis.")
+        precondition(ShapeUtil.broadcasts(shift.shape, to: columnShape), "The shift must be broadcastable to the shape of the input without the batch axis.")
         let gamma = columns(of: scale, shape: columnShape, math: math)
         let batchSize = input.shape[0]
         let columns = input.count / batchSize
@@ -378,18 +378,12 @@ public extension CPUFusedOperations {
 }
 
 extension CPUFusedOperations {
-    /// Checks that the scale and the shift have the shape of the trailing axes of the input.
-    static func checkLayerNormalizationShapes<N>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>) {
-        precondition(scale.dim <= input.dim && Array(input.shape.suffix(scale.dim)) == scale.shape, "The scale must have the shape of the trailing axes of the input.")
-        precondition(shift.shape == scale.shape, "The shift must have the shape of the scale.")
-    }
-
     /// The elements of values that are broadcastable to the columns, repeated into an intermediate buffer of `math` when the shapes differ.
     static func columns<N: NumericType>(of values: ShapedBuffer<N, CPU>, shape columnShape: [Int], math: BufferMath<N, CPU>) -> UnsafePointer<N> {
         if values.shape == columnShape {
             return values.elementPointer
         }
-        precondition(CPUKernels.broadcasts(values.shape, to: columnShape), "The parameters must be broadcastable to the shape of the input without the batch axis.")
+        precondition(ShapeUtil.broadcasts(values.shape, to: columnShape), "The parameters must be broadcastable to the shape of the input without the batch axis.")
         let repeated = math.temporary(columnShape)
         CPUKernels.broadcast(values, into: repeated)
         return UnsafePointer(repeated.elementPointer)

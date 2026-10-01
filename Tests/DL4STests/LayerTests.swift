@@ -415,6 +415,32 @@ struct LayerTests {
         #expect(!alexNet.isDropoutActive)
     }
 
+    @Test func testEmbeddingLooksUpRowsAndAddsGradientsOfRepeatedTokens() {
+        var generator = WyHash(seed: 5)
+        let embedding = Embedding<Float, CPU>(inputFeatures: 6, outputSize: 3, ignoreIndex: 4, using: &generator)
+        let result = embedding(Tensor<Int32, CPU>([1, 4, 1, 5]))
+
+        #expect(result.shape == [4, 3])
+        #expect(result[0] == embedding.embeddingMatrix[1])
+        #expect(result[1] == Tensor(repeating: 0, shape: [3]))
+        #expect(result[2] == embedding.embeddingMatrix[1])
+        #expect(result[3] == embedding.embeddingMatrix[5])
+
+        let gradient = result.reduceSum().gradients(of: [embedding.embeddingMatrix])[0]
+        #expect(gradient == Tensor([[0, 0, 0], [2, 2, 2], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 1, 1]]))
+    }
+
+    @Test func testMultiHeadAttentionSharesKeyHeadsBetweenQueryHeads() {
+        var generator = WyHash(seed: 3)
+        let layer = MultiHeadAttention<Float, CPU>(heads: 4, keyValueHeads: 2, hiddenDim: 16, keyDim: 4, valueDim: 3, dropout: 0, using: &generator)
+        #expect(layer.keyValueHeads == 2)
+        #expect([layer.qDense.shape, layer.kDense.shape, layer.vDense.shape, layer.fc.shape] == [[16, 16], [16, 8], [16, 6], [12, 16]])
+        let input = Tensor<Float, CPU>(uniformlyDistributedWithShape: [2, 5, 16], min: -1, max: 1, using: &generator)
+        let output = layer((input, input, input, nil))
+        #expect(output.shape == [2, 5, 16])
+        #expect(output.reduceSum().gradients(of: [layer.kDense, layer.vDense]).map(\.shape) == [[16, 8], [16, 6]])
+    }
+
     @Test func testTensorPathParsesAndPrints() {
         let path = TensorPath("encoder.blocks.3.Wq")
         #expect(path.segments == [.name("encoder"), .name("blocks"), .index(3), .name("Wq")])

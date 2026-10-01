@@ -72,6 +72,10 @@ let package = Package(
         .target(
             name: "DL4S",
             dependencies: mklDependencies + ["DL4SMacros"],
+            // The Metal kernels are copied as source and compiled at run time, so the build needs no Metal compiler.
+            resources: [
+                .copy("Engine/GPU/Shaders"),
+            ],
             swiftSettings: mklSwiftSettings,
         ),
         .testTarget(

@@ -287,6 +287,33 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         }
         let lhsStrides = batchStrides(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1])
         let rhsStrides = batchStrides(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+
+        // When every operand is either complete or one matrix for the whole batch, the matrices of an operand have a
+        // constant stride, and the engine computes all products in one call.
+        func uniformStride(_ batch: [Int], matrixSize: Int) -> Int? {
+            if batch.allSatisfy({ $0 == 1 }) {
+                return 0
+            }
+            return batch == batchShape ? matrixSize : nil
+        }
+        if let lhsStride = uniformStride(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1]),
+           let rhsStride = uniformStride(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+        {
+            Engine.gemmBatched(
+                lhs: lhs.slice(offset: 0, shape: lhsMatrix),
+                lhsStride: lhsStride,
+                rhs: rhs.slice(offset: 0, shape: rhsMatrix),
+                rhsStride: rhsStride,
+                result: result.slice(offset: 0, shape: [rows, columns]),
+                count: batchShape.reduce(1, *),
+                alpha: alpha,
+                beta: beta,
+                transposeFirst: transposeLhs,
+                transposeSecond: transposeRhs,
+            )
+            return
+        }
+
         var resultOffset = 0
         StridedIteration.forEachOffset(shape: batchShape, strides: lhsStrides, rhsStrides) { lhsOffset, rhsOffset in
             multiplyMatrices(
