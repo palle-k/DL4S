@@ -47,31 +47,6 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     public typealias RawBuffer = UnsafeMutableRawBufferPointer
     public typealias Device = CPU
 
-    @inline(__always)
-    static func strides(from shape: [Int]) -> [Int] {
-        let dim = shape.count
-
-        if dim == 0 {
-            return []
-        }
-
-        var str = [Int](repeating: 1, count: dim)
-        for i in (0 ..< dim - 1).reversed() {
-            str[i] = str[i + 1] * shape[i + 1]
-        }
-        return str
-    }
-
-    static func linearIndex(from index: [Int], shape: [Int]) -> Int {
-        let strides = CPUMemoryOperators.strides(from: shape)
-        return zip(index, strides).map(*).reduce(0, +)
-    }
-
-    static func index(from linearIndex: Int, shape: [Int]) -> [Int] {
-        let strides = CPUMemoryOperators.strides(from: shape)
-        return zip(shape, strides).map { dim, str in (linearIndex / str) % dim }
-    }
-
     public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> MutableBuffer<Element, CPU> {
         let stride = MemoryLayout<Element>.stride
         let alignment = max(MemoryLayout<Element>.alignment, 16)
@@ -91,18 +66,30 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     }
 
     public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: MutableBuffer<Element, CPU>, count: Int) {
-        // destination.memory.bindMemory(to: Element.self).assign(from: source, count: count)
-        memcpy(destination.memory.baseAddress!, source.baseAddress!, count * MemoryLayout<Element>.stride)
+        let byteCount = count * MemoryLayout<Element>.stride
+        precondition(count <= source.count && byteCount <= destination.memory.count, "The copy exceeds a buffer.")
+        guard byteCount > 0 else {
+            return
+        }
+        memcpy(destination.memory.baseAddress!, source.baseAddress!, byteCount)
     }
 
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: MutableBuffer<Element, CPU>, count: Int) {
-        // destination.memory.bindMemory(to: Element.self).assign(from: source.memory.bindMemory(to: Element.self).immutable, count: count)
-        memcpy(destination.memory.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
+        let byteCount = count * MemoryLayout<Element>.stride
+        precondition(byteCount <= source.memory.count && byteCount <= destination.memory.count, "The copy exceeds a buffer.")
+        guard byteCount > 0 else {
+            return
+        }
+        memcpy(destination.memory.baseAddress!, source.memory.baseAddress!, byteCount)
     }
 
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: UnsafeMutableBufferPointer<Element>, count: Int) {
-        // destination.assign(from: source.memory.bindMemory(to: Element.self).immutable, count: count)
-        memcpy(destination.baseAddress!, source.memory.baseAddress!, count * MemoryLayout<Element>.stride)
+        let byteCount = count * MemoryLayout<Element>.stride
+        precondition(byteCount <= source.memory.count && count <= destination.count, "The copy exceeds a buffer.")
+        guard byteCount > 0 else {
+            return
+        }
+        memcpy(destination.baseAddress!, source.memory.baseAddress!, byteCount)
     }
 
     @inline(__always)
@@ -117,7 +104,7 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
         while sliceCount > 0, slice[sliceCount - 1] == nil {
             sliceCount -= 1
         }
-        let strides = CPUMemoryOperators.strides(from: shape)
+        let strides = MemoryOps.strides(from: shape)
 
         if slice.prefix(sliceCount).allSatisfy({ $0 != nil }) {
             // Simple offset into storage
@@ -155,21 +142,41 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
     public static func get<Element>(slice: [CountableRange<Int>?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (MutableBuffer<Element, CPU>, Bool, [Int]) {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
 
-        let strides = CPUMemoryOperators.strides(from: shape)
+        let strides = MemoryOps.strides(from: shape)
+        let ranges = shape.indices.map { axis in (axis < slice.count ? slice[axis] : nil) ?? 0 ..< shape[axis] }
+        let resultShape = ranges.map(\.count)
+        let offset = zip(ranges, strides).map { $0.lowerBound * $1 }.reduce(0, +)
 
-        let padded = slice + [Range<Int>?](repeating: nil, count: shape.count - slice.count)
-
-        let resultShape = zip(padded, shape).map { el -> Int in
-            let (index, dimSize) = el
-            return index.map(\.count) ?? dimSize
-        }
-
-        let resultCount = resultShape.reduce(1, *)
-        let resultBuffer = allocateBuffer(withCapacity: resultCount, type: Element.self)
-
-        recursiveRead(source: buffer.memory.bindMemory(to: Element.self).immutable, destination: resultBuffer.memory.bindMemory(to: Element.self), srcIndex: padded, srcStrides: strides, srcShape: shape)
-
+        let resultBuffer = allocateBuffer(withCapacity: resultShape.reduce(1, *), type: Element.self)
+        copyRegion(
+            from: buffer.memory.bindMemory(to: Element.self).baseAddress! + offset,
+            strides: strides,
+            to: resultBuffer.memory.bindMemory(to: Element.self).baseAddress!,
+            strides: MemoryOps.strides(from: resultShape),
+            shape: resultShape,
+        )
         return (resultBuffer, true, resultShape)
+    }
+
+    /// Copies the elements of a region between two buffers, one row of the region at a time.
+    ///
+    /// - Parameters:
+    ///   - source: First element of the region in the source.
+    ///   - sourceStrides: Strides of the source.
+    ///   - destination: First element of the region in the destination.
+    ///   - destinationStrides: Strides of the destination.
+    ///   - shape: Shape of the region. The last axis must be contiguous in the source and the destination.
+    private static func copyRegion<Element>(from source: UnsafeMutablePointer<Element>, strides sourceStrides: [Int], to destination: UnsafeMutablePointer<Element>, strides destinationStrides: [Int], shape: [Int]) {
+        guard let rowLength = shape.last else {
+            destination.pointee = source.pointee
+            return
+        }
+        guard shape.allSatisfy({ $0 > 0 }) else {
+            return
+        }
+        StridedIteration.forEachOffset(shape: Array(shape.dropLast()), strides: Array(sourceStrides.dropLast()), Array(destinationStrides.dropLast())) { sourceOffset, destinationOffset in
+            (destination + destinationOffset).update(from: source + sourceOffset, count: rowLength)
+        }
     }
 
     public static func set<Element>(slice: [Int?], of buffer: MutableBuffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
@@ -178,17 +185,26 @@ public struct CPUMemoryOperators: MemoryOperatorsType {
 
         let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
 
-        let dstStrides = CPUMemoryOperators.strides(from: dstShape)
+        let dstStrides = MemoryOps.strides(from: dstShape)
         iterativeWrite(source: source.memory.bindMemory(to: Element.self).immutable, destination: buffer.memory.bindMemory(to: Element.self), dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
     }
 
     public static func set<Element>(slice: [Range<Int>?], of buffer: MutableBuffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
         precondition(sourceShape.count == dstShape.count, "Dimensionality of source must be equal to dimensionality of destination")
 
-        let padded = slice + [Range<Int>?](repeating: nil, count: dstShape.count - slice.count)
-        let dstStrides = CPUMemoryOperators.strides(from: dstShape)
+        let strides = MemoryOps.strides(from: dstShape)
+        let ranges = dstShape.indices.map { axis in (axis < slice.count ? slice[axis] : nil) ?? 0 ..< dstShape[axis] }
+        let regionShape = ranges.map(\.count)
+        precondition(regionShape == sourceShape, "Shape of source must be equal to the shape of the slice")
+        let offset = zip(ranges, strides).map { $0.lowerBound * $1 }.reduce(0, +)
 
-        recursiveWrite(source: source.memory.bindMemory(to: Element.self).immutable, destination: buffer.memory.bindMemory(to: Element.self), dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
+        copyRegion(
+            from: UnsafeMutablePointer(mutating: source.memory.bindMemory(to: Element.self).baseAddress!),
+            strides: MemoryOps.strides(from: regionShape),
+            to: buffer.memory.bindMemory(to: Element.self).baseAddress! + offset,
+            strides: strides,
+            shape: regionShape,
+        )
     }
 
     public static func getValue<Element>(from source: Buffer<Element, CPU>) -> Element {

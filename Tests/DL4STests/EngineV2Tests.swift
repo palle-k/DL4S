@@ -194,6 +194,22 @@ struct EngineV2Tests {
         #expect(gathered == a)
     }
 
+    @Test func testGatherRows() {
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]])
+        let indices = Tensor<Int32, CPU>([[2, 0], [-1, 2]])
+
+        let gathered = a.gatheringRows(at: indices)
+        #expect(gathered == Tensor([[[5, 6], [1, 2]], [[0, 0], [5, 6]]]))
+    }
+
+    @Test func testScatterRowsAddsRowsWithTheSameIndex() {
+        let a = Tensor<Float, CPU>([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+        let indices = Tensor<Int32, CPU>([[2, 0], [-1, 2]])
+
+        let scattered = a.scatteringRows(at: indices, rowCount: 4)
+        #expect(scattered == Tensor([[3, 4], [0, 0], [8, 10], [0, 0]]))
+    }
+
     @Test func testBroadcastMatrixMultiply() {
         let a = Tensor<Float, CPU>([
             [[1, 2],
@@ -480,6 +496,26 @@ struct EngineV2Tests {
         let diag = a.diagonalElements()
         let expected = Tensor<Float, CPU>([1, 5, 9])
         #expect(diag == expected)
+    }
+
+    @Test func testDiagonalOfRectangularMatrices() {
+        let wide = Tensor<Float, CPU>([
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+        ])
+        #expect(wide.diagonalElements() == Tensor<Float, CPU>([1, 6]))
+        let tall = Tensor<Float, CPU>([
+            [1, 2],
+            [3, 4],
+            [5, 6],
+        ])
+        #expect(tall.diagonalElements() == Tensor<Float, CPU>([1, 4]))
+    }
+
+    @Test func testLinearRampStartsAtTheLowerBound() {
+        #expect(Tensor<Float, CPU>(linearRampWithLowerBound: 2, upperBound: 6, by: 0.5).elements == [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5])
+        #expect(Tensor<Double, CPU>(linearRampWithLowerBound: -1, upperBound: 2).elements == [-1, 0, 1])
+        #expect(Tensor<Int32, CPU>(linearRampWithLowerBound: 3, upperBound: 9, by: 2).elements == [3, 5, 7])
     }
 
     @Test func testDiagonalGeneration() {

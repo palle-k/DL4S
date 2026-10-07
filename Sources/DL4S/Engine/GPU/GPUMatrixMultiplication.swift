@@ -1,0 +1,336 @@
+//
+//  GPUMatrixMultiplication.swift
+//  DL4S
+//
+//  Created by Palle Klewitz on 24.09.26.
+//  Copyright (c) 2026 - Palle Klewitz
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
+
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+import Foundation
+import Metal
+import MetalPerformanceShaders
+
+/// Numbers of elements between neighboring matrices of the operands of a batch of products. The stride 0 uses the same
+/// matrix for all products.
+struct GPUBatchStrides {
+    let lhs: Int
+    let rhs: Int
+    let result: Int
+
+    /// The strides of a batch with one product.
+    static let single = GPUBatchStrides(lhs: 0, rhs: 0, result: 0)
+}
+
+// A Metal Performance Shaders kernel reaches the highest throughput for large matrices, but it costs about 15 µs of host time
+// per product and opens its own encoder. The kernel of the package costs about 1 µs of host time and supports batches with any strides.
+/// Records matrix products of floats: with Metal Performance Shaders for large products, with the kernel of the package for the others.
+enum GPUMatrixMultiplication {
+    /// Number of multiplications from which a product uses Metal Performance Shaders.
+    static let largeProductMultiplications = 1 << 31
+
+    private struct GemmParameters {
+        var rows: Int32
+        var columns: Int32
+        var inner: Int32
+        var lda: Int32
+        var ldb: Int32
+        var ldc: Int32
+        var transposeA: Int32
+        var transposeB: Int32
+        var alpha: Float
+        var beta: Float
+        var batchStrideA: Int64
+        var batchStrideB: Int64
+        var batchStrideC: Int64
+        var splits: Int32 = 1
+        var splitLength: Int32 = 0
+    }
+
+    /// Records the product `result = alpha * op(lhs) * op(rhs) + beta * result` of matrices of floats.
+    ///
+    /// - Parameters:
+    ///   - lhsShape: Shape of the left matrix as stored, before the transposition.
+    ///   - rhsShape: Shape of the right matrix as stored, before the transposition.
+    ///   - rows: Number of rows of the result.
+    ///   - columns: Number of columns of the result.
+    ///   - inner: Number of columns of `op(lhs)`.
+    static func encode(lhs: GPUBuffer, lhsShape: [Int], rhs: GPUBuffer, rhsShape: [Int], result: GPUBuffer, rows: Int, columns: Int, inner: Int, alpha: Float, beta: Float, transposeFirst: Bool, transposeSecond: Bool) {
+        guard rows > 0, columns > 0 else {
+            return
+        }
+        if !result.storage.context.supportsMatrixKernels || rows * columns * inner >= largeProductMultiplications && rows >= 64 && columns >= 64 {
+            encodeLarge(lhs: lhs, lhsShape: lhsShape, rhs: rhs, rhsShape: rhsShape, result: result, rows: rows, columns: columns, inner: inner, alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
+            return
+        }
+        encodeBatch(
+            lhs: lhs, rhs: rhs, result: result, count: 1, rows: rows, columns: columns, inner: inner,
+            lhsColumns: lhsShape[1], rhsColumns: rhsShape[1], strides: .single,
+            alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond,
+        )
+    }
+
+    /// Records the products of a batch of matrices with constant strides between the matrices of an operand.
+    ///
+    /// - Parameters:
+    ///   - lhsColumns: Number of columns of every left matrix as stored.
+    ///   - rhsColumns: Number of columns of every right matrix as stored.
+    ///   - strides: Number of elements between neighboring matrices of the left operand, the right operand, and the result.
+    ///     The stride 0 uses the same matrix for all products.
+    static func encodeBatch(lhs: GPUBuffer, rhs: GPUBuffer, result: GPUBuffer, count: Int, rows: Int, columns: Int, inner: Int, lhsColumns: Int, rhsColumns: Int, strides: GPUBatchStrides, alpha: Float, beta: Float, transposeFirst: Bool, transposeSecond: Bool) {
+        guard count > 0, rows > 0, columns > 0 else {
+            return
+        }
+        guard result.storage.context.supportsMatrixKernels else {
+            let lhsShape = transposeFirst ? [inner, rows] : [rows, inner]
+            let rhsShape = transposeSecond ? [columns, inner] : [inner, columns]
+            for index in 0 ..< count {
+                func matrix(_ buffer: GPUBuffer, stride: Int, elements: Int) -> GPUBuffer {
+                    GPUBuffer(storage: buffer.storage, byteOffset: buffer.byteOffset + index * stride * MemoryLayout<Float>.stride, byteCount: elements * MemoryLayout<Float>.stride)
+                }
+                encodeLarge(
+                    lhs: matrix(lhs, stride: strides.lhs, elements: rows * inner), lhsShape: lhsShape,
+                    rhs: matrix(rhs, stride: strides.rhs, elements: inner * columns), rhsShape: rhsShape,
+                    result: matrix(result, stride: strides.result, elements: rows * columns),
+                    rows: rows, columns: columns, inner: inner, alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond,
+                )
+            }
+            return
+        }
+        let parameters = GemmParameters(
+            rows: Int32(rows), columns: Int32(columns), inner: Int32(inner),
+            lda: Int32(lhsColumns), ldb: Int32(rhsColumns), ldc: Int32(columns),
+            transposeA: transposeFirst ? 1 : 0, transposeB: transposeSecond ? 1 : 0,
+            alpha: alpha, beta: beta,
+            batchStrideA: Int64(strides.lhs), batchStrideB: Int64(strides.rhs), batchStrideC: Int64(strides.result),
+            splitLength: Int32(inner),
+        )
+        if rows == 1 {
+            // A product with one row is a vector-matrix product, which is limited by the reads of the matrix.
+            if transposeSecond {
+                GPUContext.compute(GPUKernels.kernel("gemv_t", in: .matrix), reading: [lhs, rhs, result], writing: [result]) { arguments in
+                    arguments.buffer(lhs)
+                    arguments.buffer(rhs)
+                    arguments.buffer(result)
+                    arguments.value(parameters)
+                    arguments.dispatch(threadgroups: MTLSize(width: (columns + 7) / 8, height: count, depth: 1), threadgroup: MTLSize(width: 256, height: 1, depth: 1))
+                }
+            } else {
+                encodeVectorMatrix(lhs: lhs, rhs: rhs, result: result, columns: columns, inner: inner, count: count, parameters: parameters)
+            }
+            return
+        }
+        // Tiles of 32 x 32 elements give four times as many threadgroups, so that small products occupy all GPU cores.
+        let largeTiles = ((rows + 63) / 64) * ((columns + 63) / 64) * count
+        let tile = largeTiles >= 64 ? 64 : 32
+        let tiles = ((rows + tile - 1) / tile) * ((columns + tile - 1) / tile) * count
+        let name = "gemm_\(transposeFirst ? "t" : "n")\(transposeSecond ? "t" : "n")_\(tile)"
+        let kernel = GPUKernels.kernel(name, in: .matrix)
+
+        // A product with few tiles and a long inner axis, such as the weight gradient of a convolution, splits the inner axis
+        // into parts, so that about 512 threadgroups run. A second kernel adds the products of the parts. With 128
+        // threadgroups, a [512, 512] product with the inner length 8192 is 40 percent slower.
+        let splits = min(max(1, 512 / tiles), inner / 512)
+        guard splits > 1 else {
+            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
+                arguments.buffer(lhs)
+                arguments.buffer(rhs)
+                arguments.buffer(result)
+                arguments.value(parameters)
+                arguments.dispatch(
+                    threadgroups: MTLSize(width: (columns + tile - 1) / tile, height: (rows + tile - 1) / tile, depth: count),
+                    threadgroup: MTLSize(width: 128, height: 1, depth: 1),
+                )
+            }
+            return
+        }
+        // Parts are multiples of the depth of a tile of the inner axis.
+        let splitLength = ((inner + splits - 1) / splits + 31) / 32 * 32
+        let splitCount = (inner + splitLength - 1) / splitLength
+        let partial = GPUKernels.temporary(count: count * splitCount * rows * columns, near: result)
+        var splitParameters = parameters
+        splitParameters.alpha = 1
+        splitParameters.beta = 0
+        splitParameters.batchStrideC = Int64(rows * columns)
+        splitParameters.splits = Int32(splitCount)
+        splitParameters.splitLength = Int32(splitLength)
+        GPUContext.compute(kernel, reading: [lhs, rhs], writing: [partial]) { arguments in
+            arguments.buffer(lhs)
+            arguments.buffer(rhs)
+            arguments.buffer(partial)
+            arguments.value(splitParameters)
+            arguments.dispatch(
+                threadgroups: MTLSize(width: (columns + tile - 1) / tile, height: (rows + tile - 1) / tile, depth: count * splitCount),
+                threadgroup: MTLSize(width: 128, height: 1, depth: 1),
+            )
+        }
+        var sumParameters = parameters
+        sumParameters.splits = Int32(splitCount)
+        let sum = GPUKernels.kernel("gemm_split_sum", in: .matrix)
+        GPUContext.compute(sum, reading: [partial, result], writing: [result]) { arguments in
+            arguments.buffer(partial)
+            arguments.buffer(result)
+            arguments.value(sumParameters)
+            arguments.dispatch(threads: MTLSize(width: columns, height: rows, depth: count), threadgroup: MTLSize(width: min(columns, 32), height: min(rows, 8), depth: 1))
+        }
+    }
+
+    // About 256 threadgroups occupy all GPU cores, and every SIMD group of a part reads at least 8 rows of the matrix.
+    // [1, 768] x [768, 768] takes 0.15 ms with one thread per element of the result, and 0.025 ms with the parts (M3 Max).
+    /// Records the vector-matrix product of a matrix that is not transposed, with the inner axis split into parts that
+    /// `gemm_split_sum` adds up.
+    private static func encodeVectorMatrix(lhs: GPUBuffer, rhs: GPUBuffer, result: GPUBuffer, columns: Int, inner: Int, count: Int, parameters: GemmParameters) {
+        let blocks = (columns + 127) / 128
+        let splits = max(1, min(256 / (blocks * count), inner / 64))
+        let splitLength = ((inner + splits - 1) / splits + 7) / 8 * 8
+        let splitCount = (inner + splitLength - 1) / splitLength
+        let kernel = GPUKernels.kernel("gemv_n", in: .matrix)
+        let threadgroups = MTLSize(width: blocks, height: 1, depth: count * splitCount)
+        let threadgroup = MTLSize(width: 256, height: 1, depth: 1)
+        var vectorParameters = parameters
+        vectorParameters.splitLength = Int32(splitLength)
+        guard splitCount > 1 else {
+            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
+                arguments.buffer(lhs)
+                arguments.buffer(rhs)
+                arguments.buffer(result)
+                arguments.value(vectorParameters)
+                arguments.dispatch(threadgroups: threadgroups, threadgroup: threadgroup)
+            }
+            return
+        }
+        let partial = GPUKernels.temporary(count: count * splitCount * columns, near: result)
+        vectorParameters.alpha = 1
+        vectorParameters.beta = 0
+        vectorParameters.batchStrideC = Int64(columns)
+        vectorParameters.splits = Int32(splitCount)
+        GPUContext.compute(kernel, reading: [lhs, rhs], writing: [partial]) { arguments in
+            arguments.buffer(lhs)
+            arguments.buffer(rhs)
+            arguments.buffer(partial)
+            arguments.value(vectorParameters)
+            arguments.dispatch(threadgroups: threadgroups, threadgroup: threadgroup)
+        }
+        var sumParameters = parameters
+        sumParameters.splits = Int32(splitCount)
+        GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial, result], writing: [result]) { arguments in
+            arguments.buffer(partial)
+            arguments.buffer(result)
+            arguments.value(sumParameters)
+            arguments.dispatch(threads: MTLSize(width: columns, height: 1, depth: count), threadgroup: MTLSize(width: min(columns, 256), height: 1, depth: 1))
+        }
+    }
+
+    // The batch occupies more GPU cores: a [512, 512] product with the inner length 8192 takes 0.58 ms with the sum of the
+    // parts, and 0.63 ms without parts.
+    /// Number of parts of the inner axis of a large product `lhsᵀ × rhs`, such as a weight gradient, whose result is small
+    /// against the inner axis. Metal Performance Shaders computes the parts as a batch.
+    private static func largeProductSplits(rows: Int, columns: Int, inner: Int, transposeFirst: Bool, transposeSecond: Bool) -> Int {
+        let splits = 8
+        guard transposeFirst, !transposeSecond, inner >= 16 * max(rows, columns), inner.isMultiple(of: splits) else {
+            return 1
+        }
+        return splits
+    }
+
+    private static func encodeLarge(lhs: GPUBuffer, lhsShape: [Int], rhs: GPUBuffer, rhsShape: [Int], result: GPUBuffer, rows: Int, columns: Int, inner: Int, alpha: Float, beta: Float, transposeFirst: Bool, transposeSecond: Bool) {
+        let splits = result.storage.context.supportsMatrixKernels ? largeProductSplits(rows: rows, columns: columns, inner: inner, transposeFirst: transposeFirst, transposeSecond: transposeSecond) : 1
+        guard splits == 1 else {
+            // The operands are stored with the inner axis as their rows, so every part is a contiguous block of rows.
+            let partLength = inner / splits
+            let partial = GPUKernels.temporary(count: splits * rows * columns, near: result)
+            encodeMatrices(lhs: lhs, lhsShape: [partLength, lhsShape[1]], rhs: rhs, rhsShape: [partLength, rhsShape[1]], result: partial, rows: rows, columns: columns, inner: partLength, count: splits, alpha: 1, beta: 0, transposeFirst: true, transposeSecond: false)
+            var sumParameters = GemmParameters(
+                rows: Int32(rows), columns: Int32(columns), inner: Int32(inner), lda: 0, ldb: 0, ldc: Int32(columns), transposeA: 1, transposeB: 0,
+                alpha: alpha, beta: beta, batchStrideA: 0, batchStrideB: 0, batchStrideC: 0, splitLength: Int32(partLength),
+            )
+            sumParameters.splits = Int32(splits)
+            GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial, result], writing: [result]) { arguments in
+                arguments.buffer(partial)
+                arguments.buffer(result)
+                arguments.value(sumParameters)
+                arguments.dispatch(threads: MTLSize(width: columns, height: rows, depth: 1), threadgroup: MTLSize(width: min(columns, 32), height: min(rows, 8), depth: 1))
+            }
+            return
+        }
+        // Metal Performance Shaders is about 8 percent slower with a transposed right operand: 0.56 ms against 0.51 ms for
+        // [8192, 512] x [512, 512]. A right operand that is small against the left one is transposed first.
+        if transposeSecond, !transposeFirst, result.storage.context.supportsMatrixKernels, rows >= 8 * max(columns, inner) {
+            let transposed = GPUKernels.temporary(count: columns * inner, near: result)
+            GPUKernels.transpose(source: rhs, result: transposed, batch: 1, rows: columns, columns: inner)
+            encodeMatrices(lhs: lhs, lhsShape: lhsShape, rhs: transposed, rhsShape: [inner, columns], result: result, rows: rows, columns: columns, inner: inner, count: 1, alpha: alpha, beta: beta, transposeFirst: false, transposeSecond: false)
+            return
+        }
+        encodeMatrices(lhs: lhs, lhsShape: lhsShape, rhs: rhs, rhsShape: rhsShape, result: result, rows: rows, columns: columns, inner: inner, count: 1, alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
+    }
+
+    /// Records a Metal Performance Shaders product of `count` matrices of each operand, which follow each other in memory.
+    private static func encodeMatrices(lhs: GPUBuffer, lhsShape: [Int], rhs: GPUBuffer, rhsShape: [Int], result: GPUBuffer, rows: Int, columns: Int, inner: Int, count: Int, alpha: Float, beta: Float, transposeFirst: Bool, transposeSecond: Bool) {
+        let context = GPUContext.of(reading: [lhs, rhs, result], writing: [result])
+        let key = GPUMatrixProductKey(transposeLeft: transposeFirst, transposeRight: transposeSecond, rows: rows, columns: columns, inner: inner, alpha: alpha, beta: beta)
+        let kernel = GPUCache.value(in: context.matrixProducts, for: key) {
+            // The creation autoreleases descriptors, see ``GPUContext``.
+            autoreleasepool {
+                GPUMatrixProductKernel(kernel: MPSMatrixMultiplication(
+                    device: context.device,
+                    transposeLeft: transposeFirst,
+                    transposeRight: transposeSecond,
+                    resultRows: rows,
+                    resultColumns: columns,
+                    interiorColumns: inner,
+                    alpha: Double(alpha),
+                    beta: Double(beta),
+                ))
+            }
+        }
+        func matrix(_ buffer: GPUBuffer, rows: Int, columns: Int) -> MPSMatrix {
+            let rowBytes = columns * MemoryLayout<Float>.stride
+            let descriptor = MPSMatrixDescriptor(rows: rows, columns: columns, matrices: count, rowBytes: rowBytes, matrixBytes: rows * rowBytes, dataType: .float32)
+            return MPSMatrix(buffer: buffer.storage.buffer, offset: buffer.byteOffset, descriptor: descriptor)
+        }
+        context.commands(reading: [lhs, rhs, result], writing: [result]) { commandBuffer in
+            // The matrices are created while the stream is locked, because a storage that no command used yet can still replace
+            // its buffer.
+            let left = matrix(lhs, rows: lhsShape[0], columns: lhsShape[1])
+            let right = matrix(rhs, rows: rhsShape[0], columns: rhsShape[1])
+            let target = matrix(result, rows: rows, columns: columns)
+            kernel.kernel.encode(commandBuffer: commandBuffer, leftMatrix: left, rightMatrix: right, resultMatrix: target)
+        }
+    }
+}
+
+/// The parameters of a Metal Performance Shaders kernel of a matrix product.
+struct GPUMatrixProductKey: Hashable {
+    var transposeLeft: Bool
+    var transposeRight: Bool
+    var rows: Int
+    var columns: Int
+    var inner: Int
+    var alpha: Float
+    var beta: Float
+}
+
+// `@unchecked Sendable`: Metal Performance Shaders does not mark its kernels as `Sendable`. The kernel does not change when
+// it encodes, and it encodes only while the context holds the lock of its stream.
+/// A Metal Performance Shaders kernel of a matrix product.
+struct GPUMatrixProductKernel: @unchecked Sendable {
+    let kernel: MPSMatrixMultiplication
+}
+#endif

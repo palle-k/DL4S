@@ -67,7 +67,7 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Coda
         filters = Tensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
             mean: 0,
-            stdev: 2 / Element(kernelSize.height * kernelSize.width * inputChannels).sqrt(),
+            stdev: (2 / Element(kernelSize.height * kernelSize.width * inputChannels)).sqrt(),
             requiresGradient: true,
             using: &generator,
         )
@@ -81,6 +81,10 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Coda
         #endif
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.convolved2d(filters: filters, bias: bias, padding: padding, stride: stride)
     }
@@ -131,7 +135,7 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
         filters = Tensor(
             normalDistributedWithShape: [outputChannels, inputChannels, kernelSize.height, kernelSize.width],
             mean: 0,
-            stdev: 2 / Element(kernelSize.height * kernelSize.width * inputChannels).sqrt(),
+            stdev: (2 / Element(kernelSize.height * kernelSize.width * inputChannels)).sqrt(),
             requiresGradient: true,
             using: &generator,
         )
@@ -145,6 +149,10 @@ public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceT
         #endif
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.transposedConvolved2d(filters: filters, bias: bias, inset: inset, stride: stride)
     }

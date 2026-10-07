@@ -38,12 +38,12 @@ struct TensorContext<Element: NumericType, Device: DeviceType>: Sendable {
         case perSource([@Sendable (Tensor<Element, Device>, consuming Tensor<Element, Device>?) -> Tensor<Element, Device>])
 
         // swiftformat:disable spaceAroundBrackets
+        // Operations use this form when one kernel produces the gradients of all sources at once, so the kernel runs once per
+        // backward pass and no state needs to be shared between closures.
         /// One closure for all sources.
         ///
         /// The closure receives the gradient of the result and one accumulator per source.
         /// It returns the accumulated gradient of every source in source order, or nil for a source that does not require a gradient.
-        /// Operations use this form when one kernel produces the gradients of all sources at once,
-        /// so the kernel runs once per backward pass and no state needs to be shared between closures.
         case allSources(@Sendable (Tensor<Element, Device>, consuming [Tensor<Element, Device>?]) -> [Tensor<Element, Device>?])
         // swiftformat:enable spaceAroundBrackets
     }
@@ -101,10 +101,10 @@ extension Tensor {
         sources: [Self],
         backpropagate: @escaping @Sendable (_ resultGradient: Self, _ gradients: inout [GradientAccumulator<Element, Device>]) -> Void,
     ) -> Self {
-        guard sources.contains(where: \.requiresGradient) else {
+        guard sources.contains(where: { $0.requiresGradient }) else {
             return self
         }
-        let (isRequested, shapes) = (sources.map(\.requiresGradient), sources.map(\.shape))
+        let (isRequested, shapes) = (sources.map { $0.requiresGradient }, sources.map { $0.shape })
         var result = self
         result.context = TensorContext(tag: tag(), sources: sources, backpropagateAll: { resultGradient, accumulated in
             var accumulated = consume accumulated
@@ -269,7 +269,7 @@ extension Tensor {
         let paddedShape = Array(repeating: 1, count: dim - targetShape.count) + targetShape
         let reducedAxes = zip(paddedShape, shape).enumerated()
             .filter { $1.0 == 1 && $1.1 > 1 }
-            .map(\.offset)
+            .map { $0.offset }
         return reduceSum(along: reducedAxes).view(as: targetShape)
     }
 }

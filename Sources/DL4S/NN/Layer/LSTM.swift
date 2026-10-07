@@ -25,11 +25,33 @@
 
 import Foundation
 
+/// State of a Long Short-Term Memory (LSTM) layer.
+public struct LSTMState<Element: NumericType, Device: DeviceType>: Sendable {
+    /// Hidden state, with the shape [batch size, hidden size] for one step or [sequence length, batch size, hidden size] for a sequence
+    public var hiddenState: Tensor<Element, Device>
+
+    /// Cell state, with the shape of the hidden state
+    public var cellState: Tensor<Element, Device>
+
+    /// Creates an LSTM state.
+    /// - Parameters:
+    ///   - hiddenState: Hidden state
+    ///   - cellState: Cell state, with the shape of the hidden state
+    public init(hiddenState: Tensor<Element, Device>, cellState: Tensor<Element, Device>) {
+        self.hiddenState = hiddenState
+        self.cellState = cellState
+    }
+}
+
+/// A Long Short-Term Memory (LSTM) layer.
+///
+/// For every step, the layer computes `c_t = f_t * c_(t-1) + i_t * tanh(x_t W_c + h_(t-1) U_c + b_c)` and
+/// `h_t = o_t * tanh(c_t)`, with the forget gate `f_t`, the input gate `i_t`, and the output gate `o_t`.
 @Layer
 public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable, Sendable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (State, () -> State)
-    public typealias State = (hiddenState: Tensor<Element, Device>, cellState: Tensor<Element, Device>)
+    public typealias State = LSTMState<Element, Device>
 
     public let direction: RNNDirection
 
@@ -112,8 +134,8 @@ public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable,
         inputs.shape[0]
     }
 
-    public func initialState(for inputs: Tensor<Element, Device>) -> (hiddenState: Tensor<Element, Device>, cellState: Tensor<Element, Device>) {
-        (Tensor(repeating: 0, shape: [inputs.shape[1], hiddenSize]), Tensor(repeating: 0, shape: [inputs.shape[1], hiddenSize]))
+    public func initialState(for inputs: Tensor<Element, Device>) -> State {
+        State(hiddenState: Tensor(repeating: 0, shape: [inputs.shape[1], hiddenSize]), cellState: Tensor(repeating: 0, shape: [inputs.shape[1], hiddenSize]))
     }
 
     public func prepare(inputs: Tensor<Element, Device>) -> (Tensor<Element, Device>, Tensor<Element, Device>, Tensor<Element, Device>, Tensor<Element, Device>) {
@@ -150,16 +172,17 @@ public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable,
             let i_t = sigmoid(x_i + matMul(h_p, Ui))
             let o_t = sigmoid(x_o + matMul(h_p, Uo))
 
-            let c_t_partial_1 = f_t * c_p + i_t
-            let c_t_partial_2 = tanh(x_c + matMul(h_p, Uc))
-            let c_t = c_t_partial_1 * c_t_partial_2
+            let c_t = f_t * c_p + i_t * tanh(x_c + matMul(h_p, Uc))
             let h_t = o_t * tanh(c_t)
 
-            return (h_t, c_t)
+            return State(hiddenState: h_t, cellState: c_t)
         }
     }
 
     public func concatenate(_ states: [State]) -> State {
-        (Tensor(stacking: states.map { $0.hiddenState.unsqueezed(at: 0) }, along: 0), Tensor(stacking: states.map { $0.cellState.unsqueezed(at: 0) }, along: 0))
+        State(
+            hiddenState: Tensor(stacking: states.map { $0.hiddenState.unsqueezed(at: 0) }, along: 0),
+            cellState: Tensor(stacking: states.map { $0.cellState.unsqueezed(at: 0) }, along: 0),
+        )
     }
 }

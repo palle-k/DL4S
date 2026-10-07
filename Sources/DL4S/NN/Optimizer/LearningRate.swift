@@ -25,19 +25,39 @@
 
 import Foundation
 
+/// A schedule that gives the learning rate for each step of a training run.
+///
+/// Set the learning rate of the optimizer to the value of the schedule before each step.
 public protocol LearningRateScheduler: Sendable {
+    /// Returns the learning rate at a step.
+    /// - Parameter step: Number of the training step. The first step is 1.
+    /// - Returns: The learning rate at the step.
     func learningRate<Element: NumericType>(atStep step: Int) -> Element
 }
 
+/// The learning rate schedule of [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
+///
+/// The learning rate is `modelDim^(-0.5) * min(step^(-0.5), step * warmupSteps^(-1.5))`. It increases linearly for
+/// the first `warmupSteps` steps and then decreases proportionally to the inverse square root of the step.
 public struct NoamScheduler: LearningRateScheduler {
+    /// Number of steps in which the learning rate increases
     public let warmupSteps: Int
+
+    /// Size of the hidden states of the model
     public let modelDim: Int
 
+    /// Creates a learning rate schedule with warmup and inverse square root decay.
+    /// - Parameters:
+    ///   - warmupSteps: Number of steps in which the learning rate increases
+    ///   - modelDim: Size of the hidden states of the model
     public init(warmupSteps: Int, modelDim: Int) {
         self.warmupSteps = warmupSteps
         self.modelDim = modelDim
     }
 
+    /// Returns the learning rate at a step.
+    /// - Parameter step: Number of the training step. The first step is 1. At step 0, the learning rate is 0.
+    /// - Returns: The learning rate at the step.
     public func learningRate<Element: NumericType>(atStep step: Int) -> Element {
         let step = Float(step)
         let warmupSteps = Float(warmupSteps)

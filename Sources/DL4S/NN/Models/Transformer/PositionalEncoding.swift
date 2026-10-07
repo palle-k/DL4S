@@ -28,8 +28,8 @@ import Synchronization
 
 /// Positional Encoding layer using the encoding method proposed in [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 ///
-/// The layer takes an array of Ints as an input, which indicate the number of elements in each sequence of the minibatch.
-/// It returns a tensor with the shape [max(inputs), hiddenSize].
+/// The layer takes the length of the longest sequence of the minibatch as an input.
+/// It returns a tensor with the shape [length, hiddenSize].
 /// It does not mask out positional encodings for padding elements.
 ///
 /// The layer keeps the longest encoding that it created, and returns its first rows for shorter sequences.
@@ -56,7 +56,11 @@ public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>:
 
     /// Creates a positional encoding matrix
     /// - Parameter maxLen: Maximum sequence length in the current minibatch
-    /// - Returns: Tensor of shape [max(inputs), hiddenSize]
+    /// - Returns: Tensor of shape [maxLen, hiddenSize]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ maxLen: Int) -> Tensor<Element, Device> {
         let encoding = longestEncoding.encoding.withLock { longest in
             if let longest, longest.shape[0] >= maxLen {

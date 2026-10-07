@@ -97,14 +97,18 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codabl
     ///         - Padded decoder inputs using -1 as padding token.
     ///
     /// - Returns: Batch of sequences of log-softmax normalized distributions over the vocabulary of the transformer with shape [batchSize, seqlen, vocabDim]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: (encoderInput: Tensor<Int32, Device>, decoderInput: Tensor<Int32, Device>, encoderInputLengths: [Int], decoderInputLengths: [Int])) -> Tensor<Element, Device> {
         let (encoderInput, decoderInput, encInLens, decInLens) = inputs
 
         let embeddedEncoderInput = prepareInputs(encoderInput)
         let embeddedDecoderInput = prepareInputs(decoderInput)
 
-        let encoderStates = encoder((embeddedEncoderInput, encInLens))
-        let decoded = decoder((embeddedDecoderInput, encoderStates, encInLens, decInLens)) // [batchSize, maxLen, hiddenSize]
+        let encoded = EncodedSequence(states: encoder((embeddedEncoderInput, encInLens)), lengths: encInLens)
+        let decoded = decoder(TransformerDecoderInputs(input: embeddedDecoderInput, lengths: decInLens, encoded: encoded)) // [batchSize, maxLen, hiddenSize]
 
         // [batchSize, maxLen, hiddenSize] x [vocabSize, hiddenSize]^T --> [batchSize, maxLen, vocabSize]
         let deembedded = decoded.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true) + outputBias
@@ -113,26 +117,42 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codabl
     }
 
     /// Greedily decodes the most probable sequence of output symbols given a sequence of input tokens
+    ///
+    /// The model encodes and decodes without dropout, also when its ``Dropout`` layers are active.
     /// - Parameters:
     ///   - inputSequence: Input tokens
     ///   - startToken: First token to feed into the decoder. Subsequent tokens are generated autoregressively.
     ///   - endToken: Token, which ends decoding (end of sequence marker)
     ///   - maxLength: Maximum length of the decoded sequence. If no endToken occurs after maxLength tokens, decoding is aborted.
     /// - Returns: Most probable output sequence determined by greedy decoding.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
-        let encIn = prepareInputs(Tensor([inputSequence]))
-        let encoded = encoder((encIn, [inputSequence.count]))
+        var model = self
+        model.modifyLayers(of: Dropout<Element, Device>.self) { $0.isActive = false }
+        return model.greedilyDecoded(inputSequence: inputSequence, startToken: startToken, endToken: endToken, maxLength: maxLength)
+    }
+
+    /// Greedily decodes the most probable sequence of output symbols with the dropout layers of the model.
+    private func greedilyDecoded(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
+        let encoded = EncodedSequence(states: encoder((prepareInputs(Tensor([inputSequence])), [inputSequence.count])), lengths: [inputSequence.count])
+        var state = decoder.makeState(batchSize: 1, encoded: encoded)
 
         var tokens: [Int32] = []
+        var token = startToken
         for _ in 0 ..< maxLength {
-            let tokenInput = [[startToken] + tokens]
-            let decIn = prepareInputs(Tensor(tokenInput))
-            let output = decoder((decIn, encoded, [inputSequence.count], [tokenInput[0].count]))
-            let deembedded = output.broadcastMatrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true)
+            // Every position of the step is less than state.count + 1.
+            let positions = positionalEncoding(state.count + 1).gatheringRows(at: state.positions(count: 1)) // [1, 1, embedDim]
+            let embedded = embedding(Tensor([token])).view(as: 1, 1, -1)
+            let input = dropout(embedded * Tensor(Element(embedded.shape[2]).sqrt()) + positions)
+            let decoded = decoder.decode(input, state: &state) // [1, 1, hiddenSize]
 
-            let nextToken = deembedded[0, -1].argmax()
-            tokens.append(Int32(nextToken))
-            if nextToken == endToken {
+            let logits = decoded.view(as: 1, -1).matrixMultiplied(with: embedding.embeddingMatrix, transposeOther: true) + outputBias
+            token = Int32(logits[0].argmax())
+            tokens.append(token)
+            if token == endToken {
                 break
             }
         }

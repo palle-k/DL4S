@@ -40,6 +40,10 @@ public struct Dropout<Element: RandomizableType, Device: DeviceType>: Codable, S
         self.rate = rate
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         isActive ? inputs.droppedOut(rate: rate) : inputs
     }

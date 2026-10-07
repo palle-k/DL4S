@@ -64,6 +64,10 @@ public struct Adagrad<Element: NumericType, Device: DeviceType>: Optimizer, Send
         gradientSums = Self.zeroState(for: layout.children(of: "gradientSums"))
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&gradientSums, for: parameters)

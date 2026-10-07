@@ -31,25 +31,6 @@ import Accelerate
 import Foundation
 
 extension Int32: CPUNumeric {
-    public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, stride: Int, count: Int) {
-        let dst = result.pointer(capacity: count &* stride)
-        #if MKL_ENABLE
-        if stride == 1 {
-            ippsSet_32s(value, dst, Int32(count))
-        } else {
-            for i in 0 ..< count {
-                dst[i &* stride] = value
-            }
-        }
-        #elseif canImport(Accelerate)
-        vDSP_vfilli([value], dst, stride, UInt(count))
-        #else
-        for i in 0 ..< count {
-            dst[i &* stride] = value
-        }
-        #endif
-    }
-
     public static func fill(value: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let dst = result.pointer(capacity: count)
         #if MKL_ENABLE
@@ -107,6 +88,14 @@ extension Int32: CPUNumeric {
         let dst = result.pointer(capacity: count)
         for i in 0 ..< count {
             dst[i] = src[i] &* rhs
+        }
+    }
+
+    public static func vsDiv(lhs: UnsafeBufferPointer<Int32>, rhs: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
+        let src = lhs.pointer(capacity: count)
+        let dst = result.pointer(capacity: count)
+        for i in 0 ..< count {
+            dst[i] = src[i] / rhs
         }
     }
 
@@ -177,15 +166,6 @@ extension Int32: CPUNumeric {
         var dst: Int32 = 0
         for i in 0 ..< count {
             dst &+= a[i] &* b[i]
-        }
-        return dst
-    }
-
-    public static func sum(val: UnsafeBufferPointer<Int32>, stride: Int, count: Int) -> Int32 {
-        let src = val.pointer(capacity: (count - 1) * stride + 1)
-        var dst: Int32 = 0
-        for i in 0 ..< count {
-            dst &+= src[i &* stride]
         }
         return dst
     }
@@ -284,17 +264,9 @@ extension Int32: CPUNumeric {
         return (minI, minV)
     }
 
-    public static func copy(values: UnsafeBufferPointer<Int32>, srcStride: Int, result: UnsafeMutableBufferPointer<Int32>, dstStride: Int, count: Int) {
-        let src = values.pointer(capacity: count * srcStride)
-        let dst = result.pointer(capacity: count * dstStride)
-        for i in 0 ..< count {
-            dst[i &* dstStride] = src[i &* srcStride]
-        }
-    }
-
     public static func arange(start: Int32, end: Int32, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let dst = result.pointer(capacity: count)
-        let increment = end / Int32(count)
+        let increment = (end - start) / Int32(count)
         #if MKL_ENABLE
         ippsVectorSlope_32s(dst, Int32(count), Double(start), Double(increment))
         #else

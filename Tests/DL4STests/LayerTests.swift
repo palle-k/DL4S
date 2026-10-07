@@ -415,6 +415,58 @@ struct LayerTests {
         #expect(!alexNet.isDropoutActive)
     }
 
+    @Test func testBatchNormUpdatesRunningStatisticsAndUsesThemForInference() throws {
+        var generator = WyHash(seed: 9)
+        var layer = BatchNorm<Double, CPU>(inputSize: [3, 1, 1], momentum: 0.25)
+        let input = Tensor<Double, CPU>(normalDistributedWithShape: [8, 3, 2, 5], mean: 2, stdev: 3, using: &generator)
+
+        #expect(layer(input) == input.batchNormalized(scale: layer.scale, shift: layer.shift).output)
+
+        // The running statistics of a channel combine the statistics of all positions of the channel.
+        let channels = input.permuted(to: [1, 0, 2, 3]).view(as: [3, -1])
+        let mean = channels.reduceMean(along: [1])
+        let centered = channels - mean.view(as: [3, 1])
+        let variance = (centered * centered).reduceMean(along: [1])
+        expectClose(layer.runningMean.view(as: [3]), mean * 0.75, tolerance: 1e-20)
+        expectClose(layer.runningVariance.view(as: [3]), variance * 0.75 + 0.25, tolerance: 1e-20)
+
+        layer.isTraining = false
+        let output = layer(input)
+        expectClose(output, input.batchNormalized(scale: layer.scale, shift: layer.shift, mean: layer.runningMean, variance: layer.runningVariance), tolerance: 0)
+        expectClose(layer(input), output, tolerance: 0)
+
+        var restored = BatchNorm<Double, CPU>(inputSize: [3, 1, 1])
+        try SafetensorsDecoder().load(into: &restored, from: SafetensorsEncoder().encode(layer))
+        #expect(restored.runningMean == layer.runningMean)
+        #expect(restored.runningVariance == layer.runningVariance)
+    }
+
+    @Test func testEmbeddingLooksUpRowsAndAddsGradientsOfRepeatedTokens() {
+        var generator = WyHash(seed: 5)
+        let embedding = Embedding<Float, CPU>(inputFeatures: 6, outputSize: 3, ignoreIndex: 4, using: &generator)
+        let result = embedding(Tensor<Int32, CPU>([1, 4, 1, 5]))
+
+        #expect(result.shape == [4, 3])
+        #expect(result[0] == embedding.embeddingMatrix[1])
+        #expect(result[1] == Tensor(repeating: 0, shape: [3]))
+        #expect(result[2] == embedding.embeddingMatrix[1])
+        #expect(result[3] == embedding.embeddingMatrix[5])
+
+        let gradient = result.reduceSum().gradients(of: [embedding.embeddingMatrix])[0]
+        #expect(gradient == Tensor([[0, 0, 0], [2, 2, 2], [0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 1, 1]]))
+    }
+
+    @Test func testMultiHeadAttentionSharesKeyHeadsBetweenQueryHeads() {
+        var generator = WyHash(seed: 3)
+        let layer = MultiHeadAttention<Float, CPU>(heads: 4, keyValueHeads: 2, hiddenDim: 16, keyDim: 4, valueDim: 3, dropout: 0, using: &generator)
+        #expect(layer.keyValueHeads == 2)
+        #expect([layer.qDense.shape, layer.kDense.shape, layer.vDense.shape, layer.fc.shape] == [[16, 16], [16, 8], [16, 6], [12, 16]])
+        let input = Tensor<Float, CPU>(uniformlyDistributedWithShape: [2, 5, 16], min: -1, max: 1, using: &generator)
+        let output = layer((input, input, input, nil))
+        #expect(output.shape == [2, 5, 16])
+        #expect(output.reduceSum().gradients(of: [layer.kDense, layer.vDense]).map(\.shape) == [[16, 8], [16, 6]])
+    }
+
     @Test func testTensorPathParsesAndPrints() {
         let path = TensorPath("encoder.blocks.3.Wq")
         #expect(path.segments == [.name("encoder"), .name("blocks"), .index(3), .name("Wq")])

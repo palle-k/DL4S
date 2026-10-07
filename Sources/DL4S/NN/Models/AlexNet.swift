@@ -145,6 +145,10 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: Codable, S
         }
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         classifier(avgPool(featureNet(inputs)))
     }

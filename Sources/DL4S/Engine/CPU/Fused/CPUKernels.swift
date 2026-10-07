@@ -31,7 +31,8 @@ import Foundation
 /// accelerated primitives of ``CPUNumeric`` and through element-wise loops, so intermediate values do not leave the cache.
 /// Scratch buffers are allocated for one call of a kernel and released at its end.
 enum CPUKernels {
-    /// Number of elements of a block. Some kernels keep a few scratch buffers of this size, which together fit into the L1 cache.
+    // Some kernels keep a few scratch buffers of this size, which together fit into the L1 cache.
+    /// Number of elements of a block.
     static let blockSize = 4096
 
     /// Upper bound for the number of elements of the scratch matrices of convolutions.
@@ -108,8 +109,9 @@ enum CPUKernels {
         N.sqrt(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
-    /// Computes `tanh(scale * x / 2)`, from which `sigmoid(scale * x) = tanh(scale * x / 2) / 2 + 1 / 2` follows without an overflow
-    /// for large magnitudes. Kernels that use the sigmoid in a further loop apply the last step there.
+    // The sigmoid follows from it without an overflow for large magnitudes, and kernels that use the sigmoid in a further
+    // loop apply the last step there.
+    /// Computes `tanh(scale * x / 2)`, from which `sigmoid(scale * x) = tanh(scale * x / 2) / 2 + 1 / 2` follows.
     ///
     /// The input and the result can be the same memory.
     @inline(__always)
@@ -227,15 +229,10 @@ enum CPUKernels {
         }
     }
 
-    /// Whether a shape broadcasts to another shape.
-    static func broadcasts(_ shape: [Int], to target: [Int]) -> Bool {
-        shape.count <= target.count && zip(shape.reversed(), target.reversed()).allSatisfy { $0 == $1 || $0 == 1 }
-    }
-
     /// Repeats the values along the axes that broadcast the shape of the values to the shape of the result.
     /// The shape of the values must broadcast to the shape of the result.
     static func broadcast<N: NumericType>(_ values: ShapedBuffer<N, CPU>, into result: MutableShapedBuffer<N, CPU>) {
-        precondition(broadcasts(values.shape, to: result.shape), "The values do not broadcast to the result.")
+        precondition(ShapeUtil.broadcasts(values.shape, to: result.shape), "The values do not broadcast to the result.")
         let shape = result.shape
         let sourceShape = Array(repeating: 1, count: shape.count - values.dim) + values.shape
         // A broadcast axis has the stride 0, so every position along it reads the same element.

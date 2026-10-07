@@ -175,7 +175,7 @@ public extension FusedOperationsType {
             math.release()
         }
         // input * sigmoid(1.702 * input)
-        math.sigmoid(input, scale: N(1.702), into: result)
+        math.sigmoid(input, scale: N(FusedConstants.geluSlope), into: result)
         math.multiply(result, input, into: result)
     }
 
@@ -187,11 +187,11 @@ public extension FusedOperationsType {
         // (s + 1.702 * input * s * (1 - s)) * outputGradient with s = sigmoid(1.702 * input)
         math.write(inputGradient) { dx in
             let s = math.temporary(input.shape)
-            math.sigmoid(input, scale: N(1.702), into: s)
+            math.sigmoid(input, scale: N(FusedConstants.geluSlope), into: s)
             math.subtract(1, s, into: dx)
             math.multiply(dx, s, into: dx)
             math.multiply(dx, input, into: dx)
-            math.multiply(dx, N(1.702), into: dx)
+            math.multiply(dx, N(FusedConstants.geluSlope), into: dx)
             math.add(dx, s, into: dx)
             math.multiply(dx, outputGradient, into: dx)
         }
@@ -343,9 +343,15 @@ public extension FusedOperationsType {
         defer {
             math.release()
         }
-        math.exp(input, into: result)
+        // max(x, 0) + log(1 + exp(-|x|)), because exp(x) overflows for large x. -|x| = x - 2 max(x, 0).
+        let positive = math.temporary(input.shape)
+        math.relu(input, into: positive)
+        math.multiply(positive, -2, into: result)
+        math.add(result, input, into: result)
+        math.exp(result, into: result)
         math.add(result, 1, into: result)
         math.log(result, into: result)
+        math.add(result, positive, into: result)
     }
 
     static func softplusBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {

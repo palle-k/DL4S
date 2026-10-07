@@ -385,15 +385,22 @@ extension KernelCase {
                 queries: uniform([2, 3, 6, 4], seed: 1, requiresGradient: true), keys: uniform([2, 3, 6, 4], seed: 2), values: uniform([2, 3, 6, 3], seed: 3, requiresGradient: true), mask: mask,
             )
         },
+        KernelCase("scaledDotProductAttention with grouped heads") { ops, accumulation, inputs in
+            let mask = DoubleTensor((0 ..< 24).map { $0 % 5 == 1 ? 1 : 0 }, shape: [1, 4, 1, 6])
+            return attention(
+                ops, accumulation, inputs,
+                queries: uniform([2, 4, 5, 4], seed: 1, requiresGradient: true), keys: uniform([2, 2, 6, 4], seed: 2, requiresGradient: true), values: uniform([2, 1, 6, 3], seed: 3, requiresGradient: true), mask: mask,
+            )
+        },
         KernelCase("scaledDotProductAttention without mask") { ops, accumulation, inputs in
             attention(
                 ops, accumulation, inputs,
                 queries: uniform([2, 3, 5, 4], seed: 1, requiresGradient: true), keys: uniform([2, 3, 6, 4], seed: 2, requiresGradient: true), values: uniform([2, 3, 6, 3], seed: 3), mask: nil,
             )
         },
-    ] + [[true, true, true, true, true, true, true], [false, false, true, true, false, false, false], [true, false, false, false, false, true, false]].map { computes in
-        KernelCase("multiHeadAttention computing \(computes)") { ops, accumulation, inputs in
-            let shapes = [[2, 5, 8], [2, 6, 8], [2, 6, 8], [8, 8], [8, 8], [8, 12], [12, 7]]
+    ] + [([true, true, true, true, true, true, true], 2), ([false, false, true, true, false, false, false], 2), ([true, false, false, false, false, true, false], 2), ([true, true, true, true, true, true, true], 1)].map { computes, keyHeads in
+        KernelCase("multiHeadAttention with \(keyHeads) key heads computing \(computes)") { ops, accumulation, inputs in
+            let shapes = [[2, 5, 8], [2, 6, 8], [2, 6, 8], [8, 8], [8, 4 * keyHeads], [8, 6 * keyHeads], [12, 7]]
             let sources = shapes.enumerated().map { index, shape in
                 uniform(shape, min: -1, max: 1, seed: UInt64(index + 1), requiresGradient: computes[index])
             }

@@ -31,25 +31,6 @@ import Accelerate
 import Foundation
 
 extension Double: CPUNumeric {
-    public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, stride: Int, count: Int) {
-        let dst = result.pointer(capacity: count &* stride)
-        #if MKL_ENABLE
-        if stride == 1 {
-            ippsSet_64f(value, dst, Int32(count))
-        } else {
-            for i in 0 ..< count {
-                dst[i &* stride] = value
-            }
-        }
-        #elseif canImport(Accelerate)
-        vDSP_vfillD([value], dst, stride, UInt(count))
-        #else
-        for i in 0 ..< count {
-            dst[i &* stride] = value
-        }
-        #endif
-    }
-
     public static func fill(value: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         let dst = result.pointer(capacity: count)
         #if MKL_ENABLE
@@ -132,6 +113,20 @@ extension Double: CPUNumeric {
         #else
         for i in 0 ..< count {
             dst[i] = lhs[i] * rhs
+        }
+        #endif
+    }
+
+    public static func vsDiv(lhs: UnsafeBufferPointer<Double>, rhs: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
+        let src = lhs.pointer(capacity: count)
+        let dst = result.pointer(capacity: count)
+        #if MKL_ENABLE
+        ippsDivC_64f(src, rhs, dst, Int32(count))
+        #elseif canImport(Accelerate)
+        vDSP_vsdivD(src, 1, [rhs], dst, 1, UInt(count))
+        #else
+        for i in 0 ..< count {
+            dst[i] = src[i] / rhs
         }
         #endif
     }
@@ -241,30 +236,6 @@ extension Double: CPUNumeric {
         }
         #endif
         return dst
-    }
-
-    public static func sum(val: UnsafeBufferPointer<Double>, stride: Int, count: Int) -> Double {
-        let src = val.pointer(capacity: (count - 1) * stride + 1)
-        var dst: Double = 0
-
-        #if MKL_ENABLE
-        if stride == 1 {
-            ippsSum_64f(src, Int32(count), &dst)
-        } else {
-            for i in 0 ..< count {
-                dst += src[i &* stride]
-            }
-        }
-        return dst
-        #elseif canImport(Accelerate)
-        vDSP_sveD(src, stride, &dst, UInt(count))
-        return dst
-        #else
-        for i in 0 ..< count {
-            dst += src[i &* stride]
-        }
-        return dst
-        #endif
     }
 
     public static func gemm(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), alpha: Self, beta: Self, transposeFirst: Bool, transposeSecond: Bool) {
@@ -400,22 +371,9 @@ extension Double: CPUNumeric {
         #endif
     }
 
-    public static func copy(values: UnsafeBufferPointer<Double>, srcStride: Int, result: UnsafeMutableBufferPointer<Double>, dstStride: Int, count: Int) {
-        let src = values.pointer(capacity: count * srcStride)
-        let dst = result.pointer(capacity: count * dstStride)
-
-        #if MKL_ENABLE || canImport(Accelerate)
-        cblas_dcopy(Int32(count), src, Int32(srcStride), dst, Int32(dstStride))
-        #else
-        for i in 0 ..< count {
-            dst[i &* dstStride] = src[i &* srcStride]
-        }
-        #endif
-    }
-
     public static func arange(start: Double, end: Double, result: UnsafeMutableBufferPointer<Double>, count: Int) {
         let dst = result.pointer(capacity: count)
-        let increment = end / Double(count)
+        let increment = (end - start) / Double(count)
         #if MKL_ENABLE
         ippsVectorSlope_64f(dst, Int32(count), start, increment)
         #elseif canImport(Accelerate)

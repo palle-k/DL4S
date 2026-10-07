@@ -40,6 +40,10 @@ public extension Tensor {
     ///   - lhs: First tensor
     ///   - rhs: Second tensor
     /// - Returns: Broadcast added result
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func + (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -50,40 +54,18 @@ public extension Tensor {
             Device.Engine.broadcastAdd(lhs: lhs.values, rhs: rhs.values, result: resultValues)
         }
 
-        if lhs.requiresGradient || rhs.requiresGradient {
-            @Sendable func grad(a: Self, b: Self, grad: Self) -> Self {
-                OperationGroup.capture(named: "∇+") {
-                    let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
-                    let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                        .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
-
-                    var tmpReducedShape = aPadded
-
-                    for a in aReducedAxes.reversed() {
-                        tmpReducedShape.remove(at: a)
-                    }
-
-                    return grad
-                        .reduceSum(along: aReducedAxes)
-                        .view(as: a.shape)
-                }
-            }
-
-            let resultContext = TensorContext<Element, Device>(
-                tag: "+",
-                sources: [lhs, rhs],
-                backpropagate: [
-                    { vectorGradient in
-                        grad(a: lhs, b: rhs, grad: vectorGradient)
-                    }, { vectorGradient in
-                        grad(a: rhs, b: lhs, grad: vectorGradient)
-                    },
-                ],
-            )
-
-            return Tensor(using: resultValues, context: resultContext)
-        } else {
+        // The closure and the array of the sources are only built when a gradient is needed.
+        guard lhs.requiresGradient || rhs.requiresGradient else {
             return Tensor(using: resultValues, context: nil)
+        }
+        let (lhsShape, rhsShape) = (lhs.shape, rhs.shape)
+        return Tensor(using: resultValues, context: nil).attachingContext(tag: "+", sources: [lhs, rhs]) { resultGradient, gradients in
+            if gradients[0].isRequested {
+                gradients[0].add(resultGradient.reducingBroadcast(to: lhsShape))
+            }
+            if gradients[1].isRequested {
+                gradients[1].add(resultGradient.reducingBroadcast(to: rhsShape))
+            }
         }
     }
 
@@ -99,6 +81,10 @@ public extension Tensor {
     ///   - lhs: First tensor
     ///   - rhs: Second tensor
     /// - Returns: Broadcast multiplied result
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func * (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultValues = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -109,38 +95,17 @@ public extension Tensor {
             Device.Engine.broadcastMul(lhs: lhs.values, rhs: rhs.values, result: resultValues)
         }
 
-        if lhs.requiresGradient || rhs.requiresGradient {
-            @Sendable func grad(a: Self, b: Self, grad: Self) -> Self {
-                OperationGroup.capture(named: "∇⊙") {
-                    let aPadded = Array(repeating: 1, count: grad.dim - a.dim) + a.shape
-                    let aReducedAxes = zip(aPadded, grad.shape).enumerated()
-                        .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
-
-                    var tmp1reducedShape = aPadded
-
-                    for a in aReducedAxes.reversed() {
-                        tmp1reducedShape.remove(at: a)
-                    }
-
-                    return (b * grad).reduceSum(along: aReducedAxes).view(as: a.shape)
-                }
-            }
-
-            let resultContext = TensorContext<Element, Device>(
-                tag: "⊙",
-                sources: [lhs, rhs],
-                backpropagate: [
-                    { vectorGradient in
-                        grad(a: lhs, b: rhs, grad: vectorGradient)
-                    }, { vectorGradient in
-                        grad(a: rhs, b: lhs, grad: vectorGradient)
-                    },
-                ],
-            )
-
-            return Tensor(using: resultValues, context: resultContext)
-        } else {
+        // The closure and the array of the sources are only built when a gradient is needed.
+        guard lhs.requiresGradient || rhs.requiresGradient else {
             return Tensor(using: resultValues, context: nil)
+        }
+        return Tensor(using: resultValues, context: nil).attachingContext(tag: "⊙", sources: [lhs, rhs]) { resultGradient, gradients in
+            if gradients[0].isRequested {
+                gradients[0].add((resultGradient * rhs).reducingBroadcast(to: lhs.shape))
+            }
+            if gradients[1].isRequested {
+                gradients[1].add((resultGradient * lhs).reducingBroadcast(to: rhs.shape))
+            }
         }
     }
 
@@ -156,6 +121,10 @@ public extension Tensor {
     ///   - lhs: First tensor
     ///   - rhs: Second tensor
     /// - Returns: Broadcast  difference
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func - (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -166,48 +135,18 @@ public extension Tensor {
             Device.Engine.broadcastSub(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
         }
 
-        if lhs.requiresGradient || rhs.requiresGradient {
-            let resultContext = TensorContext(
-                tag: "-",
-                sources: [lhs, rhs],
-                backpropagateAccumulate: [
-                    { resultGradient, acc in
-                        OperationGroup.capture(named: "∇₁-") {
-                            let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
-                            let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
-
-                            var tmpReducedShape = lhsPadded
-
-                            for a in lhsReducedAxes.reversed() {
-                                tmpReducedShape.remove(at: a)
-                            }
-
-                            let gradient = resultGradient.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
-                            return acc.map { $0 + gradient } ?? gradient
-                        }
-                    }, { resultGradient, acc in
-                        OperationGroup.capture(named: "∇₂-") {
-                            let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
-                            let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
-
-                            var tmpReducedShape = rhsPadded
-
-                            for a in rhsReducedAxes.reversed() {
-                                tmpReducedShape.remove(at: a)
-                            }
-
-                            let gradient = resultGradient.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
-                            return acc.map { $0 - gradient } ?? -gradient
-                        }
-                    },
-                ],
-            )
-
-            return Tensor(using: resultBuffer, context: resultContext)
-        } else {
+        // The closure and the array of the sources are only built when a gradient is needed.
+        guard lhs.requiresGradient || rhs.requiresGradient else {
             return Tensor(using: resultBuffer, context: nil)
+        }
+        let (lhsShape, rhsShape) = (lhs.shape, rhs.shape)
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "-", sources: [lhs, rhs]) { resultGradient, gradients in
+            if gradients[0].isRequested {
+                gradients[0].add(resultGradient.reducingBroadcast(to: lhsShape))
+            }
+            if gradients[1].isRequested {
+                gradients[1].add(-resultGradient.reducingBroadcast(to: rhsShape))
+            }
         }
     }
 
@@ -223,6 +162,10 @@ public extension Tensor {
     ///   - lhs: First tensor
     ///   - rhs: Second tensor
     /// - Returns: Broadcast quotient
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func / (lhs: Self, rhs: Self) -> Self {
         let resultShape = shapeForBroadcastedOperands(lhs.shape, rhs.shape)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
@@ -233,51 +176,17 @@ public extension Tensor {
             Device.Engine.broadcastDiv(lhs: lhs.values, rhs: rhs.values, result: resultBuffer)
         }
 
-        if lhs.requiresGradient || rhs.requiresGradient {
-            let context = TensorContext(
-                tag: "÷",
-                sources: [lhs, rhs],
-                backpropagateAccumulate: [
-                    { resultGradient, acc in
-                        OperationGroup.capture(named: "∇₁÷") {
-                            let lhsPadded = Array(repeating: 1, count: resultGradient.dim - lhs.dim) + lhs.shape
-                            let lhsReducedAxes = zip(lhsPadded, resultGradient.shape).enumerated()
-                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
-
-                            var tmp1reducedShape = lhsPadded
-
-                            for a in lhsReducedAxes.reversed() {
-                                tmp1reducedShape.remove(at: a)
-                            }
-
-                            let d = resultGradient / rhs
-                            let gradient = d.reduceSum(along: lhsReducedAxes).view(as: lhs.shape)
-                            return acc.map { $0 + gradient } ?? gradient
-                        }
-                    }, { resultGradient, acc in
-                        OperationGroup.capture(named: "∇₂÷") {
-                            let rhsPadded = Array(repeating: 1, count: resultGradient.dim - rhs.dim) + rhs.shape
-                            let rhsReducedAxes = zip(rhsPadded, resultGradient.shape).enumerated()
-                                .filter { $1.0 == 1 && $1.1 > 1 }.map(\.offset)
-
-                            var tmp1reducedShape = rhsPadded
-
-                            for a in rhsReducedAxes.reversed() {
-                                tmp1reducedShape.remove(at: a)
-                            }
-
-                            let m = resultGradient * lhs
-                            let d = m / (rhs * rhs)
-                            let gradient = d.reduceSum(along: rhsReducedAxes).view(as: rhs.shape)
-                            return acc.map { $0 - gradient } ?? -gradient
-                        }
-                    },
-                ],
-            )
-
-            return Tensor(using: resultBuffer, context: context)
-        } else {
+        // The closure and the array of the sources are only built when a gradient is needed.
+        guard lhs.requiresGradient || rhs.requiresGradient else {
             return Tensor(using: resultBuffer, context: nil)
+        }
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "÷", sources: [lhs, rhs]) { resultGradient, gradients in
+            if gradients[0].isRequested {
+                gradients[0].add((resultGradient / rhs).reducingBroadcast(to: lhs.shape))
+            }
+            if gradients[1].isRequested {
+                gradients[1].add(-(resultGradient * lhs / (rhs * rhs)).reducingBroadcast(to: rhs.shape))
+            }
         }
     }
 
@@ -285,6 +194,10 @@ public extension Tensor {
     ///
     /// - Parameter value: Tensor to negate
     /// - Returns: Negated tensor
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static prefix func - (value: Self) -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: value.shape, type: Element.self)
         Device.Engine.vNeg(val: value.values.values, result: resultBuffer.values, count: value.count)
@@ -309,6 +222,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to add to lhs
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func += (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -329,6 +246,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to subtract from lhs
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func -= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -349,6 +270,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to multiply with lhs
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func *= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -369,6 +294,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - lhs: Tensor to update
     ///   - rhs: Tensor to divide lhs with
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func /= (lhs: inout Self, rhs: Self) {
         let originalShape = lhs.shape
         #if DEBUG
@@ -388,6 +317,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - power: Exponent
     /// - Returns: self broadcast exponentiated by power
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func raised(toPowerOf power: Self) -> Self {
         (log() * power).exp()
     }
@@ -398,6 +331,10 @@ public extension Tensor {
     ///   - first: First tensor
     ///   - second: Second tensor
     /// - Returns: Element wise maxima between first and second value tensors
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func max(_ first: Self, _ second: Self) -> Self {
         precondition(first.shape == second.shape, "Shapes must be equal")
         let resultBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
@@ -433,6 +370,10 @@ public extension Tensor {
     ///   - first: First tensor
     ///   - second: Other tensors
     /// - Returns: Element wise minima between first and second value tensors
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     static func min(_ first: Self, _ second: Self) -> Self {
         precondition(first.shape == second.shape, "Shapes must be equal")
         let resultBuffer = Device.Memory.allocateBuffer(withShape: first.shape, type: Element.self)
@@ -443,7 +384,7 @@ public extension Tensor {
             let contextTensor = Tensor(using: contextBuffer, context: nil)
 
             let context = TensorContext(
-                tag: "max",
+                tag: "min",
                 sources: [first, second],
                 backpropagate: [
                     { targetGrad in

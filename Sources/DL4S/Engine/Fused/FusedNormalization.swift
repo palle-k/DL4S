@@ -33,14 +33,14 @@ public extension FusedOperationsType {
         defer {
             math.release()
         }
-        // mean(input * input) - mean(input) * mean(input)
-        let mean = math.temporary(result.shape)
+        // mean((input - mean(input))²), which cannot be negative, as mean(input²) - mean(input)² can be after rounding
+        let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
+        let mean = math.temporary(keptShape)
         let squares = math.temporary(input.shape)
         math.mean(input, along: axes, into: mean)
-        math.multiply(input, input, into: squares)
+        math.subtract(input, mean, into: squares)
+        math.multiply(squares, squares, into: squares)
         math.mean(squares, along: axes, into: result)
-        math.multiply(mean, mean, into: mean)
-        math.subtract(result, mean, into: result)
     }
 
     static func varianceBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axes: [Int], inputGradient: GradientBuffer<N, Device>?) {
@@ -110,16 +110,15 @@ public extension FusedOperationsType {
             math.release()
         }
         // The statistics have the shape of the input without the batch axis, which broadcasts to the input.
+        // The variance of the centered values cannot be negative, which mean(input²) - mean(input)² can be after rounding.
         let squares = math.temporary(input.shape)
         let deviation = math.temporary(mean.shape)
         math.mean(input, along: [0], into: mean)
-        math.multiply(input, input, into: squares)
+        math.subtract(input, mean, into: result)
+        math.multiply(result, result, into: squares)
         math.mean(squares, along: [0], into: variance)
-        math.multiply(mean, mean, into: deviation)
-        math.subtract(variance, deviation, into: variance)
         math.sqrt(variance, into: deviation)
         math.add(deviation, epsilon, into: deviation)
-        math.subtract(input, mean, into: result)
         math.divide(result, deviation, into: result)
         math.multiply(result, scale, into: result)
         math.add(result, shift, into: result)
@@ -245,10 +244,21 @@ extension FusedOperationsType {
             math.multiply(normalizedGradient, normalized, into: normalizedGradient)
             math.mean(normalizedGradient, along: axes, into: statistic)
             math.multiply(statistic, divisor, into: statistic)
+            // Rows of equal values have the normalized values 0 and the statistic 0. The smallest normal number keeps their
+            // quotient at 0, where 0 / 0 would give NaN, and does not change the other quotients.
+            math.add(standardDeviation, N(Float.leastNormalMagnitude), into: standardDeviation)
             math.divide(statistic, standardDeviation, into: statistic)
             math.multiply(normalized, statistic, into: normalizedGradient)
             math.subtract(dx, normalizedGradient, into: dx)
             math.divide(dx, divisor, into: dx)
         }
+    }
+}
+
+extension FusedOperationsType {
+    /// Checks that the scale and the shift of a layer normalization have the shape of the trailing axes of the input.
+    static func checkLayerNormalizationShapes<N>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>) {
+        precondition(scale.dim <= input.dim && Array(input.shape.suffix(scale.dim)) == scale.shape, "The scale must have the shape of the trailing axes of the input.")
+        precondition(shift.shape == scale.shape, "The shift must have the shape of the scale.")
     }
 }

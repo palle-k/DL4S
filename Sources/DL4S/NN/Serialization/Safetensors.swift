@@ -158,6 +158,10 @@ public struct SafetensorsError: Error, Sendable, CustomStringConvertible {
 
         /// Two tensors have the same key, because the naming closure maps two paths to the same key.
         case duplicateKey
+
+        /// The file name of a shard is not the name of a file in the directory of the index file. A name must not be
+        /// empty, `.`, or `..`, and must not contain a path separator or a null character. The value is the file name.
+        case invalidShardFileName(String)
     }
 
     /// The reason of the error.
@@ -215,6 +219,11 @@ enum SafetensorsFormat {
 
     /// The name of the file that a directory without an index file holds.
     static let singleFileName = "model.safetensors"
+
+    /// Indicates whether a shard file name is the name of a file in the directory of the index file.
+    static func isValidShardFileName(_ fileName: String) -> Bool {
+        !fileName.isEmpty && fileName != "." && fileName != ".." && !fileName.contains(where: { $0 == "/" || $0 == "\\" || $0 == "\0" })
+    }
 
     // MARK: Encoding
 

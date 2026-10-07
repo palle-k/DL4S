@@ -69,6 +69,12 @@ public extension FusedOperationsType {
         defer {
             math.release()
         }
+        // Without dropped elements, the mask needs no random numbers.
+        guard rate > 0 else {
+            Device.Engine.fill(value: 1, result: mask.values, count: mask.count)
+            math.copy(input, into: result)
+            return
+        }
         Random.bernoulli(mask, p: 1 - rate)
         math.multiply(input, mask, into: result)
     }

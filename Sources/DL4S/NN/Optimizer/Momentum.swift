@@ -60,6 +60,10 @@ public struct Momentum<Element: NumericType, Device: DeviceType>: Optimizer, Sen
         velocities = Self.zeroState(for: layout.children(of: "velocities"))
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&velocities, for: parameters)

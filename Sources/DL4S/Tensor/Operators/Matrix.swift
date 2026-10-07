@@ -32,6 +32,10 @@ public extension Tensor {
     /// - Parameter other: Tensor to multiply with self.
     /// - Parameter transposeSelf: Whether to transpose the left hand side matrix before multiplying. Ignored when self.dim == 1.
     /// - Parameter transposeOther: Whether to transpose the right hand side matrix before multiplying. Ignored when other.dim == 1.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func matrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         let lhs = self
         let rhs = other
@@ -76,6 +80,10 @@ public extension Tensor {
     ///   - other: Other operand
     ///   - transposeSelf: Whether to transpose self before multiplication
     ///   - transposeOther: Whether to transpose the other operand before the multiplication
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func broadcastMatrixMultiplied(with other: Self, transposeSelf: Bool = false, transposeOther: Bool = false) -> Self {
         precondition(dim >= 2 && other.dim >= 2, "Operands must both be at least 2-dimensional.")
         precondition(Array(shape.suffix(2))[transposeSelf ? 0 : 1] == Array(other.shape.suffix(2))[transposeOther ? 1 : 0], "Matmul operands must have matching shapes")
@@ -229,6 +237,10 @@ public extension Tensor {
     ///   - weights: Weights, shape [inputSize, outputSize]
     ///   - bias: Bias, shape [outputSize], or nil for no bias
     /// - Returns: Tensor of shape [batchSize, outputSize] for a tensor of shape [batchSize, inputSize], or [outputSize] for a vector of shape [inputSize]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func linearlyTransformed(weights: Self, bias: Self? = nil) -> Self {
         precondition(1 ... 2 ~= dim && weights.dim == 2, "The tensor must be a vector or a matrix, and the weights must be a matrix.")
         precondition(shape[dim - 1] == weights.shape[0], "The tensor must have one element per row of the weights.")

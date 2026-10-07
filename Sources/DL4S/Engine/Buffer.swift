@@ -145,7 +145,7 @@ public struct MutableShapedBuffer<Element, Device: DeviceType> {
         values.count
     }
 
-    fileprivate init(values: MutableBuffer<Element, Device>, shape: [Int]) {
+    init(values: MutableBuffer<Element, Device>, shape: [Int]) {
         self.shape = shape
         self.values = values
     }
@@ -181,17 +181,6 @@ public extension MemoryOperatorsType {
     /// - Parameter buffer: Buffer to release
     static func free<Element>(_ buffer: MutableShapedBuffer<Element, Device>) {
         free(buffer.values)
-    }
-}
-
-extension Tensor {
-    /// Writable storage of the tensor.
-    var mutableValues: MutableShapedBuffer<Element, Device> {
-        mutating get {
-            // Assume write, so perform CoW if necessary.
-            ensureOwnership()
-            return MutableShapedBuffer(values: handle.values, shape: shape)
-        }
     }
 }
 

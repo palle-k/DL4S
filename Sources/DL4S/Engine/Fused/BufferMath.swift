@@ -85,6 +85,8 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
     private final class Temporaries {
         var buffers: [MutableShapedBuffer<N, Device>] = []
         var positions: [MutableShapedBuffer<Int32, Device>] = []
+        /// Scalar constants by value, so that an implementation that uses a value several times fills it once.
+        var scalars: [N: ShapedBuffer<N, Device>] = [:]
     }
 
     private let temporaries = Temporaries()
@@ -95,6 +97,7 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         temporaries.positions.forEach(Device.Memory.free)
         temporaries.buffers = []
         temporaries.positions = []
+        temporaries.scalars = [:]
     }
 
     /// Returns an intermediate buffer with elements that are not initialized.
@@ -113,8 +116,14 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
 
     /// Returns an intermediate buffer of the given shape, whose elements have the given value.
     func constant(_ value: N, shape: [Int] = []) -> ShapedBuffer<N, Device> {
+        if shape.isEmpty, let scalar = temporaries.scalars[value] {
+            return scalar
+        }
         let buffer = temporary(shape)
         Engine.fill(value: value, result: buffer.values, count: buffer.count)
+        if shape.isEmpty {
+            temporaries.scalars[value] = ShapedBuffer(buffer)
+        }
         return ShapedBuffer(buffer)
     }
 
@@ -287,6 +296,33 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         }
         let lhsStrides = batchStrides(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1])
         let rhsStrides = batchStrides(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+
+        // When every operand is either complete or one matrix for the whole batch, the matrices of an operand have a
+        // constant stride, and the engine computes all products in one call.
+        func uniformStride(_ batch: [Int], matrixSize: Int) -> Int? {
+            if batch.allSatisfy({ $0 == 1 }) {
+                return 0
+            }
+            return batch == batchShape ? matrixSize : nil
+        }
+        if let lhsStride = uniformStride(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1]),
+           let rhsStride = uniformStride(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+        {
+            Engine.gemmBatched(
+                lhs: lhs.slice(offset: 0, shape: lhsMatrix),
+                lhsStride: lhsStride,
+                rhs: rhs.slice(offset: 0, shape: rhsMatrix),
+                rhsStride: rhsStride,
+                result: result.slice(offset: 0, shape: [rows, columns]),
+                count: batchShape.reduce(1, *),
+                alpha: alpha,
+                beta: beta,
+                transposeFirst: transposeLhs,
+                transposeSecond: transposeRhs,
+            )
+            return
+        }
+
         var resultOffset = 0
         StridedIteration.forEachOffset(shape: batchShape, strides: lhsStrides, rhsStrides) { lhsOffset, rhsOffset in
             multiplyMatrices(
@@ -326,7 +362,7 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
     }
 
     func permute(_ values: some ReadableBuffer<N, Device>, to arrangement: [Int], into result: Writable) {
-        Engine.permuteAxes(values: values.readable, result: result, arangement: arrangement)
+        Engine.permuteAxes(values: values.readable, result: result, arrangement: arrangement)
     }
 
     // MARK: Gradients
@@ -353,12 +389,17 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         }
         let values = values.readable
         let axes = ShapeUtil.broadcastAxes(from: gradient.shape, to: values.shape)
-        write(gradient) { result in
-            if axes.isEmpty {
-                copy(values, into: result)
+        // A gradient with the shape of the values is added or copied without an intermediate buffer.
+        guard !axes.isEmpty else {
+            if gradient.adds {
+                add(gradient.values, values.reshaped(to: gradient.shape), into: gradient.values)
             } else {
-                sum(values, along: axes, into: result)
+                copy(values, into: gradient.values)
             }
+            return
+        }
+        write(gradient) { result in
+            sum(values, along: axes, into: result)
         }
     }
 

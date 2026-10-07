@@ -46,45 +46,6 @@ func shapeForBroadcastedOperands(_ lhs: [Int], _ rhs: [Int]) -> [Int] {
     return zip(pLhs, pRhs).map(Swift.max)
 }
 
-@inline(__always)
-func iterate(_ shape: [Int]) -> [[Int]] {
-    var result: [[Int]] = []
-
-    let count = shape.reduce(1, *)
-    result.reserveCapacity(count)
-
-    let strides = MemoryOps.strides(from: shape)
-
-    for i in 0 ..< count {
-        var next: [Int] = Array(repeating: 0, count: shape.count)
-        for axis in 0 ..< shape.count {
-            next[axis] = (i / strides[axis]) % shape[axis]
-        }
-
-        result.append(next)
-    }
-
-    return result
-}
-
-@inline(__always)
-func flatIterate(_ shape: [Int]) -> [Int] {
-    let count = shape.reduce(1, *)
-    let dim = shape.count
-
-    let strides = MemoryOps.strides(from: shape)
-    var result = [Int](repeating: 0, count: count * dim)
-
-    for i in 0 ..< count {
-        let b = i * dim
-        for axis in 0 ..< dim {
-            result[b + axis] = (i / strides[axis]) % shape[axis]
-        }
-    }
-
-    return result
-}
-
 /// Iteration over the indices of a shape, with running offsets in two memory layouts instead of index arrays.
 enum StridedIteration {
     /// Calls `body` for every index of `shape` in row-major order, with the offset of the index in two layouts with the given strides.
@@ -177,20 +138,6 @@ enum StridedIteration {
 prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parameters) -> Bool {
     { params in
         !predicate(params)
-    }
-}
-
-extension Collection {
-    func minIndex(by comparator: (Element, Element) throws -> Bool) rethrows -> Index? {
-        var minIndex: Index?
-        var minValue: Element?
-        for index in indices {
-            if let mv = minValue, try !comparator(mv, self[index]) {
-                minIndex = index
-                minValue = self[index]
-            }
-        }
-        return minIndex
     }
 }
 
@@ -368,6 +315,22 @@ enum ShapeUtil {
             Array(repeating: 1, count: dim - rhs.count) + rhs.dropLast(2),
         )
         return batchShape + [lhs[lhs.count - (lhsTransposed ? 1 : 2)], rhs[rhs.count - (rhsTransposed ? 2 : 1)]]
+    }
+
+    /// Whether a shape is broadcastable to another shape.
+    static func broadcasts(_ shape: [Int], to target: [Int]) -> Bool {
+        shape.count <= target.count && zip(shape.reversed(), target.reversed()).allSatisfy { $0 == $1 || $0 == 1 }
+    }
+
+    /// Strides of the axes of a contiguous shape, with 0 for the axes with one element, along which the shape broadcasts.
+    static func broadcastStrides(_ shape: [Int]) -> [Int] {
+        var strides = [Int](repeating: 0, count: shape.count)
+        var stride = 1
+        for axis in shape.indices.reversed() {
+            strides[axis] = shape[axis] == 1 ? 0 : stride
+            stride *= shape[axis]
+        }
+        return strides
     }
 
     /// Axes of `target` that broadcasting expands from `shape`.

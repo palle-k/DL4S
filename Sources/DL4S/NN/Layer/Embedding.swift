@@ -67,14 +67,14 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: Codable,
     ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
     ///   - generator: Random number generator that provides the initial weights.
     public init<Generator: RandomNumberGenerator>(inputFeatures: Int, outputSize: Int, ignoreIndex: Int = -1, using generator: inout Generator) {
-        embeddingMatrix = Tensor<Element, Device>(xavierNormalWithShape: [inputFeatures, outputSize], requiresGradient: true, using: &generator)
+        embeddingMatrix = Tensor<Element, Device>(heNormalWithShape: [inputFeatures, outputSize], requiresGradient: true, using: &generator)
         #if DEBUG
         embeddingMatrix.tag = "W"
         #endif
         self.ignoreIndex = ignoreIndex
     }
 
-    /// Loads pretrained word embeddings from the space / tab separated values file at the given path
+    /// Loads pretrained word embeddings from the space or tab separated values file at the given path
     /// and arranges them according to the order of words provided.
     ///
     /// The embeddings are expected to be arranged using the following format:
@@ -83,91 +83,176 @@ public struct Embedding<Element: RandomizableType, Device: DeviceType>: Codable,
     ///     word2 num num num ... num
     ///     ...
     ///
-    /// If a word is not found in the pretrained embeddings, it is randomly created using Xavier initialization
+    /// Row `i` of the embedding matrix is the vector of `words[i]`. Lines of words that are not in `words` are skipped,
+    /// and when a word has more than one line, the first line is used. A word that the file does not have gets a
+    /// random vector with the distribution of ``init(inputFeatures:outputSize:ignoreIndex:)``.
     ///
     /// - Parameters:
     ///   - words: Provided word order.
     ///   - embeddingsURL: Path to pretrained embeddings
     ///   - verbose: If set to true, print out loading progress
     ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
-    public init?(words: [String], embeddingsURL: URL, verbose: Bool = false, ignoreIndex: Int = -1) {
-        let wordToIndex = Dictionary(uniqueKeysWithValues: words.enumerated().map { ($1, $0) })
+    /// - Throws: ``EmbeddingLoadingError`` when the file cannot be read, when a line of a word in `words` is not
+    ///   valid, or when the file has no word of `words`.
+    public init(words: [String], embeddingsURL: URL, verbose: Bool = false, ignoreIndex: Int = -1) throws {
+        var generator = WyHash()
+        try self.init(words: words, embeddingsURL: embeddingsURL, verbose: verbose, ignoreIndex: ignoreIndex, using: &generator)
+    }
 
-        var tensors: [Tensor<Element, Device>?] = Array(repeating: nil, count: words.count)
+    /// Loads pretrained word embeddings from the space or tab separated values file at the given path
+    /// and arranges them according to the order of words provided.
+    ///
+    /// The embeddings are expected to be arranged using the following format:
+    ///
+    ///     word1 num num num ... num
+    ///     word2 num num num ... num
+    ///     ...
+    ///
+    /// Row `i` of the embedding matrix is the vector of `words[i]`. Lines of words that are not in `words` are skipped,
+    /// and when a word has more than one line, the first line is used. A word that the file does not have gets a
+    /// random vector with the distribution of ``init(inputFeatures:outputSize:ignoreIndex:)``.
+    ///
+    /// - Parameters:
+    ///   - words: Provided word order.
+    ///   - embeddingsURL: Path to pretrained embeddings
+    ///   - verbose: If set to true, print out loading progress
+    ///   - ignoreIndex: Token index that is ignored when retreiving values from the embedding matrix
+    ///   - generator: Random number generator that provides the vectors of words that the file does not have.
+    /// - Throws: ``EmbeddingLoadingError`` when the file cannot be read, when a line of a word in `words` is not
+    ///   valid, or when the file has no word of `words`.
+    public init<Generator: RandomNumberGenerator>(
+        words: [String],
+        embeddingsURL: URL,
+        verbose: Bool = false,
+        ignoreIndex: Int = -1,
+        using generator: inout Generator,
+    ) throws {
+        let data: Data
+        do {
+            data = try Data(contentsOf: embeddingsURL, options: .mappedIfSafe)
+        } catch {
+            throw EmbeddingLoadingError.unreadableFile(url: embeddingsURL, underlyingError: error)
+        }
 
-        var embedDim: Int?
+        // A word can occur more than once in the vocabulary, and all of its rows get its vector.
+        let rowsByWord = Dictionary(grouping: words.indices) { words[$0] }
+        var isLoaded = [Bool](repeating: false, count: words.count)
+        var loadedWordCount = 0
+        var vectorSize: Int?
+        // The matrix is filled on the host and copied to the device once.
+        var matrix: [Element] = []
 
-        var progress = verbose ? ProgressBar<Void>(totalUnitCount: words.count, formatUserInfo: { "" }, label: "loading embeddings") : nil
+        var progress = verbose ? ProgressBar<Void>(totalUnitCount: rowsByWord.count, formatUserInfo: { "" }, label: "loading embeddings") : nil
 
-        var completedCount = 0
+        try data.withUnsafeBytes { (file: UnsafeRawBufferPointer) in
+            var lineStart = 0
+            var lineNumber = 0
+            while lineStart < file.count, loadedWordCount < rowsByWord.count {
+                let lineEnd = file[lineStart...].firstIndex(of: UInt8(ascii: "\n")) ?? file.count
+                let line = file[lineStart ..< lineEnd]
+                lineStart = lineEnd + 1
+                lineNumber += 1
 
-        for line in File(url: embeddingsURL) {
-            autoreleasepool {
-                let components = line.split(whereSeparator: { $0.isWhitespace })
-
-                guard components.count >= 2 else {
-                    return
+                // A word that is not valid UTF-8 is not in the vocabulary, so its line is skipped and the lines
+                // after it are read.
+                guard let wordEnd = line.firstIndex(where: Self.isSeparator),
+                      let word = String(bytes: file[line.startIndex ..< wordEnd], encoding: .utf8),
+                      let rows = rowsByWord[word], !isLoaded[rows[0]]
+                else {
+                    continue
                 }
-                let word = String(components[0])
-                guard let index = wordToIndex[word] else {
-                    return
+
+                let fields = file[wordEnd ..< line.endIndex].split(omittingEmptySubsequences: true, whereSeparator: Self.isSeparator)
+                let vector = try fields.map { field in
+                    let text = String(bytes: field, encoding: .utf8)
+                    guard let text, let value = Double(text) else {
+                        throw EmbeddingLoadingError.invalidValue(url: embeddingsURL, line: lineNumber, word: word, value: text ?? String(describing: Array(field)))
+                    }
+                    return Element(value)
+                }
+                if vectorSize == nil {
+                    guard !vector.isEmpty else {
+                        throw EmbeddingLoadingError.sizeMismatch(url: embeddingsURL, line: lineNumber, word: word, expected: nil, found: 0)
+                    }
+                    vectorSize = vector.count
+                    matrix = Tensor<Element, CPU>(heNormalWithShape: [words.count, vector.count], using: &generator).elements
+                }
+                guard vector.count == vectorSize else {
+                    throw EmbeddingLoadingError.sizeMismatch(url: embeddingsURL, line: lineNumber, word: word, expected: vectorSize, found: vector.count)
                 }
 
-                let values = Tensor<Element, Device>(components[1...].compactMap(Double.init).map(Element.init))
-                tensors[index] = values.unsqueezed(at: 0)
-                embedDim = values.count
-
-                completedCount += 1
-
+                for row in rows {
+                    matrix.replaceSubrange(row * vector.count ..< (row + 1) * vector.count, with: vector)
+                    isLoaded[row] = true
+                }
+                loadedWordCount += 1
                 progress?.next(userInfo: ())
-            }
-
-            if completedCount == words.count {
-                break
             }
         }
 
         progress?.complete()
 
-        if verbose {
-            let unknownCount = tensors.count(where: { $0 == nil })
-            print("Unknown: \(unknownCount) of \(words.count)")
-            print("Embedding size: \(embedDim ?? -1)")
+        guard let vectorSize else {
+            throw EmbeddingLoadingError.noWordFound(url: embeddingsURL)
         }
 
-        guard let shape = embedDim else {
-            print("No word from wordlist found in embedding file.")
-            return nil
+        if verbose {
+            print("Unknown: \(isLoaded.count(where: { !$0 })) of \(words.count)")
+            print("Embedding size: \(vectorSize)")
         }
-        embeddingMatrix = Tensor(
-            stacking: tensors.map { t in
-                if let t {
-                    t
-                } else {
-                    Tensor<Element, Device>(xavierNormalWithShape: [1, shape])
-                }
-            },
-            along: 0,
-        )
-        embeddingMatrix.requiresGradient = true
+
+        embeddingMatrix = Tensor<Element, Device>(matrix, shape: [words.count, vectorSize], requiresGradient: true)
         #if DEBUG
         embeddingMatrix.tag = "W"
         #endif
         self.ignoreIndex = ignoreIndex
     }
 
+    /// Indicates whether a byte separates the fields of a line of an embeddings file.
+    private static func isSeparator(_ byte: UInt8) -> Bool {
+        byte == UInt8(ascii: " ") || byte == UInt8(ascii: "\t") || byte == UInt8(ascii: "\r")
+    }
+
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Int32, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Embedding") {
-            let embedded = (0 ..< inputs.shape[0]).map { i -> Tensor<Element, Device> in
-                let idx = Int(inputs[i].item)
-                if idx == ignoreIndex {
-                    return Tensor(repeating: 0, shape: 1, outputSize)
-                } else {
-                    return embeddingMatrix[idx].unsqueezed(at: 0)
-                }
-            }
+            embeddingMatrix.gatheringRows(at: inputs, ignoreIndex: Int32(ignoreIndex))
+        }
+    }
+}
 
-            return Tensor(stacking: embedded, along: 0)
+/// An error that ``Embedding/init(words:embeddingsURL:verbose:ignoreIndex:using:)`` throws.
+public enum EmbeddingLoadingError: Error, CustomStringConvertible {
+    /// The file cannot be read. The underlying error tells why.
+    case unreadableFile(url: URL, underlyingError: any Error)
+
+    /// A line of a word in the vocabulary has a value that is not a number. The line number starts at 1.
+    case invalidValue(url: URL, line: Int, word: String, value: String)
+
+    /// The vector of a word has a different size than the vector of the first word that was loaded, or no values.
+    /// `expected` is nil when the word is the first word that was loaded.
+    case sizeMismatch(url: URL, line: Int, word: String, expected: Int?, found: Int)
+
+    /// The file has no word of the vocabulary.
+    case noWordFound(url: URL)
+
+    public var description: String {
+        switch self {
+        case let .unreadableFile(url, underlyingError):
+            "Cannot read the embeddings file \(url.path): \(underlyingError)"
+        case let .invalidValue(url, line, word, value):
+            "The value \"\(value)\" of the word \"\(word)\" in line \(line) of \(url.path) is not a number."
+        case let .sizeMismatch(url, line, word, expected, found):
+            if let expected {
+                "The word \"\(word)\" in line \(line) of \(url.path) has \(found) values, but the words before it have \(expected)."
+            } else {
+                "The word \"\(word)\" in line \(line) of \(url.path) has no values."
+            }
+        case let .noWordFound(url):
+            "The embeddings file \(url.path) has no word of the vocabulary."
         }
     }
 }

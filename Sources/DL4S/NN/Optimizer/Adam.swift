@@ -91,7 +91,7 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
         visitor.frozen(&firstMoments, named: "firstMoments")
         visitor.frozen(&secondMoments, named: "secondMoments")
         if useAMSGrad {
-            var maxima = secondMomentMax.compactMap(\.self)
+            var maxima = secondMomentMax.compactMap { $0 }
             visitor.frozen(&maxima, named: "secondMomentMax")
             secondMomentMax = maxima
         }
@@ -106,6 +106,10 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
         secondMomentMax = useAMSGrad ? Self.zeroState(for: layout.children(of: "secondMomentMax")) : []
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         precondition([learningRate, beta1, beta2, epsilon].allSatisfy { $0.count == 1 }, "The hyperparameters of Adam must be scalars.")
         Self.validateGradients(gradients, against: parameters)

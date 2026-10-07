@@ -86,8 +86,8 @@ public extension FusedOperationsType {
         math.multiply(candidateActivationGradient, outputGradient, into: candidateActivationGradient)
 
         // The weight gradients are added with GEMMs, so a weight that every time step uses needs no temporary gradient.
-        math.write(gradients.updateInput) { math.copy(updateActivationGradient, into: $0) }
-        math.write(gradients.candidateInput) { math.copy(candidateActivationGradient, into: $0) }
+        math.writeSum(of: updateActivationGradient, into: gradients.updateInput)
+        math.writeSum(of: candidateActivationGradient, into: gradients.candidateInput)
         if let weightGradient = gradients.updateWeights {
             math.multiplyMatrices(state, updateActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
         }
@@ -105,7 +105,7 @@ public extension FusedOperationsType {
         math.subtract(1, reset, into: slope)
         math.multiply(slope, reset, into: slope)
         math.multiply(resetActivationGradient, slope, into: resetActivationGradient)
-        math.write(gradients.resetInput) { math.copy(resetActivationGradient, into: $0) }
+        math.writeSum(of: resetActivationGradient, into: gradients.resetInput)
         if let weightGradient = gradients.resetWeights {
             math.multiplyMatrices(state, resetActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
         }

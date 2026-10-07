@@ -63,6 +63,13 @@ public extension FusedOperationsType {
         defer {
             math.release()
         }
+        math.write(biasGradient) { db in
+            math.sum(outputGradient, along: [0, 2, 3], into: db)
+        }
+        // The other gradients need the window matrix, which is the largest intermediate buffer.
+        guard inputGradient != nil || filterGradient != nil else {
+            return
+        }
         let (outputChannels, windowSize) = (filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3])
         let windows = outputGradient.count / outputChannels
         let (kernelHeight, kernelWidth) = (filters.shape[2], filters.shape[3])
@@ -84,9 +91,6 @@ public extension FusedOperationsType {
                 into: filterGradient.values.reshaped(to: [outputChannels, windowSize]),
                 beta: filterGradient.beta,
             )
-        }
-        math.write(biasGradient) { db in
-            math.sum(outputGradient, along: [0, 2, 3], into: db)
         }
     }
 
@@ -123,6 +127,13 @@ public extension FusedOperationsType {
         defer {
             math.release()
         }
+        math.write(biasGradient) { db in
+            math.sum(outputGradient, along: [0, 2, 3], into: db)
+        }
+        // The other gradients need the window matrix, which is the largest intermediate buffer.
+        guard inputGradient != nil || filterGradient != nil else {
+            return
+        }
         let (inputChannels, kernelSize) = (input.shape[1], filters.shape[0] * filters.shape[2] * filters.shape[3])
         let pixels = input.count / inputChannels
         let matrixShape = [inputChannels, input.shape[0], input.shape[2], input.shape[3]]
@@ -143,9 +154,6 @@ public extension FusedOperationsType {
                 into: filterGradient.values.reshaped(to: [inputChannels, kernelSize]),
                 beta: filterGradient.beta,
             )
-        }
-        math.write(biasGradient) { db in
-            math.sum(outputGradient, along: [0, 2, 3], into: db)
         }
     }
 

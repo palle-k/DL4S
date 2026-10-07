@@ -43,6 +43,10 @@ public extension Tensor {
     ///   - kernelHeight: Height of the convolution kernel
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func img2col(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) -> Tensor<Element, Device> {
         let resultHeight = (shape[2] + 2 * padding - kernelHeight) / stride + 1
         let resultWidth = (shape[3] + 2 * padding - kernelWidth) / stride + 1
@@ -85,6 +89,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     ///   - resultShape: Shape of the resulting tensor
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func col2img(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int, resultShape: [Int]) -> Tensor<Element, Device> {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.col2img(
@@ -123,6 +131,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func convolved2d(filters: Tensor<Element, Device>, bias: Tensor<Element, Device>? = nil, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let padding = padding ?? ((filters.shape[2] - 1) / 2)
         let bias = bias.map { bias in
@@ -155,6 +167,10 @@ public extension Tensor {
     ///   - inset: Inset from edge of the source tensor
     ///   - stride: Stride, with which the kernel moves over the result image. Larger strides result in larger output shapes.
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height - 1) * stride - 2 \* padding + kernelHeight, (width - 1) * stride - 2 \* padding + kernelWidth]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func transposedConvolved2d(filters: Tensor<Element, Device>, bias: Tensor<Element, Device>? = nil, inset: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let inset = inset ?? ((filters.shape[2] - 1) / 2)
         let bias = bias.map { bias in
@@ -189,6 +205,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func maxPooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         let padding = padding ?? ((windowSize - 1) / 2)
         let stride = stride ?? windowSize
@@ -216,6 +236,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func averagePooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         let padding = padding ?? ((windowSize - 1) / 2)
         let stride = stride ?? windowSize

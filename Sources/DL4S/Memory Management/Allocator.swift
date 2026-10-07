@@ -42,7 +42,7 @@ extension UnsafeMutableBufferPointer {
     }
 
     func advanced(by offset: Int) -> UnsafeMutableBufferPointer<Element> {
-        precondition(offset < count, "Out of bounds access")
+        precondition(offset >= 0 && offset < count, "Out of bounds access")
         return UnsafeMutableBufferPointer(start: baseAddress!.advanced(by: offset), count: count - offset)
     }
 
@@ -66,7 +66,7 @@ extension UnsafeBufferPointer {
     }
 
     func advanced(by offset: Int) -> UnsafeBufferPointer<Element> {
-        precondition(offset < count, "Out of bounds access")
+        precondition(offset >= 0 && offset < count, "Out of bounds access")
         return UnsafeBufferPointer(start: baseAddress!.advanced(by: offset), count: count - offset)
     }
 

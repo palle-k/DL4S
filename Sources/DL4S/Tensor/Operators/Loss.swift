@@ -39,6 +39,10 @@ import Foundation
 ///   - expected: Expected values
 ///   - actual: Predicted values
 /// - Returns: Loss, scalar value
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     precondition(expected.count == actual.count, "Expected and predicted values must have the same number of elements.")
     var result = Tensor<Element, Device>(uninitializedShape: [])
@@ -63,6 +67,10 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
 ///   - actual: Predicted values
 ///   - ignoreIndex: Value in expected, which is ignored. Ignored labels add 0 to the loss, but count for the mean.
 /// - Returns: Loss, scalar value
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
     precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
     precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
@@ -91,6 +99,10 @@ public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(ex
 ///   - actual: Predicted values
 ///   - ignoreIndex: Value in expected, which is ignored. Ignored labels add 0 to the loss, but count for the mean.
 /// - Returns: Loss, scalar value
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func categoricalNegativeLogLikelihood<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
     precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
     precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
@@ -112,6 +124,10 @@ public func categoricalNegativeLogLikelihood<Element: NumericType, Device: Devic
 /// - Parameters:
 ///   - expected: Expected values
 ///   - actual: Predicted values, broadcastable with the expected values
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.meanSquaredError(expected: expected.values, actual: actual.values, result: result.mutableValues)
@@ -126,6 +142,10 @@ public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>,
 /// - Parameters:
 ///   - vector: Tensor to apply weight decay on
 ///   - loss: Weight decay importance scaling factor
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.l2Loss(input: vector.values, scale: loss, result: result.mutableValues)
@@ -140,6 +160,10 @@ public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Ele
 /// - Parameters:
 ///   - vector: Tensor to apply weight decay on
 ///   - loss: Weight decay importance scaling factor
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.l1Loss(input: vector.values, scale: loss, result: result.mutableValues)
