@@ -124,17 +124,16 @@ enum GPUMatrixMultiplication {
         )
         if rows == 1 {
             // A product with one row is a vector-matrix product, which is limited by the reads of the matrix.
-            let kernel = GPUKernels.kernel(transposeSecond ? "gemv_t" : "gemv_n", in: .matrix)
-            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
-                arguments.buffer(lhs)
-                arguments.buffer(rhs)
-                arguments.buffer(result)
-                arguments.value(parameters)
-                if transposeSecond {
+            if transposeSecond {
+                GPUContext.compute(GPUKernels.kernel("gemv_t", in: .matrix), reading: [lhs, rhs, result], writing: [result]) { arguments in
+                    arguments.buffer(lhs)
+                    arguments.buffer(rhs)
+                    arguments.buffer(result)
+                    arguments.value(parameters)
                     arguments.dispatch(threadgroups: MTLSize(width: (columns + 7) / 8, height: count, depth: 1), threadgroup: MTLSize(width: 256, height: 1, depth: 1))
-                } else {
-                    arguments.dispatch(threads: MTLSize(width: columns, height: count, depth: 1), threadgroup: MTLSize(width: min(columns, 256), height: 1, depth: 1))
                 }
+            } else {
+                encodeVectorMatrix(lhs: lhs, rhs: rhs, result: result, columns: columns, inner: inner, count: count, parameters: parameters)
             }
             return
         }
@@ -190,6 +189,52 @@ enum GPUMatrixMultiplication {
             arguments.buffer(result)
             arguments.value(sumParameters)
             arguments.dispatch(threads: MTLSize(width: columns, height: rows, depth: count), threadgroup: MTLSize(width: min(columns, 32), height: min(rows, 8), depth: 1))
+        }
+    }
+
+    // About 256 threadgroups occupy all GPU cores, and every SIMD group of a part reads at least 8 rows of the matrix.
+    // [1, 768] x [768, 768] takes 0.15 ms with one thread per element of the result, and 0.025 ms with the parts (M3 Max).
+    /// Records the vector-matrix product of a matrix that is not transposed, with the inner axis split into parts that
+    /// `gemm_split_sum` adds up.
+    private static func encodeVectorMatrix(lhs: GPUBuffer, rhs: GPUBuffer, result: GPUBuffer, columns: Int, inner: Int, count: Int, parameters: GemmParameters) {
+        let blocks = (columns + 127) / 128
+        let splits = max(1, min(256 / (blocks * count), inner / 64))
+        let splitLength = ((inner + splits - 1) / splits + 7) / 8 * 8
+        let splitCount = (inner + splitLength - 1) / splitLength
+        let kernel = GPUKernels.kernel("gemv_n", in: .matrix)
+        let threadgroups = MTLSize(width: blocks, height: 1, depth: count * splitCount)
+        let threadgroup = MTLSize(width: 256, height: 1, depth: 1)
+        var vectorParameters = parameters
+        vectorParameters.splitLength = Int32(splitLength)
+        guard splitCount > 1 else {
+            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
+                arguments.buffer(lhs)
+                arguments.buffer(rhs)
+                arguments.buffer(result)
+                arguments.value(vectorParameters)
+                arguments.dispatch(threadgroups: threadgroups, threadgroup: threadgroup)
+            }
+            return
+        }
+        let partial = GPUKernels.temporary(count: count * splitCount * columns, near: result)
+        vectorParameters.alpha = 1
+        vectorParameters.beta = 0
+        vectorParameters.batchStrideC = Int64(columns)
+        vectorParameters.splits = Int32(splitCount)
+        GPUContext.compute(kernel, reading: [lhs, rhs], writing: [partial]) { arguments in
+            arguments.buffer(lhs)
+            arguments.buffer(rhs)
+            arguments.buffer(partial)
+            arguments.value(vectorParameters)
+            arguments.dispatch(threadgroups: threadgroups, threadgroup: threadgroup)
+        }
+        var sumParameters = parameters
+        sumParameters.splits = Int32(splitCount)
+        GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial, result], writing: [result]) { arguments in
+            arguments.buffer(partial)
+            arguments.buffer(result)
+            arguments.value(sumParameters)
+            arguments.dispatch(threads: MTLSize(width: columns, height: 1, depth: count), threadgroup: MTLSize(width: min(columns, 256), height: 1, depth: 1))
         }
     }
 

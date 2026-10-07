@@ -207,27 +207,55 @@ kernel void gemm_split_sum(device const float* partial [[buffer(0)]], device flo
     *target = value;
 }
 
-// Vector-matrix product for results with one row: every thread computes one element of the result.
-// For a matrix that is not transposed, neighboring threads read neighboring elements of a row of B.
-// For a transposed matrix, a SIMD group computes one element as the dot product of a row of B with the vector.
+// Vector-matrix products for results with one row, which read every element of the matrix once.
+//
+// For a matrix that is not transposed, a threadgroup of 8 SIMD groups computes 128 neighboring elements of the result over
+// a part of the inner axis: every lane reads four neighboring elements of a row of B, so that a SIMD group reads 512
+// contiguous bytes, and the SIMD groups take every eighth row of the part. One thread per element of the result, which
+// reads a whole column, leaves most GPU cores idle for the results of the layers of a model, which have few hundred
+// elements. With more than one part, matrix z of C receives the product of part z % splits of batch z / splits, and
+// `gemm_split_sum` adds the parts.
 kernel void gemv_n(device const float* A [[buffer(0)]], device const float* B [[buffer(1)]], device float* C [[buffer(2)]], constant GemmParameters& p [[buffer(3)]],
-                   uint2 position [[thread_position_in_grid]]) {
-    int column = int(position.x);
-    if (column >= p.N) { return; }
-    A += long(position.y) * p.batchStrideA;
-    B += long(position.y) * p.batchStrideB;
-    C += long(position.y) * p.batchStrideC;
+                   uint3 group [[threadgroup_position_in_grid]], uint simd [[simdgroup_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]]) {
+    threadgroup float4 partials[8][32];
+    const int column = int(group.x) * 128 + int(lane) * 4;
+    const int batch = int(group.z) / p.splits, part = int(group.z) % p.splits;
+    A += long(batch) * p.batchStrideA;
+    B += long(batch) * p.batchStrideB;
+    C += long(group.z) * p.batchStrideC;
     // The row vector is A with the stride 1, or the first column of a transposed A with the stride lda.
-    int aStride = p.transposeA ? p.lda : 1;
-    float sum = 0.0f;
-    for (int k = 0; k < p.K; k++) {
-        sum = fma(A[long(k) * aStride], B[long(k) * p.ldb + column], sum);
+    const int aStride = p.transposeA ? p.lda : 1;
+    const int start = part * p.splitLength, end = min(start + p.splitLength, p.K);
+    float4 sum = float4(0.0f);
+    if (column + 3 < p.N) {
+        for (int k = start + int(simd); k < end; k += 8) {
+            float4 row = float4(*reinterpret_cast<device const packed_float4*>(B + long(k) * p.ldb + column));
+            sum = fma(float4(A[long(k) * aStride]), row, sum);
+        }
+    } else {
+        for (int k = start + int(simd); k < end; k += 8) {
+            float a = A[long(k) * aStride];
+            device const float* row = B + long(k) * p.ldb;
+            UNROLL for (int e = 0; e < 4; e++) {
+                if (column + e < p.N) { sum[e] = fma(a, row[column + e], sum[e]); }
+            }
+        }
     }
-    float value = p.alpha * sum;
-    if (p.beta != 0.0f) { value += p.beta * C[column]; }
-    C[column] = value;
+    partials[simd][lane] = sum;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (simd != 0) { return; }
+    float4 total = float4(0.0f);
+    UNROLL for (int s = 0; s < 8; s++) { total += partials[s][lane]; }
+    UNROLL for (int e = 0; e < 4; e++) {
+        if (column + e < p.N) {
+            float value = p.alpha * total[e];
+            if (p.beta != 0.0f) { value += p.beta * C[column + e]; }
+            C[column + e] = value;
+        }
+    }
 }
 
+// For a transposed matrix, a SIMD group computes one element as the dot product of a row of B with the vector.
 kernel void gemv_t(device const float* A [[buffer(0)]], device const float* B [[buffer(1)]], device float* C [[buffer(2)]], constant GemmParameters& p [[buffer(3)]],
                    uint2 group [[threadgroup_position_in_grid]], uint simd [[simdgroup_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]]) {
     int column = int(group.x) * 8 + int(simd);

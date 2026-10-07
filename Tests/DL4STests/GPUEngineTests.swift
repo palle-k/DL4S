@@ -104,6 +104,7 @@ extension GPUTests {
         @Test(arguments: [
             (1, 1, 1, false, false), (17, 33, 65, false, false), (64, 64, 64, true, false), (70, 130, 50, false, true), (129, 65, 257, true, true),
             (512, 512, 512, false, false), (300, 700, 400, true, false), (1024, 256, 768, false, true), (6, 25, 20000, false, true), (40, 30, 3000, true, false), (1, 70, 900, false, true), (1, 70, 900, true, false),
+            (1, 256, 2048, false, false), (1, 300, 700, false, false),
         ])
         func matrixProductsMatchCPU(rows: Int, columns: Int, inner: Int, transposeLeft: Bool, transposeRight: Bool) {
             let a = GPUTest.random(transposeLeft ? [inner, rows] : [rows, inner], seed: 8)
@@ -136,7 +137,7 @@ extension GPUTests {
             }
         }
 
-        @Test(arguments: [([4, 3, 20, 30], [4, 3, 30, 10]), ([4, 3, 20, 30], [30, 10]), ([4, 1, 20, 30], [1, 3, 30, 10]), ([20, 30], [5, 30, 10])])
+        @Test(arguments: [([4, 3, 20, 30], [4, 3, 30, 10]), ([4, 3, 20, 30], [30, 10]), ([4, 1, 20, 30], [1, 3, 30, 10]), ([20, 30], [5, 30, 10]), ([5, 1, 300], [5, 300, 200]), ([4, 1, 50], [50, 130])])
         func batchedProductsMatchCPU(lhsShape: [Int], rhsShape: [Int]) {
             let a = Tensor<Float, CPU>(GPUTest.random(lhsShape, seed: 11), requiresGradient: true)
             let b = Tensor<Float, CPU>(GPUTest.random(rhsShape, seed: 12), requiresGradient: true)
@@ -149,14 +150,15 @@ extension GPUTests {
             }
         }
 
-        @Test func accumulatedProductsAddToResult() {
-            let (a, b, c) = (GPUTest.random([40, 30], seed: 10), GPUTest.random([30, 50], seed: 11), GPUTest.random([40, 50], seed: 12))
+        @Test(arguments: [(40, 30, 50), (1, 600, 300)])
+        func accumulatedProductsAddToResult(rows: Int, inner: Int, columns: Int) {
+            let (a, b, c) = (GPUTest.random([rows, inner], seed: 10), GPUTest.random([inner, columns], seed: 11), GPUTest.random([rows, columns], seed: 12))
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>, _ c: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 var accumulator = c + 0
                 D.Engine.gemm(lhs: a.values, rhs: b.values, result: accumulator.mutableValues, alpha: 1, beta: 1, transposeFirst: false, transposeSecond: false)
                 return [accumulator]
             }
-            GPUTest.compare("gemm beta") { gpu in
+            GPUTest.compare("gemm beta \(rows)x\(columns)x\(inner)") { gpu in
                 GPUTest.run(on: gpu, [a, b, c], cpu: { body($0[0], $0[1], $0[2]) }, gpu: { GPUTest.host(body($0[0], $0[1], $0[2])) })
             }
         }
