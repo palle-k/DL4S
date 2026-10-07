@@ -25,6 +25,15 @@
 
 import Foundation
 
+/// Constants that the implementations of the fused operations share. The GPU kernels repeat them in `prelude.metal`.
+enum FusedConstants {
+    /// Factor of the input in the sigmoid of the approximation of GELU, `input * sigmoid(1.702 * input)`.
+    static let geluSlope = 1.702
+    /// Factor of the mask that attention subtracts from the scores, so that the softmax sets the weights of the masked
+    /// entries to 0.
+    static let maskScale = 1e9
+}
+
 /// High-level operations of a device, such as convolutions, normalizations, activations, losses, and attention, and their first derivatives.
 ///
 /// A fused operation computes a high-level operation, or its first derivative, in one requirement.

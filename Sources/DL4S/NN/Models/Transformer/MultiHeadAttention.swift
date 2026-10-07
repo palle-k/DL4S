@@ -88,10 +88,10 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
         self.hiddenDim = hiddenDim
 
         temperature = Element(keyDim).sqrt()
-        qDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
-        kDense = Tensor(xavierNormalWithShape: [hiddenDim, keyDim * keyValueHeads], requiresGradient: true, using: &generator)
-        vDense = Tensor(xavierNormalWithShape: [hiddenDim, valueDim * keyValueHeads], requiresGradient: true, using: &generator)
-        fc = Tensor(xavierNormalWithShape: [valueDim * heads, hiddenDim], requiresGradient: true, using: &generator)
+        qDense = Tensor(heNormalWithShape: [hiddenDim, keyDim * heads], requiresGradient: true, using: &generator)
+        kDense = Tensor(heNormalWithShape: [hiddenDim, keyDim * keyValueHeads], requiresGradient: true, using: &generator)
+        vDense = Tensor(heNormalWithShape: [hiddenDim, valueDim * keyValueHeads], requiresGradient: true, using: &generator)
+        fc = Tensor(heNormalWithShape: [valueDim * heads, hiddenDim], requiresGradient: true, using: &generator)
         self.dropout = Dropout(rate: dropout)
         norm = LayerNorm(inputSize: [hiddenDim])
 
@@ -110,6 +110,10 @@ public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>:
     /// - Parameter inputs: Tuple containing queries of shape [batchSize, queryCount, hiddenDim], keys of shape [batchSize, keyCount, hiddenDim] and values of shape [batchSize, keyCount, hiddenDim]
     ///       as well as an optional mask that may be used to prevent attention to certain elements outside of the batch or in future timesteps. Mask must be broadcastable to shape [batchSize, heads, queryCount, keyCount] and have 1 entries for all elements that should be blocked.
     /// - Returns: Normalized scaled dot product attended values
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: (q: Tensor<Element, Device>, k: Tensor<Element, Device>, v: Tensor<Element, Device>, mask: Tensor<Element, Device>?)) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "MultiHeadAttention") {
             let (q, k, v, mask) = inputs // q, k, v: [batchSize, maxLen, hiddenDim]
@@ -159,6 +163,10 @@ public extension MultiHeadAttention {
     ///   - mask: Mask with 1 for every cached position that a query must not attend to and 0 elsewhere,
     ///     broadcastable to [batchSize, heads, queryCount, cache.count], or nil for no mask
     /// - Returns: Attended values with the shape [batchSize, queryCount, hiddenDim]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func callAsFunction(queries: Tensor<Element, Device>, cache: AttentionCache<Element, Device>, mask: Tensor<Element, Device>?) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "MultiHeadAttention") {
             precondition(queries.dim == 3, "The queries must have the shape [batchSize, queryCount, hiddenDim].")

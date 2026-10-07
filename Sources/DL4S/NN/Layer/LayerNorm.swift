@@ -49,6 +49,10 @@ public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: Codable,
         #endif
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.layerNormalized(scale: scale, shift: shift)
     }

@@ -110,6 +110,10 @@ public struct TransformerLanguageModel<Element: RandomizableType, Device: Device
     /// Predicts the next token at every position of the sequences.
     /// - Parameter inputs: Token sequences with padding index -1
     /// - Returns: Log probabilities of the next token with the shape [batchSize, length, vocabSize]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: TokenSequences<Device>) -> Tensor<Element, Device> {
         let length = inputs.tokens.shape[1]
         let decoded = decoder(TransformerDecoderInputs(input: embedded(inputs.tokens, positionalEncodings: positionalEncoding(length)), lengths: inputs.lengths))
@@ -119,12 +123,24 @@ public struct TransformerLanguageModel<Element: RandomizableType, Device: Device
     /// Generates continuations of prompts by greedy decoding.
     ///
     /// The model decodes the prompts in one step and then one token of every unfinished sequence per step.
+    /// The model decodes without dropout, also when its ``Dropout`` layers are active.
     /// - Parameters:
     ///   - prompts: Token indices of the prompts. Every prompt must contain at least one token.
     ///   - maxLength: Maximum number of tokens to generate for each prompt
     ///   - endToken: Token that ends a sequence, which is part of the result, or nil to generate `maxLength` tokens
     /// - Returns: Generated tokens of each prompt, without the prompt
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func generate(prompts: [[Int32]], maxLength: Int, endToken: Int32? = nil) -> [[Int32]] {
+        var model = self
+        model.modifyLayers(of: Dropout<Element, Device>.self) { $0.isActive = false }
+        return model.greedilyDecoded(prompts: prompts, maxLength: maxLength, endToken: endToken)
+    }
+
+    /// Generates continuations of prompts by greedy decoding with the dropout layers of the model.
+    private func greedilyDecoded(prompts: [[Int32]], maxLength: Int, endToken: Int32?) -> [[Int32]] {
         precondition(!prompts.isEmpty && prompts.allSatisfy { !$0.isEmpty }, "There must be at least one prompt, and every prompt must contain a token.")
         var generated = [[Int32]](repeating: [], count: prompts.count)
         guard maxLength > 0 else {

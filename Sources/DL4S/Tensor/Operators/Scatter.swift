@@ -42,6 +42,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - context: Indices along gathering axis.
     ///   - axis: Axis to gather from
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func gather(using context: Tensor<Int32, Device>, alongAxis axis: Int, ignoreIndex: Int32 = -1) -> Self {
         var resultShape = shape
         resultShape.remove(at: axis)
@@ -77,6 +81,10 @@ public extension Tensor {
     ///   - context: Indices along scattering axis
     ///   - axis: Axis to scatter along
     ///   - axisSize: Number of elements along the axis in the result tensor. Must be greater than `max(context)`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func scatter(using context: Tensor<Int32, Device>, alongAxis axis: Int, withSize axisSize: Int, ignoreIndex: Int32 = -1) -> Self {
         var resultShape = shape
         resultShape.insert(axisSize, at: axis)
@@ -109,6 +117,10 @@ public extension Tensor {
     ///   - indices: Indices of rows. Every index must be in `0 ..< shape[0]` or equal to `ignoreIndex`.
     ///   - ignoreIndex: Index for which the row of the result is zero
     /// - Returns: Tensor with the shape `indices.shape + shape[1...]`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func gatheringRows(at indices: Tensor<Int32, Device>, ignoreIndex: Int32 = -1) -> Self {
         precondition(dim >= 1, "Rows can only be gathered from a tensor with at least one axis.")
         let shape = shape
@@ -143,6 +155,10 @@ public extension Tensor {
     ///   - rowCount: Number of rows of the result
     ///   - ignoreIndex: Index of rows that are not added
     /// - Returns: Tensor with the shape `[rowCount] + shape[indices.dim...]`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func scatteringRows(at indices: Tensor<Int32, Device>, rowCount: Int, ignoreIndex: Int32 = -1) -> Self {
         precondition(shape.starts(with: indices.shape), "The shape of the tensor must start with the shape of the indices.")
         var result = Self(repeating: 0, shape: [rowCount] + shape[indices.dim...])

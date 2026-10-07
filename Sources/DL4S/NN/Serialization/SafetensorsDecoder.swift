@@ -101,16 +101,27 @@ public struct SafetensorsDecoder: Sendable {
         }
         let urls = files.map(\.url)
         let layout = storedLayout(of: headers)
-        try validate(layer, adopting: layout, headers: headers, urls: urls)
-        layer.adoptLayoutRecursively(layout)
+        let plan = try validate(layer, adopting: layout, headers: headers, urls: urls)
 
-        try withModelTensors(of: &layer) { tensors in
-            let plan = try LoadPlan(tensors: tensors, headers: headers, options: options, urls: urls)
-            for (fileIndex, file) in files.enumerated() where !plan.assignments[fileIndex].isEmpty {
-                let mapping = try MappedFile(url: file.url)
-                // A file that changed since its header was read cannot be read safely.
-                guard mapping.bytes.count == headers[fileIndex].dataSectionOffset + (headers[fileIndex].entries.last?.dataOffsets.upperBound ?? 0) else {
-                    throw SafetensorsError(.malformedHeader("The file changed while it was read."), url: file.url)
+        // Every file is mapped and checked before the model changes, so that an error leaves the model unchanged.
+        // A mapping uses address space, but no memory, until its pages are read.
+        let mappings = try files.indices.map { fileIndex -> MappedFile? in
+            guard !plan.assignments[fileIndex].isEmpty else {
+                return nil
+            }
+            let mapping = try MappedFile(url: files[fileIndex].url)
+            // A file that changed since its header was read cannot be read safely.
+            guard mapping.bytes.count == headers[fileIndex].dataSectionOffset + (headers[fileIndex].entries.last?.dataOffsets.upperBound ?? 0) else {
+                throw SafetensorsError(.malformedHeader("The file changed while it was read."), url: files[fileIndex].url)
+            }
+            return mapping
+        }
+
+        layer.adoptLayoutRecursively(layout)
+        withModelTensors(of: &layer) { tensors in
+            for (fileIndex, mapping) in mappings.enumerated() {
+                guard let mapping else {
+                    continue
                 }
                 apply(plan.assignments[fileIndex], from: mapping.bytes, header: headers[fileIndex], to: &tensors, release: mapping.release(upTo:))
             }
@@ -128,11 +139,10 @@ public struct SafetensorsDecoder: Sendable {
         try data.withUnsafeBytes { bytes in
             let header = try SafetensorsFormat.decodeHeader(file: bytes)
             let layout = storedLayout(of: [header])
-            try validate(layer, adopting: layout, headers: [header], urls: [nil])
+            let plan = try validate(layer, adopting: layout, headers: [header], urls: [nil])
             layer.adoptLayoutRecursively(layout)
 
-            try withModelTensors(of: &layer) { tensors in
-                let plan = try LoadPlan(tensors: tensors, headers: [header], options: options, urls: [nil])
+            withModelTensors(of: &layer) { tensors in
                 apply(plan.assignments[0], from: bytes, header: header, to: &tensors, release: { _ in })
             }
         }
@@ -210,6 +220,10 @@ public struct SafetensorsDecoder: Sendable {
         let directory = indexURL.deletingLastPathComponent()
         let keysByShard = Dictionary(grouping: index.weightMap.keys) { index.weightMap[$0] ?? "" }
         return try keysByShard.keys.sorted().map { fileName in
+            // The index file can come from an untrusted source, so a shard must be a file in the directory of the index file.
+            guard SafetensorsFormat.isValidShardFileName(fileName) else {
+                throw SafetensorsError(.invalidShardFileName(fileName), url: indexURL)
+            }
             let shardURL = directory.appending(path: fileName)
             guard FileManager.default.fileExists(atPath: shardURL.path) else {
                 throw SafetensorsError(.shardNotFound(fileName), url: shardURL)
@@ -234,9 +248,12 @@ public struct SafetensorsDecoder: Sendable {
 
     // The layout is adopted by a copy, so that the model is not changed when the check fails. The copy shares the
     // storage of the model and is released before the model is filled, so the fill does not copy any tensor.
+    // The model visits its tensors in the same order after it adopts the same layout, so the plan of the copy
+    // applies to the model.
 
     /// Checks that the model, after it adopts the layout, matches the files.
-    private func validate<Layer: TensorContainer>(_ layer: Layer, adopting layout: TensorLayout, headers: [SafetensorsHeader], urls: [URL?]) throws(SafetensorsError) {
+    /// - Returns: The assignments of the file entries to the tensors of the model, in traversal order.
+    private func validate<Layer: TensorContainer>(_ layer: Layer, adopting layout: TensorLayout, headers: [SafetensorsHeader], urls: [URL?]) throws(SafetensorsError) -> LoadPlan {
         var candidate = layer
         candidate.adoptLayoutRecursively(layout)
         var tensors: [ModelTensor<Layer.Parameter, Layer.Device>] = []
@@ -244,17 +261,17 @@ public struct SafetensorsDecoder: Sendable {
             tensors.append(ModelTensor(key: key(for: path), tensor: tensor))
         })
         candidate.visitTensors(&collector)
-        _ = try LoadPlan(tensors: tensors, headers: headers, options: options, urls: urls)
+        return try LoadPlan(tensors: tensors, headers: headers, options: options, urls: urls)
     }
 
     // While body runs, the model holds a placeholder instead of each tensor. The array then holds the only
     // reference to the storage, and a write into a tensor does not copy it.
 
-    /// Takes the tensors out of the model, calls `body`, and puts the tensors back, also when `body` throws.
+    /// Takes the tensors out of the model, calls `body`, and puts the tensors back.
     private func withModelTensors<Layer: TensorContainer>(
         of layer: inout Layer,
-        _ body: (inout [ModelTensor<Layer.Parameter, Layer.Device>]) throws -> Void,
-    ) throws {
+        _ body: (inout [ModelTensor<Layer.Parameter, Layer.Device>]) -> Void,
+    ) {
         let placeholder = Tensor<Layer.Parameter, Layer.Device>(repeating: 0, shape: [])
         var tensors: [ModelTensor<Layer.Parameter, Layer.Device>] = []
         var collector = TensorVisitor<Layer.Parameter, Layer.Device>(tensors: { tensor, _, path in
@@ -271,7 +288,7 @@ public struct SafetensorsDecoder: Sendable {
             })
             layer.visitTensors(&writer)
         }
-        try body(&tensors)
+        body(&tensors)
     }
 
     /// Copies the entries of one file into the model tensors, in file order.
@@ -283,6 +300,7 @@ public struct SafetensorsDecoder: Sendable {
         release: (Int) -> Void,
     ) {
         for assignment in assignments {
+            precondition(tensors[assignment.tensorIndex].tensor.shape == assignment.entry.shape, "The model changed its tensors between the check and the load of the file.")
             let range = assignment.entry.dataOffsets
             let start = header.dataSectionOffset + range.lowerBound
             let source = UnsafeRawBufferPointer(rebasing: file[start ..< start + range.count])

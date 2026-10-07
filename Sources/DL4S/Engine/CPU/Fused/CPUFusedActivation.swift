@@ -162,7 +162,7 @@ public extension CPUFusedOperations {
             t.deallocate()
         }
         CPUKernels.map(input, into: result) { x, y, length in
-            CPUKernels.tanhOfHalf(x, scale: N(1.702), into: t, count: length)
+            CPUKernels.tanhOfHalf(x, scale: N(FusedConstants.geluSlope), into: t, count: length)
             for i in 0 ..< length {
                 y[i] = x[i] * (t[i] * half + half)
             }
@@ -177,7 +177,7 @@ public extension CPUFusedOperations {
         }
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         let (x, g) = (input.elementPointer, outputGradient.elementPointer)
-        let (half, slope) = (N(0.5), N(1.702))
+        let (half, slope) = (N(0.5), N(FusedConstants.geluSlope))
         let t = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         defer {
             t.deallocate()
@@ -462,12 +462,21 @@ public extension CPUFusedOperations {
         defer {
             exponentials.deallocate()
         }
+        // max(x, 0) + log(1 + exp(-|x|)), because exp(x) overflows for large x.
         CPUKernels.map(input, into: result) { x, y, length in
-            CPUKernels.exp(x, into: exponentials, count: length)
+            for i in 0 ..< length {
+                let value = x[i]
+                exponentials[i] = value < 0 ? value : -value
+            }
+            CPUKernels.exp(exponentials, into: exponentials, count: length)
             for i in 0 ..< length {
                 exponentials[i] += 1
             }
             CPUKernels.log(exponentials, into: y, count: length)
+            for i in 0 ..< length {
+                let value = x[i]
+                y[i] += value > 0 ? value : 0
+            }
         }
     }
 
@@ -571,10 +580,11 @@ extension CPUFusedOperations {
         }
     }
 
+    // The limit keeps `n` from an overflow. The factor already rounds to 1 there, in single and in double precision.
     /// Computes `tanh(log(1 + exp(x)))` with a single exponential, and writes `exp(x)` to `exponentials`.
     ///
     /// With `e = exp(x)` and `n = e * (e + 2)`, `tanh(log(1 + e)) = n / (n + 2)`. The input is limited to 20 before the
-    /// exponential, so that `n` does not overflow. The factor already rounds to 1 there, in single and in double precision.
+    /// exponential.
     @inline(__always)
     static func mishFactors<N: NumericType>(_ x: UnsafePointer<N>, exponentials: UnsafeMutablePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         let limit = N(20)

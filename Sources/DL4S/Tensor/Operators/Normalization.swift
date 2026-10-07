@@ -39,6 +39,10 @@ public extension Tensor {
     ///   - shift: Shift, with the shape of the trailing axes of the tensor
     ///   - epsilon: Value added to the standard deviation
     /// - Returns: Normalized tensor with the shape of the tensor
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func layerNormalized(scale: Self, shift: Self, epsilon: Element = Element(1e-5)) -> Self {
         precondition(Array(shape.suffix(scale.dim)) == scale.shape, "The scale must have the shape of the trailing axes of the tensor.")
         precondition(shift.shape == scale.shape, "The shift must have the shape of the scale.")
@@ -61,7 +65,11 @@ public extension Tensor {
     ///   - shift: Shift, broadcastable to the shape of the tensor without the batch axis
     ///   - epsilon: Value added to the standard deviation
     /// - Returns: The normalized tensor, and the mean and the biased variance of the batch. The statistics have no gradient.
-    func batchNormalized(scale: Self, shift: Self, epsilon: Element = Element(1e-5)) -> (output: Self, mean: Self, variance: Self) {
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
+    func batchNormalized(scale: Self, shift: Self, epsilon: Element = Element(1e-5)) -> BatchNormalizationResult<Element, Device> {
         var result = Self(uninitializedShape: shape)
         var mean = Self(uninitializedShape: Array(shape.dropFirst()))
         var variance = Self(uninitializedShape: Array(shape.dropFirst()))
@@ -72,7 +80,7 @@ public extension Tensor {
         } fused: { resultGradient, inputGradient, scaleGradient, shiftGradient in
             Device.FusedOperations.batchNormalizationBackward(input: self.values, scale: scale.values, shift: shift.values, outputGradient: resultGradient, epsilon: epsilon, inputGradient: inputGradient, scaleGradient: scaleGradient, shiftGradient: shiftGradient)
         }
-        return (output, mean, variance)
+        return BatchNormalizationResult(output: output, mean: mean, variance: variance)
     }
 
     /// Normalizes the tensor with the given statistics, then scales and shifts it.
@@ -87,6 +95,10 @@ public extension Tensor {
     ///   - variance: Variance, broadcastable to the shape of the tensor without the batch axis. It gets no gradient.
     ///   - epsilon: Value added to the standard deviation
     /// - Returns: Normalized tensor with the shape of the tensor
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func batchNormalized(scale: Self, shift: Self, mean: Self, variance: Self, epsilon: Element = Element(1e-5)) -> Self {
         let mean = mean.detached()
         let variance = variance.detached()
@@ -99,4 +111,14 @@ public extension Tensor {
             Device.FusedOperations.batchNormalizationBackward(input: self.values, scale: scale.values, shift: shift.values, mean: mean.values, variance: variance.values, outputGradient: resultGradient, epsilon: epsilon, inputGradient: inputGradient, scaleGradient: scaleGradient, shiftGradient: shiftGradient)
         }
     }
+}
+
+/// The result of a batch normalization with the statistics of the batch.
+public struct BatchNormalizationResult<Element: NumericType, Device: DeviceType>: Sendable {
+    /// The normalized tensor.
+    public let output: Tensor<Element, Device>
+    /// The mean of the batch, which has no gradient.
+    public let mean: Tensor<Element, Device>
+    /// The biased variance of the batch, which has no gradient.
+    public let variance: Tensor<Element, Device>
 }

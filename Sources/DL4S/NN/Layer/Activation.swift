@@ -31,6 +31,10 @@ public struct Tanh<Element: NumericType, Device: DeviceType>: Codable, Sendable 
     /// Element-wise hyperbolic tangent activation layer.
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.tanh()
     }
@@ -42,6 +46,10 @@ public struct Sigmoid<Element: NumericType, Device: DeviceType>: Codable, Sendab
     /// Element-wise sigmoid activation layer.
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.sigmoid()
     }
@@ -53,6 +61,10 @@ public struct Relu<Element: NumericType, Device: DeviceType>: Codable, Sendable 
     /// Element-wise rectified linear unit activation layer.
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.rectifiedLinear()
     }
@@ -68,6 +80,10 @@ public struct LeakyRelu<Element: NumericType, Device: DeviceType>: Codable, Send
         self.leakage = leakage
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.leakyRectifiedLinear(leakage: Tensor(leakage))
     }
@@ -79,6 +95,10 @@ public struct LogSoftmax<Element: NumericType, Device: DeviceType>: Codable, Sen
     /// Softmax activation layer
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.logSoftmax()
     }
@@ -90,6 +110,10 @@ public struct Softmax<Element: NumericType, Device: DeviceType>: Codable, Sendab
     /// Softmax activation layer
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.softmax()
     }
@@ -101,16 +125,22 @@ public struct Gelu<Element: NumericType, Device: DeviceType>: Codable, Sendable 
     /// Element-wise Gaussian error linear unit activation layer.
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.gaussianErrorLinear()
     }
 }
 
+// The role of `beta` follows `requiresGradient`, which is known only at run time, so the layer implements
+// LayerType by hand instead of with the Layer() macro.
+
 /// Element-wise Swish activation layer.
 ///
 /// The layer decides at runtime whether `beta` is trained: ``init(trainableWithChannels:)`` creates a weight
-/// and ``init(fixedWithBeta:)`` a frozen tensor. Because the role follows `requiresGradient`, the layer
-/// implements ``LayerType`` by hand instead of with the ``Layer()`` macro. After ``LayerType/freeze()``, `beta`
+/// and ``init(fixedWithBeta:)`` a frozen tensor. After ``LayerType/freeze()``, `beta`
 /// is reported as frozen, so ``LayerType/unfreeze()`` does not make it trainable again.
 public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codable, Sendable {
     /// Slope of the sigmoid inside the activation, shape [channels] when trainable and a scalar when fixed
@@ -134,6 +164,10 @@ public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codabl
         self.beta = Tensor(beta)
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.swishActivated(beta: beta)
     }
@@ -145,6 +179,10 @@ public struct Mish<Element: NumericType, Device: DeviceType>: Codable, Sendable 
     /// Element-wise Mish activation layer.
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.mishActivated()
     }
@@ -156,6 +194,10 @@ public struct LiSHT<Element: NumericType, Device: DeviceType>: Codable, Sendable
     /// Element-wise LiSHT activation layer.
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.lishtActivated()
     }

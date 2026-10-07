@@ -85,6 +85,8 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
     private final class Temporaries {
         var buffers: [MutableShapedBuffer<N, Device>] = []
         var positions: [MutableShapedBuffer<Int32, Device>] = []
+        /// Scalar constants by value, so that an implementation that uses a value several times fills it once.
+        var scalars: [N: ShapedBuffer<N, Device>] = [:]
     }
 
     private let temporaries = Temporaries()
@@ -95,6 +97,7 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         temporaries.positions.forEach(Device.Memory.free)
         temporaries.buffers = []
         temporaries.positions = []
+        temporaries.scalars = [:]
     }
 
     /// Returns an intermediate buffer with elements that are not initialized.
@@ -113,8 +116,14 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
 
     /// Returns an intermediate buffer of the given shape, whose elements have the given value.
     func constant(_ value: N, shape: [Int] = []) -> ShapedBuffer<N, Device> {
+        if shape.isEmpty, let scalar = temporaries.scalars[value] {
+            return scalar
+        }
         let buffer = temporary(shape)
         Engine.fill(value: value, result: buffer.values, count: buffer.count)
+        if shape.isEmpty {
+            temporaries.scalars[value] = ShapedBuffer(buffer)
+        }
         return ShapedBuffer(buffer)
     }
 
@@ -353,7 +362,7 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
     }
 
     func permute(_ values: some ReadableBuffer<N, Device>, to arrangement: [Int], into result: Writable) {
-        Engine.permuteAxes(values: values.readable, result: result, arangement: arrangement)
+        Engine.permuteAxes(values: values.readable, result: result, arrangement: arrangement)
     }
 
     // MARK: Gradients
@@ -380,12 +389,17 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         }
         let values = values.readable
         let axes = ShapeUtil.broadcastAxes(from: gradient.shape, to: values.shape)
-        write(gradient) { result in
-            if axes.isEmpty {
-                copy(values, into: result)
+        // A gradient with the shape of the values is added or copied without an intermediate buffer.
+        guard !axes.isEmpty else {
+            if gradient.adds {
+                add(gradient.values, values.reshaped(to: gradient.shape), into: gradient.values)
             } else {
-                sum(values, along: axes, into: result)
+                copy(values, into: gradient.values)
             }
+            return
+        }
+        write(gradient) { result in
+            sum(values, along: axes, into: result)
         }
     }
 

@@ -46,7 +46,7 @@ public extension GPUFusedOperations {
             [gradient.shape, firstMoment.shape, secondMoment.shape, result.shape].allSatisfy { $0 == shape } && (secondMomentMax.map { $0.shape == shape } ?? true),
             "The gradient, the moments, and the result must have the shape of the parameter.",
         )
-        guard GPUFused.runsKernel(N.self, elements: parameter.count, reading: [parameter.gpuBuffer, gradient.gpuBuffer, firstMoment.gpuBuffer, secondMoment.gpuBuffer] + (secondMomentMax.map { [$0.gpuBuffer] } ?? [])) else {
+        guard GPUFused.runsKernel(N.self, elements: parameter.count, reading: [parameter.gpuBuffer, gradient.gpuBuffer], writing: [firstMoment.gpuBuffer, secondMoment.gpuBuffer, result.gpuBuffer] + (secondMomentMax.map { [$0.gpuBuffer] } ?? [])) else {
             DefaultFusedOperations<GPU>.adamUpdate(
                 parameter: parameter, gradient: gradient, firstMoment: firstMoment, secondMoment: secondMoment, secondMomentMax: secondMomentMax,
                 learningRate: learningRate, beta1: beta1, beta2: beta2, epsilon: epsilon, beta1Power: beta1Power, beta2Power: beta2Power, result: result,
@@ -66,8 +66,8 @@ public extension GPUFusedOperations {
             secondCorrection: 1 / (1 - beta2Power.floatValue),
         )
         let moments = [m, v] + (maximum.map { [$0] } ?? [])
-        let pipeline = GPUKernels.pipeline("adam_update", in: .fused)
-        GPUContext.current.compute(pipeline, reading: [p, g] + moments, writing: moments + [updated]) { arguments in
+        let kernel = GPUKernels.kernel("adam_update", in: .fused)
+        GPUContext.compute(kernel, reading: [p, g] + moments, writing: moments + [updated]) { arguments in
             arguments.buffer(p)
             arguments.buffer(g)
             arguments.buffer(m)
@@ -93,7 +93,7 @@ public extension GPUFusedOperations {
         result: MutableShapedBuffer<N, GPU>,
     ) {
         GPUGatedRecurrentUnitGates<N>.checkShapes(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights)
-        guard GPUFused.runsKernel(N.self, elements: state.count, reading: [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights].map(\.gpuBuffer)) else {
+        guard GPUFused.runsKernel(N.self, elements: state.count, reading: [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights].map { $0.gpuBuffer }, writing: [result.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.gatedRecurrentUnitStep(
                 updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state,
                 updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, result: result,
@@ -122,7 +122,7 @@ public extension GPUFusedOperations {
     ) {
         GPUGatedRecurrentUnitGates<N>.checkShapes(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights)
         precondition(outputGradient.shape == state.shape, "The gradient of the new state must have the shape of the state.")
-        guard GPUFused.runsKernel(N.self, elements: state.count, reading: [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights, outputGradient].map(\.gpuBuffer)) else {
+        guard GPUFused.runsKernel(N.self, elements: state.count, reading: [updateInput, resetInput, candidateInput, state, updateWeights, resetWeights, candidateWeights, outputGradient].map { $0.gpuBuffer }, writing: [gradients.updateInput, gradients.resetInput, gradients.candidateInput, gradients.state, gradients.updateWeights, gradients.resetWeights, gradients.candidateWeights].compactMap { $0?.gpuBuffer }) else {
             DefaultFusedOperations<GPU>.gatedRecurrentUnitStepBackward(
                 updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state,
                 updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights,
@@ -206,7 +206,7 @@ private enum GPUGatedRecurrentUnitKernel {
     /// Records a kernel that receives the buffers in the given order and then the number of elements.
     static func record(_ name: String, buffers: [GPUBuffer], reading: [GPUBuffer], writing: [GPUBuffer], count: Int) {
         let elements = UInt32(count)
-        GPUContext.current.compute(GPUKernels.pipeline(name, in: .fused), reading: reading, writing: writing) { arguments in
+        GPUContext.compute(GPUKernels.kernel(name, in: .fused), reading: reading, writing: writing) { arguments in
             for buffer in buffers {
                 arguments.buffer(buffer)
             }

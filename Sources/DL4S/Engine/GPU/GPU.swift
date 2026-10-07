@@ -26,36 +26,39 @@
 #if canImport(Metal) && canImport(MetalPerformanceShaders)
 import Foundation
 
+// A GPU command costs more than an operation on a small tensor, and Metal has no double precision arithmetic.
 /// The GPU of the system, used through Metal.
 ///
 /// Tensors on the GPU are stored in memory that the CPU and the GPU share. Operations are recorded in command buffers
 /// and run on the GPU after the operation returns. The values of a tensor are available on the host when they are read,
 /// for example with `elements` or `item`: a read waits for the GPU work that writes the tensor.
 ///
-/// Operations on small tensors whose values are available on the host run on the CPU, because a GPU command costs more
-/// than the computation. Operations on `Double` tensors always run on the CPU, because Metal has no double precision arithmetic.
+/// Operations on small tensors whose values are available on the host run on the CPU. Operations on `Double` tensors always
+/// run on the CPU.
 ///
-/// Check ``isAvailable`` before you create tensors on the GPU. Without a Metal device, the creation of a GPU tensor traps.
+/// The GPU needs an Apple GPU of the family Apple7 or later, which Apple silicon Macs and devices with the A14 chip or
+/// later have. Check ``isAvailable`` before you create tensors on the GPU. Without a supported GPU, the creation of a GPU
+/// tensor traps.
 public struct GPU: DeviceType {
     public typealias Memory = GPUMemoryOperators
     public typealias Engine = GPUEngine
     public typealias FusedOperations = GPUFusedOperations
 
-    /// Whether the system has a Metal device.
+    /// Whether the system has a supported GPU.
     public static var isAvailable: Bool {
-        GPUContext.shared != nil
+        GPUContext.systemDefault != nil
     }
 
-    /// Name of the Metal device, or nil when the system has none.
+    /// Name of the GPU, or nil when the system has no supported GPU.
     public static var deviceName: String? {
-        GPUContext.shared?.device.name
+        GPUContext.systemDefault?.device.name
     }
 
     /// Submits all recorded work to the GPU and waits until the GPU completes it.
     ///
     /// Reads of tensor values wait for the work that they need, so a call is only necessary to measure time.
     public static func synchronize() {
-        GPUContext.shared?.synchronize()
+        GPUContext.systemDefault?.synchronize()
     }
 
     /// Releases the buffers that the GPU keeps for reuse.
@@ -63,7 +66,7 @@ public struct GPU: DeviceType {
     /// Tensors that are released return their buffers to a cache, so that new tensors do not allocate memory.
     /// Call this function to return the memory of the cache to the system.
     public static func clearCache() {
-        GPUContext.shared?.clearCache()
+        GPUContext.systemDefault?.clearCache()
     }
 
     // A GPU command costs a few microseconds of host time, in which the host computes an operation of about this size.
@@ -75,10 +78,10 @@ public struct GPU: DeviceType {
     /// The default is ``defaultHostExecutionLimit``. Set it to 0 to run all supported operations on the GPU.
     public static var hostExecutionLimit: Int {
         get {
-            GPUContext.shared?.hostExecutionLimit ?? 0
+            GPUContext.systemDefault?.hostExecutionLimit ?? 0
         }
         set {
-            GPUContext.shared?.hostExecutionLimit = newValue
+            GPUContext.systemDefault?.hostExecutionLimit = newValue
         }
     }
 }

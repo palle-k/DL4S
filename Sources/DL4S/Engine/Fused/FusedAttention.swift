@@ -273,7 +273,7 @@ extension FusedOperationsType {
         if let mask {
             // The mask contains 1 for every entry that is blocked, so the softmax sets these entries to 0.
             let blocked = Device.Memory.allocateBuffer(withShape: mask.shape, type: N.self)
-            math.multiply(mask, N(1e9), into: blocked)
+            math.multiply(mask, N(FusedConstants.maskScale), into: blocked)
             math.subtract(scores, blocked, into: scores)
             Device.Memory.free(blocked)
         }

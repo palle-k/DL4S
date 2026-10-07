@@ -63,10 +63,12 @@ enum GPUFused {
     // A small operation whose operands are available on the host uses the default implementation, whose basic operations then
     // run on the host.
     /// Whether a fused operation runs its GPU kernel: for floats, unless the operation runs on the host, see ``GPUPlacement``.
-    static func runsKernel<N>(_: N.Type, elements: Int, reading buffers: [GPUBuffer]) -> Bool {
-        N.self == Float.self && !GPUPlacement.runsOnHost(elements: elements, reading: buffers, writing: [])
+    static func runsKernel<N>(_: N.Type, elements: Int, reading: [GPUBuffer], writing: [GPUBuffer]) -> Bool {
+        N.self == Float.self && !GPUPlacement.runsOnHost(elements: elements, reading: reading, writing: writing)
     }
 
+    // Short rows get one SIMD group, so that no threadgroup synchronization is necessary. Longer rows get more threads, so that
+    // every thread reads a few elements, up to 256 threads, which keeps several threadgroups resident on a GPU core.
     /// Number of threads of a threadgroup that processes one row of the given length.
     static func rowThreadgroupWidth(length: Int) -> Int {
         length <= 64 ? 32 : length <= 512 ? 128 : 256
@@ -91,12 +93,17 @@ enum GPUFused {
         var accumulate: UInt32
     }
 
-    /// Records the forward kernel of an activation.
-    static func activation<N>(_ name: String, input: ShapedBuffer<N, GPU>, parameter: ShapedBuffer<N, GPU>? = nil, parameterLength: Int = 1, result: MutableShapedBuffer<N, GPU>) {
+    /// Records the forward kernel of an activation, or calls `fallback` when the activation runs on the host or the kernel
+    /// does not support the shape of the parameter.
+    static func activation<N>(_ name: String, input: ShapedBuffer<N, GPU>, parameter: ShapedBuffer<N, GPU>? = nil, result: MutableShapedBuffer<N, GPU>, fallback: () -> Void) {
         let (x, y, a) = (input.gpuBuffer, result.gpuBuffer, parameter?.gpuBuffer ?? input.gpuBuffer)
-        let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(parameterLength), accumulate: 0)
-        let pipeline = GPUKernels.pipeline("\(name)_forward", in: .fused)
-        GPUContext.current.compute(pipeline, reading: [x, a], writing: [y]) { arguments in
+        let length = parameter.map { parameterLength($0, input: input) } ?? 1
+        guard let length, runsKernel(N.self, elements: input.count, reading: [x, a], writing: [y]) else {
+            fallback()
+            return
+        }
+        let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(length), accumulate: 0)
+        GPUContext.compute(GPUKernels.kernel("\(name)_forward", in: .fused), reading: [x, a], writing: [y]) { arguments in
             arguments.buffer(x)
             arguments.buffer(y)
             arguments.buffer(a)
@@ -105,14 +112,30 @@ enum GPUFused {
         }
     }
 
-    /// Records the backward kernel of an activation, which adds the gradient to the accumulated gradient or stores it.
+    /// Records the backward kernel of an activation, which adds the gradient to the accumulated gradient or stores it, or calls
+    /// `fallback` when the activation runs on the host or the kernel does not support the shape of the parameter.
     ///
     /// - Parameter input: Input of the forward operation, or its result for activations whose gradient uses the result.
-    static func activationBackward<N>(_ name: String, input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, parameter: ShapedBuffer<N, GPU>? = nil, parameterLength: Int = 1, inputGradient: GradientBuffer<N, GPU>) {
+    static func activationBackward<N>(
+        _ name: String,
+        input: ShapedBuffer<N, GPU>,
+        outputGradient: ShapedBuffer<N, GPU>,
+        parameter: ShapedBuffer<N, GPU>? = nil,
+        inputGradient: GradientBuffer<N, GPU>?,
+        fallback: () -> Void,
+    ) {
+        guard let inputGradient else {
+            return
+        }
+        precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         let (x, g, dx, a) = (input.gpuBuffer, outputGradient.gpuBuffer, inputGradient.gpuBuffer, parameter?.gpuBuffer ?? input.gpuBuffer)
-        let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(parameterLength), accumulate: inputGradient.accumulateFlag)
-        let pipeline = GPUKernels.pipeline("\(name)_backward", in: .fused)
-        GPUContext.current.compute(pipeline, reading: [x, g, a, dx], writing: [dx]) { arguments in
+        let length = parameter.map { parameterLength($0, input: input) } ?? 1
+        guard let length, runsKernel(N.self, elements: input.count, reading: [x, g, a], writing: [dx]) else {
+            fallback()
+            return
+        }
+        let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(length), accumulate: inputGradient.accumulateFlag)
+        GPUContext.compute(GPUKernels.kernel("\(name)_backward", in: .fused), reading: [x, g, a, dx], writing: [dx]) { arguments in
             arguments.buffer(x)
             arguments.buffer(g)
             arguments.buffer(dx)

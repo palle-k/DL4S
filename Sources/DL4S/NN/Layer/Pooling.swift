@@ -48,6 +48,10 @@ public struct MaxPool2D<Element: NumericType, Device: DeviceType>: Codable, Send
         self.padding = padding
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.maxPooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
@@ -76,12 +80,21 @@ public struct AvgPool2D<Element: NumericType, Device: DeviceType>: Codable, Send
         self.padding = padding
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.averagePooled2d(windowSize: windowSize, padding: padding, stride: stride)
     }
 }
 
 /// A 2D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+///
+/// The layer expects inputs with the shape [batchSize, channels, height, width] and returns the shape
+/// [batchSize, channels, targetSize, targetSize]. The output element at row `i` and column `j` is the maximum of the rows
+/// `floor(i * height / targetSize) ..< ceil((i + 1) * height / targetSize)` and the matching columns of the input.
+/// The height and the width of the input must be at least `targetSize`.
 @Layer
 public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Codable, Sendable {
     /// Width and height of the output tensor
@@ -90,17 +103,25 @@ public struct AdaptiveMaxPool2D<Element: NumericType, Device: DeviceType>: Codab
     /// A 2D adaptive max pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
     /// - Parameter targetSize: Width and height of the output tensor
     public init(targetSize: Int) {
+        precondition(targetSize > 0, "The target size must be positive.")
         self.targetSize = targetSize
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        let height = inputs.shape[2]
-        let windowSize = height / targetSize
-        return inputs.maxPooled2d(windowSize: windowSize, padding: 0, stride: windowSize)
+        inputs.adaptivelyPooled2d(targetSize: targetSize, reduction: .maximum)
     }
 }
 
 /// A 2D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
+///
+/// The layer expects inputs with the shape [batchSize, channels, height, width] and returns the shape
+/// [batchSize, channels, targetSize, targetSize]. The output element at row `i` and column `j` is the mean of the rows
+/// `floor(i * height / targetSize) ..< ceil((i + 1) * height / targetSize)` and the matching columns of the input.
+/// The height and the width of the input must be at least `targetSize`.
 @Layer
 public struct AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: Codable, Sendable {
     /// Width and height of the output tensor
@@ -109,12 +130,69 @@ public struct AdaptiveAvgPool2D<Element: NumericType, Device: DeviceType>: Codab
     /// A 2D adaptive average pooling layer that pools its inputs with an automatically computed stride and window size to reach the desired output size
     /// - Parameter targetSize: Width and height of the output tensor
     public init(targetSize: Int) {
+        precondition(targetSize > 0, "The target size must be positive.")
         self.targetSize = targetSize
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
-        let height = inputs.shape[2]
-        let windowSize = height / targetSize
-        return inputs.averagePooled2d(windowSize: windowSize, padding: 0, stride: windowSize)
+        inputs.adaptivelyPooled2d(targetSize: targetSize, reduction: .mean)
+    }
+}
+
+/// The reduction of the windows of adaptive pooling.
+private enum AdaptivePoolingReduction {
+    case maximum
+    case mean
+}
+
+private extension Tensor {
+    /// Reduces windows of the last two axes of a tensor with the shape [batchSize, channels, height, width] to the
+    /// shape [batchSize, channels, targetSize, targetSize].
+    func adaptivelyPooled2d(targetSize: Int, reduction: AdaptivePoolingReduction) -> Self {
+        precondition(dim == 4, "The input must have the shape [batchSize, channels, height, width].")
+        let height = shape[2]
+        let width = shape[3]
+        precondition(height >= targetSize && width >= targetSize, "The height and the width of the input (\(height) x \(width)) must be at least the target size \(targetSize).")
+
+        // When the windows have the same size and do not overlap, the pooling operation or one reduction computes
+        // the result. Other sizes need windows of different sizes, which are reduced one axis at a time.
+        guard height.isMultiple(of: targetSize), width.isMultiple(of: targetSize) else {
+            return reducingWindows(along: 2, targetSize: targetSize, reduction: reduction)
+                .reducingWindows(along: 3, targetSize: targetSize, reduction: reduction)
+        }
+        let windowHeight = height / targetSize
+        let windowWidth = width / targetSize
+        if windowHeight == windowWidth {
+            return switch reduction {
+            case .maximum: maxPooled2d(windowSize: windowHeight, padding: 0, stride: windowHeight)
+            case .mean: averagePooled2d(windowSize: windowHeight, padding: 0, stride: windowHeight)
+            }
+        }
+        return view(as: [shape[0], shape[1], targetSize, windowHeight, targetSize, windowWidth])
+            .reduced(along: 5, by: reduction)
+            .reduced(along: 3, by: reduction)
+    }
+
+    /// Reduces the windows of adaptive pooling along one axis, which then has the size `targetSize`.
+    func reducingWindows(along axis: Int, targetSize: Int, reduction: AdaptivePoolingReduction) -> Self {
+        let size = shape[axis]
+        let windows = (0 ..< targetSize).map { index in
+            var ranges: [Range<Int>?] = Array(repeating: nil, count: dim)
+            ranges[axis] = (index * size / targetSize) ..< ((index + 1) * size + targetSize - 1) / targetSize
+            return self[ranges].reduced(along: axis, by: reduction).unsqueezed(at: axis)
+        }
+        return Tensor(stacking: windows, along: axis)
+    }
+
+    // The gradient of reduceMax supports one axis only, so the axes are reduced one at a time.
+    func reduced(along axis: Int, by reduction: AdaptivePoolingReduction) -> Self {
+        switch reduction {
+        case .maximum: reduceMax(along: [axis])
+        case .mean: reduceMean(along: [axis])
+        }
     }
 }

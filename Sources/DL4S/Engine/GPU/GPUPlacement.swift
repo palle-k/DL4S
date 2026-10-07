@@ -49,7 +49,7 @@ enum GPUPlacement {
     /// Whether an operation with the given number of result elements runs on the host: small operations whose operands the
     /// host can access without waiting for the GPU.
     static func runsOnHost(elements: Int, reading: [GPUBuffer], writing: [GPUBuffer]) -> Bool {
-        let context = GPUContext.current
+        let context = GPUContext.of(reading: reading, writing: writing)
         guard elements <= context.hostExecutionLimit else {
             return false
         }

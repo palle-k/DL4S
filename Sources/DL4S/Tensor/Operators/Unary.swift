@@ -29,6 +29,10 @@ import Foundation
 
 public extension Tensor {
     /// Element-wise exponentiates the tensor
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func exp() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.exp(values: values, result: resultBuffer)
@@ -56,6 +60,10 @@ public extension Tensor {
     }
 
     /// Computes the element-wise logarithm of the tensor.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func log() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.log(values: values, result: resultBuffer)
@@ -75,6 +83,10 @@ public extension Tensor {
     }
 
     /// Computes the element-wise hyperbolic tangent of the tensor.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func tanh() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.tanh(values: values, result: resultBuffer)
@@ -91,6 +103,10 @@ public extension Tensor {
     }
 
     /// Computes the element-wise square root of the tensor.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func sqrt() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sqrt(values: values, result: resultBuffer)
@@ -118,6 +134,10 @@ public extension Tensor {
     /// Computes the element-wise heaviside step function of the tensor.
     ///
     /// The heaviside step function is defined as `value > 0 ? 1 : 0`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func heaviside() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.heaviside(values: values, result: resultBuffer)
@@ -141,6 +161,10 @@ public extension Tensor {
     /// Computes the element-wise relu function.
     ///
     /// The relu function is defined as `max(value, 0)`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func rectifiedLinear() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.relu(values: values, result: resultBuffer)
@@ -157,6 +181,10 @@ public extension Tensor {
     /// Computes the element-wise leaky relu function.
     ///
     /// The leaky relu function is defined as `value > 0 ? value : leakage * value`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func leakyRectifiedLinear(leakage: Self) -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.leakyRelu(input: values, leakage: leakage.values, result: result.mutableValues)
@@ -168,6 +196,10 @@ public extension Tensor {
     }
 
     /// Computes the element-wise sigmoid function.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func sigmoid() -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.sigmoid(input: values, result: result.mutableValues)
@@ -183,6 +215,10 @@ public extension Tensor {
 
     /// Computes the softmax function along the given axis.
     /// If no axis is provided, the softmax is computed along axis 1.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func softmax(axis: Int = 1) -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.softmax(input: values, axis: axis, result: result.mutableValues)
@@ -198,6 +234,10 @@ public extension Tensor {
 
     /// Computes the logarithm of the softmax function along the given axis.
     /// If no axis is provided, the softmax is computed along axis 1.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func logSoftmax(axis: Int = 1) -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.logSoftmax(input: values, axis: axis, result: result.mutableValues)
@@ -212,6 +252,10 @@ public extension Tensor {
     }
 
     /// Computes the element-wise sine.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func sine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sin(values: values, result: resultBuffer)
@@ -230,6 +274,10 @@ public extension Tensor {
     }
 
     /// Computes the element-wise cosine.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func cosine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.cos(values: values, result: resultBuffer)
@@ -250,6 +298,10 @@ public extension Tensor {
     /// Computes the element-wise GeLU activation
     ///
     /// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func gaussianErrorLinear() -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.gelu(input: values, result: result.mutableValues)
@@ -263,6 +315,10 @@ public extension Tensor {
     /// Computes the element-wise Swish activation
     ///
     /// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func swishActivated(beta: Self = 1) -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.swish(input: values, beta: beta.values, result: result.mutableValues)
@@ -276,6 +332,10 @@ public extension Tensor {
     /// Computes the element-wise Mish activation
     ///
     /// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func mishActivated() -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.mish(input: values, result: result.mutableValues)
@@ -289,6 +349,10 @@ public extension Tensor {
     /// Computes the element-wise LiSHT activation
     ///
     /// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func lishtActivated() -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.lisht(input: values, result: result.mutableValues)
@@ -303,6 +367,10 @@ public extension Tensor {
     ///
     /// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf)
     /// - Parameter alpha: Scale applied to exponential part
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func exponentialLinearActivated(alpha: Self = 1) -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.elu(input: values, alpha: alpha.values, result: result.mutableValues)
@@ -318,6 +386,10 @@ public extension Tensor {
     /// This function is similar to a rectified linear unit but is smooth and has a continuous gradient.
     ///
     /// See [Dugas et al. - Incorporating Second-Order Functional Knowledge for Better Option Pricing](https://proceedings.neurips.cc/paper/2000/file/44968aece94f667e4095002d140b5896-Paper.pdf)
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func softplus() -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.softplus(input: values, result: result.mutableValues)
@@ -333,6 +405,10 @@ public extension Tensor {
     /// This activation function is similar to softplus but does not use exponentiation and logarithms.
     ///
     /// See https://twitter.com/jon_barron/status/1387167648669048833
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func squareplus() -> Self {
         var result = Self(uninitializedShape: shape)
         Device.FusedOperations.squareplus(input: values, result: result.mutableValues)

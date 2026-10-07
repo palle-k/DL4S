@@ -34,9 +34,7 @@ import Synchronization
 /// Every command buffer has a sequence number. The numbers increase in the order in which the command buffers are committed,
 /// and the queue runs them in that order. A storage records the sequence numbers of the last command buffers that use it and that write it,
 /// so that a host access waits only for the command buffers that it depends on.
-struct GPUStream: ~Copyable, @unchecked Sendable {
-    // `@unchecked Sendable`: The stream is only accessed while the lock of the context is held.
-
+struct GPUStream: ~Copyable {
     /// Command buffer that records work, or nil when no work was recorded since the last commit.
     var commandBuffer: (any MTLCommandBuffer)?
     /// Open compute encoder of the command buffer.
@@ -59,7 +57,8 @@ struct GPUStream: ~Copyable, @unchecked Sendable {
         if let commandBuffer {
             return commandBuffer
         }
-        guard let commandBuffer = queue.makeCommandBuffer() else {
+        // The command buffer is autoreleased, see ``GPUContext``.
+        guard let commandBuffer = autoreleasepool(invoking: { queue.makeCommandBuffer() }) else {
             preconditionFailure("DL4S: The Metal command queue could not create a command buffer.")
         }
         self.commandBuffer = commandBuffer
@@ -73,7 +72,8 @@ struct GPUStream: ~Copyable, @unchecked Sendable {
         // A serial encoder runs the dispatches in order and makes the writes of a dispatch visible to the next one.
         // Most commands of a training step depend on the command before them, and on Apple GPUs a serial encoder costs
         // less per dependent dispatch than a concurrent encoder with memory barriers.
-        guard let encoder = openCommandBuffer(queue: queue).makeComputeCommandEncoder(dispatchType: .serial) else {
+        let commandBuffer = openCommandBuffer(queue: queue)
+        guard let encoder = autoreleasepool(invoking: { commandBuffer.makeComputeCommandEncoder(dispatchType: .serial) }) else {
             preconditionFailure("DL4S: The Metal command buffer could not create a compute encoder.")
         }
         self.encoder = encoder
@@ -107,9 +107,16 @@ struct GPUCommittedCommandBuffer {
     let commandBuffer: any MTLCommandBuffer
 }
 
-/// A buffer that the pool keeps for reuse.
-struct GPUPooledBuffer {
+// `@unchecked Sendable`: Metal does not mark buffers as `Sendable`, but the object of a buffer can be used from any thread.
+// The context orders the accesses to the contents of a buffer with the sequence numbers of its command buffers.
+/// A Metal buffer.
+struct GPUMetalBuffer: @unchecked Sendable {
     let buffer: any MTLBuffer
+}
+
+/// A buffer of the pool, or a new buffer for a storage.
+struct GPUPooledBuffer {
+    let buffer: GPUMetalBuffer
     /// Sequence number of the last command buffer that used the buffer.
     let lastUse: UInt64
     /// Position of the buffer in the order in which the pool received the buffers.
@@ -117,9 +124,7 @@ struct GPUPooledBuffer {
 }
 
 /// Buffers of released storages, grouped by capacity.
-struct GPUBufferPool: ~Copyable, @unchecked Sendable {
-    // `@unchecked Sendable`: The pool is only accessed while the lock of the context is held.
-
+struct GPUBufferPool: ~Copyable {
     var buckets: [Int: [GPUPooledBuffer]] = [:]
     var cachedBytes = 0
     /// Number of buffers that the pool received.
@@ -156,24 +161,27 @@ struct GPUBufferPool: ~Copyable, @unchecked Sendable {
     }
 }
 
-/// The Metal device, its command queue, and the state of the GPU work. Every function that calls Metal drains an autorelease pool.
-final class GPUContext: @unchecked Sendable {
-    // `@unchecked Sendable`: The mutable state is in mutexes and atomics. Metal devices and queues can be used from any thread.
-
+/// A Metal device, its command queue, the state of the GPU work, and the caches of the device. Every function that calls
+/// Metal drains an autorelease pool.
+///
+/// Every storage belongs to one context, and the kernels record their commands in the context of their operands.
+final class GPUContext: Sendable {
     // Metal returns command buffers, encoders, and objects of Metal Performance Shaders autoreleased, a command buffer keeps
     // all buffers that it uses alive, and `contents()` of a buffer autoreleases the buffer. A thread without a run loop, such
     // as the main thread of a command line tool, never drains its autorelease pool, so without the local pools every buffer
     // that a command or the host used would stay allocated.
 
-    /// The context of the system default Metal device, or nil when the system has none.
-    static let shared: GPUContext? = GPUContext()
+    // The kernels use SIMD group matrices and assume SIMD groups of 32 threads, which Apple GPUs of the family Apple7 and
+    // later have.
+    /// The context of the system default Metal device, or nil when the system has no supported device.
+    static let systemDefault: GPUContext? = MTLCreateSystemDefaultDevice().flatMap(GPUContext.init(device:))
 
-    /// The shared context. Traps when the system has no Metal device.
+    /// The context in which new storages are created. Traps when the system has no supported Metal device.
     static var current: GPUContext {
-        guard let shared else {
-            preconditionFailure("DL4S: The system has no Metal device. Check GPU.isAvailable before you create GPU tensors.")
+        guard let systemDefault else {
+            preconditionFailure("DL4S: The system has no supported Metal device. Check GPU.isAvailable before you create GPU tensors.")
         }
-        return shared
+        return systemDefault
     }
 
     // The GPU runs the committed commands while the host records more work.
@@ -183,18 +191,26 @@ final class GPUContext: @unchecked Sendable {
     let device: any MTLDevice
     let queue: any MTLCommandQueue
     let kernels: GPUKernelLibrary
-    // The kernels need SIMD group matrices. Tests switch the kernels off to check the other path.
+    // Tests switch the kernels off to check the other path.
     /// Whether the matrix kernels of the package compute products. Otherwise, Metal Performance Shaders compute all products.
     var supportsMatrixKernels: Bool {
         get {
             matrixKernels.load(ordering: .relaxed)
         }
         set {
-            matrixKernels.store(newValue && device.supportsFamily(.apple7), ordering: .relaxed)
+            matrixKernels.store(newValue, ordering: .relaxed)
         }
     }
 
-    private let matrixKernels: Atomic<Bool>
+    /// Compiled Metal Performance Shaders graphs of convolutions.
+    let graphs = Mutex(GPUCache<GPUConvolutionKey, GPUGraph>(capacity: 256))
+    /// Metal Performance Shaders kernels of matrix products.
+    let matrixProducts = Mutex(GPUCache<GPUMatrixProductKey, GPUMatrixProductKernel>(capacity: 256))
+    // The tables do not depend on the batch size, but on the size of the images, which can change in every step.
+    /// Offset tables of the implicit convolutions, see ``clearCache()``.
+    let convolutionTables = Mutex(GPUCache<GPUConvolutionTableKey, GPUConvolutionTables>(capacity: 64))
+
+    private let matrixKernels = Atomic(true)
     /// Maximum number of bytes that the pool keeps.
     let poolLimit: Int
 
@@ -214,17 +230,29 @@ final class GPUContext: @unchecked Sendable {
     private let commitCounter = Atomic<Int>(0)
     private let waitCounter = Atomic<Int>(0)
 
-    private init?() {
-        guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else {
+    /// Creates the context of a device, or returns nil when the kernels do not support the device.
+    init?(device: any MTLDevice) {
+        guard device.supportsFamily(.apple7), let queue = device.makeCommandQueue() else {
             return nil
         }
         self.device = device
         self.queue = queue
         kernels = GPUKernelLibrary(device: device)
-        matrixKernels = Atomic(device.supportsFamily(.apple7))
         // The pool keeps at most a quarter of the memory that the GPU can use well, and at most 4 GB, so that released
         // tensors do not hold memory that other allocations of the process need.
         poolLimit = Int(min(device.recommendedMaxWorkingSetSize / 4, 4 << 30))
+    }
+
+    /// The context of the storages of a command. Traps when they belong to different contexts.
+    static func of(reading: [GPUBuffer], writing: [GPUBuffer]) -> GPUContext {
+        guard let context = (writing.first ?? reading.first)?.storage.context else {
+            return current
+        }
+        precondition(
+            reading.allSatisfy { $0.storage.context === context } && writing.allSatisfy { $0.storage.context === context },
+            "DL4S: The operands of a GPU operation belong to different devices.",
+        )
+        return context
     }
 
     var hostExecutionLimit: Int {
@@ -241,21 +269,32 @@ final class GPUContext: @unchecked Sendable {
     /// Records a compute command.
     ///
     /// - Parameters:
-    ///   - pipeline: Pipeline state of the kernel.
+    ///   - kernel: The kernel.
     ///   - reading: Buffers that the command reads.
     ///   - writing: Buffers that the command writes.
     ///   - encode: Sets the arguments and dispatches the threads.
-    func compute(_ pipeline: any MTLComputePipelineState, reading: [GPUBuffer], writing: [GPUBuffer], _ encode: (inout GPUArguments) -> Void) {
-        autoreleasepool {
-            stream.withLock { stream in
-                let encoder = stream.openEncoder(queue: queue)
-                encoder.setComputePipelineState(pipeline)
-                var arguments = GPUArguments(encoder: encoder, pipeline: pipeline)
-                encode(&arguments)
-                stream.record(reading: reading, writing: writing)
-                finishCommand(&stream)
-            }
+    func compute(_ kernel: GPUKernel, reading: [GPUBuffer], writing: [GPUBuffer], _ encode: (inout GPUArguments) -> Void) {
+        let pipeline = kernels.pipeline(kernel)
+        // Encoding a command autoreleases nothing, so only the creation of a command buffer and a commit need a pool.
+        stream.withLock { stream in
+            let encoder = stream.openEncoder(queue: queue)
+            encoder.setComputePipelineState(pipeline)
+            var arguments = GPUArguments(encoder: encoder, pipeline: pipeline)
+            encode(&arguments)
+            stream.record(reading: reading, writing: writing)
+            finishCommand(&stream)
         }
+    }
+
+    /// Records a compute command in the context of its buffers.
+    ///
+    /// - Parameters:
+    ///   - kernel: The kernel.
+    ///   - reading: Buffers that the command reads.
+    ///   - writing: Buffers that the command writes.
+    ///   - encode: Sets the arguments and dispatches the threads.
+    static func compute(_ kernel: GPUKernel, reading: [GPUBuffer], writing: [GPUBuffer], _ encode: (inout GPUArguments) -> Void) {
+        of(reading: reading, writing: writing).compute(kernel, reading: reading, writing: writing, encode)
     }
 
     /// Records commands that use the command buffer directly, such as Metal Performance Shaders kernels.
@@ -319,9 +358,11 @@ final class GPUContext: @unchecked Sendable {
         guard let commandBuffer = stream.commandBuffer else {
             return
         }
-        stream.endEncoding()
-        trackCompletion(&stream)
-        commandBuffer.commit()
+        autoreleasepool {
+            stream.endEncoding()
+            trackCompletion(&stream)
+            commandBuffer.commit()
+        }
         commitCounter.add(1, ordering: .relaxed)
 
         let completedSequence = completed.load(ordering: .sequentiallyConsistent)
@@ -391,10 +432,9 @@ final class GPUContext: @unchecked Sendable {
     /// Gives a storage that no command used yet a buffer that the host can write at once, and returns its old buffer to the pool.
     /// The caller holds the lock of the stream.
     private func replaceBuffer(of storage: GPUStorage) {
-        let replacement = makeBuffer(byteCount: storage.buffer.length, hostWritable: true)
-        recycle(storage.buffer, lastUse: storage.lastUse)
-        storage.buffer = replacement.buffer
-        storage.lastUse = replacement.lastUse
+        let lastUse = storage.lastUse
+        let previous = storage.replaceBuffer(with: makeBuffer(byteCount: storage.buffer.length, hostWritable: true))
+        recycle(previous, lastUse: lastUse)
     }
 
     /// Waits until the GPU completed all work that writes the storage.
@@ -491,8 +531,11 @@ final class GPUContext: @unchecked Sendable {
         let reused = pool.withLock { pool -> GPUPooledBuffer? in
             // A buffer of up to twice the size serves the request, so that tensors whose shapes change in every step,
             // such as batches of padded sequences, find buffers in the pool.
-            let candidates = pool.buckets.keys.filter { $0 >= capacity && $0 <= 2 * capacity && !pool.buckets[$0]!.isEmpty }.sorted()
-            for bucketCapacity in candidates {
+            var bucketCapacity = capacity
+            while bucketCapacity <= 2 * capacity {
+                defer {
+                    bucketCapacity = Self.capacity(forByteCount: bucketCapacity + 1)
+                }
                 // Buffers are appended when they are released, so the first buffers of a bucket are the oldest ones.
                 // The GPU reuses the newest buffer, which is likely still in its cache. The host needs a buffer that the GPU
                 // no longer uses, which is most likely one of the oldest ones. It checks the 16 oldest, so that a search under the
@@ -512,18 +555,18 @@ final class GPUContext: @unchecked Sendable {
         }
         // The allocation autoreleases the device, see ``GPUContext``.
         if let buffer = autoreleasepool(invoking: { device.makeBuffer(length: capacity, options: .storageModeShared) }) {
-            return GPUPooledBuffer(buffer: buffer, lastUse: 0)
+            return GPUPooledBuffer(buffer: GPUMetalBuffer(buffer: buffer), lastUse: 0)
         }
         clearCache()
         guard let buffer = autoreleasepool(invoking: { device.makeBuffer(length: capacity, options: .storageModeShared) }) else {
             preconditionFailure("DL4S: The GPU could not allocate a buffer of \(capacity) bytes.")
         }
-        return GPUPooledBuffer(buffer: buffer, lastUse: 0)
+        return GPUPooledBuffer(buffer: GPUMetalBuffer(buffer: buffer), lastUse: 0)
     }
 
     /// Returns the buffer of a released storage to the pool.
-    func recycle(_ buffer: any MTLBuffer, lastUse: UInt64) {
-        let capacity = buffer.length
+    func recycle(_ buffer: GPUMetalBuffer, lastUse: UInt64) {
+        let capacity = buffer.buffer.length
         pool.withLock { pool in
             guard capacity <= poolLimit else {
                 return
@@ -536,8 +579,12 @@ final class GPUContext: @unchecked Sendable {
         }
     }
 
+    /// Releases the buffers of the pool and the offset tables of the implicit convolutions.
     func clearCache() {
-        // The buffers are released after the lock, so that no deinitializer runs while the lock is held.
+        // The buffers are released after the lock, so that no deinitializer runs while the lock is held. The storages of the
+        // tables return their buffers to the pool, so the tables are released first.
+        let tables = convolutionTables.withLock { $0.removeAll() }
+        _ = consume tables
         let buffers = pool.withLock { pool in
             let buffers = pool.buckets
             pool.buckets.removeAll()

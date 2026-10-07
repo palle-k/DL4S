@@ -28,12 +28,9 @@ import Foundation
 import Metal
 import MetalPerformanceShaders
 import MetalPerformanceShadersGraph
-import Synchronization
 
 /// A compiled Metal Performance Shaders graph with the order of its inputs and results.
-struct GPUGraph: @unchecked Sendable {
-    // `@unchecked Sendable`: An executable does not change when it encodes, and the graph is not used after the compilation.
-
+struct GPUGraph: Sendable {
     let executable: MPSGraphExecutable
     /// Positions of the inputs of the executable in the order in which the caller passes them.
     let inputOrder: [Int]
@@ -42,8 +39,11 @@ struct GPUGraph: @unchecked Sendable {
 
     /// Compiles a graph.
     ///
-    /// - Parameter build: Creates the graph from its inputs and returns the results.
-    init(inputShapes: [[Int]], build: (MPSGraph, [MPSGraphTensor]) -> [MPSGraphTensor]) {
+    /// - Parameters:
+    ///   - device: The device that runs the graph.
+    ///   - inputShapes: Shapes of the inputs.
+    ///   - build: Creates the graph from its inputs and returns the results.
+    init(device: any MTLDevice, inputShapes: [[Int]], build: (MPSGraph, [MPSGraphTensor]) -> [MPSGraphTensor]) {
         let graph = MPSGraph()
         let inputs = inputShapes.map { graph.placeholder(shape: $0.map { NSNumber(value: $0) }, dataType: .float32, name: nil) }
         let results = build(graph, inputs)
@@ -51,7 +51,7 @@ struct GPUGraph: @unchecked Sendable {
         for input in inputs {
             feeds[input] = MPSGraphShapedType(shape: input.shape, dataType: .float32)
         }
-        executable = graph.compile(with: MPSGraphDevice(mtlDevice: GPUContext.current.device), feeds: feeds, targetTensors: results, targetOperations: nil, compilationDescriptor: nil)
+        executable = graph.compile(with: MPSGraphDevice(mtlDevice: device), feeds: feeds, targetTensors: results, targetOperations: nil, compilationDescriptor: nil)
         let feedTensors = executable.feedTensors ?? []
         let targetTensors = executable.targetTensors ?? []
         inputOrder = inputs.map { input in feedTensors.firstIndex { $0 === input }! }
@@ -64,8 +64,10 @@ struct GPUGraph: @unchecked Sendable {
     ///   - inputs: Inputs, in the order of the inputs of the builder.
     ///   - results: Results, in the order of the results of the builder.
     func encode<N>(inputs: [ShapedBuffer<N, GPU>], results: [MutableShapedBuffer<N, GPU>]) {
-        GPUContext.current.graph(reading: inputs.map(\.gpuBuffer), writing: results.map(\.gpuBuffer)) { commandBuffer in
-            // The data objects are created while the stream is locked, because a new storage can still replace its buffer.
+        let (reading, writing) = (inputs.map { $0.gpuBuffer }, results.map { $0.gpuBuffer })
+        GPUContext.of(reading: reading, writing: writing).graph(reading: reading, writing: writing) { commandBuffer in
+            // The data objects are created while the stream is locked, because a storage that no command used yet can still
+            // replace its buffer.
             var inputData = [MPSGraphTensorData?](repeating: nil, count: inputs.count)
             for (index, input) in inputs.enumerated() {
                 inputData[inputOrder[index]] = Self.data(input.gpuBuffer, shape: input.shape)
@@ -90,33 +92,4 @@ struct GPUGraph: @unchecked Sendable {
     }
 }
 
-/// Compiled graphs by a key that describes the operation and the shapes of its inputs.
-enum GPUGraphCache {
-    private struct Key: Hashable, @unchecked Sendable {
-        // `@unchecked Sendable`: The wrapped key is `Sendable`, see ``GPUGraphCache/graph(for:compile:)``.
-        let value: AnyHashable
-    }
-
-    private static let graphs = Mutex<[Key: GPUGraph]>([:])
-    /// Number of graphs that the cache keeps.
-    private static let maximumCachedGraphs = 256
-
-    /// Returns the graph for the key, and compiles it when the cache has none.
-    static func graph(for key: some Hashable & Sendable, compile: () -> GPUGraph) -> GPUGraph {
-        let key = Key(value: AnyHashable(key))
-        if let graph = graphs.withLock({ $0[key] }) {
-            return graph
-        }
-        // The compilation runs without the lock. When two threads compile the same graph, the second result is kept.
-        let graph = autoreleasepool(invoking: compile)
-        graphs.withLock { graphs in
-            // Shapes that change in every step, such as the sizes of padded batches, would let the cache grow without a limit.
-            if graphs.count >= maximumCachedGraphs {
-                graphs.removeAll()
-            }
-            graphs[key] = graph
-        }
-        return graph
-    }
-}
 #endif

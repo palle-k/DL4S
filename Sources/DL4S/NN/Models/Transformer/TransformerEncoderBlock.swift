@@ -61,6 +61,10 @@ public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceT
     /// Applies multi-head self attention and a pointwise feed forward layer to the inputs
     /// - Parameter inputs: Layer input with shape [batchSize, maxLen, hiddenSize] and padding mask broadcastable to [batchSize, heads, queryCount, keyCount] with 1 entries for all elements that should be blocked.
     /// - Returns: Result of layer operations with shape [batchSize, maxLen, hiddenSize]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: (inputs: Tensor<Element, Device>, mask: Tensor<Element, Device>)) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "EncoderLayer") {
             // inputs: [batchSize, maxLen == queryCount, hiddenDim]

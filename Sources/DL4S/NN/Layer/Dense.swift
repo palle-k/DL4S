@@ -55,7 +55,7 @@ public struct Dense<Element: RandomizableType, Device: DeviceType>: Codable, Sen
     ///   - outputSize: Number of elements in an output vector
     ///   - generator: Random number generator that provides the initial weights.
     public init<Generator: RandomNumberGenerator>(inputSize: Int, outputSize: Int, using generator: inout Generator) {
-        weights = Tensor(xavierNormalWithShape: [inputSize, outputSize], requiresGradient: true, using: &generator)
+        weights = Tensor(heNormalWithShape: [inputSize, outputSize], requiresGradient: true, using: &generator)
         bias = Tensor(repeating: 0, shape: [outputSize], requiresGradient: true)
 
         #if DEBUG
@@ -64,6 +64,10 @@ public struct Dense<Element: RandomizableType, Device: DeviceType>: Codable, Sen
         #endif
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         inputs.linearlyTransformed(weights: weights, bias: bias)
     }

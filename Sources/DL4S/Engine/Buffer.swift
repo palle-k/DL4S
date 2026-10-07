@@ -184,17 +184,6 @@ public extension MemoryOperatorsType {
     }
 }
 
-extension Tensor {
-    /// Writable storage of the tensor.
-    var mutableValues: MutableShapedBuffer<Element, Device> {
-        mutating get {
-            // Assume write, so perform CoW if necessary.
-            ensureOwnership()
-            return MutableShapedBuffer(values: handle.values, shape: shape)
-        }
-    }
-}
-
 extension Buffer: CustomStringConvertible {
     public var description: String {
         "Buffer(\(generateDescription()))"

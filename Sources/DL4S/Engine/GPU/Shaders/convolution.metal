@@ -138,9 +138,9 @@ kernel void implicit_gemm(device const float* A [[buffer(0)]], device const floa
     }
 
     // Every thread owns two neighboring elements of each 8 x 8 block, in row `blockRow` and columns `blockColumn` and `blockColumn + 1`.
-    const int quad = int(lane) / 4;
-    const int blockRow = (quad & 4) + (int(lane) / 2) % 4;
-    const int blockColumn = (quad & 2) * 2 + (int(lane) % 2) * 2;
+    const ushort2 position = matrix_position(ushort(lane));
+    const int blockRow = int(position.y);
+    const int blockColumn = int(position.x);
     UNROLL for (int j = 0; j < BLOCKS; j++) {
         UNROLL for (int e = 0; e < 2; e++) {
             int column = n0 + sn + j * 8 + blockColumn + e;

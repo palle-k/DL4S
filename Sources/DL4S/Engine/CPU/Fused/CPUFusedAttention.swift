@@ -260,7 +260,7 @@ struct AttentionMask<N: NumericType> {
         /// Subtracts 10⁹ times the mask from the scores, so that the softmax sets the blocked entries to 0.
         @inline(__always)
         func apply(to scores: UnsafeMutablePointer<N>, queryCount: Int, keyCount: Int) {
-            let blocked = N(1e9)
+            let blocked = N(FusedConstants.maskScale)
             for row in 0 ..< queryCount {
                 let (maskRow, rowScores) = (values + row * queryStride, scores + row * keyCount)
                 if keyStride == 1 {

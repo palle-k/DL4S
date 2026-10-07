@@ -47,7 +47,7 @@ public extension GPUFusedOperations {
     static func convolution2d<N: NumericType>(input: ShapedBuffer<N, GPU>, filters: ShapedBuffer<N, GPU>, bias: ShapedBuffer<N, GPU>?, padding: Int, stride: Int, result: MutableShapedBuffer<N, GPU>) {
         let geometry = GPUConvolution(input: input, filters: filters, bias: bias, padding: padding, stride: stride)
         precondition(result.shape == geometry.outputShape, "The result must have the shape of the convolved images.")
-        guard GPUFused.runsKernel(N.self, elements: result.count, reading: [input.gpuBuffer, filters.gpuBuffer] + (bias.map { [$0.gpuBuffer] } ?? []))
+        guard GPUFused.runsKernel(N.self, elements: result.count, reading: [input.gpuBuffer, filters.gpuBuffer] + (bias.map { [$0.gpuBuffer] } ?? []), writing: [result.gpuBuffer])
         else {
             DefaultFusedOperations<GPU>.convolution2d(input: input, filters: filters, bias: bias, padding: padding, stride: stride, result: result)
             return
@@ -56,8 +56,9 @@ public extension GPUFusedOperations {
             geometry.implicitConvolution.forward(input: input.gpuBuffer, filters: filters.gpuBuffer, bias: bias?.gpuBuffer, result: result.gpuBuffer)
             return
         }
-        let graph = GPUGraphCache.graph(for: geometry.key(outputs: [])) {
-            GPUGraph(inputShapes: [input.shape, filters.shape] + (bias.map { [$0.shape] } ?? [])) { graph, inputs in
+        let context = GPUContext.of(reading: [input.gpuBuffer, filters.gpuBuffer], writing: [result.gpuBuffer])
+        let graph = GPUCache.value(in: context.graphs, for: geometry.key(outputs: [])) {
+            GPUGraph(device: context.device, inputShapes: [input.shape, filters.shape] + (bias.map { [$0.shape] } ?? [])) { graph, inputs in
                 let convolved = graph.convolution2D(inputs[0], weights: inputs[1], descriptor: geometry.descriptor, name: nil)
                 guard inputs.count == 3 else {
                     return [convolved]
@@ -81,7 +82,7 @@ public extension GPUFusedOperations {
         biasGradient: GradientBuffer<N, GPU>?,
     ) {
         let geometry = GPUConvolution(input: input, filters: filters, bias: bias, padding: padding, stride: stride)
-        guard GPUFused.runsKernel(N.self, elements: outputGradient.count, reading: [input.gpuBuffer, filters.gpuBuffer, outputGradient.gpuBuffer])
+        guard GPUFused.runsKernel(N.self, elements: outputGradient.count, reading: [input.gpuBuffer, filters.gpuBuffer, outputGradient.gpuBuffer], writing: [inputGradient, filterGradient, biasGradient].compactMap { $0?.gpuBuffer })
         else {
             DefaultFusedOperations<GPU>.convolution2dBackward(
                 input: input, filters: filters, bias: bias, outputGradient: outputGradient, padding: padding, stride: stride,
@@ -113,10 +114,11 @@ public extension GPUFusedOperations {
             math.release()
         }
         // The graph stores its results, so a gradient that is added to the accumulated gradient goes through an intermediate buffer.
-        let gradients = requested.compactMap(\.self)
+        let gradients = requested.compactMap { $0 }
         let targets = gradients.map { $0.adds ? math.temporary($0.shape) : $0.values }
-        let graph = GPUGraphCache.graph(for: geometry.key(outputs: outputs)) {
-            GPUGraph(inputShapes: [input.shape, filters.shape, outputGradient.shape]) { graph, inputs in
+        let context = GPUContext.of(reading: [input.gpuBuffer, filters.gpuBuffer, outputGradient.gpuBuffer], writing: [])
+        let graph = GPUCache.value(in: context.graphs, for: geometry.key(outputs: outputs)) {
+            GPUGraph(device: context.device, inputShapes: [input.shape, filters.shape, outputGradient.shape]) { graph, inputs in
                 let (x, w, g) = (inputs[0], inputs[1], inputs[2])
                 var results: [MPSGraphTensor] = []
                 if outputs[0] {
@@ -222,10 +224,12 @@ private struct GPUConvolution {
             padded = graph.sliceTensor(padded, starts: [0, 0, 0, 0], ends: [inputShape[0], inputShape[1], paddedHeight, paddedWidth].map { NSNumber(value: $0) }, strides: [1, 1, 1, 1], name: nil)
         }
         let blocks = graph.space(toDepth2DTensor: padded, widthAxis: 3, heightAxis: 2, depthAxis: 1, blockSize: stride, usePixelShuffleOrder: true, name: nil)
-        let descriptor = MPSGraphConvolution2DOpDescriptor(
+        guard let descriptor = MPSGraphConvolution2DOpDescriptor(
             strideInX: 1, strideInY: 1, dilationRateInX: 1, dilationRateInY: 1, groups: 1,
             paddingLeft: 0, paddingRight: 0, paddingTop: 0, paddingBottom: 0, paddingStyle: .explicit, dataLayout: .NCHW, weightsLayout: .OIHW,
-        )!
+        ) else {
+            preconditionFailure("DL4S: Metal Performance Shaders could not create the descriptor of a convolution.")
+        }
         let (outputChannels, inputChannels) = (filterShape[0], filterShape[1])
         let blockGradient = graph.convolution2DWeightsGradient(
             outputGradient, source: blocks,
@@ -247,7 +251,7 @@ private struct GPUConvolution {
     }
 
     var descriptor: MPSGraphConvolution2DOpDescriptor {
-        MPSGraphConvolution2DOpDescriptor(
+        guard let descriptor = MPSGraphConvolution2DOpDescriptor(
             strideInX: stride,
             strideInY: stride,
             dilationRateInX: 1,
@@ -260,16 +264,21 @@ private struct GPUConvolution {
             paddingStyle: .explicit,
             dataLayout: .NCHW,
             weightsLayout: .OIHW,
-        )!
+        ) else {
+            preconditionFailure("DL4S: Metal Performance Shaders could not create the descriptor of a convolution.")
+        }
+        return descriptor
     }
 
+    // The graphs of the gradients do not read the bias, so a convolution with a bias shares them with one without.
     /// Key of the graph that computes the given gradients, or the forward pass for no gradients.
     func key(outputs: [Bool]) -> GPUConvolutionKey {
-        GPUConvolutionKey(inputShape: inputShape, filterShape: filterShape, hasBias: hasBias, padding: padding, stride: stride, outputs: outputs)
+        GPUConvolutionKey(inputShape: inputShape, filterShape: filterShape, hasBias: outputs.isEmpty && hasBias, padding: padding, stride: stride, outputs: outputs)
     }
 }
 
-private struct GPUConvolutionKey: Hashable, Sendable {
+/// Describes a convolution graph: the shapes and parameters of the convolution, and the gradients that the graph computes.
+struct GPUConvolutionKey: Hashable, Sendable {
     let inputShape: [Int]
     let filterShape: [Int]
     let hasBias: Bool

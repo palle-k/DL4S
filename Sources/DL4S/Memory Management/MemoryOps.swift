@@ -28,7 +28,6 @@ import Foundation
 @_specialize(where Element == Float)
 @_specialize(where Element == Int32)
 @_specialize(where Element == Double)
-@inline(__always)
 func iterativeRead<Element>(
     source: UnsafeBufferPointer<Element>,
     destination: UnsafeMutableBufferPointer<Element>,
@@ -36,32 +35,23 @@ func iterativeRead<Element>(
     srcStrides: [Int],
     srcShape: [Int],
 ) {
-    let srcIndex = srcIndex.dropLast(while: { $0 == nil })
+    let srcIndex = Array(srcIndex.dropLast(while: { $0 == nil }))
 
-    if srcIndex.count == 0 {
+    if srcIndex.isEmpty {
         let count = srcShape[0] &* srcStrides[0]
         destination.assign(from: source, count: count)
         return
     }
 
+    // Every index of the axes without a position selects a contiguous run of copyCount elements, which are written in order.
     let copyCount = srcStrides[srcIndex.count - 1]
-
-    let iterShape = zip(srcIndex, srcShape).map { idx, dim in
-        idx == nil ? dim : 1
-    }
-
-    let indices = iterate(iterShape)
-
-    for i in 0 ..< indices.count {
-        let index = indices[i]
-        var baseIndex = 0
-        let dstIndex = i &* copyCount
-        for j in 0 ..< index.count {
-            baseIndex &+= (srcIndex[j] ?? index[j]) &* srcStrides[j]
-        }
-        destination
-            .advanced(by: dstIndex)
-            .assign(from: source.advanced(by: baseIndex), count: copyCount)
+    let iterShape = zip(srcIndex, srcShape).map { position, size in position == nil ? size : 1 }
+    let strides = Array(srcStrides.prefix(srcIndex.count))
+    let baseOffset = zip(srcIndex, strides).reduce(0) { offset, axis in offset &+ (axis.0 ?? 0) &* axis.1 }
+    var destinationOffset = 0
+    StridedIteration.forEachOffset(shape: iterShape, strides: strides, strides) { offset, _ in
+        destination.advanced(by: destinationOffset).assign(from: source.advanced(by: baseOffset &+ offset), count: copyCount)
+        destinationOffset &+= copyCount
     }
 }
 
@@ -75,26 +65,23 @@ func iterativeWrite<Element>(
     dstStrides: [Int],
     dstShape: [Int],
 ) {
-    let dstIndex = dstIndex.reversed().drop(while: { $0 == nil }).reversed()
+    let dstIndex = Array(dstIndex.dropLast(while: { $0 == nil }))
 
-    if dstIndex.count == 0 {
+    if dstIndex.isEmpty {
         let count = dstShape[0] &* dstStrides[0]
         destination.assign(from: source, count: count)
         return
     }
 
+    // Every index of the axes without a position selects a contiguous run of copyCount elements, which are read in order.
     let copyCount = dstStrides[dstIndex.count - 1]
-
-    let iterShape = zip(dstIndex, dstShape).map { idx, dim in
-        idx == nil ? dim : 1
-    }
-
-    for (i, index) in iterate(iterShape).enumerated() {
-        let index = zip(dstIndex, index).map { $0 ?? $1 }
-        let baseIndex = zip(index, dstStrides).map(&*).reduce(0, &+)
-        let srcIndex = i &* copyCount
-        destination.advanced(by: baseIndex)
-            .assign(from: source.advanced(by: srcIndex), count: copyCount)
+    let iterShape = zip(dstIndex, dstShape).map { position, size in position == nil ? size : 1 }
+    let strides = Array(dstStrides.prefix(dstIndex.count))
+    let baseOffset = zip(dstIndex, strides).reduce(0) { offset, axis in offset &+ (axis.0 ?? 0) &* axis.1 }
+    var sourceOffset = 0
+    StridedIteration.forEachOffset(shape: iterShape, strides: strides, strides) { offset, _ in
+        destination.advanced(by: baseOffset &+ offset).assign(from: source.advanced(by: sourceOffset), count: copyCount)
+        sourceOffset &+= copyCount
     }
 }
 
@@ -112,15 +99,5 @@ enum MemoryOps {
             str[i] = str[i &+ 1] &* shape[i &+ 1]
         }
         return str
-    }
-
-    static func linearIndex(from index: [Int], shape: [Int]) -> Int {
-        let strides = MemoryOps.strides(from: shape)
-        return zip(index, strides).map(&*).reduce(0, &+)
-    }
-
-    static func index(from linearIndex: Int, shape: [Int]) -> [Int] {
-        let strides = MemoryOps.strides(from: shape)
-        return zip(shape, strides).map { dim, str in (linearIndex / str) % dim }
     }
 }

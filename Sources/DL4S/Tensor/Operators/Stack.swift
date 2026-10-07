@@ -36,6 +36,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - axis: Axis to unstack along.
     ///   - lengths: Number of elements along the unstacking axis of the resulting tensors
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func unstacked(along axis: Int, withLengths lengths: [Int]) -> [Self] {
         let sourceShapes = lengths.map { length -> [Int] in
             var shape = self.shape
@@ -55,14 +59,10 @@ public extension Tensor {
                 context: self.requiresGradient ? TensorContext(
                     tag: "unstack",
                     sources: [self],
-                    backpropagate: [{ resultGradient -> Tensor<Element, Device> in
-                        let sourceOffsets = lengths.reduce(into: [0]) { $0.append($0.last! + $1) }
-                        let idx = Array(repeating: nil, count: axis) +
-                            [sourceOffsets[i] ..< sourceOffsets[i] + lengths[i]]
-
-                        var target = Tensor<Element, Device>(repeating: 0, shape: selfShape)
-                        target[idx] = resultGradient
-                        return target
+                    backpropagateAccumulate: [{ resultGradient, accumulated in
+                        let start = lengths[..<i].reduce(0, +)
+                        let index: [Range<Int>?] = Array(repeating: nil, count: axis) + [start ..< start + lengths[i]]
+                        return Self.addingSlice(resultGradient, to: accumulated, shape: selfShape, contiguousOffset: Self.contiguousOffset(of: index, shape: selfShape), read: { $0[index] }, write: { $0[index] = $1 })
                     }],
                 ) : nil,
             )
@@ -86,7 +86,7 @@ public extension Tensor {
                 .allSatisfy { $0 == axis || $1.0 == $1.1 }
         }, "All vector shapes must match except on concatenation axis.")
 
-        let requiresGradient = tensors.contains(where: \.requiresGradient)
+        let requiresGradient = tensors.contains { $0.requiresGradient }
 
         let resultStackDimSize = tensors.map { $0.shape[axis] }
         let resultStackDimCount = resultStackDimSize.reduce(0, +)
@@ -95,7 +95,7 @@ public extension Tensor {
         resultShape[axis] = resultStackDimCount
 
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
-        Device.Engine.stack(buffers: tensors.map(\.values), result: resultBuffer, axis: axis)
+        Device.Engine.stack(buffers: tensors.map { $0.values }, result: resultBuffer, axis: axis)
 
         self.init(
             using: resultBuffer,
@@ -106,6 +106,17 @@ public extension Tensor {
                 // and the closures share no state.
                 backpropagateAll: { resultGradient, accumulators in
                     var accumulators = accumulators
+                    // Without a gradient graph, the gradients are added to the accumulated gradients in place, in one operation.
+                    if !resultGradient.requiresGradient, accumulators.allSatisfy({ $0.map { !$0.requiresGradient } ?? false }) {
+                        // Taking the accumulators out of the array leaves them uniquely referenced, so the writes do not copy them.
+                        var gradients = accumulators.indices.compactMap { accumulators[$0].take() }
+                        var buffers: [MutableShapedBuffer<Element, Device>] = []
+                        for index in gradients.indices {
+                            buffers.append(gradients[index].mutableValues)
+                        }
+                        Device.Engine.unstackAdd(stacked: resultGradient.values, add: buffers.map { ShapedBuffer($0) }, result: buffers, axis: axis)
+                        return gradients
+                    }
                     let sourceGradients = resultGradient.unstacked(along: axis, withLengths: resultStackDimSize)
                     return sourceGradients.indices.map { i in
                         // Taking the accumulator out of the array leaves it uniquely referenced.

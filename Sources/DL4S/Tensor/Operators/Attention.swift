@@ -43,6 +43,10 @@ import Foundation
 ///     broadcastable to [batchSize, heads, queryCount, keyCount], or nil for no mask. The mask gets no gradient.
 ///   - temperature: Divisor of the dot products
 /// - Returns: Attended values, shape [batchSize, heads, queryCount, valueDim]
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func scaledDotProductAttention<Element, Device>(
     queries: Tensor<Element, Device>,
     keys: Tensor<Element, Device>,
@@ -84,6 +88,10 @@ public func scaledDotProductAttention<Element, Device>(
 ///   - heads: Number of query heads
 ///   - temperature: Divisor of the dot products
 /// - Returns: Attended values, shape [batchSize, queryCount, outputDim]
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func multiHeadAttention<Element, Device>(
     queries: Tensor<Element, Device>,
     keys: Tensor<Element, Device>,

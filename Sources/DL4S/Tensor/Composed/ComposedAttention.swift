@@ -33,7 +33,7 @@ extension Composed {
             .view(as: [-1, queries.shape[1], queries.shape[2], keys.shape[2]])
         if let mask {
             // The mask contains 1 for every entry that is blocked, so the softmax sets these entries to 0.
-            scores -= mask * 1e9
+            scores -= mask * Tensor(N(FusedConstants.maskScale))
         }
         return scores.softmax(axis: 3)
     }

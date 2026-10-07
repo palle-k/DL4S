@@ -77,7 +77,7 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
 
     /// Whether a block of the decoder attends to the states of an encoder
     public var attendsToEncoder: Bool {
-        decoderLayers.contains(where: \.attendsToEncoder)
+        decoderLayers.contains { $0.attendsToEncoder }
     }
 
     /// Creates a transformer decoder sequencing multiple transformer decoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
@@ -102,6 +102,10 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     /// Every position attends to itself and to the positions before it.
     /// - Parameter inputs: Decoder inputs, with the encoder output exactly when the decoder attends to an encoder
     /// - Returns: Decoded sequences with the shape [batchSize, length, hiddenDim]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: TransformerDecoderInputs<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Decoder") {
             precondition((inputs.encoded != nil) == attendsToEncoder, attendsToEncoder ? "The decoder attends to an encoder, so it needs the encoder output." : "The decoder does not attend to an encoder, so it takes no encoder output.")
@@ -122,6 +126,10 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     ///   - encoded: Output of the encoder with the batch size `batchSize` or 1, or nil for a decoder that does not attend
     ///     to an encoder. With the batch size 1, every sequence attends to the same encoder output, as the hypotheses of a beam search do.
     /// - Returns: State for ``decode(_:lengths:state:)``
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func makeState(batchSize: Int, encoded: EncodedSequence<Element, Device>? = nil) -> TransformerDecoderState<Element, Device> {
         precondition((encoded != nil) == attendsToEncoder, attendsToEncoder ? "The decoder attends to an encoder, so it needs the encoder output." : "The decoder does not attend to an encoder, so it takes no encoder output.")
         precondition(batchSize > 0, "The batch size must be positive.")
@@ -153,6 +161,10 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
     ///   - lengths: Number of new positions of each sequence that are not padding, in `0 ... count`, or nil when every new position is a position of its sequence
     ///   - state: State of the decoding, which this function updates
     /// - Returns: Results at the new positions with the shape [batchSize, count, hiddenDim]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func decode(_ next: Tensor<Element, Device>, lengths: [Int]? = nil, state: inout TransformerDecoderState<Element, Device>) -> Tensor<Element, Device> {
         precondition(next.dim == 3 && next.shape[0] == state.batchSize, "The inputs must have the shape [\(state.batchSize), count, hiddenDim].")
         precondition(state.selfAttention.count == decoderLayers.count, "The state belongs to a decoder with \(state.selfAttention.count) blocks.")

@@ -247,7 +247,7 @@ public protocol EngineType {
     ///   - transposeSecond: Whether to transpose the right-hand side matrices
     static func gemmBatched<N: NumericType>(lhs: ShapedBuffer<N, Device>, lhsStride: Int, rhs: ShapedBuffer<N, Device>, rhsStride: Int, result: MutableShapedBuffer<N, Device>, count: Int, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool)
 
-    /// Band matrix extraction
+    /// Band matrix extraction. The elements of the result outside of the band are not written.
     /// - Parameters:
     ///   - buffer: Source matrix
     ///   - result: Result buffer
@@ -427,18 +427,6 @@ public protocol EngineType {
     ///   - result: Result buffer
     static func tan<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
-    /// Element-wise hyperbolic sine
-    /// - Parameters:
-    ///   - values: Buffer of values to compute the hyperbolic sine of
-    ///   - result: Result buffer
-    static func sinh<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
-
-    /// Element-wise hyperbolic cosine
-    /// - Parameters:
-    ///   - values: Buffer of values to compute the hyperbolic cosine of
-    ///   - result: Result buffer
-    static func cosh<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
-
     /// Element-wise hyperbolic tangent
     /// - Parameters:
     ///   - values: Buffer of values to compute the hyperbolic tangent of
@@ -519,16 +507,16 @@ public protocol EngineType {
     /// - Parameters:
     ///   - values: Buffer of values to permute
     ///   - result: Result buffer
-    ///   - arangement: Arangement of axes.
-    static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, arangement: [Int])
+    ///   - arrangement: Arangement of axes.
+    static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, arrangement: [Int])
 
     /// Performs an axis permutation / transpose oepration and adds another value vector
     /// - Parameters:
     ///   - values: Buffer of values to permute
     ///   - add: Buffer of values to add to the result
     ///   - result: Result buffer
-    ///   - arangement: Arangement of axes.
-    static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, arangement: [Int])
+    ///   - arrangement: Arangement of axes.
+    static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, arrangement: [Int])
 
     /// Reverses the order of elements along the first dimension of the buffer
     /// - Parameters:

@@ -41,10 +41,14 @@ public extension CPUFusedOperations {
         for row in 0 ..< input.count / rowLength {
             let (values, output) = (x + row * rowLength, y + row * rowLength)
             let mean = CPUKernels.sum(values, count: rowLength) * inverseLength
-            let variance = CPUKernels.dot(values, values, count: rowLength) * inverseLength - mean * mean
+            // The variance of the centered values cannot be negative, which E[x²] - E[x]² can be after rounding.
+            for j in 0 ..< rowLength {
+                output[j] = values[j] - mean
+            }
+            let variance = CPUKernels.dot(output, output, count: rowLength) * inverseLength
             let inverseDivisor = 1 / (variance.sqrt() + epsilon)
             for j in 0 ..< rowLength {
-                output[j] = (values[j] - mean) * inverseDivisor * gamma[j] + beta[j]
+                output[j] = output[j] * inverseDivisor * gamma[j] + beta[j]
             }
         }
     }
@@ -128,7 +132,8 @@ public extension CPUFusedOperations {
             }
             // dx = (dn - mean(dn) - n * mean(dn * n) * d / sqrt(variance)) / d
             let meanGradient = CPUKernels.sum(normalizedGradient, count: rowLength) * inverseLength
-            let correlation = CPUKernels.dot(normalizedGradient, normalized, count: rowLength) * inverseLength * divisor / standardDeviation
+            // A row of equal values has the normalized values 0, so the term is 0, and the division would give NaN.
+            let correlation = standardDeviation > 0 ? CPUKernels.dot(normalizedGradient, normalized, count: rowLength) * inverseLength * divisor / standardDeviation : 0
             // Without an accumulated gradient, the row is written directly.
             let target = beta == 0 ? dx + row * rowLength : rowGradient
             for j in 0 ..< rowLength {
@@ -162,13 +167,22 @@ public extension CPUFusedOperations {
             let values = x + row * columns
             for j in 0 ..< columns {
                 means[j] += values[j]
-                variances[j] += values[j] * values[j]
             }
         }
         let inverseBatchSize = 1 / N(batchSize)
         for j in 0 ..< columns {
             means[j] *= inverseBatchSize
-            variances[j] = variances[j] * inverseBatchSize - means[j] * means[j]
+        }
+        // The variance of the centered values cannot be negative, which E[x²] - E[x]² can be after rounding.
+        for row in 0 ..< batchSize {
+            let values = x + row * columns
+            for j in 0 ..< columns {
+                let centered = values[j] - means[j]
+                variances[j] += centered * centered
+            }
+        }
+        for j in 0 ..< columns {
+            variances[j] *= inverseBatchSize
         }
 
         // y = x * factor + offset with factor = gamma / d and offset = beta - mean * factor
@@ -254,8 +268,9 @@ public extension CPUFusedOperations {
             let standardDeviation = (squares[j] * inverseBatchSize).sqrt()
             let divisor = standardDeviation + epsilon
             inverseDivisors[j] = 1 / divisor
-            // Holds d / sqrt(variance) until the sums of the gradients are known.
-            correlationFactors[j] = divisor / standardDeviation
+            // Holds d / sqrt(variance) until the sums of the gradients are known. A column of equal values has the
+            // normalized values 0, so its term is 0, and the division would give NaN.
+            correlationFactors[j] = standardDeviation > 0 ? divisor / standardDeviation : 0
         }
 
         for row in 0 ..< batchSize {

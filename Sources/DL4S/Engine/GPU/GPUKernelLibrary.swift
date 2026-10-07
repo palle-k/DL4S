@@ -32,21 +32,23 @@ import Synchronization
 /// A group of kernels in Metal Shading Language, in a `.metal` file in the `Shaders` resource directory.
 ///
 /// The package ships the kernels as source and compiles every group when one of its kernels is used first.
-struct GPUShaderSource: Sendable {
-    /// Name of the `.metal` file without the extension.
-    let name: String
+enum GPUShaderSource: String, CaseIterable, Sendable {
+    case elementwise
+    case copy
+    case reduction
+    case matrix
+    case fused
+    case convolution
+    case attention
 
-    static let elementwise = GPUShaderSource(name: "elementwise")
-    static let copy = GPUShaderSource(name: "copy")
-    static let reduction = GPUShaderSource(name: "reduction")
-    static let matrix = GPUShaderSource(name: "matrix")
-    static let fused = GPUShaderSource(name: "fused")
-    static let convolution = GPUShaderSource(name: "convolution")
-    static let attention = GPUShaderSource(name: "attention")
+    /// Name of the `.metal` file without the extension.
+    var name: String {
+        rawValue
+    }
 
     /// All kernel groups of the package.
     static var all: [GPUShaderSource] {
-        [.elementwise, .copy, .reduction, .matrix, .fused, .convolution, .attention]
+        allCases
     }
 
     /// Source of the group, after the declarations of `prelude.metal` that all groups share.
@@ -75,42 +77,51 @@ enum GPUShaderError: Error, CustomStringConvertible {
     }
 }
 
-/// Compiles the kernel groups and keeps their pipeline states.
-final class GPUKernelLibrary: @unchecked Sendable {
-    // `@unchecked Sendable`: The mutable state is in a mutex. Metal devices, libraries, and pipeline states can be used from any thread.
+/// A kernel: a function of a kernel group.
+struct GPUKernel: Hashable, Sendable {
+    /// Name of the function.
+    let name: String
+    /// Group that contains the function.
+    let source: GPUShaderSource
+}
 
-    private struct State {
-        var libraries: [String: any MTLLibrary] = [:]
-        var pipelines: [String: any MTLComputePipelineState] = [:]
-    }
+/// Compiles the kernel groups and keeps their pipeline states.
+final class GPUKernelLibrary: Sendable {
+    // The compilations run without the locks, so that the lookups of other threads do not wait for them. Two threads can
+    // compile the same group or pipeline at the same time, and the first result is kept.
 
     private let device: any MTLDevice
-    private let state = Mutex(State())
+    private let libraries = Mutex<[GPUShaderSource: any MTLLibrary]>([:])
+    private let pipelines = Mutex<[GPUKernel: any MTLComputePipelineState]>([:])
 
     init(device: any MTLDevice) {
         self.device = device
     }
 
-    /// Returns the pipeline state of the kernel with the given name in the given group.
-    func pipeline(_ name: String, in source: GPUShaderSource) -> any MTLComputePipelineState {
-        let key = source.name + "." + name
-        return autoreleasepool {
-            state.withLock { state in
-                if let pipeline = state.pipelines[key] {
-                    return pipeline
-                }
-                let library = library(for: source, state: &state)
-                guard let function = library.makeFunction(name: name) else {
-                    preconditionFailure("DL4S: The GPU kernel \(name) does not exist in \(source.name).")
-                }
-                do {
-                    let pipeline = try device.makeComputePipelineState(function: function)
-                    state.pipelines[key] = pipeline
-                    return pipeline
-                } catch {
-                    preconditionFailure("DL4S: The pipeline of the GPU kernel \(name) could not be created: \(error)")
-                }
+    /// Returns the pipeline state of the kernel.
+    func pipeline(_ kernel: GPUKernel) -> any MTLComputePipelineState {
+        if let pipeline = pipelines.withLock({ $0[kernel] }) {
+            return pipeline
+        }
+        // The compilation autoreleases objects, see ``GPUContext``.
+        let pipeline = autoreleasepool { makePipeline(kernel) }
+        return pipelines.withLock { pipelines in
+            if let existing = pipelines[kernel] {
+                return existing
             }
+            pipelines[kernel] = pipeline
+            return pipeline
+        }
+    }
+
+    private func makePipeline(_ kernel: GPUKernel) -> any MTLComputePipelineState {
+        guard let function = library(for: kernel.source).makeFunction(name: kernel.name) else {
+            preconditionFailure("DL4S: The GPU kernel \(kernel.name) does not exist in \(kernel.source.name).")
+        }
+        do {
+            return try device.makeComputePipelineState(function: function)
+        } catch {
+            preconditionFailure("DL4S: The pipeline of the GPU kernel \(kernel.name) could not be created: \(error)")
         }
     }
 
@@ -125,14 +136,19 @@ final class GPUKernelLibrary: @unchecked Sendable {
         return options
     }
 
-    private func library(for source: GPUShaderSource, state: inout State) -> any MTLLibrary {
-        if let library = state.libraries[source.name] {
+    private func library(for source: GPUShaderSource) -> any MTLLibrary {
+        if let library = libraries.withLock({ $0[source] }) {
             return library
         }
         do {
             let library = try device.makeLibrary(source: source.code(), options: Self.compileOptions)
-            state.libraries[source.name] = library
-            return library
+            return libraries.withLock { libraries in
+                if let existing = libraries[source] {
+                    return existing
+                }
+                libraries[source] = library
+                return library
+            }
         } catch {
             preconditionFailure("DL4S: The GPU kernels \(source.name) could not be compiled: \(error)")
         }

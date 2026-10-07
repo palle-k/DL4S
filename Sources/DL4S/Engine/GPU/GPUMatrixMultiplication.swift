@@ -27,7 +27,6 @@
 import Foundation
 import Metal
 import MetalPerformanceShaders
-import Synchronization
 
 /// Numbers of elements between neighboring matrices of the operands of a batch of products. The stride 0 uses the same
 /// matrix for all products.
@@ -46,25 +45,6 @@ struct GPUBatchStrides {
 enum GPUMatrixMultiplication {
     /// Number of multiplications from which a product uses Metal Performance Shaders.
     static let largeProductMultiplications = 1 << 31
-
-    private struct KernelKey: Hashable {
-        var transposeLeft: Bool
-        var transposeRight: Bool
-        var rows: Int
-        var columns: Int
-        var inner: Int
-        var alpha: Float
-        var beta: Float
-    }
-
-    private struct UncheckedKernel: @unchecked Sendable {
-        // `@unchecked Sendable`: The kernel has no state that changes when it encodes.
-        let kernel: MPSMatrixMultiplication
-    }
-
-    private static let kernels = Mutex<[KernelKey: UncheckedKernel]>([:])
-    /// Number of Metal Performance Shaders kernels that the cache keeps.
-    private static let maximumCachedKernels = 256
 
     private struct GemmParameters {
         var rows: Int32
@@ -96,7 +76,7 @@ enum GPUMatrixMultiplication {
         guard rows > 0, columns > 0 else {
             return
         }
-        if !GPUContext.current.supportsMatrixKernels || rows * columns * inner >= largeProductMultiplications && rows >= 64 && columns >= 64 {
+        if !result.storage.context.supportsMatrixKernels || rows * columns * inner >= largeProductMultiplications && rows >= 64 && columns >= 64 {
             encodeLarge(lhs: lhs, lhsShape: lhsShape, rhs: rhs, rhsShape: rhsShape, result: result, rows: rows, columns: columns, inner: inner, alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
             return
         }
@@ -118,8 +98,7 @@ enum GPUMatrixMultiplication {
         guard count > 0, rows > 0, columns > 0 else {
             return
         }
-        let context = GPUContext.current
-        guard context.supportsMatrixKernels else {
+        guard result.storage.context.supportsMatrixKernels else {
             let lhsShape = transposeFirst ? [inner, rows] : [rows, inner]
             let rhsShape = transposeSecond ? [columns, inner] : [inner, columns]
             for index in 0 ..< count {
@@ -145,8 +124,8 @@ enum GPUMatrixMultiplication {
         )
         if rows == 1 {
             // A product with one row is a vector-matrix product, which is limited by the reads of the matrix.
-            let pipeline = GPUKernels.pipeline(transposeSecond ? "gemv_t" : "gemv_n", in: .matrix)
-            context.compute(pipeline, reading: [lhs, rhs, result], writing: [result]) { arguments in
+            let kernel = GPUKernels.kernel(transposeSecond ? "gemv_t" : "gemv_n", in: .matrix)
+            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
                 arguments.buffer(lhs)
                 arguments.buffer(rhs)
                 arguments.buffer(result)
@@ -164,14 +143,14 @@ enum GPUMatrixMultiplication {
         let tile = largeTiles >= 64 ? 64 : 32
         let tiles = ((rows + tile - 1) / tile) * ((columns + tile - 1) / tile) * count
         let name = "gemm_\(transposeFirst ? "t" : "n")\(transposeSecond ? "t" : "n")_\(tile)"
-        let pipeline = GPUKernels.pipeline(name, in: .matrix)
+        let kernel = GPUKernels.kernel(name, in: .matrix)
 
         // A product with few tiles and a long inner axis, such as the weight gradient of a convolution, splits the inner axis
         // into parts, so that about 512 threadgroups run. A second kernel adds the products of the parts. With 128
         // threadgroups, a [512, 512] product with the inner length 8192 is 40 percent slower.
         let splits = min(max(1, 512 / tiles), inner / 512)
         guard splits > 1 else {
-            context.compute(pipeline, reading: [lhs, rhs, result], writing: [result]) { arguments in
+            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
                 arguments.buffer(lhs)
                 arguments.buffer(rhs)
                 arguments.buffer(result)
@@ -186,14 +165,14 @@ enum GPUMatrixMultiplication {
         // Parts are multiples of the depth of a tile of the inner axis.
         let splitLength = ((inner + splits - 1) / splits + 31) / 32 * 32
         let splitCount = (inner + splitLength - 1) / splitLength
-        let partial = GPUKernels.temporary(count: count * splitCount * rows * columns)
+        let partial = GPUKernels.temporary(count: count * splitCount * rows * columns, near: result)
         var splitParameters = parameters
         splitParameters.alpha = 1
         splitParameters.beta = 0
         splitParameters.batchStrideC = Int64(rows * columns)
         splitParameters.splits = Int32(splitCount)
         splitParameters.splitLength = Int32(splitLength)
-        context.compute(pipeline, reading: [lhs, rhs], writing: [partial]) { arguments in
+        GPUContext.compute(kernel, reading: [lhs, rhs], writing: [partial]) { arguments in
             arguments.buffer(lhs)
             arguments.buffer(rhs)
             arguments.buffer(partial)
@@ -205,8 +184,8 @@ enum GPUMatrixMultiplication {
         }
         var sumParameters = parameters
         sumParameters.splits = Int32(splitCount)
-        let sum = GPUKernels.pipeline("gemm_split_sum", in: .matrix)
-        context.compute(sum, reading: [partial, result], writing: [result]) { arguments in
+        let sum = GPUKernels.kernel("gemm_split_sum", in: .matrix)
+        GPUContext.compute(sum, reading: [partial, result], writing: [result]) { arguments in
             arguments.buffer(partial)
             arguments.buffer(result)
             arguments.value(sumParameters)
@@ -227,18 +206,18 @@ enum GPUMatrixMultiplication {
     }
 
     private static func encodeLarge(lhs: GPUBuffer, lhsShape: [Int], rhs: GPUBuffer, rhsShape: [Int], result: GPUBuffer, rows: Int, columns: Int, inner: Int, alpha: Float, beta: Float, transposeFirst: Bool, transposeSecond: Bool) {
-        let splits = GPUContext.current.supportsMatrixKernels ? largeProductSplits(rows: rows, columns: columns, inner: inner, transposeFirst: transposeFirst, transposeSecond: transposeSecond) : 1
+        let splits = result.storage.context.supportsMatrixKernels ? largeProductSplits(rows: rows, columns: columns, inner: inner, transposeFirst: transposeFirst, transposeSecond: transposeSecond) : 1
         guard splits == 1 else {
             // The operands are stored with the inner axis as their rows, so every part is a contiguous block of rows.
             let partLength = inner / splits
-            let partial = GPUKernels.temporary(count: splits * rows * columns)
+            let partial = GPUKernels.temporary(count: splits * rows * columns, near: result)
             encodeMatrices(lhs: lhs, lhsShape: [partLength, lhsShape[1]], rhs: rhs, rhsShape: [partLength, rhsShape[1]], result: partial, rows: rows, columns: columns, inner: partLength, count: splits, alpha: 1, beta: 0, transposeFirst: true, transposeSecond: false)
             var sumParameters = GemmParameters(
                 rows: Int32(rows), columns: Int32(columns), inner: Int32(inner), lda: 0, ldb: 0, ldc: Int32(columns), transposeA: 1, transposeB: 0,
                 alpha: alpha, beta: beta, batchStrideA: 0, batchStrideB: 0, batchStrideC: 0, splitLength: Int32(partLength),
             )
             sumParameters.splits = Int32(splits)
-            GPUContext.current.compute(GPUKernels.pipeline("gemm_split_sum", in: .matrix), reading: [partial, result], writing: [result]) { arguments in
+            GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial, result], writing: [result]) { arguments in
                 arguments.buffer(partial)
                 arguments.buffer(result)
                 arguments.value(sumParameters)
@@ -248,8 +227,8 @@ enum GPUMatrixMultiplication {
         }
         // Metal Performance Shaders is about 8 percent slower with a transposed right operand: 0.56 ms against 0.51 ms for
         // [8192, 512] x [512, 512]. A right operand that is small against the left one is transposed first.
-        if transposeSecond, !transposeFirst, GPUContext.current.supportsMatrixKernels, rows >= 8 * max(columns, inner) {
-            let transposed = GPUKernels.temporary(count: columns * inner)
+        if transposeSecond, !transposeFirst, result.storage.context.supportsMatrixKernels, rows >= 8 * max(columns, inner) {
+            let transposed = GPUKernels.temporary(count: columns * inner, near: result)
             GPUKernels.transpose(source: rhs, result: transposed, batch: 1, rows: columns, columns: inner)
             encodeMatrices(lhs: lhs, lhsShape: lhsShape, rhs: transposed, rhsShape: [inner, columns], result: result, rows: rows, columns: columns, inner: inner, count: 1, alpha: alpha, beta: beta, transposeFirst: false, transposeSecond: false)
             return
@@ -259,29 +238,22 @@ enum GPUMatrixMultiplication {
 
     /// Records a Metal Performance Shaders product of `count` matrices of each operand, which follow each other in memory.
     private static func encodeMatrices(lhs: GPUBuffer, lhsShape: [Int], rhs: GPUBuffer, rhsShape: [Int], result: GPUBuffer, rows: Int, columns: Int, inner: Int, count: Int, alpha: Float, beta: Float, transposeFirst: Bool, transposeSecond: Bool) {
-        let context = GPUContext.current
-        let key = KernelKey(transposeLeft: transposeFirst, transposeRight: transposeSecond, rows: rows, columns: columns, inner: inner, alpha: alpha, beta: beta)
-        let kernel = kernels.withLock { kernels in
-            if let kernel = kernels[key] {
-                return kernel
-            }
-            // Shapes that change in every step, such as the lengths of padded sequences, would let the cache grow without a limit.
-            if kernels.count >= maximumCachedKernels {
-                kernels.removeAll()
-            }
+        let context = GPUContext.of(reading: [lhs, rhs, result], writing: [result])
+        let key = GPUMatrixProductKey(transposeLeft: transposeFirst, transposeRight: transposeSecond, rows: rows, columns: columns, inner: inner, alpha: alpha, beta: beta)
+        let kernel = GPUCache.value(in: context.matrixProducts, for: key) {
             // The creation autoreleases descriptors, see ``GPUContext``.
-            let kernel = autoreleasepool { UncheckedKernel(kernel: MPSMatrixMultiplication(
-                device: context.device,
-                transposeLeft: transposeFirst,
-                transposeRight: transposeSecond,
-                resultRows: rows,
-                resultColumns: columns,
-                interiorColumns: inner,
-                alpha: Double(alpha),
-                beta: Double(beta),
-            )) }
-            kernels[key] = kernel
-            return kernel
+            autoreleasepool {
+                GPUMatrixProductKernel(kernel: MPSMatrixMultiplication(
+                    device: context.device,
+                    transposeLeft: transposeFirst,
+                    transposeRight: transposeSecond,
+                    resultRows: rows,
+                    resultColumns: columns,
+                    interiorColumns: inner,
+                    alpha: Double(alpha),
+                    beta: Double(beta),
+                ))
+            }
         }
         func matrix(_ buffer: GPUBuffer, rows: Int, columns: Int) -> MPSMatrix {
             let rowBytes = columns * MemoryLayout<Float>.stride
@@ -289,12 +261,31 @@ enum GPUMatrixMultiplication {
             return MPSMatrix(buffer: buffer.storage.buffer, offset: buffer.byteOffset, descriptor: descriptor)
         }
         context.commands(reading: [lhs, rhs, result], writing: [result]) { commandBuffer in
-            // The matrices are created while the stream is locked, because a new storage can still replace its buffer.
+            // The matrices are created while the stream is locked, because a storage that no command used yet can still replace
+            // its buffer.
             let left = matrix(lhs, rows: lhsShape[0], columns: lhsShape[1])
             let right = matrix(rhs, rows: rhsShape[0], columns: rhsShape[1])
             let target = matrix(result, rows: rows, columns: columns)
             kernel.kernel.encode(commandBuffer: commandBuffer, leftMatrix: left, rightMatrix: right, resultMatrix: target)
         }
     }
+}
+
+/// The parameters of a Metal Performance Shaders kernel of a matrix product.
+struct GPUMatrixProductKey: Hashable {
+    var transposeLeft: Bool
+    var transposeRight: Bool
+    var rows: Int
+    var columns: Int
+    var inner: Int
+    var alpha: Float
+    var beta: Float
+}
+
+// `@unchecked Sendable`: Metal Performance Shaders does not mark its kernels as `Sendable`. The kernel does not change when
+// it encodes, and it encodes only while the context holds the lock of its stream.
+/// A Metal Performance Shaders kernel of a matrix product.
+struct GPUMatrixProductKernel: @unchecked Sendable {
+    let kernel: MPSMatrixMultiplication
 }
 #endif

@@ -55,9 +55,7 @@
 // skips a block does not load it. A causal mask skips about half of the blocks. A row in which every score is masked is
 // computed like any other row. The votes read `attention_mask_tiles`, one byte for every 8 x 8 scores.
 //
-// The kernels use the layout of the elements of a SIMD group matrix in the threads: thread `lane` holds the elements
-// (row, column) and (row, column + 1), where `matrix_position(lane)` is (column, row). Metal does not document the
-// layout; the GPU tests of attention compare the results with the CPU and fail when it changes.
+// The kernels use the layout of the elements of a SIMD group matrix in the threads, see `matrix_position` in `prelude.metal`.
 
 struct AttentionParameters {
     int queryCount;
@@ -98,12 +96,6 @@ constant constexpr int ZEROS = 4;
 // ATTENDS has an unmasked score, so the weight of the masked score, exp2(score - maximum), is exactly 0 in float.
 constant constexpr float MASKED = 0.5f;
 constant constexpr float ATTENDS = -1e6f;
-
-// First column and row of the two elements that a thread holds in an 8 x 8 SIMD group matrix.
-inline ushort2 matrix_position(ushort lane) {
-    ushort quad = lane / 4;
-    return ushort2((quad & 2) * 2 + (lane % 2) * 2, (quad / 4) * 4 + (lane / 2) % 4);
-}
 
 // The two elements of a thread in a SIMD group matrix, which are the first two elements of its storage.
 inline thread float2& elements(thread simdgroup_float8x8& matrix) {

@@ -65,13 +65,17 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Send
         if downsample != 1 {
             self.downsample = Sequential {
                 Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (1, 1), padding: 0, stride: downsample, using: &generator)
-                BatchNorm<Element, Device>(inputSize: [outPlanes, inputShape[1] / downsample, inputShape[2] / downsample])
+                BatchNorm<Element, Device>(inputSize: ConvUtil.outputShape(for: inputShape, kernelCount: outPlanes, kernelWidth: 1, kernelHeight: 1, stride: downsample, padding: 0))
             }
         } else {
             self.downsample = nil
         }
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "ResidualBlock") {
             var x = inputs

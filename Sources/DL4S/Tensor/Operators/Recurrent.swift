@@ -41,6 +41,10 @@ import Foundation
 ///   - resetWeights: Weights of the state for the reset gate, shape [hiddenSize, hiddenSize]
 ///   - candidateWeights: Weights of the reset state for the candidate state, shape [hiddenSize, hiddenSize]
 /// - Returns: New state, shape [batchSize, hiddenSize]
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
 public func gatedRecurrentUnitStep<Element, Device>(
     updateInput: Tensor<Element, Device>,
     resetInput: Tensor<Element, Device>,

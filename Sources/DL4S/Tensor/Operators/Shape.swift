@@ -36,6 +36,10 @@ public extension Tensor {
     ///
     /// - Parameter shape: Shape to view the tensor in.
     /// - Returns: Tensor with given shape, where occurrences of -1 have been replaced.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func view(as shape: [Int]) -> Tensor<Element, Device> {
         precondition(shape.count(where: { $0 == -1 }) <= 1, "The size of at most one dimension can be unknown (-1).")
         precondition(shape.allSatisfy { $0 >= -1 }, "All dimensions must be greater than or equal to -1.")
@@ -80,6 +84,10 @@ public extension Tensor {
     /// Adds an axis to the shape of the tensor.
     /// The axis will have a size of 1.
     /// - Parameter axis: Axis to expand at.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func unsqueezed(at axis: Int) -> Self {
         var shape = shape
         shape.insert(1, at: axis)
@@ -89,6 +97,10 @@ public extension Tensor {
     /// Removes an axis from the tensor if the axis has a size of 1.
     /// Otherwise, the original tensor is returned.
     /// - Parameter axis: Axis to remove if possible.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func squeezed(at axis: Int) -> Self {
         var shape = shape
         if shape[axis] == 1 {
@@ -98,11 +110,19 @@ public extension Tensor {
     }
 
     /// Removes all axes from the tensor that have a size of 1.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func squeezed() -> Self {
         view(as: shape.filter { $0 != 1 })
     }
 
     /// Flattens the tensor into a tensor of shape [count]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func flattened() -> Self {
         view(as: [-1])
     }
@@ -111,14 +131,18 @@ public extension Tensor {
 public extension Tensor {
     /// Swaps the axes of the tensor.
     ///
-    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    /// The axis arrangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
     ///
-    /// With axis arangement of [1, 0], this operation is equivalent to `tensor.transposed()`
+    /// With axis arrangement of [1, 0], this operation is equivalent to `tensor.transposed()`
     ///
     /// - Parameter axisArangement: Arangement of axes in the resulting tensor.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func permuted(to axisArangement: [Int]) -> Self {
-        precondition(axisArangement.count == dim, "Axis arangement must have dimensionality of source tensor")
-        precondition(Set(axisArangement).count == dim, "Axis arangement must not contain duplicate axes")
+        precondition(axisArangement.count == dim, "Axis arrangement must have dimensionality of source tensor")
+        precondition(Set(axisArangement).count == dim, "Axis arrangement must not contain duplicate axes")
 
         var dstShape = [Int](repeating: 0, count: dim)
 
@@ -127,7 +151,7 @@ public extension Tensor {
         }
 
         let resultBuffer = Device.Memory.allocateBuffer(withShape: dstShape, type: Element.self)
-        Device.Engine.permuteAxes(values: values, result: resultBuffer, arangement: axisArangement)
+        Device.Engine.permuteAxes(values: values, result: resultBuffer, arrangement: axisArangement)
 
         let dim = dim
 
@@ -158,15 +182,15 @@ public extension Tensor {
     ///
     /// - Parameters:
     ///   - other: Tensor to add permuted to the current tensor
-    ///   - permutation: Desired arangement of axes of the summand.
+    ///   - permutation: Desired arrangement of axes of the summand.
     mutating func addingPermuted(_ other: Self, permutation: [Int]) {
-        precondition(permutation.count == dim, "Axis arangement must have dimensionality of source tensor")
-        precondition(Set(permutation).count == dim, "Axis arangement must not contain duplicate axes")
+        precondition(permutation.count == dim, "Axis arrangement must have dimensionality of source tensor")
+        precondition(Set(permutation).count == dim, "Axis arrangement must not contain duplicate axes")
 
         if requiresGradient || other.requiresGradient {
             let original = self
 
-            Device.Engine.permuteAxesAdd(values: other.values, add: original.values, result: mutableValues, arangement: permutation)
+            Device.Engine.permuteAxesAdd(values: other.values, add: original.values, result: mutableValues, arrangement: permutation)
             let dim = dim
             context = TensorContext(
                 tag: "permutedAdd",
@@ -190,15 +214,15 @@ public extension Tensor {
             )
         } else {
             let target = mutableValues
-            Device.Engine.permuteAxesAdd(values: other.values, add: ShapedBuffer(target), result: target, arangement: permutation)
+            Device.Engine.permuteAxesAdd(values: other.values, add: ShapedBuffer(target), result: target, arrangement: permutation)
         }
     }
 
     /// Swaps the axes of the tensor.
     ///
-    /// The axis arangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
+    /// The axis arrangement must have a count of `tensor.dim` and contain all elements in `0 ..< tensor.dim`.
     ///
-    /// With axis arangement of [1, 0], this operation is equivalent to `tensor.transposed()`
+    /// With axis arrangement of [1, 0], this operation is equivalent to `tensor.transposed()`
     ///
     /// - Parameter axisArangement: Arangement of axes in the resulting tensor.
     func permuted(to axisArangement: Int...) -> Self {
@@ -207,6 +231,10 @@ public extension Tensor {
 
     /// Transposes the given tensor.
     /// The tensor must have a dimensionality of 2.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func transposed() -> Self {
         permuted(to: [1, 0])
     }

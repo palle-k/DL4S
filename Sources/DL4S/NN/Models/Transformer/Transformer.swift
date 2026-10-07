@@ -97,6 +97,10 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codabl
     ///         - Padded decoder inputs using -1 as padding token.
     ///
     /// - Returns: Batch of sequences of log-softmax normalized distributions over the vocabulary of the transformer with shape [batchSize, seqlen, vocabDim]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: (encoderInput: Tensor<Int32, Device>, decoderInput: Tensor<Int32, Device>, encoderInputLengths: [Int], decoderInputLengths: [Int])) -> Tensor<Element, Device> {
         let (encoderInput, decoderInput, encInLens, decInLens) = inputs
 
@@ -113,13 +117,26 @@ public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codabl
     }
 
     /// Greedily decodes the most probable sequence of output symbols given a sequence of input tokens
+    ///
+    /// The model encodes and decodes without dropout, also when its ``Dropout`` layers are active.
     /// - Parameters:
     ///   - inputSequence: Input tokens
     ///   - startToken: First token to feed into the decoder. Subsequent tokens are generated autoregressively.
     ///   - endToken: Token, which ends decoding (end of sequence marker)
     ///   - maxLength: Maximum length of the decoded sequence. If no endToken occurs after maxLength tokens, decoding is aborted.
     /// - Returns: Most probable output sequence determined by greedy decoding.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
+        var model = self
+        model.modifyLayers(of: Dropout<Element, Device>.self) { $0.isActive = false }
+        return model.greedilyDecoded(inputSequence: inputSequence, startToken: startToken, endToken: endToken, maxLength: maxLength)
+    }
+
+    /// Greedily decodes the most probable sequence of output symbols with the dropout layers of the model.
+    private func greedilyDecoded(inputSequence: [Int32], startToken: Int32, endToken: Int32, maxLength: Int) -> [Int32] {
         let encoded = EncodedSequence(states: encoder((prepareInputs(Tensor([inputSequence])), [inputSequence.count])), lengths: [inputSequence.count])
         var state = decoder.makeState(batchSize: 1, encoded: encoded)
 

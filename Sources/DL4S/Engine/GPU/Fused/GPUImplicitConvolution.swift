@@ -26,7 +26,6 @@
 #if canImport(Metal) && canImport(MetalPerformanceShaders)
 import Foundation
 import Metal
-import Synchronization
 
 /// Convolutions as implicit matrix products on the GPU, see `convolution.metal`.
 ///
@@ -56,13 +55,14 @@ struct GPUImplicitConvolution {
     /// Records the forward pass: `result = convolution(input, filters) + bias`.
     func forward(input: GPUBuffer, filters: GPUBuffer, bias: GPUBuffer?, result: GPUBuffer) {
         let windowSize = inputChannels * kernelHeight * kernelWidth
-        let tables = GPUImplicitConvolutionTables.tables(for: TableKey(pass: .forward, convolution: self, phaseY: 0, phaseX: 0)) {
+        let context = GPUContext.of(reading: [input, filters], writing: [result])
+        let tables = GPUCache.value(in: context.convolutionTables, for: GPUConvolutionTableKey(pass: .forward, convolution: self, phaseY: 0, phaseX: 0)) {
             let columns = (0 ..< windowSize).map { k -> SIMD4<Int32> in
                 let (channel, tap) = k.quotientAndRemainder(dividingBy: kernelHeight * kernelWidth)
                 let (i, j) = tap.quotientAndRemainder(dividingBy: kernelWidth)
                 return SIMD4(Int32(channel * height * width + i * width + j), Int32(i), Int32(j), 0)
             }
-            return GPUImplicitConvolutionTables.Tables(columns: columns, filterColumns: nil)
+            return GPUConvolutionTables(columns: columns, filterColumns: nil, context: context)
         }
         let parameters = ImplicitGemmParameters(
             m: outputChannels, n: batchSize * outputHeight * outputWidth, k: windowSize, aRowStride: windowSize,
@@ -76,6 +76,7 @@ struct GPUImplicitConvolution {
 
     /// Records the gradient of the input, which is added to the accumulated gradient when `accumulate` is true.
     func dataGradient(outputGradient: GPUBuffer, filters: GPUBuffer, inputGradient: GPUBuffer, accumulate: Bool) {
+        let context = GPUContext.of(reading: [outputGradient, filters], writing: [inputGradient])
         for phaseY in 0 ..< stride {
             for phaseX in 0 ..< stride {
                 // The rows y of the input with (y + padding) % stride == phaseY: y = stride * uy + phaseY - padding.
@@ -87,7 +88,8 @@ struct GPUImplicitConvolution {
                 // The taps i with i % stride == phaseY reach these rows, from the output row uy - (i - phaseY) / stride.
                 let (tapsY, tapsX) = ((kernelHeight - phaseY + stride - 1) / stride, (kernelWidth - phaseX + stride - 1) / stride)
                 let taps = outputChannels * Swift.max(tapsY, 0) * Swift.max(tapsX, 0)
-                let tables = GPUImplicitConvolutionTables.tables(for: TableKey(pass: .dataGradient, convolution: self, phaseY: phaseY, phaseX: phaseX)) {
+                let key = GPUConvolutionTableKey(pass: .dataGradient, convolution: self, phaseY: phaseY, phaseX: phaseX)
+                let tables = GPUCache.value(in: context.convolutionTables, for: key) {
                     var filterColumns: [Int32] = [], columns: [SIMD4<Int32>] = []
                     for channel in 0 ..< outputChannels {
                         for ty in 0 ..< tapsY {
@@ -98,12 +100,12 @@ struct GPUImplicitConvolution {
                             }
                         }
                     }
-                    return GPUImplicitConvolutionTables.Tables(columns: columns.isEmpty ? [.zero] : columns, filterColumns: filterColumns.isEmpty ? [0] : filterColumns)
+                    return GPUConvolutionTables(columns: columns.isEmpty ? [.zero] : columns, filterColumns: filterColumns.isEmpty ? [0] : filterColumns, context: context)
                 }
                 let (rows, columns) = (lastRow - firstRow + 1, lastColumn - firstColumn + 1)
                 // The filters of the phase are written as a contiguous [inputChannels, taps] matrix, which the product loads with
                 // vector loads. It has at most as many elements as the filters.
-                let phaseFilters = taps > 0 ? GPUKernels.temporary(count: inputChannels * taps) : filters
+                let phaseFilters = taps > 0 ? GPUKernels.temporary(count: inputChannels * taps, near: filters) : filters
                 if taps > 0 {
                     Self.gatherColumns(filters, rowStride: kernelHeight * kernelWidth, table: tables.filterColumns!, rows: inputChannels, columns: taps, into: phaseFilters)
                 }
@@ -125,7 +127,7 @@ struct GPUImplicitConvolution {
         // The taller tile needs at least as many rows, or it computes rows that do not exist.
         let tileHeight = parameters.m >= 128 ? 128 : 64
         let threadgroups = MTLSize(width: (Int(parameters.n) + 63) / 64, height: (Int(parameters.m) + tileHeight - 1) / tileHeight, depth: 1)
-        GPUContext.current.compute(GPUKernels.pipeline("implicit_gemm_\(tileHeight)", in: .convolution), reading: reading, writing: [c]) { arguments in
+        GPUContext.compute(GPUKernels.kernel("implicit_gemm_\(tileHeight)", in: .convolution), reading: reading, writing: [c]) { arguments in
             arguments.buffer(a)
             arguments.buffer(b)
             arguments.buffer(c)
@@ -138,7 +140,7 @@ struct GPUImplicitConvolution {
 
     private static func gatherColumns(_ source: GPUBuffer, rowStride: Int, table: GPUBuffer, rows: Int, columns: Int, into result: GPUBuffer) {
         let parameters = SIMD3<Int32>(Int32(rows), Int32(columns), Int32(rowStride))
-        GPUContext.current.compute(GPUKernels.pipeline("gather_columns", in: .convolution), reading: [source, table], writing: [result]) { arguments in
+        GPUContext.compute(GPUKernels.kernel("gather_columns", in: .convolution), reading: [source, table], writing: [result]) { arguments in
             arguments.buffer(source)
             arguments.buffer(table)
             arguments.buffer(result)
@@ -154,58 +156,45 @@ struct GPUImplicitConvolution {
     private static func ceilingQuotient(_ n: Int, _ d: Int) -> Int {
         -floorQuotient(-n, d)
     }
+}
 
-    fileprivate enum Pass: Hashable {
+/// Describes the offset tables of an implicit convolution pass. The tables do not depend on the batch size.
+struct GPUConvolutionTableKey: Hashable {
+    enum Pass: Hashable {
         case forward
         case dataGradient
     }
 
-    fileprivate struct TableKey: Hashable {
-        let pass: Pass
-        let inputChannels: Int, height: Int, width: Int, outputChannels: Int, kernelHeight: Int, kernelWidth: Int
-        let outputHeight: Int, outputWidth: Int, padding: Int, stride: Int
-        let phaseY: Int, phaseX: Int
+    let pass: Pass
+    let inputChannels: Int, height: Int, width: Int, outputChannels: Int, kernelHeight: Int, kernelWidth: Int
+    let outputHeight: Int, outputWidth: Int, padding: Int, stride: Int
+    let phaseY: Int, phaseX: Int
 
-        init(pass: Pass, convolution c: GPUImplicitConvolution, phaseY: Int, phaseX: Int) {
-            self.pass = pass
-            (inputChannels, height, width, outputChannels, kernelHeight, kernelWidth) = (c.inputChannels, c.height, c.width, c.outputChannels, c.kernelHeight, c.kernelWidth)
-            (outputHeight, outputWidth, padding, stride) = (c.outputHeight, c.outputWidth, c.padding, c.stride)
-            (self.phaseY, self.phaseX) = (phaseY, phaseX)
-        }
+    init(pass: Pass, convolution c: GPUImplicitConvolution, phaseY: Int, phaseX: Int) {
+        self.pass = pass
+        (inputChannels, height, width, outputChannels, kernelHeight, kernelWidth) = (c.inputChannels, c.height, c.width, c.outputChannels, c.kernelHeight, c.kernelWidth)
+        (outputHeight, outputWidth, padding, stride) = (c.outputHeight, c.outputWidth, c.padding, c.stride)
+        (self.phaseY, self.phaseX) = (phaseY, phaseX)
     }
 }
 
-/// The offset tables of the implicit convolutions, computed once for every geometry and phase. The tables do not depend on the batch size.
-private enum GPUImplicitConvolutionTables {
-    struct Tables: @unchecked Sendable {
-        // `@unchecked Sendable`: The buffers are written once, when they are created, and only read afterwards.
+/// The offset tables of an implicit convolution pass, which the context computes once for every geometry and phase.
+struct GPUConvolutionTables: Sendable {
+    /// Entries of the rows of B, four integers each, see `convolution.metal`
+    let columns: GPUBuffer
+    /// Columns of the filters of a phase of the data gradient, which `gather_columns` writes as a contiguous matrix
+    let filterColumns: GPUBuffer?
 
-        /// Entries of the rows of B, four integers each, see `convolution.metal`
-        let columns: GPUBuffer
-        /// Columns of the filters of a phase of the data gradient, which `gather_columns` writes as a contiguous matrix
-        let filterColumns: GPUBuffer?
-
-        init(columns: [SIMD4<Int32>], filterColumns: [Int32]?) {
-            self.columns = Self.upload(columns.flatMap { [$0.x, $0.y, $0.z, $0.w] })
-            self.filterColumns = filterColumns.map(Self.upload)
-        }
-
-        private static func upload(_ values: [Int32]) -> GPUBuffer {
-            let buffer = GPUMemoryOperators.allocateBuffer(withCapacity: values.count, type: Int32.self)
-            values.withUnsafeBufferPointer { GPUMemoryOperators.assign(from: $0, to: buffer, count: values.count) }
-            return buffer.memory
-        }
+    init(columns: [SIMD4<Int32>], filterColumns: [Int32]?, context: GPUContext) {
+        self.columns = Self.upload(columns.flatMap { [$0.x, $0.y, $0.z, $0.w] }, context: context)
+        self.filterColumns = filterColumns.map { Self.upload($0, context: context) }
     }
 
-    private static let cache = Mutex<[GPUImplicitConvolution.TableKey: Tables]>([:])
-
-    static func tables(for key: GPUImplicitConvolution.TableKey, create: () -> Tables) -> Tables {
-        if let tables = cache.withLock({ $0[key] }) {
-            return tables
-        }
-        let tables = create()
-        cache.withLock { $0[key] = tables }
-        return tables
+    private static func upload(_ values: [Int32], context: GPUContext) -> GPUBuffer {
+        let byteCount = values.count * MemoryLayout<Int32>.stride
+        let buffer = MutableBuffer<Int32, GPU>(memory: GPUBuffer(storage: GPUStorage(byteCount: byteCount, context: context), byteOffset: 0, byteCount: byteCount))
+        values.withUnsafeBufferPointer { GPUMemoryOperators.assign(from: $0, to: buffer, count: values.count) }
+        return buffer.memory
     }
 }
 

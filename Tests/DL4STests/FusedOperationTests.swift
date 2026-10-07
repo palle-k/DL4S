@@ -710,9 +710,9 @@ struct FusedOperationTests {
 
     @Test func batchNormalizationReturnsBatchStatistics() {
         let input = uniform([5, 3], seed: 3020)
-        let (_, mean, variance) = input.batchNormalized(scale: DoubleTensor(repeating: 1, shape: [3]), shift: DoubleTensor(repeating: 0, shape: [3]))
-        expectApproximatelyEqual(mean, referenceMean(input, along: [0]), "mean")
-        expectApproximatelyEqual(variance, referenceVariance(input, along: [0]), "variance")
+        let statistics = input.batchNormalized(scale: DoubleTensor(repeating: 1, shape: [3]), shift: DoubleTensor(repeating: 0, shape: [3]))
+        expectApproximatelyEqual(statistics.mean, referenceMean(input, along: [0]), "mean")
+        expectApproximatelyEqual(statistics.variance, referenceVariance(input, along: [0]), "variance")
     }
 
     @Test func dropoutGradientUsesTheMaskOfTheForwardPass() {

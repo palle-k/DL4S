@@ -118,7 +118,8 @@ kernel void reduce_rows_arg##NAME##_##T(device const T* values [[buffer(0)]], de
         bestIndex = simd_min(best == extreme && bestIndex != UINT_MAX ? bestIndex : UINT_MAX); \
         best = extreme; \
     } \
-    if (active && local.x == 0) { result[row] = best; context[row] = int(bestIndex); } \
+    /* A row of NaN values has no extreme value, and the CPU reports its first element. */ \
+    if (active && local.x == 0) { result[row] = best; context[row] = bestIndex == UINT_MAX ? 0 : int(bestIndex); } \
 }
 
 #define REDUCE_COLUMNS_ARG(NAME, T, BETTER) \

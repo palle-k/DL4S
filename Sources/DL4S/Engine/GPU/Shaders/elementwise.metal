@@ -57,8 +57,6 @@ UNARY(sqrt, float, precise::sqrt(x))
 UNARY(sin, float, precise::sin(x))
 UNARY(cos, float, precise::cos(x))
 UNARY(tan, float, precise::tan(x))
-UNARY(sinh, float, precise::sinh(x))
-UNARY(cosh, float, precise::cosh(x))
 UNARY(tanh, float, precise::tanh(x))
 
 // Binary operators in four forms: vector-vector, vector-scalar, scalar-vector, and broadcast with a layout.

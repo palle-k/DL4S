@@ -66,6 +66,10 @@ public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType
     /// Applies the pointwise feed forward layer to the provided inputs
     /// - Parameter inputs: tensor of shape [batch size, sequence length, size]
     /// - Returns: tensor of shape [batch size, sequence length, size]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "PointwiseFeedForward") {
             // inputs: [batchSize, timeSteps, size]

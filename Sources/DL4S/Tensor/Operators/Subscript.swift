@@ -42,6 +42,7 @@ public extension Tensor {
     subscript(index: [Int?]) -> Self {
         get {
             let index = Self.resolvingNegativeIndices(index, shape: shape)
+            Self.checkBounds(of: index, shape: shape)
             let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
             let handle = TensorHandle(values: val, parent: isCopy ? nil : handle)
             let sourceShape = self.shape
@@ -64,11 +65,8 @@ public extension Tensor {
             precondition(!requiresGradient, "Cannot write into tensor that requires gradient.")
 
             let index = Self.resolvingNegativeIndices(index, shape: shape)
-            if slice.dim == 0, dim - index.filter({ $0 != nil }).count > 0 {
-                fatalError("Assigning from a single value not supported yet.")
-            }
-
-            // TODO: Proper handling of replacement when gradient is computed.
+            Self.checkBounds(of: index, shape: shape)
+            precondition(slice.dim > 0 || index.count(where: { $0 != nil }) == dim, "A scalar can only be assigned to a single element.")
 
             Device.Memory.set(slice: index, of: mutableValues.values, with: shape, from: slice.values.values, with: slice.shape)
 
@@ -113,6 +111,7 @@ public extension Tensor {
     /// ```
     subscript(index: [Range<Int>?]) -> Self {
         get {
+            Self.checkBounds(of: index, shape: shape)
             let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
 
             let handle: TensorHandle<Element, Device> = if isCopy {
@@ -137,11 +136,11 @@ public extension Tensor {
         }
 
         set(slice) {
-            if slice.dim == 0, dim - index.filter({ $0 != nil }).count > 0 {
-                fatalError("Assigning from a single value not supported yet.")
-            }
-
-            // TODO: Proper handling of replacement when gradient is computed.
+            // The context of the result only has the slice as its source, so the gradient of the values before the write
+            // would be lost.
+            precondition(!requiresGradient, "Cannot write into tensor that requires gradient.")
+            Self.checkBounds(of: index, shape: shape)
+            precondition(slice.dim > 0, "A scalar cannot be assigned to a range.")
 
             Device.Memory.set(slice: index, of: mutableValues.values, with: shape, from: slice.values.values, with: slice.shape)
 
@@ -200,6 +199,28 @@ extension Tensor {
         return range.lowerBound * shape.dropFirst().reduce(1, *)
     }
 
+    /// Checks that an index with resolved negative positions lies in a tensor of the given shape.
+    @inline(__always)
+    static func checkBounds(of index: [Int?], shape: [Int]) {
+        precondition(index.count <= shape.count, "The index has more axes than the tensor.")
+        for (position, size) in zip(index, shape) {
+            if let position {
+                precondition(position >= 0 && position < size, "Index \(position) is out of range for an axis of size \(size).")
+            }
+        }
+    }
+
+    /// Checks that a window lies in a tensor of the given shape.
+    @inline(__always)
+    static func checkBounds(of index: [Range<Int>?], shape: [Int]) {
+        precondition(index.count <= shape.count, "The index has more axes than the tensor.")
+        for (range, size) in zip(index, shape) {
+            if let range {
+                precondition(range.lowerBound >= 0 && range.upperBound <= size, "Range \(range) is out of range for an axis of size \(size).")
+            }
+        }
+    }
+
     /// Replaces negative indices, which count from the end of their axis, with the corresponding positive indices.
     @inline(__always)
     static func resolvingNegativeIndices(_ index: [Int?], shape: [Int]) -> [Int?] {
@@ -212,7 +233,7 @@ extension Tensor {
     }
 }
 
-private extension Tensor {
+extension Tensor {
     /// Adds the gradient of a slice of the source to the accumulated gradient of the source, which has the given shape.
     ///
     /// `read` reads the slice from, and `write` writes it into, a tensor with the shape of the source. Without a gradient graph,

@@ -33,6 +33,17 @@ using namespace metal;
 // it places the matrices in memory instead of registers.
 #define UNROLL _Pragma("clang loop unroll(full)")
 
+// Constants of the fused operations, see `FusedConstants`.
+constant constexpr float GELU_SLOPE = 1.702f;
+
+// Thread `lane` of a SIMD group holds the elements (row, column) and (row, column + 1) of an 8 x 8 SIMD group matrix, where
+// `matrix_position(lane)` is (column, row). Metal does not document this layout. The GPU tests of the matrix products,
+// the convolutions, and attention compare the results with the CPU and fail when it changes.
+inline ushort2 matrix_position(ushort lane) {
+    ushort quad = lane / 4;
+    return ushort2((quad & 2) * 2 + (lane % 2) * 2, (quad / 4) * 4 + (lane / 2) % 4);
+}
+
 // Shape and strides of a strided region with up to eight axes. Strides are in elements and can be negative.
 struct Layout {
     int dim;

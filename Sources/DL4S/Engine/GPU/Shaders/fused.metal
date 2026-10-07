@@ -74,8 +74,8 @@ ACTIVATION_FORWARD(sigmoid, sigmoid_(x))
 ACTIVATION_BACKWARD(sigmoid, x * (1.0f - x) * g)
 ACTIVATION_FORWARD(leaky_relu, x > 0.0f ? x : a * x)
 ACTIVATION_BACKWARD(leaky_relu, (x > 0.0f ? 1.0f : (x < 0.0f ? a : 0.0f)) * g)
-ACTIVATION_FORWARD(gelu, x * sigmoid_(1.702f * x))
-ACTIVATION_BACKWARD(gelu, (sigmoid_(1.702f * x) + 1.702f * x * sigmoid_(1.702f * x) * (1.0f - sigmoid_(1.702f * x))) * g)
+ACTIVATION_FORWARD(gelu, x * sigmoid_(GELU_SLOPE * x))
+ACTIVATION_BACKWARD(gelu, (sigmoid_(GELU_SLOPE * x) + GELU_SLOPE * x * sigmoid_(GELU_SLOPE * x) * (1.0f - sigmoid_(GELU_SLOPE * x))) * g)
 ACTIVATION_FORWARD(swish, x * sigmoid_(a * x))
 ACTIVATION_BACKWARD(swish, (sigmoid_(a * x) + a * x * sigmoid_(a * x) * (1.0f - sigmoid_(a * x))) * g)
 ACTIVATION_FORWARD(mish, x * precise::tanh(softplus_(x)))
@@ -222,7 +222,8 @@ kernel void layer_norm_backward(device const float* input [[buffer(0)]], device 
         correlation += normalizedGradient * (x[i] - mean) * inverse;
     }
     float meanGradient = group_sum(gradientSum, scratch, lane, simd, simds) / float(p.length);
-    correlation = group_sum(correlation, scratch, lane, simd, simds) / float(p.length) * divisor / deviation;
+    // A row of equal values has the normalized values 0, so the term is 0, and the division would give NaN.
+    correlation = deviation > 0.0f ? group_sum(correlation, scratch, lane, simd, simds) / float(p.length) * divisor / deviation : 0.0f;
     for (uint i = t; i < p.length; i += size) {
         float normalized = (x[i] - mean) * inverse;
         store(inputGradient, offset + i, (g[i] * scale[i] - meanGradient - normalized * correlation) * inverse, p.accumulate);
@@ -291,7 +292,7 @@ kernel void batch_norm_backward(device const float* input [[buffer(0)]], device 
     shiftSums[j] = shiftSum;
     if (computesInput == 0) { return; }
     float meanGradient = gradientSum / float(p.rows);
-    float correlation = productSum / float(p.rows) * divisor / deviation;
+    float correlation = deviation > 0.0f ? productSum / float(p.rows) * divisor / deviation : 0.0f;
     for (uint row = 0; row < p.rows; row++) {
         ulong index = ulong(row) * p.columns + j;
         float normalized = (input[index] - mu) * inverse;

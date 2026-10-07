@@ -257,4 +257,76 @@ struct GradientTests {
         let secondGradient = gradient.reduceSum().gradients(of: [matrix])[0]
         expectClose(secondGradient, numericalGradient(of: firstDerivative, at: matrix), tolerance: 1e-8)
     }
+
+    @Test func testPowerGradients() {
+        var generator = WyHash(seed: 21)
+        let base = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 4], min: 0.5, max: 2, requiresGradient: true, using: &generator)
+        let exponent = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 4], min: -1, max: 2, requiresGradient: true, using: &generator)
+        expectGradientsMatchCentralDifferences(of: { $0.raised(toPowerOf: exponent.detached()) }, at: base)
+        expectGradientsMatchCentralDifferences(of: { base.detached().raised(toPowerOf: $0) }, at: exponent)
+    }
+
+    @Test func testUnstackGradient() {
+        var generator = WyHash(seed: 22)
+        let input = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 5, 2], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let firstWeights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 2, 2], min: -1, max: 1, using: &generator)
+        let secondWeights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 3, 2], min: -1, max: 1, using: &generator)
+        expectGradientsMatchCentralDifferences(of: { x in
+            let parts = x.unstacked(along: 1, withLengths: [2, 3])
+            return (parts[0] * firstWeights).reduceSum() + (parts[1] * parts[1] * secondWeights).reduceSum()
+        }, at: input)
+    }
+
+    @Test(arguments: [(0, 0), (1, 0), (0, 2), (nil, 1), (1, nil)] as [(Int?, Int?)])
+    func testBandMatrixGradient(belowDiagonal: Int?, aboveDiagonal: Int?) {
+        var generator = WyHash(seed: 23)
+        let input = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 5], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let weights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 5], min: -1, max: 1, using: &generator)
+        expectGradientsMatchCentralDifferences(of: { $0.bandMatrix(belowDiagonal: belowDiagonal, aboveDiagonal: aboveDiagonal) * weights }, at: input)
+    }
+
+    @Test func testDiagonalGradients() {
+        var generator = WyHash(seed: 24)
+        let matrix = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 4], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let vector = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let vectorWeights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4], min: -1, max: 1, using: &generator)
+        let matrixWeights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 4], min: -1, max: 1, using: &generator)
+        expectGradientsMatchCentralDifferences(of: { $0.diagonalElements() * vectorWeights }, at: matrix)
+        expectGradientsMatchCentralDifferences(of: { $0.diagonalMatrix() * matrixWeights }, at: vector)
+    }
+
+    @Test func testReverseGradient() {
+        var generator = WyHash(seed: 25)
+        let input = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 3], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let weights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 3], min: -1, max: 1, using: &generator)
+        expectGradientsMatchCentralDifferences(of: { $0.reversed() * weights }, at: input)
+    }
+
+    @Test func testScatterAndGatherGradients() {
+        var generator = WyHash(seed: 26)
+        let vector = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let matrix = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 4], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let weights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 4], min: -1, max: 1, using: &generator)
+        // One column index for each of the 3 rows, and one row index for each of the 4 columns
+        let columnIndices = Tensor<Int32, CPU>([2, 0, 3])
+        let rowIndices = Tensor<Int32, CPU>([1, 2, 0, 1])
+        expectGradientsMatchCentralDifferences(of: { $0.scatter(using: columnIndices, alongAxis: 1, withSize: 4) * weights }, at: vector)
+        expectGradientsMatchCentralDifferences(of: { $0.scatter(using: Tensor<Int32, CPU>([2, 0, 1]), alongAxis: 0, withSize: 3) * weights[nil, 0 ..< 3] }, at: vector)
+        expectGradientsMatchCentralDifferences(of: { $0.gather(using: columnIndices, alongAxis: 1) * weights[nil, 0] }, at: matrix)
+        expectGradientsMatchCentralDifferences(of: { $0.gather(using: rowIndices, alongAxis: 0) * weights[0] }, at: matrix)
+    }
+
+    /// Checks the gradient of the weighted sum of `function` at `point` against central differences, with and
+    /// without a recorded backward graph.
+    private func expectGradientsMatchCentralDifferences(
+        of function: (Tensor<Double, CPU>) -> Tensor<Double, CPU>,
+        at point: Tensor<Double, CPU>,
+        sourceLocation: SourceLocation = #_sourceLocation,
+    ) {
+        let expected = numericalGradient(of: function, at: point)
+        for retainsGraph in [false, true] {
+            let gradient = function(point).reduceSum().gradients(of: [point], retainBackwardsGraph: retainsGraph)[0]
+            expectClose(gradient, expected, tolerance: 1e-14, sourceLocation: sourceLocation)
+        }
+    }
 }

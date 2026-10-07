@@ -39,6 +39,10 @@ public struct ScaledDotProductAttention<Element: NumericType, Device: DeviceType
     ///       where `keyHeads` and `valueHeads` divide `heads` and a group of query heads shares one key head and one value head (grouped-query attention),
     ///       as well as an optional mask that may be used to prevent attention to certain elements outside of the batch or in future timesteps. Mask must be broadcastable to shape [batchSize, heads, queryCount, keyCount]
     /// - Returns: Attended values tensor of shape [batchSize, heads, queryCount, valueDim]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: (q: Tensor<Element, Device>, k: Tensor<Element, Device>, v: Tensor<Element, Device>, mask: Tensor<Element, Device>?)) -> Tensor<Element, Device> {
         scaledDotProductAttention(queries: inputs.q, keys: inputs.k, values: inputs.v, mask: inputs.mask, temperature: temperature)
     }

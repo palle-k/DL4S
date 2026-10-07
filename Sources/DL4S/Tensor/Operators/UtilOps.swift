@@ -30,34 +30,48 @@ import Foundation
 public extension Tensor where Element == Int32 {
     /// One-hot encodes a tensor of indices
     /// - Parameters:
-    ///   - dim: Size of encoding axis. `max(tensor)` must be less than `dim`.
+    ///   - dim: Size of encoding axis. Every index must be in `0 ..< dim`.
     ///   - type: Data type of the result.
+    /// - Returns: Tensor with the shape `shape + [dim]`, which is 1 at the given indices and 0 everywhere else.
     func oneHotEncoded<Target>(dim: Int, type: Target.Type = Target.self) -> Tensor<Target, Device> {
-        var result = Tensor<Target, Device>(repeating: 0, shape: shape + [dim])
-
-        for idx in iterate(shape) {
-            let target = Int(self[idx].item)
-            result[idx + [target]] = 1
+        // The indices are read once and the result is written once, because every element access on a device is a
+        // separate read or command.
+        var encoded = [Target](repeating: 0, count: count * dim)
+        for (position, index) in elements.enumerated() {
+            precondition(0 ..< Int32(dim) ~= index, "Index \(index) is not in 0 ..< \(dim).")
+            encoded[position * dim + Int(index)] = 1
         }
-
-        return result
+        return Tensor<Target, Device>(encoded, shape: shape + [dim])
     }
 }
 
 public extension Tensor {
     /// Creates the values from the lower bound up to the upper bound, which is not included, with the given increment.
+    ///
+    /// The tensor has `ceil((upperBound - lowerBound) / stride)` elements, and the element at index `i` is
+    /// `lowerBound + i * stride`. When the increment does not move from the lower bound towards the upper bound,
+    /// the tensor is empty.
     /// - Parameters:
     ///   - lowerBound: First value
     ///   - upperBound: Value after the last value
-    ///   - stride: Increment between elements
+    ///   - stride: Increment between elements. It must not be 0.
     init(linearRampWithLowerBound lowerBound: Element = 0, upperBound: Element, by stride: Element = 1) {
-        let buffer = Device.Memory.allocateBuffer(withShape: [((upperBound - lowerBound) / stride).toInt()], type: Element.self)
-        Device.Engine.arange(lowerBound: lowerBound, upperBound: upperBound, result: buffer)
+        precondition(stride != 0, "The stride must not be 0.")
+        let count = Swift.max(0, Int(((upperBound - lowerBound).doubleValue / stride.doubleValue).rounded(.up)))
+        let buffer = Device.Memory.allocateBuffer(withShape: [count], type: Element.self)
+        if count > 0 {
+            // The engine divides the distance between its bounds into count equal steps.
+            Device.Engine.arange(lowerBound: lowerBound, upperBound: lowerBound + stride * Element(count), result: buffer)
+        }
         self.init(using: buffer, context: nil)
     }
 
     /// Repeats the tensor `times` times and stacks the result along the 0th axis.
     /// - Parameter times: Number of repetitions
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func repeated(_ times: Int) -> Self {
         Tensor(stacking: Array(repeating: self, count: times))
     }
@@ -66,6 +80,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - value: Padding value
     ///   - padding: Number of padded elements before and after the tensor.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func padded(with value: Element = 0, padding: [(Int, Int)]) -> Self {
         precondition(padding.count == dim)
 
@@ -80,6 +98,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - value: Padding value
     ///   - padding: Number of padded elements before and after the tensor.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func padded(with value: Element = 0, padding: [Int]) -> Self {
         precondition(padding.count == dim)
 
@@ -91,6 +113,10 @@ public extension Tensor {
     }
 
     /// Reverses the tensor along the 0th axis.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func reversed() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.reverse(values: values, result: resultBuffer)
@@ -112,6 +138,10 @@ public extension Tensor {
     /// - Parameters:
     ///   - belowDiagonal: Number of elements below diagonal or nil, if all elements should be copied.
     ///   - aboveDiagonal: Number of elements above the diagonal or nil, if all elements should be copied.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func bandMatrix(belowDiagonal: Int?, aboveDiagonal: Int?) -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.fill(value: 0, result: resultBuffer.values, count: resultBuffer.count)
@@ -135,6 +165,10 @@ public extension Tensor {
     /// For backpropagation, the matrix must have square shape.
     ///
     /// - Returns: Vector containing matrix diagonal elements
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func diagonalElements() -> Self {
         precondition(dim == 2, "source tensor must be matrix")
 
@@ -160,6 +194,10 @@ public extension Tensor {
     /// The resulting matrix will have a number of rows and columns equal to number of elements in the vector
     ///
     /// - Returns: Square diagonal matrix
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func diagonalMatrix() -> Self {
         precondition(dim == 1, "diagonal element tensor must be vector")
 
@@ -204,6 +242,10 @@ public extension Tensor {
     ///
     /// - Parameter rate: Probability, with which an element is set to zero
     /// - Returns: Tensor with the shape of the tensor
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func droppedOut(rate: Float) -> Self {
         var result = Self(uninitializedShape: shape)
         var mask = Self(uninitializedShape: shape)

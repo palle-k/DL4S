@@ -65,6 +65,10 @@ public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>:
     /// Forwards the given batch of token sequences through the encoder.
     /// - Parameter inputs: Token sequences
     /// - Returns: Batch of encoder outputs with shape [inputs.count, maxLen, hiddenSize]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: (input: Tensor<Element, Device>, sequenceLengths: [Int])) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "Encoder") {
             let mask: Tensor<Element, Device> = makeEncoderMasks(sequenceLengths: inputs.sequenceLengths, length: inputs.input.shape[1])

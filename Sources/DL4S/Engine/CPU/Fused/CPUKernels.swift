@@ -31,7 +31,8 @@ import Foundation
 /// accelerated primitives of ``CPUNumeric`` and through element-wise loops, so intermediate values do not leave the cache.
 /// Scratch buffers are allocated for one call of a kernel and released at its end.
 enum CPUKernels {
-    /// Number of elements of a block. Some kernels keep a few scratch buffers of this size, which together fit into the L1 cache.
+    // Some kernels keep a few scratch buffers of this size, which together fit into the L1 cache.
+    /// Number of elements of a block.
     static let blockSize = 4096
 
     /// Upper bound for the number of elements of the scratch matrices of convolutions.
@@ -108,8 +109,9 @@ enum CPUKernels {
         N.sqrt(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
-    /// Computes `tanh(scale * x / 2)`, from which `sigmoid(scale * x) = tanh(scale * x / 2) / 2 + 1 / 2` follows without an overflow
-    /// for large magnitudes. Kernels that use the sigmoid in a further loop apply the last step there.
+    // The sigmoid follows from it without an overflow for large magnitudes, and kernels that use the sigmoid in a further
+    // loop apply the last step there.
+    /// Computes `tanh(scale * x / 2)`, from which `sigmoid(scale * x) = tanh(scale * x / 2) / 2 + 1 / 2` follows.
     ///
     /// The input and the result can be the same memory.
     @inline(__always)

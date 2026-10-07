@@ -26,9 +26,8 @@
 import Foundation
 import Synchronization
 
+// A counter is cheaper than the system random number generator, which takes a process-wide lock on every call.
 /// Mints identifiers that are unique within one process.
-///
-/// A counter is cheaper than the system random number generator, which takes a process-wide lock on every call.
 enum UniqueID {
     private static let counter = Atomic<UInt64>(0)
 
@@ -41,7 +40,8 @@ enum UniqueID {
 
 /// Owns the storage of a tensor and frees it when the last tensor that uses it is released.
 final class TensorHandle<Element, Device: DeviceType>: @unchecked Sendable {
-    // `@unchecked Sendable`: True `Sendable` conformance is achieved through CoW semantics on Tensor that prevents concurrent access.
+    // `@unchecked Sendable`: The storage is only written through `Tensor.mutableValues`, which copies it first when another
+    // tensor shares it, so no two threads write or read and write the same storage.
     let values: MutableBuffer<Element, Device>
     let parent: TensorHandle<Element, Device>?
 
@@ -245,6 +245,10 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     /// - Parameters:
     ///   - tensors: Tensors to differentiate for
     ///   - retainGraph: Whether to store the graph for the backwards pass. If enabled, higher order gradients can be computed.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func gradients(of tensors: [Self], retainBackwardsGraph retainGraph: Bool = false) -> [Self] {
         OperationGroup.capture(named: "Backpropagate") {
             // self is the result of a function, which is differentiated with respect to the given tensors.
@@ -261,13 +265,17 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
                 result.backpropID: Tensor(repeating: 1, shape: result.shape, requiresGradient: retainGraph),
             ]
             grads.reserveCapacity(operationOrder.count)
+            let requested = Set(tensors.map { $0.backpropID })
 
             // Perform the actual backpropagation.
             for tensor in operationOrder.reversed() {
-                guard let grad = grads[tensor.backpropID] else {
+                guard let ctx = tensor.context else {
                     continue
                 }
-                guard let ctx = tensor.context else {
+                // The gradient of an intermediate tensor is only used in its own step. Releasing it frees its memory early,
+                // and leaves the accumulators of the sources that share its storage, such as views, uniquely referenced.
+                let grad = requested.contains(tensor.backpropID) ? grads[tensor.backpropID] : grads.removeValue(forKey: tensor.backpropID)
+                guard let grad else {
                     continue
                 }
                 // Add gradients of all tensors that directly influenced the values
@@ -370,3 +378,14 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
 }
 
 extension Tensor: Sendable {}
+
+extension Tensor {
+    /// Writable storage of the tensor.
+    var mutableValues: MutableShapedBuffer<Element, Device> {
+        mutating get {
+            // Assume write, so perform CoW if necessary.
+            ensureOwnership()
+            return MutableShapedBuffer(values: handle.values, shape: shape)
+        }
+    }
+}

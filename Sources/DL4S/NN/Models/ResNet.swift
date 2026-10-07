@@ -82,6 +82,10 @@ public struct ResNet18<Element: RandomizableType, Device: DeviceType>: Sendable 
         }
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "ResNet18") {
             var x = inputs

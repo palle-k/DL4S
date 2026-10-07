@@ -74,6 +74,10 @@ public struct TransformerDecoderBlock<Element: RandomizableType, Device: DeviceT
     /// - Parameter inputs: Layer input with shape [batchSize, maxLen, hiddenSize], encoder outputs with shape [batchSize, maxLen, hiddenSize], and masks broadcastable to [batchSize, heads, queryCount, keyCount] with 1 entries for all elements that should be blocked for encoder and decoder states.
     ///   The encoder outputs and the encoder mask must be nil when the block has no encoder attention, and the encoder outputs must not be nil when it has one.
     /// - Returns: Result of layer operations with shape [batchSize, maxLen, hiddenSize]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: (decoderInput: Tensor<Element, Device>, encoderOutput: Tensor<Element, Device>?, encoderMask: Tensor<Element, Device>?, decoderMask: Tensor<Element, Device>)) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "DecoderLayer") {
             let (decoderInput, encoderOutput, encoderMask, decoderMask) = inputs

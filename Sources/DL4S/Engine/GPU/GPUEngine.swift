@@ -107,9 +107,9 @@ public struct GPUEngine: EngineType {
             return
         }
         let word = withUnsafeBytes(of: value) { $0.load(as: UInt32.self) }
-        let pipeline = GPUKernels.pipeline("fill_diagonal_u32", in: .elementwise)
+        let kernel = GPUKernels.kernel("fill_diagonal_u32", in: .elementwise)
         let result = target.values.memory
-        GPUContext.current.compute(pipeline, reading: [], writing: [result]) { arguments in
+        GPUContext.compute(kernel, reading: [], writing: [result]) { arguments in
             arguments.buffer(result)
             arguments.value(SIMD3<UInt32>(UInt32(count), UInt32(target.shape[1] + 1), word))
             arguments.dispatch(count: count)
@@ -130,8 +130,8 @@ public struct GPUEngine: EngineType {
     }
 
     private static func diagonal(values: GPUBuffer, result: GPUBuffer, count: Int, stride: Int, extracts: Bool) {
-        let pipeline = GPUKernels.pipeline("diagonal_u32", in: .elementwise)
-        GPUContext.current.compute(pipeline, reading: [values], writing: [result]) { arguments in
+        let kernel = GPUKernels.kernel("diagonal_u32", in: .elementwise)
+        GPUContext.compute(kernel, reading: [values], writing: [result]) { arguments in
             arguments.buffer(values)
             arguments.buffer(result)
             arguments.value(SIMD3<UInt32>(UInt32(count), UInt32(stride), extracts ? 1 : 0))
@@ -143,7 +143,8 @@ public struct GPUEngine: EngineType {
         let rows = result.shape[0]
         let columns = result.shape[1]
         let inner = transposeFirst ? lhs.shape[0] : lhs.shape[1]
-        // A product runs on the host when it has at most as many multiplications as a small matrix of 64 x 64 x 64 elements.
+        // A product counts as an operation of a 64th of its multiplications, so that with the default limit of 4096, a product runs
+        // on the host when it has at most as many multiplications as a product of matrices of 64 x 64 elements.
         let multiplications = rows * columns * inner
         guard gpuElement(N.self, elements: multiplications / 64, reading: [lhs.values.memory, rhs.values.memory], writing: [result.values.memory]) == .float else {
             CPUEngine.gemm(lhs: lhs.host, rhs: rhs.host, result: result.host, alpha: alpha, beta: beta, transposeFirst: transposeFirst, transposeSecond: transposeSecond)
@@ -191,9 +192,9 @@ public struct GPUEngine: EngineType {
         }
         let (rows, columns) = (buffer.shape[0], buffer.shape[1])
         let limit = Swift.max(rows, columns)
-        let pipeline = GPUKernels.pipeline("band_u32", in: .elementwise)
+        let kernel = GPUKernels.kernel("band_u32", in: .elementwise)
         let (values, target) = (buffer.values.memory, result.values.memory)
-        GPUContext.current.compute(pipeline, reading: [values], writing: [target]) { arguments in
+        GPUContext.compute(kernel, reading: [values], writing: [target]) { arguments in
             arguments.buffer(values)
             arguments.buffer(target)
             arguments.value(SIMD4<Int32>(Int32(rows), Int32(columns), Int32(belowDiagonal ?? limit), Int32(aboveDiagonal ?? limit)))
@@ -296,8 +297,8 @@ public struct GPUEngine: EngineType {
         }
         let reducedGroups = groups.indices.filter { groups[$0].isReduced }
         if reducedGroups.count <= 1 {
-            let outer = reducedGroups.first.map { groups[..<$0].map(\.size).reduce(1, *) } ?? values.count
-            let inner = reducedGroups.first.map { groups[($0 + 1)...].map(\.size).reduce(1, *) } ?? 1
+            let outer = reducedGroups.first.map { groups[..<$0].map { $0.size }.reduce(1, *) } ?? values.count
+            let inner = reducedGroups.first.map { groups[($0 + 1)...].map { $0.size }.reduce(1, *) } ?? 1
             GPUKernels.reduce(reduction, element, values: values.values.memory, result: result.values.memory, context: context?.values.memory, outer: outer, length: length, inner: inner, scale: scale)
             return
         }
@@ -307,7 +308,7 @@ public struct GPUEngine: EngineType {
             arrangement[source] = destination
         }
         let (shape, strides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arrangement)
-        let permuted = GPUKernels.temporary(count: values.count)
+        let permuted = GPUKernels.temporary(count: values.count, near: result.values.memory)
         GPUKernels.stridedCopy(source: values.values.memory, result: permuted, layout: GPULayout(shape: shape, strides: [strides, GPULayout.contiguousStrides(shape)]))
         GPUKernels.reduce(reduction, element, values: permuted, result: result.values.memory, context: context?.values.memory, outer: values.count / length, length: length, inner: 1, scale: scale)
     }
@@ -430,14 +431,6 @@ public struct GPUEngine: EngineType {
         unary("tan", values: values, result: result, host: CPUEngine.tan)
     }
 
-    public static func sinh<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
-        unary("sinh", values: values, result: result, host: CPUEngine.sinh)
-    }
-
-    public static func cosh<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
-        unary("cosh", values: values, result: result, host: CPUEngine.cosh)
-    }
-
     public static func tanh<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("tanh", values: values, result: result, host: CPUEngine.tanh)
     }
@@ -538,8 +531,8 @@ public struct GPUEngine: EngineType {
     ///   - result: Buffer that the kernel writes
     ///   - sizes: Parameters of the kernel. The first one is the number of threads.
     private static func indexed(_ name: String, values: GPUBuffer, indices: GPUBuffer, result: GPUBuffer, sizes: SIMD4<Int32>) {
-        let pipeline = GPUKernels.pipeline(name, in: .copy)
-        GPUContext.current.compute(pipeline, reading: [values, indices], writing: [result]) { arguments in
+        let kernel = GPUKernels.kernel(name, in: .copy)
+        GPUContext.compute(kernel, reading: [values, indices], writing: [result]) { arguments in
             arguments.buffer(values)
             arguments.buffer(indices)
             arguments.buffer(result)
@@ -548,15 +541,15 @@ public struct GPUEngine: EngineType {
         }
     }
 
-    public static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, arangement: [Int]) {
+    public static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, arrangement: [Int]) {
         guard values.count > 0 else {
             return
         }
         guard gpuElement(N.self, elements: result.count, reading: [values.values.memory], writing: [result.values.memory]) != nil else {
-            CPUEngine.permuteAxes(values: values.host, result: result.host, arangement: arangement)
+            CPUEngine.permuteAxes(values: values.host, result: result.host, arrangement: arrangement)
             return
         }
-        let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arangement)
+        let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arrangement)
         let dim = shape.count
         // When the last two axes swap places and the batch is contiguous, a tiled transpose reads and writes contiguous rows.
         if dim >= 2, dim <= 3, sourceStrides[dim - 2] == 1, sourceStrides[dim - 1] == shape[dim - 2], dim == 2 || sourceStrides[0] == shape[1] * shape[2] {
@@ -565,21 +558,21 @@ public struct GPUEngine: EngineType {
         }
         let layout = GPULayout(shape: shape, strides: [sourceStrides, GPULayout.contiguousStrides(shape)])
         guard layout.isSupported else {
-            CPUEngine.permuteAxes(values: values.host, result: result.host, arangement: arangement)
+            CPUEngine.permuteAxes(values: values.host, result: result.host, arrangement: arrangement)
             return
         }
         GPUKernels.stridedCopy(source: values.values.memory, result: result.values.memory, layout: layout)
     }
 
-    public static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, arangement: [Int]) {
+    public static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>, arrangement: [Int]) {
         guard values.count > 0 else {
             return
         }
-        let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arangement)
+        let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arrangement)
         let contiguous = GPULayout.contiguousStrides(shape)
         let layout = GPULayout(shape: shape, strides: [sourceStrides, contiguous, contiguous])
         guard let element = gpuElement(N.self, elements: result.count, reading: [values.values.memory, add.values.memory], writing: [result.values.memory]), layout.isSupported else {
-            CPUEngine.permuteAxesAdd(values: values.host, add: add.host, result: result.host, arangement: arangement)
+            CPUEngine.permuteAxesAdd(values: values.host, add: add.host, result: result.host, arrangement: arrangement)
             return
         }
         GPUKernels.stridedCopy(source: values.values.memory, adding: add.values.memory, element: element, result: result.values.memory, layout: layout)
@@ -592,9 +585,9 @@ public struct GPUEngine: EngineType {
         }
         let start = lowerBound.floatValue
         let increment = (upperBound.floatValue - start) / Float(result.count)
-        let pipeline = GPUKernels.pipeline("arange_float", in: .elementwise)
+        let kernel = GPUKernels.kernel("arange_float", in: .elementwise)
         let target = result.values.memory
-        GPUContext.current.compute(pipeline, reading: [], writing: [target]) { arguments in
+        GPUContext.compute(kernel, reading: [], writing: [target]) { arguments in
             arguments.buffer(target)
             arguments.value(SIMD2<Float>(start, increment))
             arguments.value(UInt32(result.count))
@@ -643,7 +636,7 @@ public struct GPUEngine: EngineType {
     }
 
     public static func reverse<N>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
-        precondition(values.shape == result.shape)
+        precondition(values.shape == result.shape, "The result must have the shape of the values.")
         guard values.count > 0 else {
             return
         }
@@ -659,7 +652,7 @@ public struct GPUEngine: EngineType {
     }
 
     public static func reverseAdd<N: NumericType>(values: ShapedBuffer<N, GPU>, add: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
-        precondition(values.shape == result.shape && values.shape == add.shape)
+        precondition(values.shape == result.shape && values.shape == add.shape, "The result and the added values must have the shape of the values.")
         guard values.count > 0 else {
             return
         }
@@ -704,9 +697,9 @@ public struct GPUEngine: EngineType {
         let geometry = WindowParameters(imageShape: values.shape, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
         let rows = values.shape[1] * kernelHeight * kernelWidth
         let columns = values.shape[0] * Int(geometry.outputHeight) * Int(geometry.outputWidth)
-        let pipeline = GPUKernels.pipeline("img2col_u32", in: .copy)
+        let kernel = GPUKernels.kernel("img2col_u32", in: .copy)
         let (image, matrix) = (values.values.memory, result.values.memory)
-        GPUContext.current.compute(pipeline, reading: [image], writing: [matrix]) { arguments in
+        GPUContext.compute(kernel, reading: [image], writing: [matrix]) { arguments in
             arguments.buffer(image)
             arguments.buffer(matrix)
             arguments.value(geometry)
@@ -721,9 +714,9 @@ public struct GPUEngine: EngineType {
             return
         }
         let geometry = WindowParameters(imageShape: image.shape, kernelHeight: kernelHeight, kernelWidth: kernelWidth, padding: padding, stride: stride)
-        let pipeline = GPUKernels.pipeline("col2img_float", in: .copy)
+        let kernel = GPUKernels.kernel("col2img_float", in: .copy)
         let (source, target) = (matrix.values.memory, image.values.memory)
-        GPUContext.current.compute(pipeline, reading: [source], writing: [target]) { arguments in
+        GPUContext.compute(kernel, reading: [source], writing: [target]) { arguments in
             arguments.buffer(source)
             arguments.buffer(target)
             arguments.value(geometry)

@@ -38,6 +38,10 @@ public struct SGD<Element: NumericType, Device: DeviceType>: Optimizer, Sendable
         self.learningRate = learningRate
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         for index in parameters.indices {

@@ -36,8 +36,7 @@ extension Composed {
         weightGradient: inout GradientAccumulator<N, Device>,
         biasGradient: inout GradientAccumulator<N, Device>,
     ) {
-        // Without a gradient graph, the products are added to the accumulated gradients in place,
-        // so a weight that is used several times needs no temporary gradient.
+        // The context calls this function only to record a gradient graph, so the products are added with tensor operations.
         if inputGradient.isRequested {
             inputGradient.add(outputGradient.matrixMultiplied(with: weights, transposeOther: true))
         }
