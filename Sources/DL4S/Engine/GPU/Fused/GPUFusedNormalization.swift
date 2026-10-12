@@ -31,7 +31,7 @@ import Metal
 // in the cache between the passes over it. Softmax along another axis than the last one uses the default implementation.
 
 public extension GPUFusedOperations {
-    static func softmax<N: NumericType>(input: ShapedBuffer<N, GPU>, axis: Int, result: MutableShapedBuffer<N, GPU>) {
+    static func softmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, axis: Int, result: MutableShapedBuffer<N, GPU>) {
         // The kernel supports the last axis.
         guard axis == input.dim - 1, GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer], writing: [result.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.softmax(input: input, axis: axis, result: result)
@@ -40,7 +40,7 @@ public extension GPUFusedOperations {
         rowForward("softmax_forward", input: input, result: result)
     }
 
-    static func softmaxBackward<N: NumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, axis: Int, inputGradient: GradientBuffer<N, GPU>?) {
+    static func softmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, axis: Int, inputGradient: GradientBuffer<N, GPU>?) {
         guard let inputGradient else {
             return
         }
@@ -53,7 +53,7 @@ public extension GPUFusedOperations {
         rowBackward("softmax_backward", output: output, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 
-    static func logSoftmax<N: NumericType>(input: ShapedBuffer<N, GPU>, axis: Int, result: MutableShapedBuffer<N, GPU>) {
+    static func logSoftmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, axis: Int, result: MutableShapedBuffer<N, GPU>) {
         // The kernel supports the last axis.
         guard axis == input.dim - 1, GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer], writing: [result.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.logSoftmax(input: input, axis: axis, result: result)
@@ -62,7 +62,7 @@ public extension GPUFusedOperations {
         rowForward("log_softmax_forward", input: input, result: result)
     }
 
-    static func logSoftmaxBackward<N: NumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, axis: Int, inputGradient: GradientBuffer<N, GPU>?) {
+    static func logSoftmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, axis: Int, inputGradient: GradientBuffer<N, GPU>?) {
         guard let inputGradient else {
             return
         }
@@ -75,7 +75,7 @@ public extension GPUFusedOperations {
         rowBackward("log_softmax_backward", output: output, outputGradient: outputGradient, inputGradient: inputGradient)
     }
 
-    static func layerNormalization<N: NumericType>(input: ShapedBuffer<N, GPU>, scale: ShapedBuffer<N, GPU>, shift: ShapedBuffer<N, GPU>, epsilon: N, result: MutableShapedBuffer<N, GPU>) {
+    static func layerNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, scale: ShapedBuffer<N, GPU>, shift: ShapedBuffer<N, GPU>, epsilon: N, result: MutableShapedBuffer<N, GPU>) {
         checkLayerNormalizationShapes(input: input, scale: scale, shift: shift)
         guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer, scale.gpuBuffer, shift.gpuBuffer], writing: [result.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.layerNormalization(input: input, scale: scale, shift: shift, epsilon: epsilon, result: result)
@@ -86,16 +86,13 @@ public extension GPUFusedOperations {
         let parameters = GPUFused.RowParameters(length: UInt32(length), accumulate: 0, epsilon: epsilon.floatValue)
         let kernel = GPUKernels.kernel("layer_norm_forward", in: .fused)
         GPUContext.compute(kernel, reading: [x, gamma, beta], writing: [y]) { arguments in
-            arguments.buffer(x)
-            arguments.buffer(gamma)
-            arguments.buffer(beta)
-            arguments.buffer(y)
+            arguments.buffers(x, gamma, beta, y)
             arguments.value(parameters)
             arguments.dispatch(threadgroups: MTLSize(width: input.count / length, height: 1, depth: 1), threadgroup: MTLSize(width: GPUFused.rowThreadgroupWidth(length: length), height: 1, depth: 1))
         }
     }
 
-    static func layerNormalizationBackward<N: NumericType>(
+    static func layerNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         scale: ShapedBuffer<N, GPU>,
         shift: ShapedBuffer<N, GPU>,
@@ -123,11 +120,7 @@ public extension GPUFusedOperations {
             let outputs = SIMD2<UInt32>(inputBuffer != nil ? 1 : 0, scaleTerms != nil ? 1 : 0)
             let kernel = GPUKernels.kernel("layer_norm_backward", in: .fused)
             GPUContext.compute(kernel, reading: [x, gamma, g] + writing, writing: writing) { arguments in
-                arguments.buffer(x)
-                arguments.buffer(gamma)
-                arguments.buffer(g)
-                arguments.buffer(inputBuffer ?? x)
-                arguments.buffer(scaleTerms ?? x)
+                arguments.buffers(x, gamma, g, inputBuffer ?? x, scaleTerms ?? x)
                 arguments.value(parameters)
                 arguments.value(outputs)
                 arguments.dispatch(threadgroups: MTLSize(width: rows, height: 1, depth: 1), threadgroup: MTLSize(width: GPUFused.rowThreadgroupWidth(length: length), height: 1, depth: 1))
@@ -141,7 +134,7 @@ public extension GPUFusedOperations {
         }
     }
 
-    static func batchNormalization<N: NumericType>(
+    static func batchNormalization<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         scale: ShapedBuffer<N, GPU>,
         shift: ShapedBuffer<N, GPU>,
@@ -158,9 +151,6 @@ public extension GPUFusedOperations {
             return
         }
         let math = BufferMath<N, GPU>()
-        defer {
-            math.release()
-        }
         let (gamma, beta) = (math.columns(of: scale, shape: columnShape), math.columns(of: shift, shape: columnShape))
         let parameters = ColumnParameters(input: input, accumulate: false, epsilon: epsilon)
         let (x, g, b, y, m, v) = (input.gpuBuffer, gamma.gpuBuffer, beta.gpuBuffer, result.gpuBuffer, mean.gpuBuffer, variance.gpuBuffer)
@@ -174,7 +164,7 @@ public extension GPUFusedOperations {
         }
     }
 
-    static func batchNormalizationBackward<N: NumericType>(
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         scale: ShapedBuffer<N, GPU>,
         shift: ShapedBuffer<N, GPU>,
@@ -196,12 +186,9 @@ public extension GPUFusedOperations {
             return
         }
         let math = BufferMath<N, GPU>()
-        defer {
-            math.release()
-        }
         let gamma = math.columns(of: scale, shape: columnShape)
         let parameters = ColumnParameters(input: input, accumulate: inputGradient?.adds ?? false, epsilon: epsilon)
-        let (scaleColumns, shiftColumns) = (math.temporary(columnShape), math.temporary(columnShape))
+        let (scaleColumns, shiftColumns) = (GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self), GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self))
         let (x, w, g, dx, ds, db) = (input.gpuBuffer, gamma.gpuBuffer, outputGradient.gpuBuffer, inputGradient?.gpuBuffer, scaleColumns.gpuBuffer, shiftColumns.gpuBuffer)
         let kernel = GPUKernels.kernel("batch_norm_backward", in: .fused)
         GPUContext.compute(kernel, reading: [x, w, g] + (dx.map { [$0] } ?? []), writing: [ds, db] + (dx.map { [$0] } ?? [])) { arguments in
@@ -216,7 +203,7 @@ public extension GPUFusedOperations {
         math.writeSum(of: shiftColumns, into: shiftGradient)
     }
 
-    static func batchNormalization<N: NumericType>(
+    static func batchNormalization<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         scale: ShapedBuffer<N, GPU>,
         shift: ShapedBuffer<N, GPU>,
@@ -231,9 +218,6 @@ public extension GPUFusedOperations {
             return
         }
         let math = BufferMath<N, GPU>()
-        defer {
-            math.release()
-        }
         let affine = GPUFixedNormalizationColumns(scale: scale, shift: shift, mean: mean, variance: variance, columnShape: Array(input.shape.dropFirst()), epsilon: epsilon, math: math)
         let parameters = ColumnParameters(input: input, accumulate: false, epsilon: epsilon)
         let (x, factors, offsets, y) = (input.gpuBuffer, affine.factors.gpuBuffer, affine.offsets.gpuBuffer, result.gpuBuffer)
@@ -247,7 +231,7 @@ public extension GPUFusedOperations {
         }
     }
 
-    static func batchNormalizationBackward<N: NumericType>(
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         scale: ShapedBuffer<N, GPU>,
         shift: ShapedBuffer<N, GPU>,
@@ -269,13 +253,10 @@ public extension GPUFusedOperations {
             return
         }
         let math = BufferMath<N, GPU>()
-        defer {
-            math.release()
-        }
         let columnShape = Array(input.shape.dropFirst())
         let affine = GPUFixedNormalizationColumns(scale: scale, shift: shift, mean: mean, variance: variance, columnShape: columnShape, epsilon: epsilon, math: math)
         let parameters = ColumnParameters(input: input, accumulate: inputGradient?.adds ?? false, epsilon: epsilon)
-        let (scaleColumns, shiftColumns) = (math.temporary(columnShape), math.temporary(columnShape))
+        let (scaleColumns, shiftColumns) = (GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self), GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self))
         let (x, g, factors, divisors, mu) = (input.gpuBuffer, outputGradient.gpuBuffer, affine.factors.gpuBuffer, affine.inverseDivisors.gpuBuffer, affine.means.gpuBuffer)
         let (dx, ds, db) = (inputGradient?.gpuBuffer, scaleColumns.gpuBuffer, shiftColumns.gpuBuffer)
         let kernel = GPUKernels.kernel("batch_norm_fixed_backward", in: .fused)
@@ -297,8 +278,7 @@ public extension GPUFusedOperations {
         let parameters = GPUFused.RowParameters(length: UInt32(length), accumulate: 0, epsilon: 0)
         let kernel = GPUKernels.kernel(name, in: .fused)
         GPUContext.compute(kernel, reading: [x], writing: [y]) { arguments in
-            arguments.buffer(x)
-            arguments.buffer(y)
+            arguments.buffers(x, y)
             arguments.value(parameters)
             arguments.dispatch(threadgroups: MTLSize(width: input.count / length, height: 1, depth: 1), threadgroup: MTLSize(width: GPUFused.rowThreadgroupWidth(length: length), height: 1, depth: 1))
         }
@@ -309,10 +289,8 @@ public extension GPUFusedOperations {
         let (y, g, dx) = (output.gpuBuffer, outputGradient.gpuBuffer, inputGradient.gpuBuffer)
         let parameters = GPUFused.RowParameters(length: UInt32(length), accumulate: inputGradient.accumulateFlag, epsilon: 0)
         let kernel = GPUKernels.kernel(name, in: .fused)
-        GPUContext.compute(kernel, reading: [y, g, dx], writing: [dx]) { arguments in
-            arguments.buffer(y)
-            arguments.buffer(g)
-            arguments.buffer(dx)
+        GPUContext.compute(kernel, reading: [y, g], writing: [dx]) { arguments in
+            arguments.buffers(y, g, dx)
             arguments.value(parameters)
             arguments.dispatch(threadgroups: MTLSize(width: output.count / length, height: 1, depth: 1), threadgroup: MTLSize(width: GPUFused.rowThreadgroupWidth(length: length), height: 1, depth: 1))
         }
@@ -321,7 +299,7 @@ public extension GPUFusedOperations {
 
 /// The columns of a normalization with fixed statistics, in intermediate buffers: the factors `scale / (sqrt(variance) + epsilon)`,
 /// the inverse divisors `1 / (sqrt(variance) + epsilon)`, the offsets `shift - mean * factor`, and the means.
-private struct GPUFixedNormalizationColumns<N: NumericType> {
+private struct GPUFixedNormalizationColumns<N: FloatingPointNumericType> {
     let factors: ShapedBuffer<N, GPU>
     let inverseDivisors: ShapedBuffer<N, GPU>
     let offsets: ShapedBuffer<N, GPU>
@@ -331,7 +309,7 @@ private struct GPUFixedNormalizationColumns<N: NumericType> {
     init(scale: ShapedBuffer<N, GPU>, shift: ShapedBuffer<N, GPU>, mean: ShapedBuffer<N, GPU>, variance: ShapedBuffer<N, GPU>, columnShape: [Int], epsilon: N, math: BufferMath<N, GPU>) {
         let (gamma, beta) = (math.columns(of: scale, shape: columnShape), math.columns(of: shift, shape: columnShape))
         let (means, variances) = (math.columns(of: mean, shape: columnShape), math.columns(of: variance, shape: columnShape))
-        let (inverseDivisors, factors, offsets) = (math.temporary(columnShape), math.temporary(columnShape), math.temporary(columnShape))
+        let (inverseDivisors, factors, offsets) = (GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self), GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self), GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self))
         math.sqrt(variances, into: inverseDivisors)
         math.add(inverseDivisors, epsilon, into: inverseDivisors)
         math.divide(math.constant(1), inverseDivisors, into: inverseDivisors)
@@ -352,7 +330,7 @@ private extension BufferMath where Device == GPU {
             return values
         }
         precondition(ShapeUtil.broadcasts(values.shape, to: columnShape), "The parameters must be broadcastable to the shape of the input without the batch axis.")
-        let repeated = temporary(columnShape)
+        let repeated = GPU.Memory.allocateBuffer(withShape: columnShape, type: N.self)
         add(values, constant(0, shape: columnShape), into: repeated)
         return ShapedBuffer(repeated)
     }

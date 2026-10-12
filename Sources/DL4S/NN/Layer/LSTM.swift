@@ -48,7 +48,7 @@ public struct LSTMState<Element: NumericType, Device: DeviceType>: Sendable {
 /// For every step, the layer computes `c_t = f_t * c_(t-1) + i_t * tanh(x_t W_c + h_(t-1) U_c + b_c)` and
 /// `h_t = o_t * tanh(c_t)`, with the forget gate `f_t`, the input gate `i_t`, and the output gate `o_t`.
 @Layer
-public struct LSTM<Element: RandomizableType, Device: DeviceType>: RNN, Codable, Sendable {
+public struct LSTM<Element: FloatingPointNumericType, Device: DeviceType>: RNN, Codable, Sendable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (State, () -> State)
     public typealias State = LSTMState<Element, Device>

@@ -27,37 +27,47 @@ import Foundation
 
 extension ShapedBuffer where Device == CPU {
     var immutable: UnsafeBufferPointer<Element> {
-        values.memory.bindMemory(to: Element.self).immutable
+        values.immutable
     }
 }
 
 extension MutableShapedBuffer where Device == CPU {
     var pointer: UnsafeMutableBufferPointer<Element> {
-        values.memory.bindMemory(to: Element.self)
+        values.pointer
     }
 
     var immutable: UnsafeBufferPointer<Element> {
-        values.memory.bindMemory(to: Element.self).immutable
+        values.immutable
     }
 }
 
 extension Buffer where Device == CPU {
+    /// The bytes of the region in memory.
+    var bytes: UnsafeMutableRawBufferPointer {
+        memory.bytes
+    }
+
     var immutable: UnsafeBufferPointer<Element> {
-        memory.bindMemory(to: Element.self).immutable
+        UnsafeBufferPointer(bytes.bindMemory(to: Element.self))
     }
 }
 
 extension MutableBuffer where Device == CPU {
+    /// The bytes of the region in memory.
+    var bytes: UnsafeMutableRawBufferPointer {
+        memory.bytes
+    }
+
     var pointer: UnsafeMutableBufferPointer<Element> {
-        memory.bindMemory(to: Element.self)
+        bytes.bindMemory(to: Element.self)
     }
 
     var immutable: UnsafeBufferPointer<Element> {
-        memory.bindMemory(to: Element.self).immutable
+        UnsafeBufferPointer(pointer)
     }
 }
 
-private enum BroadcastMode: Int {
+private enum BroadcastMode {
     case vectorVector
     case vectorScalar
     case scalarVector
@@ -67,31 +77,31 @@ public struct CPUEngine: EngineType {
     public typealias Device = CPU
 
     public static func fill<N: NumericType>(value: N, result: MutableBuffer<N, Device>, count: Int) {
-        N.fill(value: value, result: result.memory.bindMemory(to: N.self), count: count)
+        N.fill(value: value, result: result.pointer, count: count)
     }
 
     public static func vAdd<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: MutableBuffer<N, Device>, count: Int) {
-        N.vAdd(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+        N.vAdd(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, count: count)
     }
 
     public static func vNeg<N: NumericType>(val: Buffer<N, Device>, result: MutableBuffer<N, Device>, count: Int) {
-        N.vNeg(val: val.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+        N.vNeg(val: val.immutable, result: result.pointer, count: count)
     }
 
     public static func vSub<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: MutableBuffer<N, Device>, count: Int) {
-        N.vSub(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+        N.vSub(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, count: count)
     }
 
     public static func vMul<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: MutableBuffer<N, Device>, count: Int) {
-        N.vMul(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+        N.vMul(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, count: count)
     }
 
     public static func vDiv<N: NumericType>(lhs: Buffer<N, Device>, rhs: Buffer<N, Device>, result: MutableBuffer<N, Device>, count: Int) {
-        N.vDiv(lhs: lhs.memory.bindMemory(to: N.self).immutable, rhs: rhs.memory.bindMemory(to: N.self).immutable, result: result.memory.bindMemory(to: N.self), count: count)
+        N.vDiv(lhs: lhs.immutable, rhs: rhs.immutable, result: result.pointer, count: count)
     }
 
     public static func argmax<N: NumericType>(values: Buffer<N, Device>, count: Int) -> (Int, N) {
-        N.argmax(values: values.memory.bindMemory(to: N.self).immutable, count: count)
+        N.argmax(values: values.immutable, count: count)
     }
 
     @inline(__always)
@@ -104,6 +114,9 @@ public struct CPUEngine: EngineType {
         scalarOperatorA: (N, UnsafeBufferPointer<N>, UnsafeMutableBufferPointer<N>, Int) -> Void,
         scalarOperatorB: (UnsafeBufferPointer<N>, N, UnsafeMutableBufferPointer<N>, Int) -> Void,
     ) {
+        guard result.count > 0 else {
+            return
+        }
         let dim = Swift.max(lhs.dim, rhs.dim)
 
         // Reshape operands to their broadcasting shape by padding shape with ones from the left
@@ -158,21 +171,13 @@ public struct CPUEngine: EngineType {
                 var prefixCount = 0
                 var sc = 1
 
-                loop: for i in (0 ... devIndex).reversed() {
-                    switch mode {
-                    case .scalarVector:
-                        if lhs.shape[i] > 1 {
-                            break loop
-                        }
-                        sc *= rhs.shape[i]
-                    case .vectorScalar:
-                        if rhs.shape[i] > 1 {
-                            break loop
-                        }
-                        sc *= lhs.shape[i]
-                    default:
+                // The scalar operand has the size 1 along the axes of the slice, and the vector operand gives their sizes.
+                let (scalarShape, vectorShape) = mode == .scalarVector ? (lhs.shape, rhs.shape) : (rhs.shape, lhs.shape)
+                for i in (0 ... devIndex).reversed() {
+                    if scalarShape[i] > 1 {
                         break
                     }
+                    sc *= vectorShape[i]
                     prefixCount = i
                 }
                 iterShape = Array(result.shape.prefix(prefixCount))
@@ -210,32 +215,6 @@ public struct CPUEngine: EngineType {
         }
     }
 
-    @inline(__always)
-    @_specialize(where N == Float)
-    private static func reduce<N>(
-        values: ShapedBuffer<N, CPU>,
-        result: MutableShapedBuffer<N, CPU>,
-        axis: Int,
-        reduceOperator: (_ buffer: UnsafeBufferPointer<N>, _ stride: Int, _ count: Int) -> N,
-    ) {
-        #if DEBUG
-        var shape = values.shape
-        shape.remove(at: axis)
-        precondition(shape == result.shape)
-        #endif
-
-        var srcStrides = MemoryOps.strides(from: values.shape)
-        let reductionStride = srcStrides.remove(at: axis)
-        let axisSize = values.shape[axis]
-        let dstStrides = MemoryOps.strides(from: result.shape)
-        let source = values.immutable
-        let destination = result.pointer
-
-        StridedIteration.forEachOffset(shape: result.shape, strides: srcStrides, dstStrides) { sourceOffset, destinationOffset in
-            destination[destinationOffset] = reduceOperator(source.advanced(by: sourceOffset), reductionStride, axisSize)
-        }
-    }
-
     // A matrix-vector product with ones avoids a call per short row.
     /// Sums along the given axes in one pass over the values.
     ///
@@ -257,7 +236,7 @@ public struct CPUEngine: EngineType {
             resultStrides[axis] = resultStride
             resultStride *= shape[axis]
         }
-        let merged = StridedIteration.mergingAxes(shape: shape, strides: [MemoryOps.strides(from: shape), resultStrides])
+        let merged = StridedIteration.mergingAxes(shape: shape, strides: [ShapeUtil.contiguousStrides(of: shape), resultStrides])
         let (mergedShape, mergedValueStrides, mergedResultStrides) = (merged.shape, merged.strides[0], merged.strides[1])
         guard let rowLength = mergedShape.last, let rowResultStride = mergedResultStrides.last else {
             destination[0] = source[0]
@@ -320,7 +299,7 @@ public struct CPUEngine: EngineType {
         guard values.count > 0 else {
             return
         }
-        let strides = MemoryOps.strides(from: shape)
+        let strides = ShapeUtil.contiguousStrides(of: shape)
         let keptAxes = shape.indices.filter { !axes.contains($0) }
         let keptShape = keptAxes.map { shape[$0] }
         let sortedAxes = axes.sorted()
@@ -330,7 +309,7 @@ public struct CPUEngine: EngineType {
         let destination = result.pointer.pointer(capacity: result.count)
         let positions = context.map { $0.pointer.pointer(capacity: $0.count) }
 
-        StridedIteration.forEachOffset(shape: keptShape, strides: keptAxes.map { strides[$0] }, MemoryOps.strides(from: keptShape)) { sourceOffset, destinationOffset in
+        StridedIteration.forEachOffset(shape: keptShape, strides: keptAxes.map { strides[$0] }, ShapeUtil.contiguousStrides(of: keptShape)) { sourceOffset, destinationOffset in
             let slice = source + sourceOffset
             var (position, best): (Int, N)
             if reducedShape.count <= 1 {
@@ -377,64 +356,6 @@ public struct CPUEngine: EngineType {
             let offset = stride * i
 
             reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, stride)
-        }
-    }
-
-    @inline(__always)
-    @_specialize(where N == Float, Context == Int32)
-    private static func reduceWithContext<N, Context>(
-        values: ShapedBuffer<N, CPU>,
-        result: MutableShapedBuffer<N, CPU>,
-        context: MutableShapedBuffer<Context, CPU>,
-        axis: Int,
-        reduceOperator: (UnsafeBufferPointer<N>, Int, Int) -> (N, Context),
-    ) {
-        #if DEBUG
-        precondition(result.shape == context.shape)
-
-        var shape = values.shape
-        shape.remove(at: axis)
-        precondition(shape == result.shape)
-        #endif
-
-        let srcPtr = values.immutable
-        let dstPtr = result.pointer
-        let ctxPtr = context.pointer
-
-        let dstStrides = MemoryOps.strides(from: result.shape)
-        var srcStrides = MemoryOps.strides(from: values.shape)
-        let reductionStride = srcStrides.remove(at: axis)
-        let reductionCount = values.shape[axis]
-
-        StridedIteration.forEachOffset(shape: result.shape, strides: srcStrides, dstStrides) { sourceOffset, destinationOffset in
-            let (value, position) = reduceOperator(srcPtr.advanced(by: sourceOffset), reductionStride, reductionCount)
-            dstPtr[destinationOffset] = value
-            ctxPtr[destinationOffset] = position
-        }
-    }
-
-    @inline(__always)
-    @_specialize(where N == Float, Context == Int32)
-    private static func reducePrefixWithContext<N: NumericType, Context: NumericType>(
-        values: ShapedBuffer<N, CPU>,
-        result: MutableShapedBuffer<N, CPU>,
-        context: MutableShapedBuffer<Context, CPU>,
-        reduceColumns: (UnsafeBufferPointer<N>, UnsafeBufferPointer<N>, UnsafeMutableBufferPointer<N>, UnsafeMutableBufferPointer<Context>, Int) -> Void,
-    ) {
-        if result.count == 0 {
-            return
-        }
-
-        let stride = result.count
-        let count = values.count / stride
-
-        N.fill(value: 0, result: result.pointer, count: result.count)
-        Context.fill(value: 0, result: context.pointer, count: context.count)
-
-        for i in 0 ..< count {
-            let offset = stride * i
-
-            reduceColumns(values.immutable.advanced(by: offset), result.immutable, result.pointer, context.pointer, stride)
         }
     }
 
@@ -498,9 +419,9 @@ public struct CPUEngine: EngineType {
     @_specialize(where N == Float)
     public static func gemm<N: NumericType>(lhs: ShapedBuffer<N, CPU>, rhs: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, alpha: N, beta: N, transposeFirst: Bool, transposeSecond: Bool) {
         N.gemm(
-            lhs: lhs.values.memory.bindMemory(to: N.self).immutable,
-            rhs: rhs.values.memory.bindMemory(to: N.self).immutable,
-            result: result.values.memory.bindMemory(to: N.self),
+            lhs: lhs.values.immutable,
+            rhs: rhs.values.immutable,
+            result: result.values.pointer,
             lhsShape: (lhs.shape[0], lhs.shape[1]),
             rhsShape: (rhs.shape[0], rhs.shape[1]),
             resultShape: (result.shape[0], result.shape[1]),
@@ -562,72 +483,20 @@ public struct CPUEngine: EngineType {
         )
     }
 
-    @_specialize(where N == Float)
     public static func reduceSum<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, axis: Int) {
-        // Choose the operation that performs better
-        if axis == 0, result.shape.reduce(1, *) > 1 {
-            reducePrefix(values: values, result: result, reduceColumns: N.vAdd)
-        } else {
-            sumAlongAxes(values: values, result: result, axes: [axis])
-        }
+        reduceSum(values: values, result: result, axes: [axis])
     }
 
-    @_specialize(where N == Float)
     public static func reduceMax<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, context: MutableShapedBuffer<Int32, CPU>?, axis: Int) {
-        if let context {
-            reduceWithContext(
-                values: values,
-                result: result,
-                context: context,
-                axis: axis,
-                reduceOperator: { buffer, stride, count -> (N, Int32) in
-                    let (arg, max) = N.argmax(values: buffer, stride: stride, count: count)
-                    return (max, Int32(arg))
-                },
-            )
-        } else if axis == 0, result.shape.reduce(1, *) > 1 {
-            reducePrefix(values: values, result: result, reduceColumns: N.max)
-        } else {
-            reduce(
-                values: values,
-                result: result,
-                axis: axis,
-            ) { buffer, stride, count in
-                N.argmax(values: buffer, stride: stride, count: count).1
-            }
-        }
+        reduceMax(values: values, result: result, context: context, axes: [axis])
     }
 
-    @_specialize(where N == Float)
     public static func reduceMin<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, context: MutableShapedBuffer<Int32, CPU>?, axis: Int) {
-        if let context {
-            reduceWithContext(
-                values: values,
-                result: result,
-                context: context,
-                axis: axis,
-                reduceOperator: { buffer, stride, count -> (N, Int32) in
-                    let (arg, min) = N.argmin(values: buffer, stride: stride, count: count)
-                    return (min, Int32(arg))
-                },
-            )
-        } else if axis == 0, result.shape.reduce(1, *) > 1 {
-            reducePrefix(values: values, result: result, reduceColumns: N.min)
-        } else {
-            reduce(
-                values: values,
-                result: result,
-                axis: axis,
-            ) { values, stride, count in
-                N.argmin(values: values, stride: stride, count: count).1
-            }
-        }
+        reduceMin(values: values, result: result, context: context, axes: [axis])
     }
 
-    @_specialize(where N == Float)
     public static func reduceMean<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, axis: Int) {
-        reduceSum(values: values, result: result, axis: axis)
-        N.vsDiv(lhs: result.immutable, rhs: N(values.shape[axis]), result: result.pointer, count: result.count)
+        reduceMean(values: values, result: result, axes: [axis])
     }
 
     @_specialize(where N == Float)
@@ -651,11 +520,19 @@ public struct CPUEngine: EngineType {
 
     @_specialize(where N == Float)
     public static func reduceMax<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, context: MutableShapedBuffer<Int32, CPU>?, axes: [Int]) {
+        if context == nil, axes.elementsEqual(0 ..< axes.count), result.count > 1 {
+            reducePrefix(values: values, result: result, reduceColumns: N.max)
+            return
+        }
         reduceExtremum(values: values, result: result, context: context, axes: axes, extremum: { N.argmax(values: $0, stride: $1, count: $2) }, isBetter: { $0 > $1 })
     }
 
     @_specialize(where N == Float)
     public static func reduceMin<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>, context: MutableShapedBuffer<Int32, CPU>?, axes: [Int]) {
+        if context == nil, axes.elementsEqual(0 ..< axes.count), result.count > 1 {
+            reducePrefix(values: values, result: result, reduceColumns: N.min)
+            return
+        }
         reduceExtremum(values: values, result: result, context: context, axes: axes, extremum: { N.argmin(values: $0, stride: $1, count: $2) }, isBetter: { $0 < $1 })
     }
 
@@ -734,15 +611,15 @@ public struct CPUEngine: EngineType {
         return arg
     }
 
-    public static func exp<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    public static func exp<N: FloatingPointNumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         N.exp(val: values.immutable, result: result.pointer, count: result.count)
     }
 
-    public static func log<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    public static func log<N: FloatingPointNumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         N.log(val: values.immutable, result: result.pointer, count: result.count)
     }
 
-    public static func sqrt<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    public static func sqrt<N: FloatingPointNumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         N.sqrt(val: values.immutable, result: result.pointer, count: result.count)
     }
 
@@ -754,19 +631,19 @@ public struct CPUEngine: EngineType {
         N.heaviside(values: values.immutable, result: result.pointer, count: result.count)
     }
 
-    public static func sin<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    public static func sin<N: FloatingPointNumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         N.sin(values: values.immutable, result: result.pointer, count: result.count)
     }
 
-    public static func cos<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    public static func cos<N: FloatingPointNumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         N.cos(values: values.immutable, result: result.pointer, count: result.count)
     }
 
-    public static func tan<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    public static func tan<N: FloatingPointNumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         N.tan(values: values.immutable, result: result.pointer, count: result.count)
     }
 
-    public static func tanh<N: NumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    public static func tanh<N: FloatingPointNumericType>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         N.tanh(val: values.immutable, result: result.pointer, count: result.count)
     }
 
@@ -808,7 +685,7 @@ public struct CPUEngine: EngineType {
         let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arrangement)
         let source = values.immutable.pointer(capacity: values.count)
         let destination = result.pointer.pointer(capacity: result.count)
-        let destinationStrides = MemoryOps.strides(from: shape)
+        let destinationStrides = ShapeUtil.contiguousStrides(of: shape)
         let dim = shape.count
 
         // When only the last two axes swap places, the source holds transposed matrices.
@@ -853,7 +730,7 @@ public struct CPUEngine: EngineType {
         let source = values.immutable.pointer(capacity: values.count)
         let summand = add.immutable.pointer(capacity: result.count)
         let destination = result.pointer.pointer(capacity: result.count)
-        let destinationStrides = MemoryOps.strides(from: shape)
+        let destinationStrides = ShapeUtil.contiguousStrides(of: shape)
 
         // The result can be the summand, so every element is read before it is written.
         let rowLength = shape[shape.count - 1]
@@ -884,76 +761,51 @@ public struct CPUEngine: EngineType {
     }
 
     public static func stack<N>(buffers: [ShapedBuffer<N, CPU>], result: MutableShapedBuffer<N, CPU>, axis: Int) {
-        var offset = 0
-
-        let dstPtr = result.pointer.pointer(capacity: buffers.map { $0.count }.reduce(0, +))
-        let dstStrides = MemoryOps.strides(from: result.shape)
-
-        for buffer in buffers {
-            let dst = dstPtr.advanced(by: offset)
-            let srcStrides = MemoryOps.strides(from: buffer.shape)
-            let copyCount = buffer.shape[axis] * srcStrides[axis]
-
-            let iterShape = Array(buffer.shape.prefix(upTo: axis))
-            let src = buffer.immutable.pointer(capacity: buffer.count)
-
-            StridedIteration.forEachOffset(shape: iterShape, strides: Array(srcStrides.prefix(upTo: axis)), Array(dstStrides.prefix(upTo: axis))) { srcIdx, dstIdx in
-                dst.advanced(by: dstIdx).update(from: src.advanced(by: srcIdx), count: copyCount)
-            }
-
-            offset += copyCount
+        let (stacked, parts) = (result.pointer.baseAddress, buffers.map { $0.immutable.baseAddress })
+        forEachStackedRun(stackedShape: result.shape, partShapes: buffers.map { $0.shape }, axis: axis) { part, stackedOffset, partOffset, length in
+            (stacked! + stackedOffset).update(from: parts[part]! + partOffset, count: length)
         }
     }
 
     public static func unstackAdd<N: NumericType>(stacked: ShapedBuffer<N, CPU>, add: [ShapedBuffer<N, CPU>], result: [MutableShapedBuffer<N, CPU>], axis: Int) {
-        var offset = 0
-
-        let srcPtr = stacked.immutable
-        let srcStrides = MemoryOps.strides(from: stacked.shape)
-
-        for (buffer, addBuffer) in zip(result, add) {
-            let src = srcPtr.advanced(by: offset)
-            let dstStrides = MemoryOps.strides(from: buffer.shape)
-            let copyCount = buffer.shape[axis] * dstStrides[axis]
-
-            let iterShape = Array(buffer.shape.prefix(upTo: axis))
-            let dst = buffer.pointer
-            let a = addBuffer.immutable
-
-            StridedIteration.forEachOffset(shape: iterShape, strides: Array(srcStrides.prefix(upTo: axis)), Array(dstStrides.prefix(upTo: axis))) { srcIdx, dstIdx in
-                N.vAdd(lhs: src.advanced(by: srcIdx), rhs: a.advanced(by: dstIdx), result: dst.advanced(by: dstIdx), count: copyCount)
-            }
-
-            offset += copyCount
+        let (source, summands, parts) = (stacked.immutable, add.map { $0.immutable }, result.map { $0.pointer })
+        forEachStackedRun(stackedShape: stacked.shape, partShapes: result.map { $0.shape }, axis: axis) { part, stackedOffset, partOffset, length in
+            N.vAdd(lhs: source.advanced(by: stackedOffset), rhs: summands[part].advanced(by: partOffset), result: parts[part].advanced(by: partOffset), count: length)
         }
     }
 
     public static func unstack<N: NumericType>(stacked: ShapedBuffer<N, CPU>, result: [MutableShapedBuffer<N, CPU>], axis: Int) {
-        var offset = 0
+        let (source, parts) = (stacked.immutable.baseAddress, result.map { $0.pointer.baseAddress })
+        forEachStackedRun(stackedShape: stacked.shape, partShapes: result.map { $0.shape }, axis: axis) { part, stackedOffset, partOffset, length in
+            (parts[part]! + partOffset).update(from: source! + stackedOffset, count: length)
+        }
+    }
 
-        let srcPtr = stacked.immutable
-        let srcStrides = MemoryOps.strides(from: stacked.shape)
-
-        for buffer in result {
-            let src = srcPtr.advanced(by: offset)
-            let dstStrides = MemoryOps.strides(from: buffer.shape)
-            let copyCount = buffer.shape[axis] * dstStrides[axis]
-
-            let iterShape = Array(buffer.shape.prefix(upTo: axis))
-            let dst = buffer.pointer
-
-            StridedIteration.forEachOffset(shape: iterShape, strides: Array(srcStrides.prefix(upTo: axis)), Array(dstStrides.prefix(upTo: axis))) { srcIdx, dstIdx in
-                dst.baseAddress!.advanced(by: dstIdx).update(from: src.baseAddress!.advanced(by: srcIdx), count: copyCount)
+    /// Calls `body` for every run of contiguous elements that a part of a stack along an axis shares with the stacked buffer.
+    ///
+    /// `body` receives the index of the part, the offsets of the run in the stacked buffer and in the part, and the length
+    /// of the run. Parts without elements are skipped.
+    private static func forEachStackedRun(stackedShape: [Int], partShapes: [[Int]], axis: Int, _ body: (_ part: Int, _ stackedOffset: Int, _ partOffset: Int, _ length: Int) -> Void) {
+        let stackedStrides = Array(ShapeUtil.contiguousStrides(of: stackedShape).prefix(axis))
+        var start = 0
+        for (part, shape) in partShapes.enumerated() {
+            let strides = ShapeUtil.contiguousStrides(of: shape)
+            let length = shape[axis] * strides[axis]
+            guard shape.allSatisfy({ $0 > 0 }) else {
+                start += length
+                continue
             }
-
-            offset += copyCount
+            StridedIteration.forEachOffset(shape: Array(shape.prefix(axis)), strides: stackedStrides, Array(strides.prefix(axis))) { stackedOffset, partOffset in
+                body(part, start + stackedOffset, partOffset, length)
+            }
+            start += length
         }
     }
 
     public static func reverse<N>(values: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         precondition(values.shape == result.shape)
 
-        let stride = MemoryOps.strides(from: values.shape)[0]
+        let stride = ShapeUtil.contiguousStrides(of: values.shape)[0]
         let count = values.shape[0]
 
         let srcPtr = values.immutable.pointer(capacity: stride * count)
@@ -969,7 +821,7 @@ public struct CPUEngine: EngineType {
     public static func reverseAdd<N: NumericType>(values: ShapedBuffer<N, CPU>, add: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         precondition(values.shape == result.shape && values.shape == add.shape)
 
-        let stride = MemoryOps.strides(from: values.shape)[0]
+        let stride = ShapeUtil.contiguousStrides(of: values.shape)[0]
         let count = values.shape[0]
 
         let srcPtr = values.immutable
@@ -1009,8 +861,8 @@ public struct CPUEngine: EngineType {
         let belowDiagonal = belowDiagonal ?? Swift.max(rows, cols)
         let aboveDiagonal = aboveDiagonal ?? Swift.max(rows, cols)
 
-        let src = buffer.values.memory.bindMemory(to: N.self).immutable.pointer(capacity: rows * cols)
-        let dst = result.values.memory.bindMemory(to: N.self).pointer(capacity: rows * cols)
+        let src = buffer.values.immutable.pointer(capacity: rows * cols)
+        let dst = result.values.pointer.pointer(capacity: rows * cols)
 
         for i in 0 ..< rows {
             let start = Swift.min(Swift.max(0, i - belowDiagonal), cols)

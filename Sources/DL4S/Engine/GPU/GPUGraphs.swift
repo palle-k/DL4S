@@ -32,8 +32,12 @@ import MetalPerformanceShadersGraph
 /// A compiled Metal Performance Shaders graph with the order of its inputs and results.
 struct GPUGraph: Sendable {
     let executable: MPSGraphExecutable
-    /// Positions of the inputs of the executable in the order in which the caller passes them.
-    let inputOrder: [Int]
+    // A graph whose results do not depend on an input, such as the gradient of the bias only, has no feed for it.
+    /// Positions of the inputs of the executable in the order in which the caller passes them, or nil for an input that
+    /// the executable does not read.
+    let inputOrder: [Int?]
+    /// Number of inputs of the executable.
+    let feedCount: Int
     /// Positions of the results of the executable in the order in which the caller passes them.
     let resultOrder: [Int]
 
@@ -54,8 +58,14 @@ struct GPUGraph: Sendable {
         executable = graph.compile(with: MPSGraphDevice(mtlDevice: device), feeds: feeds, targetTensors: results, targetOperations: nil, compilationDescriptor: nil)
         let feedTensors = executable.feedTensors ?? []
         let targetTensors = executable.targetTensors ?? []
-        inputOrder = inputs.map { input in feedTensors.firstIndex { $0 === input }! }
-        resultOrder = results.map { result in targetTensors.firstIndex { $0 === result }! }
+        inputOrder = inputs.map { input in feedTensors.firstIndex { $0 === input } }
+        feedCount = feedTensors.count
+        resultOrder = results.map { result in
+            guard let position = targetTensors.firstIndex(where: { $0 === result }) else {
+                preconditionFailure("DL4S: The compiled graph does not compute one of its results.")
+            }
+            return position
+        }
     }
 
     /// Records the graph.
@@ -68,17 +78,21 @@ struct GPUGraph: Sendable {
         GPUContext.of(reading: reading, writing: writing).graph(reading: reading, writing: writing) { commandBuffer in
             // The data objects are created while the stream is locked, because a storage that no command used yet can still
             // replace its buffer.
-            var inputData = [MPSGraphTensorData?](repeating: nil, count: inputs.count)
+            var inputData = [MPSGraphTensorData?](repeating: nil, count: feedCount)
             for (index, input) in inputs.enumerated() {
-                inputData[inputOrder[index]] = Self.data(input.gpuBuffer, shape: input.shape)
+                if let position = inputOrder[index] {
+                    inputData[position] = Self.data(input.gpuBuffer, shape: input.shape)
+                }
             }
             var resultData = [MPSGraphTensorData?](repeating: nil, count: results.count)
             for (index, result) in results.enumerated() {
                 resultData[resultOrder[index]] = Self.data(result.gpuBuffer, shape: result.shape)
             }
+            let (feeds, targets) = (inputData.compactMap { $0 }, resultData.compactMap { $0 })
+            precondition(feeds.count == feedCount && targets.count == results.count, "DL4S: A compiled graph needs an input that the caller does not pass.")
             let descriptor = MPSGraphExecutableExecutionDescriptor()
             descriptor.waitUntilCompleted = false
-            executable.encode(to: commandBuffer, inputs: inputData.map { $0! }, results: resultData.map { $0! }, executionDescriptor: descriptor)
+            executable.encode(to: commandBuffer, inputs: feeds, results: targets, executionDescriptor: descriptor)
         }
     }
 

@@ -54,16 +54,9 @@ public extension Tensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
 
         Device.Engine.gather(expanded: values, context: context.values, result: resultBuffer, axis: axis, ignoreIndex: ignoreIndex)
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "gather",
-                sources: [self],
-                backpropagate: [{ resultGradient -> Self in
-                    resultGradient.scatter(using: context, alongAxis: axis, withSize: originalAxisSize, ignoreIndex: ignoreIndex)
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "gather", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.scatter(using: context, alongAxis: axis, withSize: originalAxisSize, ignoreIndex: ignoreIndex))
+        }
     }
 
     /// Scatters elements to indices determined by the context along the specified axis.
@@ -90,16 +83,9 @@ public extension Tensor {
         resultShape.insert(axisSize, at: axis)
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.scatter(reduced: values, context: context.values, result: resultBuffer, axis: axis, ignoreIndex: ignoreIndex)
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "scatter",
-                sources: [self],
-                backpropagate: [{ resultGradient -> Self in
-                    resultGradient.gather(using: context, alongAxis: axis, ignoreIndex: ignoreIndex)
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "scatter", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.gather(using: context, alongAxis: axis, ignoreIndex: ignoreIndex))
+        }
     }
 
     /// Gathers the rows at the given indices.

@@ -31,11 +31,8 @@ import Foundation
 // goes through one intermediate buffer, see `BufferMath.write(_:_:)`.
 
 public extension FusedOperationsType {
-    static func tanhBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func tanhBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // (1 - output * output) * outputGradient
         math.write(inputGradient) { dx in
             math.multiply(output, output, into: dx)
@@ -46,28 +43,19 @@ public extension FusedOperationsType {
 
     static func reluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.write(inputGradient) { dx in
             math.heaviside(input, into: dx)
             math.multiply(dx, outputGradient, into: dx)
         }
     }
 
-    static func sigmoid<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func sigmoid<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.sigmoid(input, into: result)
     }
 
-    static func sigmoidBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func sigmoidBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // output * (1 - output) * outputGradient
         math.write(inputGradient) { dx in
             math.subtract(1, output, into: dx)
@@ -76,22 +64,16 @@ public extension FusedOperationsType {
         }
     }
 
-    static func softmax<N: NumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>) {
+    static func softmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.softmax(input, along: axis, into: result)
     }
 
-    static func softmaxBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?) {
+    static func softmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // output * (outputGradient - sum(outputGradient * output))
         math.write(inputGradient) { dx in
-            let sums = math.temporary(ShapeUtil.keptShape(of: output.shape, along: [axis]))
+            let sums = Device.Memory.allocateBuffer(withShape: ShapeUtil.keptShape(of: output.shape, along: [axis]), type: N.self)
             math.multiply(outputGradient, output, into: dx)
             math.sum(dx, along: [axis], into: sums)
             math.subtract(outputGradient, sums, into: dx)
@@ -99,13 +81,10 @@ public extension FusedOperationsType {
         }
     }
 
-    static func logSoftmax<N: NumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>) {
+    static func logSoftmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
-        let reduced = math.temporary(ShapeUtil.keptShape(of: input.shape, along: [axis]))
-        let exponentials = math.temporary(input.shape)
+        let reduced = Device.Memory.allocateBuffer(withShape: ShapeUtil.keptShape(of: input.shape, along: [axis]), type: N.self)
+        let exponentials = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.maximum(input, along: axis, into: reduced)
         math.subtract(input, reduced, into: result)
         math.exp(result, into: exponentials)
@@ -114,14 +93,11 @@ public extension FusedOperationsType {
         math.subtract(result, reduced, into: result)
     }
 
-    static func logSoftmaxBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?) {
+    static func logSoftmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // outputGradient - exp(output) * sum(outputGradient)
         math.write(inputGradient) { dx in
-            let sums = math.temporary(ShapeUtil.keptShape(of: output.shape, along: [axis]))
+            let sums = Device.Memory.allocateBuffer(withShape: ShapeUtil.keptShape(of: output.shape, along: [axis]), type: N.self)
             math.sum(outputGradient, along: [axis], into: sums)
             math.exp(output, into: dx)
             math.multiply(dx, sums, into: dx)
@@ -129,13 +105,10 @@ public extension FusedOperationsType {
         }
     }
 
-    static func leakyRelu<N: NumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func leakyRelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // relu(input) - leakage * relu(-input)
-        let negativePart = math.temporary(input.shape)
+        let negativePart = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.negate(input, into: negativePart)
         math.relu(negativePart, into: negativePart)
         math.multiply(negativePart, leakage, into: negativePart)
@@ -143,14 +116,11 @@ public extension FusedOperationsType {
         math.subtract(result, negativePart, into: result)
     }
 
-    static func leakyReluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, leakageGradient: GradientBuffer<N, Device>?) {
+    static func leakyReluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, leakageGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // The slope at 0 is 0, as for the rectified linear unit: (heaviside(input) + leakage * heaviside(-input)) * outputGradient
         math.write(inputGradient) { dx in
-            let positive = math.temporary(input.shape)
+            let positive = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.negate(input, into: dx)
             math.heaviside(dx, into: dx)
             math.multiply(dx, leakage, into: dx)
@@ -160,7 +130,7 @@ public extension FusedOperationsType {
         }
         if leakageGradient != nil {
             // -relu(-input) * outputGradient
-            let products = math.temporary(input.shape)
+            let products = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.negate(input, into: products)
             math.relu(products, into: products)
             math.negate(products, into: products)
@@ -169,24 +139,18 @@ public extension FusedOperationsType {
         }
     }
 
-    static func gelu<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func gelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // input * sigmoid(1.702 * input)
         math.sigmoid(input, scale: N(FusedConstants.geluSlope), into: result)
         math.multiply(result, input, into: result)
     }
 
-    static func geluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func geluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // (s + 1.702 * input * s * (1 - s)) * outputGradient with s = sigmoid(1.702 * input)
         math.write(inputGradient) { dx in
-            let s = math.temporary(input.shape)
+            let s = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.sigmoid(input, scale: N(FusedConstants.geluSlope), into: s)
             math.subtract(1, s, into: dx)
             math.multiply(dx, s, into: dx)
@@ -197,26 +161,20 @@ public extension FusedOperationsType {
         }
     }
 
-    static func swish<N: NumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func swish<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // input * sigmoid(beta * input)
         math.multiply(input, beta, into: result)
         math.sigmoid(result, into: result)
         math.multiply(result, input, into: result)
     }
 
-    static func swishBackward<N: NumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, betaGradient: GradientBuffer<N, Device>?) {
+    static func swishBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, betaGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // With s = sigmoid(beta * input) and the slope s * (1 - s):
         // the input gradient is (s + beta * input * slope) * outputGradient, the beta gradient input * input * slope * outputGradient.
-        let s = math.temporary(input.shape)
-        let slope = math.temporary(input.shape)
+        let s = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
+        let slope = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.multiply(input, beta, into: s)
         math.sigmoid(s, into: s)
         math.subtract(1, s, into: slope)
@@ -235,11 +193,8 @@ public extension FusedOperationsType {
         }
     }
 
-    static func mish<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func mish<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // input * tanh(log(1 + exp(input)))
         math.exp(input, into: result)
         math.add(result, 1, into: result)
@@ -248,16 +203,13 @@ public extension FusedOperationsType {
         math.multiply(result, input, into: result)
     }
 
-    static func mishBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func mishBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // (t + input * (1 - t * t) * sigmoid(input)) * outputGradient with t = tanh(log(1 + exp(input))).
         // The derivative of log(1 + exp(x)) is sigmoid(x).
         math.write(inputGradient) { dx in
-            let t = math.temporary(input.shape)
-            let s = math.temporary(input.shape)
+            let t = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
+            let s = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.exp(input, into: t)
             math.add(t, 1, into: t)
             math.log(t, into: t)
@@ -272,23 +224,17 @@ public extension FusedOperationsType {
         }
     }
 
-    static func lisht<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func lisht<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.tanh(input, into: result)
         math.multiply(result, input, into: result)
     }
 
-    static func lishtBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func lishtBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // (t + input * (1 - t * t)) * outputGradient with t = tanh(input)
         math.write(inputGradient) { dx in
-            let t = math.temporary(input.shape)
+            let t = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.tanh(input, into: t)
             math.multiply(t, t, into: dx)
             math.subtract(1, dx, into: dx)
@@ -298,14 +244,11 @@ public extension FusedOperationsType {
         }
     }
 
-    static func elu<N: NumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func elu<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // relu(input) + alpha * (exp(min(input, 0)) - 1). exp(min(input, 0)) does not overflow for large inputs,
         // and its exponential part is 0 for positive inputs.
-        let exponentialPart = math.temporary(input.shape)
+        let exponentialPart = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         exponentialOfNegativePart(input, into: exponentialPart, math: math)
         math.add(exponentialPart, -1, into: exponentialPart)
         math.multiply(exponentialPart, alpha, into: exponentialPart)
@@ -313,17 +256,14 @@ public extension FusedOperationsType {
         math.add(result, exponentialPart, into: result)
     }
 
-    static func eluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, alphaGradient: GradientBuffer<N, Device>?) {
+    static func eluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, alphaGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // With e = exp(min(input, 0)) and p = heaviside(input): the input gradient is (p + (1 - p) * alpha * e) * outputGradient,
         // the alpha gradient (e - 1) * outputGradient.
-        let exponentials = math.temporary(input.shape)
+        let exponentials = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         exponentialOfNegativePart(input, into: exponentials, math: math)
         math.write(inputGradient) { dx in
-            let positive = math.temporary(input.shape)
+            let positive = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.heaviside(input, into: positive)
             math.subtract(1, positive, into: dx)
             math.multiply(dx, alpha, into: dx)
@@ -338,13 +278,10 @@ public extension FusedOperationsType {
         }
     }
 
-    static func softplus<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func softplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // max(x, 0) + log(1 + exp(-|x|)), because exp(x) overflows for large x. -|x| = x - 2 max(x, 0).
-        let positive = math.temporary(input.shape)
+        let positive = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.relu(input, into: positive)
         math.multiply(positive, -2, into: result)
         math.add(result, input, into: result)
@@ -354,24 +291,18 @@ public extension FusedOperationsType {
         math.add(result, positive, into: result)
     }
 
-    static func softplusBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func softplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.write(inputGradient) { dx in
             math.sigmoid(input, into: dx)
             math.multiply(dx, outputGradient, into: dx)
         }
     }
 
-    static func squareplus<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func squareplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // (input + sqrt(input * input + 4)) / 2
-        let roots = math.temporary(input.shape)
+        let roots = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.multiply(input, input, into: roots)
         math.add(roots, 4, into: roots)
         math.sqrt(roots, into: roots)
@@ -379,14 +310,11 @@ public extension FusedOperationsType {
         math.multiply(result, N(0.5), into: result)
     }
 
-    static func squareplusBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func squareplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // (1 + input / sqrt(input * input + 4)) / 2 * outputGradient
         math.write(inputGradient) { dx in
-            let roots = math.temporary(input.shape)
+            let roots = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.multiply(input, input, into: roots)
             math.add(roots, 4, into: roots)
             math.sqrt(roots, into: roots)
@@ -400,7 +328,7 @@ public extension FusedOperationsType {
 
 extension FusedOperationsType {
     /// Computes `exp(min(input, 0))`, which does not overflow for large inputs.
-    static func exponentialOfNegativePart<N: NumericType>(_ input: ShapedBuffer<N, Device>, into result: MutableShapedBuffer<N, Device>, math: BufferMath<N, Device>) {
+    static func exponentialOfNegativePart<N: FloatingPointNumericType>(_ input: ShapedBuffer<N, Device>, into result: MutableShapedBuffer<N, Device>, math: BufferMath<N, Device>) {
         math.negate(input, into: result)
         math.relu(result, into: result)
         math.negate(result, into: result)

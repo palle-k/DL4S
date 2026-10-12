@@ -32,7 +32,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softmax<N: NumericType>(input: ShapedBuffer<N, CPU>, axis: Int, result: MutableShapedBuffer<N, CPU>) {
+    static func softmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, axis: Int, result: MutableShapedBuffer<N, CPU>) {
         // The kernel supports the last axis.
         guard axis == input.dim - 1 else {
             DefaultFusedOperations<CPU>.softmax(input: input, axis: axis, result: result)
@@ -52,7 +52,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softmaxBackward<N: NumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, axis: Int, inputGradient: GradientBuffer<N, CPU>?) {
+    static func softmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, axis: Int, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
@@ -83,7 +83,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func logSoftmax<N: NumericType>(input: ShapedBuffer<N, CPU>, axis: Int, result: MutableShapedBuffer<N, CPU>) {
+    static func logSoftmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, axis: Int, result: MutableShapedBuffer<N, CPU>) {
         // The kernel supports the last axis.
         guard axis == input.dim - 1 else {
             DefaultFusedOperations<CPU>.logSoftmax(input: input, axis: axis, result: result)
@@ -111,7 +111,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func logSoftmaxBackward<N: NumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, axis: Int, inputGradient: GradientBuffer<N, CPU>?) {
+    static func logSoftmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, axis: Int, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }

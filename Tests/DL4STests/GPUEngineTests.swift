@@ -40,7 +40,7 @@ extension GPUTests {
         }
 
         @Test func transferKeepsValues() {
-            let values = GPUTest.random([3, 5, 7], seed: 1)
+            let values = Tensor<Float, CPU>.uniform([3, 5, 7], seed: 1)
             let copy = Tensor<Float, CPU>(Tensor<Float, GPU>(values))
             #expect(copy.shape == values.shape)
             #expect(copy.elements == values.elements)
@@ -50,7 +50,7 @@ extension GPUTests {
 
         @Test(arguments: [[1000], [37, 129], [4, 3, 1025]])
         func elementwiseOperationsMatchCPU(shape: [Int]) {
-            let (a, b) = (GPUTest.random(shape, seed: 2), GPUTest.random(shape, seed: 3, min: 0.5, max: 2))
+            let (a, b) = (Tensor<Float, CPU>.uniform(shape, seed: 2), Tensor<Float, CPU>.uniform(shape, min: 0.5, max: 2, seed: 3))
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 [a + b, a - b, a * b, a / b, -a, a.exp(), b.log(), b.sqrt(), a.rectifiedLinear(), a.heaviside(), a.tanh(), a.sine(), a.cosine(), a.sigmoid()]
             }
@@ -63,7 +63,7 @@ extension GPUTests {
             ([5, 7], [7]), ([5, 7], [5, 1]), ([5, 7], []), ([], [5, 7]), ([3, 1, 5], [4, 1]), ([2, 3, 4, 5], [3, 1, 5]), ([1, 7], [5, 1]),
         ])
         func broadcastOperationsMatchCPU(lhsShape: [Int], rhsShape: [Int]) {
-            let (a, b) = (GPUTest.random(lhsShape, seed: 4), GPUTest.random(rhsShape, seed: 5, min: 0.5, max: 2))
+            let (a, b) = (Tensor<Float, CPU>.uniform(lhsShape, seed: 4), Tensor<Float, CPU>.uniform(rhsShape, min: 0.5, max: 2, seed: 5))
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 [a + b, a - b, a * b, a / b, b - a, b / a]
             }
@@ -77,7 +77,7 @@ extension GPUTests {
             ([3, 40000], [1]), ([40000, 3], [0]), ([2, 3000, 4], [1]), ([1, 1, 5], [1]), ([7, 1, 3], [1]),
         ])
         func reductionsMatchCPU(shape: [Int], axes: [Int]) {
-            let a = GPUTest.random(shape, seed: 6)
+            let a = Tensor<Float, CPU>.uniform(shape, seed: 6)
             func body<D: DeviceType>(_ a: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 [a.reduceSum(along: axes), a.reduceMean(along: axes), a.reduceMax(along: axes), a.reduceSum(), a.reduceMean()]
             }
@@ -88,7 +88,7 @@ extension GPUTests {
 
         @Test(arguments: [[5, 300], [300, 5], [7, 9, 11]])
         func argumentsOfMaximaMatchCPU(shape: [Int]) {
-            let a = Tensor<Float, CPU>(GPUTest.random(shape, seed: 7), requiresGradient: true)
+            let a = Tensor<Float, CPU>.uniform(shape, seed: 7, requiresGradient: true)
             // The gradient of a maximum scatters into the position of the maximum, which the context records.
             func body<D: DeviceType>(_ a: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 let maxima = a.reduceMax(along: [a.dim - 1])
@@ -107,8 +107,8 @@ extension GPUTests {
             (1, 256, 2048, false, false), (1, 300, 700, false, false),
         ])
         func matrixProductsMatchCPU(rows: Int, columns: Int, inner: Int, transposeLeft: Bool, transposeRight: Bool) {
-            let a = GPUTest.random(transposeLeft ? [inner, rows] : [rows, inner], seed: 8)
-            let b = GPUTest.random(transposeRight ? [columns, inner] : [inner, columns], seed: 9)
+            let a = Tensor<Float, CPU>.uniform(transposeLeft ? [inner, rows] : [rows, inner], seed: 8)
+            let b = Tensor<Float, CPU>.uniform(transposeRight ? [columns, inner] : [inner, columns], seed: 9)
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 [a.matrixMultiplied(with: b, transposeSelf: transposeLeft, transposeOther: transposeRight)]
             }
@@ -123,9 +123,9 @@ extension GPUTests {
         func productsOfMetalPerformanceShadersMatchCPU(rows: Int, columns: Int, inner: Int, transposeLeft: Bool, transposeRight: Bool) {
             GPUContext.current.supportsMatrixKernels = false
             defer { GPUContext.current.supportsMatrixKernels = true }
-            let a = GPUTest.random([3] + (transposeLeft ? [inner, rows] : [rows, inner]), seed: 8)
-            let b = GPUTest.random(transposeRight ? [columns, inner] : [inner, columns], seed: 9)
-            let c = GPUTest.random([3] + (transposeRight ? [columns, inner] : [inner, columns]), seed: 10)
+            let a = Tensor<Float, CPU>.uniform([3] + (transposeLeft ? [inner, rows] : [rows, inner]), seed: 8)
+            let b = Tensor<Float, CPU>.uniform(transposeRight ? [columns, inner] : [inner, columns], seed: 9)
+            let c = Tensor<Float, CPU>.uniform([3] + (transposeRight ? [columns, inner] : [inner, columns]), seed: 10)
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>, _ c: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 [
                     a[0].matrixMultiplied(with: b, transposeSelf: transposeLeft, transposeOther: transposeRight),
@@ -139,8 +139,8 @@ extension GPUTests {
 
         @Test(arguments: [([4, 3, 20, 30], [4, 3, 30, 10]), ([4, 3, 20, 30], [30, 10]), ([4, 1, 20, 30], [1, 3, 30, 10]), ([20, 30], [5, 30, 10]), ([5, 1, 300], [5, 300, 200]), ([4, 1, 50], [50, 130])])
         func batchedProductsMatchCPU(lhsShape: [Int], rhsShape: [Int]) {
-            let a = Tensor<Float, CPU>(GPUTest.random(lhsShape, seed: 11), requiresGradient: true)
-            let b = Tensor<Float, CPU>(GPUTest.random(rhsShape, seed: 12), requiresGradient: true)
+            let a = Tensor<Float, CPU>.uniform(lhsShape, seed: 11, requiresGradient: true)
+            let b = Tensor<Float, CPU>.uniform(rhsShape, seed: 12, requiresGradient: true)
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 let product = a.broadcastMatrixMultiplied(with: b)
                 return [product] + (product * product).reduceSum().gradients(of: [a, b])
@@ -152,7 +152,7 @@ extension GPUTests {
 
         @Test(arguments: [(40, 30, 50), (1, 600, 300)])
         func accumulatedProductsAddToResult(rows: Int, inner: Int, columns: Int) {
-            let (a, b, c) = (GPUTest.random([rows, inner], seed: 10), GPUTest.random([inner, columns], seed: 11), GPUTest.random([rows, columns], seed: 12))
+            let (a, b, c) = (Tensor<Float, CPU>.uniform([rows, inner], seed: 10), Tensor<Float, CPU>.uniform([inner, columns], seed: 11), Tensor<Float, CPU>.uniform([rows, columns], seed: 12))
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>, _ c: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 var accumulator = c + 0
                 D.Engine.gemm(lhs: a.values, rhs: b.values, result: accumulator.mutableValues, alpha: 1, beta: 1, transposeFirst: false, transposeSecond: false)
@@ -165,7 +165,7 @@ extension GPUTests {
 
         // A small transposed right operand of a large product is transposed before the product.
         @Test func largeProductsWithSmallTransposedOperandsMatchCPU() {
-            let (a, b) = (GPUTest.random([8192, 512], seed: 16), GPUTest.random([512, 512], seed: 17))
+            let (a, b) = (Tensor<Float, CPU>.uniform([8192, 512], seed: 16), Tensor<Float, CPU>.uniform([512, 512], seed: 17))
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 [a.matrixMultiplied(with: b, transposeOther: true)]
             }
@@ -176,7 +176,7 @@ extension GPUTests {
 
         // Metal Performance Shaders computes the product in parts of the inner axis, which a second kernel adds to the result.
         @Test func largeTransposedProductsAddTheirParts() {
-            let (a, b, c) = (GPUTest.random([8192, 512], seed: 13), GPUTest.random([8192, 512], seed: 14), GPUTest.random([512, 512], seed: 15))
+            let (a, b, c) = (Tensor<Float, CPU>.uniform([8192, 512], seed: 13), Tensor<Float, CPU>.uniform([8192, 512], seed: 14), Tensor<Float, CPU>.uniform([512, 512], seed: 15))
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>, _ c: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 var accumulator = c + 0
                 D.Engine.gemm(lhs: a.values, rhs: b.values, result: accumulator.mutableValues, alpha: 0.5, beta: 1, transposeFirst: true, transposeSecond: false)
@@ -189,7 +189,7 @@ extension GPUTests {
 
         @Test(arguments: [([2, 3, 4, 5], [0, 2, 1, 3]), ([2, 3, 4, 5], [3, 2, 1, 0]), ([33, 65], [1, 0]), ([7, 33, 65], [0, 2, 1]), ([4, 5, 6], [1, 0, 2])])
         func permutationsMatchCPU(shape: [Int], arrangement: [Int]) {
-            let a = Tensor<Float, CPU>(GPUTest.random(shape, seed: 13), requiresGradient: true)
+            let a = Tensor<Float, CPU>.uniform(shape, seed: 13, requiresGradient: true)
             func body<D: DeviceType>(_ a: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 let permuted = a.permuted(to: arrangement)
                 return [permuted, (permuted * permuted).reduceSum().gradients(of: [a])[0]]
@@ -200,8 +200,8 @@ extension GPUTests {
         }
 
         @Test func subscriptsStacksAndReversalsMatchCPU() {
-            let a = Tensor<Float, CPU>(GPUTest.random([6, 5, 4], seed: 14), requiresGradient: true)
-            let b = Tensor<Float, CPU>(GPUTest.random([3, 5, 4], seed: 15), requiresGradient: true)
+            let a = Tensor<Float, CPU>.uniform([6, 5, 4], seed: 14, requiresGradient: true)
+            let b = Tensor<Float, CPU>.uniform([3, 5, 4], seed: 15, requiresGradient: true)
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ b: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 let row = a[2]
                 let column = a[nil, 3]
@@ -219,7 +219,7 @@ extension GPUTests {
         }
 
         @Test func gathersAndScattersMatchCPU() {
-            let a = Tensor<Float, CPU>(GPUTest.random([37, 11], seed: 16, min: 0.1, max: 1), requiresGradient: true)
+            let a = Tensor<Float, CPU>.uniform([37, 11], min: 0.1, max: 1, seed: 16, requiresGradient: true)
             var generator = WyHash(seed: 17)
             let labels = Tensor<Int32, CPU>((0 ..< 37).map { $0 % 5 == 0 ? -1 : Int32.random(in: 0 ..< 11, using: &generator) })
             let gpuLabels = Tensor<Int32, GPU>(labels)
@@ -236,10 +236,10 @@ extension GPUTests {
 
         // Many rows share an index, so the scatter kernel adds to the same elements from many threads.
         @Test func rowGathersAndScattersMatchCPU() {
-            let matrix = Tensor<Float, CPU>(GPUTest.random([13, 70], seed: 21), requiresGradient: true)
+            let matrix = Tensor<Float, CPU>.uniform([13, 70], seed: 21, requiresGradient: true)
             var generator = WyHash(seed: 22)
             let indices = Tensor<Int32, CPU>((0 ..< 300).map { $0 % 7 == 0 ? -1 : Int32.random(in: 0 ..< 13, using: &generator) }, shape: [20, 15])
-            let weights = Tensor<Float, CPU>(GPUTest.random([20, 15, 70], seed: 23))
+            let weights = Tensor<Float, CPU>.uniform([20, 15, 70], seed: 23)
             func body<D: DeviceType>(_ matrix: Tensor<Float, D>, _ weights: Tensor<Float, D>, _ indices: Tensor<Int32, D>) -> [Tensor<Float, D>] {
                 let gathered = matrix.gatheringRows(at: indices)
                 let scattered = (gathered * weights).scatteringRows(at: indices, rowCount: 13)
@@ -268,9 +268,9 @@ extension GPUTests {
             (2, 20, 12, 11, 24, 3, 2, 1), (2, 18, 9, 10, 6, 1, 2, 0), (1, 17, 13, 13, 5, 4, 3, 2),
         ])
         func convolutionsMatchCPU(batch: Int, channels: Int, height: Int, width: Int, filters: Int, kernel: Int, stride: Int, padding: Int) {
-            let input = Tensor<Float, CPU>(GPUTest.random([batch, channels, height, width], seed: 18), requiresGradient: true)
-            let weights = Tensor<Float, CPU>(GPUTest.random([filters, channels, kernel, kernel], seed: 19), requiresGradient: true)
-            let bias = Tensor<Float, CPU>(GPUTest.random([filters], seed: 20), requiresGradient: true)
+            let input = Tensor<Float, CPU>.uniform([batch, channels, height, width], seed: 18, requiresGradient: true)
+            let weights = Tensor<Float, CPU>.uniform([filters, channels, kernel, kernel], seed: 19, requiresGradient: true)
+            let bias = Tensor<Float, CPU>.uniform([filters], seed: 20, requiresGradient: true)
             func body<D: DeviceType>(_ input: Tensor<Float, D>, _ weights: Tensor<Float, D>, _ bias: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 let output = input.convolved2d(filters: weights, bias: bias, padding: padding, stride: stride)
                 let pooled = output.maxPooled2d(windowSize: 2)
@@ -282,10 +282,26 @@ extension GPUTests {
             }
         }
 
+        // The graphs of these gradients do not read every input, so the compiled executables have fewer feeds.
+        @Test(arguments: [(true, false), (false, false)])
+        func convolutionGradientsOfSomeSourcesMatchCPU(inputRequiresGradient: Bool, weightsRequireGradient: Bool) {
+            let input = Tensor<Float, CPU>.uniform([2, 3, 8, 8], seed: 18, requiresGradient: inputRequiresGradient)
+            let weights = Tensor<Float, CPU>.uniform([4, 3, 3, 3], seed: 19, requiresGradient: weightsRequireGradient)
+            let bias = Tensor<Float, CPU>.uniform([4], seed: 20, requiresGradient: true)
+            func body<D: DeviceType>(_ input: Tensor<Float, D>, _ weights: Tensor<Float, D>, _ bias: Tensor<Float, D>) -> [Tensor<Float, D>] {
+                let output = input.convolved2d(filters: weights, bias: bias, padding: 1, stride: 1)
+                let sources = (inputRequiresGradient ? [input] : []) + [bias]
+                return [output] + (output * output).reduceSum().gradients(of: sources)
+            }
+            GPUTest.compare("conv gradients \(inputRequiresGradient) \(weightsRequireGradient)", tolerance: 2e-3) { gpu in
+                GPUTest.run(on: gpu, [input, weights, bias], cpu: { body($0[0], $0[1], $0[2]) }, gpu: { GPUTest.host(body($0[0], $0[1], $0[2])) })
+            }
+        }
+
         @Test func bandsAndDiagonalsMatchCPU() {
-            let a = GPUTest.random([9, 7], seed: 21)
-            let square = GPUTest.random([6, 6], seed: 22)
-            let wide = GPUTest.random([4, 9], seed: 23)
+            let a = Tensor<Float, CPU>.uniform([9, 7], seed: 21)
+            let square = Tensor<Float, CPU>.uniform([6, 6], seed: 22)
+            let wide = Tensor<Float, CPU>.uniform([4, 9], seed: 23)
             func body<D: DeviceType>(_ a: Tensor<Float, D>, _ square: Tensor<Float, D>, _ wide: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 [
                     a.bandMatrix(belowDiagonal: 2, aboveDiagonal: 1), a.bandMatrix(belowDiagonal: nil, aboveDiagonal: 0),
@@ -310,10 +326,10 @@ extension GPUTests {
         }
 
         @Test func trainingStepsMatchCPU() {
-            let input = GPUTest.random([64, 20], seed: 23)
-            let targets = GPUTest.random([64, 3], seed: 24)
-            let w1 = Tensor<Float, CPU>(GPUTest.random([20, 32], seed: 25), requiresGradient: true)
-            let w2 = Tensor<Float, CPU>(GPUTest.random([32, 3], seed: 26), requiresGradient: true)
+            let input = Tensor<Float, CPU>.uniform([64, 20], seed: 23)
+            let targets = Tensor<Float, CPU>.uniform([64, 3], seed: 24)
+            let w1 = Tensor<Float, CPU>.uniform([20, 32], seed: 25, requiresGradient: true)
+            let w2 = Tensor<Float, CPU>.uniform([32, 3], seed: 26, requiresGradient: true)
             func body<D: DeviceType>(_ values: [Tensor<Float, D>]) -> [Tensor<Float, D>] {
                 var (w1, w2) = (values[2], values[3])
                 var losses: [Tensor<Float, D>] = []

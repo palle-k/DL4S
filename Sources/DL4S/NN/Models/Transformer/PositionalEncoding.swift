@@ -35,7 +35,7 @@ import Synchronization
 /// The layer keeps the longest encoding that it created, and returns its first rows for shorter sequences.
 /// Copies of the layer share the kept encoding.
 @Layer
-public struct PositionalEncoding<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct PositionalEncoding<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Number of elements in the positional encoding output tensor.
     public let hiddenSize: Int
 

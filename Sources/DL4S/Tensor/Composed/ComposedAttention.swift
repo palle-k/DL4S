@@ -27,7 +27,7 @@ import Foundation
 
 extension Composed {
     /// Computes `softmax(queries × keysᵀ / temperature - 10⁹ * mask)` along the last axis, shape [batchSize, heads, queryCount, keyCount].
-    static func attentionWeights<N, Device>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, mask: Tensor<N, Device>?, temperature: N) -> Tensor<N, Device> {
+    static func attentionWeights<N: FloatingPointNumericType, Device>(queries: Tensor<N, Device>, keys: Tensor<N, Device>, mask: Tensor<N, Device>?, temperature: N) -> Tensor<N, Device> {
         var scores = grouped(queries / Tensor(temperature), heads: keys.shape[1])
             .broadcastMatrixMultiplied(with: keys, transposeOther: true)
             .view(as: [-1, queries.shape[1], queries.shape[2], keys.shape[2]])
@@ -38,7 +38,7 @@ extension Composed {
         return scores.softmax(axis: 3)
     }
 
-    static func scaledDotProductAttentionBackward<N, Device>(
+    static func scaledDotProductAttentionBackward<N: FloatingPointNumericType, Device>(
         queries: Tensor<N, Device>,
         keys: Tensor<N, Device>,
         values: Tensor<N, Device>,
@@ -64,7 +64,7 @@ extension Composed {
     }
 
     /// Computes the gradients of scaled dot product attention from the attention weights of the forward pass.
-    private static func attentionBackward<N, Device>(
+    private static func attentionBackward<N: FloatingPointNumericType, Device>(
         weights: Tensor<N, Device>,
         queries: Tensor<N, Device>,
         keys: Tensor<N, Device>,
@@ -96,12 +96,12 @@ extension Composed {
 
     /// Folds the query heads that share one of `heads` key or value heads into the rows:
     /// [n, queryHeads, rows, columns] becomes [n, heads, queryHeads / heads \* rows, columns].
-    private static func grouped<N, Device>(_ input: Tensor<N, Device>, heads: Int) -> Tensor<N, Device> {
+    private static func grouped<N: FloatingPointNumericType, Device>(_ input: Tensor<N, Device>, heads: Int) -> Tensor<N, Device> {
         input.view(as: [input.shape[0], heads, -1, input.shape[3]])
     }
 
     /// Multiplies every vector of a [batchSize, count, inputSize] tensor with weights of the shape [inputSize, outputSize].
-    static func project<N, Device>(_ input: Tensor<N, Device>, with weights: Tensor<N, Device>) -> Tensor<N, Device> {
+    static func project<N: FloatingPointNumericType, Device>(_ input: Tensor<N, Device>, with weights: Tensor<N, Device>) -> Tensor<N, Device> {
         input
             .view(as: [-1, input.shape[2]])
             .matrixMultiplied(with: weights)
@@ -109,21 +109,21 @@ extension Composed {
     }
 
     /// Splits [batchSize, count, heads \* size] into [batchSize, heads, count, size].
-    static func splitHeads<N, Device>(_ input: Tensor<N, Device>, heads: Int) -> Tensor<N, Device> {
+    static func splitHeads<N: FloatingPointNumericType, Device>(_ input: Tensor<N, Device>, heads: Int) -> Tensor<N, Device> {
         input
             .view(as: [input.shape[0], input.shape[1], heads, -1])
             .permuted(to: [0, 2, 1, 3])
     }
 
     /// Joins [batchSize, heads, count, size] into [batchSize, count, heads \* size].
-    static func joinHeads<N, Device>(_ input: Tensor<N, Device>) -> Tensor<N, Device> {
+    static func joinHeads<N: FloatingPointNumericType, Device>(_ input: Tensor<N, Device>) -> Tensor<N, Device> {
         input
             .permuted(to: [0, 2, 1, 3])
             .view(as: [input.shape[0], input.shape[2], -1])
     }
 
     /// Computes the gradients of multi-head attention. The result of the attention of the heads and its gradients share the attention weights.
-    static func multiHeadAttentionBackward<N, Device>(
+    static func multiHeadAttentionBackward<N: FloatingPointNumericType, Device>(
         queries: Tensor<N, Device>,
         keys: Tensor<N, Device>,
         values: Tensor<N, Device>,
@@ -185,7 +185,7 @@ extension Composed {
     }
 
     /// Adds the gradient of the input of ``project(_:with:)`` when it is requested.
-    private static func addProjectionInputGradient<N, Device>(outputGradient: Tensor<N, Device>, weights: Tensor<N, Device>, to inputGradient: inout GradientAccumulator<N, Device>) {
+    private static func addProjectionInputGradient<N: FloatingPointNumericType, Device>(outputGradient: Tensor<N, Device>, weights: Tensor<N, Device>, to inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -198,7 +198,7 @@ extension Composed {
     }
 
     /// Adds the gradient of the weights of ``project(_:with:)`` when it is requested.
-    private static func addProjectionWeightGradient<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, to weightGradient: inout GradientAccumulator<N, Device>) {
+    private static func addProjectionWeightGradient<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, to weightGradient: inout GradientAccumulator<N, Device>) {
         guard weightGradient.isRequested else {
             return
         }

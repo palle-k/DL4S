@@ -708,11 +708,14 @@ kernel void attention_query_gradient(device const float* Q [[buffer(0)]], device
 }
 
 // Instantiates the kernels for a head size with the rows per SIMD group, the block length, and the number of SIMD groups
-// of the forward kernel (F), the key and value kernel (K), and the query kernel (Q). `GPUFusedAttention.swift` has the
-// same configurations.
-#define ATTENTION_KERNELS(D, FR, FB, FS, KR, KB, KS, QR, QB, QS) \
+// of the forward kernel (F) and the key and value kernel (K). `GPUFusedAttention.swift` has the same configurations.
+#define ATTENTION_KERNELS(D, FR, FB, FS, KR, KB, KS) \
 template [[host_name("attention_forward_" #D)]] kernel void attention_forward<D, FR, FB, FS>(device const float*, device const float*, device const float*, device const float*, device float*, device float*, device float*, device float*, device const float*, constant AttentionParameters&, constant int&, device const uchar*, device float*, uint3, uint, uint, uint); \
-template [[host_name("attention_key_value_gradient_" #D)]] kernel void attention_key_value_gradient<D, KR, KB, KS, false>(device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device float*, device float*, constant AttentionParameters&, device const uchar*, device atomic_float*, uint3, uint, uint, uint); \
+template [[host_name("attention_key_value_gradient_" #D)]] kernel void attention_key_value_gradient<D, KR, KB, KS, false>(device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device float*, device float*, constant AttentionParameters&, device const uchar*, device atomic_float*, uint3, uint, uint, uint);
+
+// The kernel of the query gradient, for the head sizes whose key and value kernel does not add it, with the rows per SIMD
+// group, the block length, and the number of SIMD groups.
+#define ATTENTION_QUERY_GRADIENT(D, QR, QB, QS) \
 template [[host_name("attention_query_gradient_" #D)]] kernel void attention_query_gradient<D, QR, QB, QS>(device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device float*, constant AttentionParameters&, device const uchar*, uint3, uint, uint, uint);
 
 // The key and value kernel that also adds the query gradient, with the configuration of the key and value kernel. With the
@@ -720,8 +723,9 @@ template [[host_name("attention_query_gradient_" #D)]] kernel void attention_que
 #define ATTENTION_GRADIENTS(D, R, B, S) \
 template [[host_name("attention_gradients_" #D)]] kernel void attention_key_value_gradient<D, R, B, S, true>(device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device const float*, device float*, device float*, constant AttentionParameters&, device const uchar*, device atomic_float*, uint3, uint, uint, uint);
 
-ATTENTION_KERNELS(32, 16, 32, 4, 16, 16, 4, 16, 16, 4)
-ATTENTION_KERNELS(64, 16, 32, 4, 8, 16, 8, 8, 32, 8)
-ATTENTION_KERNELS(128, 16, 16, 4, 8, 16, 8, 8, 16, 8)
+ATTENTION_KERNELS(32, 16, 32, 4, 16, 16, 4)
+ATTENTION_KERNELS(64, 16, 32, 4, 8, 16, 8)
+ATTENTION_KERNELS(128, 16, 16, 4, 8, 16, 8)
+ATTENTION_QUERY_GRADIENT(128, 8, 16, 8)
 ATTENTION_GRADIENTS(32, 16, 16, 4)
 ATTENTION_GRADIENTS(64, 8, 16, 8)

@@ -33,9 +33,6 @@ using namespace metal;
 // it places the matrices in memory instead of registers.
 #define UNROLL _Pragma("clang loop unroll(full)")
 
-// Constants of the fused operations, see `FusedConstants`.
-constant constexpr float GELU_SLOPE = 1.702f;
-
 // Thread `lane` of a SIMD group holds the elements (row, column) and (row, column + 1) of an 8 x 8 SIMD group matrix, where
 // `matrix_position(lane)` is (column, row). Metal does not document this layout. The GPU tests of the matrix products,
 // the convolutions, and attention compare the results with the CPU and fail when it changes.

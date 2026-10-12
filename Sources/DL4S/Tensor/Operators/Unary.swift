@@ -28,6 +28,44 @@ import Foundation
 // MARK: Element-wise operations
 
 public extension Tensor {
+    /// Computes the element-wise heaviside step function of the tensor.
+    ///
+    /// The heaviside step function is defined as `value > 0 ? 1 : 0`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
+    func heaviside() -> Self {
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
+        Device.Engine.heaviside(values: values, result: resultBuffer)
+
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "heaviside", source: self) { resultGradient, gradient in
+            gradient.add(Tensor(repeating: 0, shape: resultGradient.shape))
+        }
+    }
+
+    /// Computes the element-wise relu function.
+    ///
+    /// The relu function is defined as `max(value, 0)`
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
+    func rectifiedLinear() -> Self {
+        let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
+        Device.Engine.relu(values: values, result: resultBuffer)
+
+        let result = Tensor(using: resultBuffer, context: nil)
+
+        return result.attachingContext(tag: "relu", source: self) { resultGradient, gradient in
+            Composed.reluBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
+        } fused: { resultGradient, gradient in
+            Device.FusedOperations.reluBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
+        }
+    }
+}
+
+public extension Tensor where Element: FloatingPointNumericType {
     /// Element-wise exponentiates the tensor
     #if canImport(Metal) && canImport(MetalPerformanceShaders)
     @_specialize(where Element == Float, Device == GPU)
@@ -36,27 +74,14 @@ public extension Tensor {
     func exp() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.exp(values: values, result: resultBuffer)
-        var result = Tensor(using: resultBuffer, context: nil)
+        let result = Tensor(using: resultBuffer, context: nil)
 
-        if requiresGradient {
-            let resultCopy = result
-            result.context = TensorContext(
-                tag: "exp",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    // reusing result would lead to retain cycle
-                    // Using resultCopy when retaining the backwards graph doesn't work, because resultCopy does not have a compute graph attached.
-                    if resultGradient.requiresGradient {
-                        resultGradient * self.exp()
-                    } else {
-                        resultGradient * resultCopy
-                    }
-                }],
-            )
-            result.requiresGradient = true
+        // A copy without context. Capturing the result itself would create a retain cycle.
+        let output = result
+        return result.attachingContext(tag: "exp", source: self) { resultGradient, gradient in
+            // The output has no compute graph, so the gradient is computed from the source when it must be differentiable.
+            gradient.add(resultGradient * (resultGradient.requiresGradient ? self.exp() : output))
         }
-
-        return result
     }
 
     /// Computes the element-wise logarithm of the tensor.
@@ -67,19 +92,9 @@ public extension Tensor {
     func log() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.log(values: values, result: resultBuffer)
-        var result = Tensor(using: resultBuffer, context: nil)
-
-        if requiresGradient {
-            result.context = TensorContext(
-                tag: "log",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    resultGradient / self
-                }],
-            )
-            result.requiresGradient = true
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "log", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient / self)
         }
-        return result
     }
 
     /// Computes the element-wise hyperbolic tangent of the tensor.
@@ -110,71 +125,13 @@ public extension Tensor {
     func sqrt() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sqrt(values: values, result: resultBuffer)
-        var result = Tensor(using: resultBuffer, context: nil)
-
-        if requiresGradient {
-            let resultCopy = result
-            result.context = TensorContext(
-                tag: "sqrt",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    if resultGradient.requiresGradient {
-                        0.5 / self.sqrt() * resultGradient
-                    } else {
-                        0.5 / resultCopy * resultGradient
-                    }
-                }],
-            )
-            result.requiresGradient = true
-        }
-
-        return result
-    }
-
-    /// Computes the element-wise heaviside step function of the tensor.
-    ///
-    /// The heaviside step function is defined as `value > 0 ? 1 : 0`
-    #if canImport(Metal) && canImport(MetalPerformanceShaders)
-    @_specialize(where Element == Float, Device == GPU)
-    #endif
-    @_specialize(where Element == Float, Device == CPU)
-    func heaviside() -> Self {
-        let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
-        Device.Engine.heaviside(values: values, result: resultBuffer)
-
-        var result = Tensor(using: resultBuffer, context: nil)
-
-        if requiresGradient {
-            result.context = TensorContext(
-                tag: "heaviside",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    Tensor(repeating: 0, shape: resultGradient.shape)
-                }],
-            )
-            result.requiresGradient = true
-        }
-
-        return result
-    }
-
-    /// Computes the element-wise relu function.
-    ///
-    /// The relu function is defined as `max(value, 0)`
-    #if canImport(Metal) && canImport(MetalPerformanceShaders)
-    @_specialize(where Element == Float, Device == GPU)
-    #endif
-    @_specialize(where Element == Float, Device == CPU)
-    func rectifiedLinear() -> Self {
-        let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
-        Device.Engine.relu(values: values, result: resultBuffer)
-
         let result = Tensor(using: resultBuffer, context: nil)
 
-        return result.attachingContext(tag: "relu", source: self) { resultGradient, gradient in
-            Composed.reluBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
-        } fused: { resultGradient, gradient in
-            Device.FusedOperations.reluBackward(input: self.values, outputGradient: resultGradient, inputGradient: gradient)
+        // A copy without context. Capturing the result itself would create a retain cycle.
+        let output = result
+        return result.attachingContext(tag: "sqrt", source: self) { resultGradient, gradient in
+            // The output has no compute graph, so the gradient is computed from the source when it must be differentiable.
+            gradient.add(0.5 / (resultGradient.requiresGradient ? self.sqrt() : output) * resultGradient)
         }
     }
 
@@ -187,6 +144,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func leakyRectifiedLinear(leakage: Self) -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.leakyRelu(input: values, leakage: leakage.values, result: result.mutableValues)
         return result.attachingContext(tag: "leakyRelu", sources: self, leakage) { resultGradient, inputGradient, leakageGradient in
             Composed.leakyReluBackward(input: self, leakage: leakage, outputGradient: resultGradient, inputGradient: &inputGradient, leakageGradient: &leakageGradient)
@@ -202,6 +162,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func sigmoid() -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.sigmoid(input: values, result: result.mutableValues)
         // A copy without context. Capturing the result itself would create a retain cycle.
         let output = result
@@ -221,6 +184,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func softmax(axis: Int = 1) -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.softmax(input: values, axis: axis, result: result.mutableValues)
         // A copy without context. Capturing the result itself would create a retain cycle.
         let output = result
@@ -240,6 +206,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func logSoftmax(axis: Int = 1) -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.logSoftmax(input: values, axis: axis, result: result.mutableValues)
         // A copy without context. Capturing the result itself would create a retain cycle.
         let output = result
@@ -259,18 +228,9 @@ public extension Tensor {
     func sine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.sin(values: values, result: resultBuffer)
-        var result = Tensor(using: resultBuffer, context: nil)
-        if requiresGradient {
-            result.context = TensorContext(
-                tag: "sin",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    self.cosine() * resultGradient
-                }],
-            )
-            result.requiresGradient = true
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "sin", source: self) { resultGradient, gradient in
+            gradient.add(self.cosine() * resultGradient)
         }
-        return result
     }
 
     /// Computes the element-wise cosine.
@@ -281,18 +241,9 @@ public extension Tensor {
     func cosine() -> Self {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.cos(values: values, result: resultBuffer)
-        var result = Tensor(using: resultBuffer, context: nil)
-        if requiresGradient {
-            result.context = TensorContext(
-                tag: "cos",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    -self.sine() * resultGradient
-                }],
-            )
-            result.requiresGradient = true
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "cos", source: self) { resultGradient, gradient in
+            gradient.add(-self.sine() * resultGradient)
         }
-        return result
     }
 
     /// Computes the element-wise GeLU activation
@@ -304,6 +255,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func gaussianErrorLinear() -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.gelu(input: values, result: result.mutableValues)
         return result.attachingContext(tag: "gelu", source: self) { resultGradient, gradient in
             Composed.geluBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
@@ -321,6 +275,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func swishActivated(beta: Self = 1) -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.swish(input: values, beta: beta.values, result: result.mutableValues)
         return result.attachingContext(tag: "swish", sources: self, beta) { resultGradient, inputGradient, betaGradient in
             Composed.swishBackward(input: self, beta: beta, outputGradient: resultGradient, inputGradient: &inputGradient, betaGradient: &betaGradient)
@@ -338,6 +295,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func mishActivated() -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.mish(input: values, result: result.mutableValues)
         return result.attachingContext(tag: "mish", source: self) { resultGradient, gradient in
             Composed.mishBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
@@ -355,6 +315,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func lishtActivated() -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.lisht(input: values, result: result.mutableValues)
         return result.attachingContext(tag: "lisht", source: self) { resultGradient, gradient in
             Composed.lishtBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
@@ -373,6 +336,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func exponentialLinearActivated(alpha: Self = 1) -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.elu(input: values, alpha: alpha.values, result: result.mutableValues)
         return result.attachingContext(tag: "elu", sources: self, alpha) { resultGradient, inputGradient, alphaGradient in
             Composed.eluBackward(input: self, alpha: alpha, outputGradient: resultGradient, inputGradient: &inputGradient, alphaGradient: &alphaGradient)
@@ -392,6 +358,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func softplus() -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.softplus(input: values, result: result.mutableValues)
         return result.attachingContext(tag: "softplus", source: self) { resultGradient, gradient in
             Composed.softplusBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
@@ -411,6 +380,9 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == CPU)
     func squareplus() -> Self {
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.squareplus(input: values, result: result.mutableValues)
         return result.attachingContext(tag: "squareplus", source: self) { resultGradient, gradient in
             Composed.squareplusBackward(input: self, outputGradient: resultGradient, inputGradient: &gradient)
@@ -421,37 +393,37 @@ public extension Tensor {
 }
 
 /// Element-wise exponentiates the tensor.
-public func exp<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func exp<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.exp()
 }
 
 /// Computes the element-wise logarithm.
-public func log<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func log<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.log()
 }
 
 /// Computes the element-wise square root.
-public func sqrt<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func sqrt<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.sqrt()
 }
 
 /// Computes the element-wise hyperbolic tangent.
-public func tanh<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func tanh<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.tanh()
 }
 
 /// Computes the element-wise sigmoid function.
-public func sigmoid<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func sigmoid<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.sigmoid()
 }
 
 /// Computes the element-wise sine.
-public func sin<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func sin<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.sine()
 }
 
 /// Computes the element-wise cosine.
-public func cos<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func cos<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.cosine()
 }
 
@@ -462,77 +434,14 @@ public func relu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<E
     tensor.rectifiedLinear()
 }
 
-/// Computes the element-wise leaky relu function.
-///
-/// The leaky relu function is defined as `value > 0 ? value : leakage * value`
-public func leakyRelu<Element, Device>(_ tensor: Tensor<Element, Device>, leakage: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.leakyRectifiedLinear(leakage: leakage)
-}
-
-/// Computes the element-wise heaviside step function of the tensor.
-///
-/// The heaviside step function is defined as `value > 0 ? 1 : 0`
-public func heaviside<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.heaviside()
-}
-
 /// Computes the softmax function along the given axis.
 /// If no axis is provided, the softmax is computed along axis 1.
-public func softmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
+public func softmax<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
     tensor.softmax(axis: axis)
 }
 
 /// Computes the logarithm of the softmax function along the given axis.
 /// If no axis is provided, the log softmax is computed along axis 1.
-public func logSoftmax<Element, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
+public func logSoftmax<Element: FloatingPointNumericType, Device>(_ tensor: Tensor<Element, Device>, axis: Int = 1) -> Tensor<Element, Device> {
     tensor.logSoftmax(axis: axis)
-}
-
-/// Computes the element-wise GeLU activation
-///
-/// See [Hendrycks, Gimpel - Gaussian Error Linear Units](https://arxiv.org/pdf/1606.08415.pdf)
-public func gelu<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.gaussianErrorLinear()
-}
-
-/// Element-wise exponential linear unit activation, `value > 0 ? value : alpha * (exp(value) - 1)`
-///
-/// See [Clevert et al. - Fast And Accurate Deep Network Learning By Exponential Linear Units (ELUs)](https://arxiv.org/pdf/1511.07289.pdf)
-public func elu<Element, Device>(_ tensor: Tensor<Element, Device>, alpha: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
-    tensor.exponentialLinearActivated(alpha: alpha)
-}
-
-/// Computes the element-wise Swish activation
-///
-/// See [Ramachandran et al. - Searching for Activation Functions](https://arxiv.org/pdf/1710.05941.pdf)
-public func swishActivated<Element, Device>(_ tensor: Tensor<Element, Device>, beta: Tensor<Element, Device> = 1) -> Tensor<Element, Device> {
-    tensor.swishActivated(beta: beta)
-}
-
-/// Computes the element-wise Mish activation
-///
-/// See [Diganta Misra - Mish: A Self Regularized Non-Monotonic Neural Activation Function](https://arxiv.org/pdf/1908.08681.pdf)
-public func mishActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.mishActivated()
-}
-
-/// Computes the element-wise LiSHT activation
-///
-/// See [Roy et al. - LiSHT: Non-Parametric Linearly Scaled Hyperbolic Tangent Activation Function for Neural Networks](https://arxiv.org/pdf/1901.05894.pdf)
-public func lishtActivated<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.lishtActivated()
-}
-
-/// Element-wise softplus activation
-///
-/// See [Dugas et al. - Incorporating Second-Order Functional Knowledge for Better Option Pricing](https://proceedings.neurips.cc/paper/2000/file/44968aece94f667e4095002d140b5896-Paper.pdf)
-public func softplus<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.softplus()
-}
-
-/// Element-wise squareplus activation
-///
-/// See https://twitter.com/jon_barron/status/1387167648669048833
-public func squareplus<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.squareplus()
 }

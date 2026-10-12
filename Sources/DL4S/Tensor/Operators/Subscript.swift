@@ -43,14 +43,13 @@ public extension Tensor {
         get {
             let index = Self.resolvingNegativeIndices(index, shape: shape)
             Self.checkBounds(of: index, shape: shape)
-            let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
-            let handle = TensorHandle(values: val, parent: isCopy ? nil : handle)
-            let sourceShape = self.shape
+            let slice = Device.Memory.get(slice: index, of: values.values, with: shape)
+            let sourceShape = shape
 
             // Subscripts are small operations that run in loops, so they use the context with one closure per source directly.
             return Tensor(
-                handle: handle,
-                shape: shape,
+                memory: slice.values.memory,
+                shape: slice.shape,
                 context: requiresGradient ? TensorContext(
                     tag: "read",
                     sources: [self],
@@ -112,19 +111,13 @@ public extension Tensor {
     subscript(index: [Range<Int>?]) -> Self {
         get {
             Self.checkBounds(of: index, shape: shape)
-            let (val, isCopy, shape) = Device.Memory.get(slice: index, of: values.values, with: shape)
-
-            let handle: TensorHandle<Element, Device> = if isCopy {
-                TensorHandle(values: val)
-            } else {
-                TensorHandle(values: val, parent: self.handle)
-            }
-            let sourceShape = self.shape
+            let slice = Device.Memory.get(slice: index, of: values.values, with: shape)
+            let sourceShape = shape
 
             // Subscripts are small operations that run in loops, so they use the context with one closure per source directly.
             return Tensor(
-                handle: handle,
-                shape: shape,
+                memory: slice.values.memory,
+                shape: slice.shape,
                 context: requiresGradient ? TensorContext(
                     tag: "SubscriptRangeRead",
                     sources: [self],
@@ -180,7 +173,7 @@ extension Tensor {
         while count > 0, index[count - 1] == nil {
             count -= 1
         }
-        let strides = MemoryOps.strides(from: shape)
+        let strides = ShapeUtil.contiguousStrides(of: shape)
         var offset = 0
         for axis in 0 ..< count {
             guard let position = index[axis] else {

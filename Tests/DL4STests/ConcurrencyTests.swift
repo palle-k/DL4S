@@ -24,7 +24,6 @@
 //  SOFTWARE.
 
 import DL4S
-import Foundation
 import Synchronization
 import Testing
 
@@ -35,21 +34,6 @@ import Testing
 @Suite(.serialized)
 struct ConcurrencyTests {
     private let threadCounts = [2, 4, 8]
-
-    private func run(threadCount: Int, _ body: @escaping @Sendable (_ threadIndex: Int) -> Void) {
-        let group = DispatchGroup()
-        for index in 0 ..< threadCount {
-            group.enter()
-            // raw Threads ensure parallel execution, as opposed to structured concurrency or dispatch queues.
-            let thread = Thread {
-                body(index)
-                group.leave()
-            }
-            thread.name = "DL4S.ConcurrencyTests.\(index)"
-            thread.start()
-        }
-        group.wait()
-    }
 
     private typealias TrainedModel = Sequential<Dense<Float, CPU>, Tanh<Float, CPU>, Dense<Float, CPU>, Tanh<Float, CPU>, Dense<Float, CPU>, Sigmoid<Float, CPU>>
 
@@ -103,7 +87,7 @@ struct ConcurrencyTests {
         for threadCount in threadCounts {
             let mismatches = Mutex<[String]>([])
 
-            run(threadCount: threadCount) { threadIndex in
+            runOnThreads(threadCount, name: "DL4S.ConcurrencyTests") { threadIndex in
                 for iteration in 0 ..< iterations {
                     let result = model(input).elements
                     if result != reference {
@@ -137,7 +121,7 @@ struct ConcurrencyTests {
         let invalidMasks = Mutex<[String]>([])
         let masks = Mutex<[[Float]]>([])
 
-        run(threadCount: threadCount) { threadIndex in
+        runOnThreads(threadCount, name: "DL4S.ConcurrencyTests") { threadIndex in
             for iteration in 0 ..< iterations {
                 let mask = dropout(input).elements
                 if mask.contains(where: { $0 != 0 && $0 != 1 }) {
@@ -169,7 +153,7 @@ struct ConcurrencyTests {
 
         let weights = Mutex<[[Double]]>([])
 
-        run(threadCount: threadCount) { _ in
+        runOnThreads(threadCount, name: "DL4S.ConcurrencyTests") { _ in
             let layer = Dense<Double, CPU>(inputSize: layerSize, outputSize: layerSize)
             weights.withLock { $0.append(layer.weights.elements) }
         }
@@ -208,7 +192,7 @@ struct ConcurrencyTests {
         for threadCount in threadCounts {
             let mismatches = Mutex<[String]>([])
 
-            run(threadCount: threadCount) { threadIndex in
+            runOnThreads(threadCount, name: "DL4S.ConcurrencyTests") { threadIndex in
                 for iteration in 0 ..< iterations {
                     let gradient = backwardPass()
                     if gradient != reference {
@@ -239,7 +223,7 @@ struct ConcurrencyTests {
         }
 
         let results = Mutex<[[Float]]>([])
-        run(threadCount: 1) { _ in
+        runOnThreads(1, name: "DL4S.ConcurrencyTests") { _ in
             results.withLock { $0.append(infer()) }
         }
 
@@ -260,7 +244,7 @@ struct ConcurrencyTests {
         }
 
         let wrongResults = Mutex<[String]>([])
-        run(threadCount: threadCount) { threadIndex in
+        runOnThreads(threadCount, name: "DL4S.ConcurrencyTests") { threadIndex in
             for iteration in 0 ..< iterations {
                 let tensor = Tensor<Float, CPU>(repeating: Float(iteration), shape: [16, 16])
                 if (tensor + tensor).elements.first != Float(iteration) * 2 {

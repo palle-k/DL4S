@@ -26,7 +26,7 @@
 import Foundation
 
 /// Gradient descent optimizer with momentum
-public struct Momentum<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct Momentum<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Learning rate with which to move along the gradient

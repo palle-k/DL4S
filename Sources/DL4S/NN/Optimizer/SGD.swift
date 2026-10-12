@@ -26,7 +26,7 @@
 import Foundation
 
 /// 'Vanilla' stochastic gradient descent optimizer
-public struct SGD<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct SGD<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Learning rate with which to move along the gradient

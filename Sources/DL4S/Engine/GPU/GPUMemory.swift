@@ -115,7 +115,7 @@ final class GPUStorage: Sendable {
 ///
 /// Views of a tensor refer to the storage of the tensor with an offset.
 public struct GPUBuffer: Sendable {
-    let storage: GPUStorage
+    var storage: GPUStorage
     let byteOffset: Int
     let byteCount: Int
 
@@ -139,8 +139,8 @@ public struct GPUMemoryOperators: MemoryOperatorsType {
         return MutableBuffer(memory: GPUBuffer(storage: GPUStorage(byteCount: byteCount, context: .current), byteOffset: 0, byteCount: byteCount))
     }
 
-    public static func free<Element>(_ buffer: MutableBuffer<Element, GPU>) {
-        // The storage returns its buffer to the pool when the last reference to it is released.
+    public static func isUniquelyReferenced(_ buffer: inout GPUBuffer) -> Bool {
+        isKnownUniquelyReferenced(&buffer.storage)
     }
 
     public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: MutableBuffer<Element, GPU>, count: Int) {
@@ -171,7 +171,7 @@ public struct GPUMemoryOperators: MemoryOperatorsType {
             return
         }
         if GPUPlacement.runsOnHost(elements: count, reading: [source.memory], writing: [destination.memory]) {
-            memcpy(destination.host.memory.baseAddress!, source.host.memory.baseAddress!, byteCount)
+            memcpy(destination.host.bytes.baseAddress!, source.host.bytes.baseAddress!, byteCount)
         } else {
             GPUKernels.copyWords(from: source.memory, to: destination.memory, byteCount: byteCount)
         }
@@ -194,13 +194,13 @@ public struct GPUMemoryOperators: MemoryOperatorsType {
         buffer.memory.byteCount / MemoryLayout<Element>.stride
     }
 
-    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> (MutableBuffer<Element, GPU>, Bool, [Int]) {
+    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> MutableShapedBuffer<Element, GPU> {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         var sliceCount = slice.count
         while sliceCount > 0, slice[sliceCount - 1] == nil {
             sliceCount -= 1
         }
-        let strides = MemoryOps.strides(from: shape)
+        let strides = ShapeUtil.contiguousStrides(of: shape)
         let prefix = slice.prefix(sliceCount)
         if prefix.allSatisfy({ $0 != nil }) {
             let offset = zip(prefix, strides).map { $0! * $1 }.reduce(0, +)
@@ -210,21 +210,21 @@ public struct GPUMemoryOperators: MemoryOperatorsType {
                 byteOffset: buffer.memory.byteOffset + offset * MemoryLayout<Element>.stride,
                 byteCount: resultShape.reduce(1, *) * MemoryLayout<Element>.stride,
             )
-            return (MutableBuffer(memory: view), false, resultShape)
+            return MutableShapedBuffer(values: MutableBuffer(memory: view), shape: resultShape)
         }
         let ranges = shape.indices.map { axis in (axis < slice.count ? slice[axis] : nil).map { $0 ..< $0 + 1 } ?? 0 ..< shape[axis] }
         let resultShape = zip(slice + [Int?](repeating: nil, count: shape.count - slice.count), shape).compactMap { index, size in index == nil ? size : nil }
         let result = allocateBuffer(withCapacity: resultShape.reduce(1, *), type: Element.self)
         GPUKernels.copyRegion(of: buffer, shape: shape, ranges: ranges, to: result)
-        return (result, true, resultShape)
+        return MutableShapedBuffer(values: result, shape: resultShape)
     }
 
-    public static func get<Element>(slice: [CountableRange<Int>?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> (MutableBuffer<Element, GPU>, Bool, [Int]) {
+    public static func get<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, GPU>, with shape: [Int]) -> MutableShapedBuffer<Element, GPU> {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
         let ranges = shape.indices.map { axis in (axis < slice.count ? slice[axis] : nil) ?? 0 ..< shape[axis] }
         let result = allocateBuffer(withCapacity: ranges.map(\.count).reduce(1, *), type: Element.self)
         GPUKernels.copyRegion(of: buffer, shape: shape, ranges: ranges, to: result)
-        return (result, true, ranges.map(\.count))
+        return MutableShapedBuffer(values: result, shape: ranges.map(\.count))
     }
 
     public static func set<Element>(slice: [Int?], of buffer: MutableBuffer<Element, GPU>, with dstShape: [Int], from source: Buffer<Element, GPU>, with sourceShape: [Int]) {
@@ -264,7 +264,7 @@ extension Buffer where Device == GPU {
     /// The values in host memory, after the GPU completed the work that writes them.
     var host: Buffer<Element, CPU> {
         memory.storage.waitUntilReadable()
-        return Buffer<Element, CPU>(memory: memory.hostMemory)
+        return Buffer<Element, CPU>(memory: CPUBuffer(storage: nil, bytes: memory.hostMemory))
     }
 }
 
@@ -272,7 +272,7 @@ extension MutableBuffer where Device == GPU {
     /// The values in host memory, after the GPU completed the work that uses them.
     var host: MutableBuffer<Element, CPU> {
         memory.storage.waitUntilWritable()
-        return MutableBuffer<Element, CPU>(memory: memory.hostMemory)
+        return MutableBuffer<Element, CPU>(memory: CPUBuffer(storage: nil, bytes: memory.hostMemory))
     }
 }
 

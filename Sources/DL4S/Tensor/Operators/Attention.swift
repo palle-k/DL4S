@@ -47,7 +47,7 @@ import Foundation
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func scaledDotProductAttention<Element, Device>(
+public func scaledDotProductAttention<Element: FloatingPointNumericType, Device>(
     queries: Tensor<Element, Device>,
     keys: Tensor<Element, Device>,
     values: Tensor<Element, Device>,
@@ -57,6 +57,9 @@ public func scaledDotProductAttention<Element, Device>(
     let shape = AttentionShape(queries: queries.values, keys: keys.values, values: values.values)
     let mask = mask?.detached()
     var result = Tensor<Element, Device>(uninitializedShape: shape.resultShape)
+    guard result.count > 0 else {
+        return result
+    }
     Device.FusedOperations.scaledDotProductAttention(queries: queries.values, keys: keys.values, values: values.values, mask: mask?.values, temperature: temperature, result: result.mutableValues)
 
     return result.attachingContext(tag: "scaledDotProductAttention", sources: queries, keys, values) { resultGradient, queryGradient, keyGradient, valueGradient in
@@ -92,7 +95,7 @@ public func scaledDotProductAttention<Element, Device>(
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func multiHeadAttention<Element, Device>(
+public func multiHeadAttention<Element: FloatingPointNumericType, Device>(
     queries: Tensor<Element, Device>,
     keys: Tensor<Element, Device>,
     values: Tensor<Element, Device>,
@@ -116,6 +119,9 @@ public func multiHeadAttention<Element, Device>(
     )
     let mask = mask?.detached()
     var result = Tensor<Element, Device>(uninitializedShape: shape.resultShape)
+    guard result.count > 0 else {
+        return result
+    }
     Device.FusedOperations.multiHeadAttention(
         queries: queries.values,
         keys: keys.values,
@@ -165,7 +171,7 @@ public func multiHeadAttention<Element, Device>(
     }
 }
 
-public extension Tensor {
+public extension Tensor where Element: FloatingPointNumericType {
     /// Creates the sinusoidal positional encoding of [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     ///
     /// The element at position `p` and index `2i` is `sin(p / 10000^(i / (hiddenSize / 2)))`,
@@ -177,6 +183,9 @@ public extension Tensor {
     init(positionalEncodingWithLength length: Int, hiddenSize: Int) {
         precondition(hiddenSize.isMultiple(of: 2), "Hidden size must be multiple of 2")
         self.init(uninitializedShape: [length, hiddenSize])
+        guard count > 0 else {
+            return
+        }
         Device.FusedOperations.positionalEncoding(length: length, hiddenSize: hiddenSize, result: mutableValues)
     }
 }

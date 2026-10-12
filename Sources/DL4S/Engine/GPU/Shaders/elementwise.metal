@@ -61,12 +61,16 @@ UNARY(tanh, float, precise::tanh(x))
 
 // Binary operators in four forms: vector-vector, vector-scalar, scalar-vector, and broadcast with a layout.
 // The scalar forms read the scalar from device memory, so the host does not wait for the GPU to compute it.
-#define BINARY(NAME, T, EXPRESSION) \
+// Operators that only combine vectors of the same shape, such as the maximum, only get the vector-vector form.
+#define VECTOR_BINARY(NAME, T, EXPRESSION) \
 kernel void NAME##_vv_##T(device const T* a [[buffer(0)]], device const T* b [[buffer(1)]], device T* result [[buffer(2)]], constant uint& count [[buffer(3)]], uint i [[thread_position_in_grid]]) { \
     if (i >= count) { return; } \
     T x = a[i]; T y = b[i]; \
     result[i] = (EXPRESSION); \
-} \
+}
+
+#define BINARY(NAME, T, EXPRESSION) \
+VECTOR_BINARY(NAME, T, EXPRESSION) \
 kernel void NAME##_vs_##T(device const T* a [[buffer(0)]], device const T* b [[buffer(1)]], device T* result [[buffer(2)]], constant uint& count [[buffer(3)]], uint i [[thread_position_in_grid]]) { \
     if (i >= count) { return; } \
     T x = a[i]; T y = b[0]; \
@@ -92,10 +96,10 @@ BINARY(add, int, x + y)
 BINARY(sub, int, x - y)
 BINARY(mul, int, x * y)
 BINARY(div, int, y == 0 ? 0 : x / y)
-BINARY(max, float, max(x, y))
-BINARY(min, float, min(x, y))
-BINARY(max, int, max(x, y))
-BINARY(min, int, min(x, y))
+VECTOR_BINARY(max, float, max(x, y))
+VECTOR_BINARY(min, float, min(x, y))
+VECTOR_BINARY(max, int, max(x, y))
+VECTOR_BINARY(min, int, min(x, y))
 
 // Maximum and minimum that also record which operand they select: 0 for the first, 1 for the second.
 #define SELECT(NAME, T, CONDITION) \

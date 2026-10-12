@@ -30,9 +30,6 @@ import Foundation
 public extension FusedOperationsType {
     static func linear<N: NumericType>(input: ShapedBuffer<N, Device>, weights: ShapedBuffer<N, Device>, bias: ShapedBuffer<N, Device>?, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.multiplyMatrices(input, weights, into: result)
         if let bias {
             math.add(result, bias, into: result)
@@ -49,26 +46,16 @@ public extension FusedOperationsType {
         biasGradient: GradientBuffer<N, Device>?,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // The products are added to the gradients with GEMMs, so a weight that is used in several steps needs no temporary gradient.
-        if let inputGradient {
-            math.multiplyMatrices(outputGradient, weights, rhsTransposed: true, into: inputGradient.values, beta: inputGradient.beta)
-        }
-        if let weightGradient {
-            math.multiplyMatrices(input, outputGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-        }
+        math.writeProduct(outputGradient, weights, rhsTransposed: true, into: inputGradient)
+        math.writeProduct(input, outputGradient, lhsTransposed: true, into: weightGradient)
         math.write(biasGradient) { db in
             math.sum(outputGradient, along: [0], into: db)
         }
     }
 
-    static func dropout<N: NumericType>(input: ShapedBuffer<N, Device>, rate: Float, result: MutableShapedBuffer<N, Device>, mask: MutableShapedBuffer<N, Device>) {
+    static func dropout<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, rate: Float, result: MutableShapedBuffer<N, Device>, mask: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // Without dropped elements, the mask needs no random numbers.
         guard rate > 0 else {
             Device.Engine.fill(value: 1, result: mask.values, count: mask.count)
@@ -79,11 +66,8 @@ public extension FusedOperationsType {
         math.multiply(input, mask, into: result)
     }
 
-    static func dropoutBackward<N: NumericType>(mask: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
+    static func dropoutBackward<N: FloatingPointNumericType>(mask: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.write(inputGradient) { dx in
             math.multiply(outputGradient, mask, into: dx)
         }

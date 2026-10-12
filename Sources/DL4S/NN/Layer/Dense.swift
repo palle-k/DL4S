@@ -27,7 +27,7 @@ import Foundation
 
 /// Dense (Linear, Fully connected) layer with no activation function.
 @Layer
-public struct Dense<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct Dense<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Weights, shape [inputSize, outputSize]
     public var weights: Tensor<Element, Device>
 

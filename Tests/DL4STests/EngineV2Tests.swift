@@ -34,7 +34,6 @@ struct EngineV2Tests {
         let context = Tensor<Int32, CPU>([0, 1, 2])
 
         let result = CPU.Memory.allocateBuffer(withShape: [5, 3], type: Double.self)
-        defer { CPU.Memory.free(result) }
         CPU.Engine.fill(value: 42, result: result.values, count: result.count)
 
         CPU.Engine.scatter(reduced: values.values, context: context.values, result: result, axis: 0, ignoreIndex: -1)
@@ -383,9 +382,10 @@ struct EngineV2Tests {
             #expect(permuted.shape == resultShape, "arrangement \(arrangement)")
             #expect(permuted.elements == expected, "arrangement \(arrangement)")
 
-            var accumulator = Tensor<Double, CPU>(repeating: 1, shape: resultShape)
-            accumulator.addingPermuted(values, permutation: arrangement)
-            #expect(accumulator.elements == expected.map { $0 + 1 }, "accumulated arrangement \(arrangement)")
+            let accumulator = CPU.Memory.allocateBuffer(withShape: resultShape, type: Double.self)
+            CPU.Engine.fill(value: 1, result: accumulator.values, count: accumulator.count)
+            CPU.Engine.permuteAxesAdd(values: values.values, add: ShapedBuffer(accumulator), result: accumulator, arrangement: arrangement)
+            #expect(Buffer(accumulator.values).array == expected.map { $0 + 1 }, "accumulated arrangement \(arrangement)")
         }
     }
 
@@ -427,10 +427,6 @@ struct EngineV2Tests {
             for (isMaximum, combine) in [(true, Swift.max as (Double, Double) -> Double), (false, Swift.min)] {
                 let result = CPU.Memory.allocateBuffer(withShape: resultShape, type: Double.self)
                 let positions = CPU.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
-                defer {
-                    CPU.Memory.free(result)
-                    CPU.Memory.free(positions)
-                }
                 if isMaximum {
                     CPU.Engine.reduceMax(values: values.values, result: result, context: positions, axes: axes)
                 } else {
@@ -478,9 +474,6 @@ struct EngineV2Tests {
 
         let positive = Tensor<Float, CPU>([[3, 1], [2, 5], [4, 2]])
         let minimum = CPU.Memory.allocateBuffer(withShape: [2], type: Float.self)
-        defer {
-            CPU.Memory.free(minimum)
-        }
         withExtendedLifetime(positive) {
             CPU.Engine.reduceMin(values: positive.values, result: minimum, context: nil, axis: 0)
         }

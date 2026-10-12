@@ -109,6 +109,17 @@ public extension Tensor {
         reduceMean(along: Array(0 ..< dim))
     }
 
+    /// Returns the index of the largest element in the tensor.
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
+    func argmax() -> Int {
+        Device.Engine.argmax(values: values.values, count: count).0
+    }
+}
+
+public extension Tensor where Element: FloatingPointNumericType {
     /// Computes the biased variance of the tensor along the given axes, `mean(x * x) - mean(x) * mean(x)`.
     ///
     /// - Parameter axes: Axes to compute the variance along.
@@ -118,7 +129,11 @@ public extension Tensor {
     #endif
     @_specialize(where Element == Float, Device == CPU)
     func variance(along axes: [Int]) -> Self {
+        let axes = Self.reductionAxes(axes, dim: dim)
         var result = Self(uninitializedShape: ShapeUtil.reducedShape(of: shape, along: axes))
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.variance(input: values, axes: axes, result: result.mutableValues)
         return result.attachingContext(tag: "variance\(axes)", source: self) { resultGradient, gradient in
             Composed.varianceBackward(input: self, outputGradient: resultGradient, axes: axes, inputGradient: &gradient)
@@ -145,15 +160,6 @@ public extension Tensor {
     func variance() -> Self {
         variance(along: Array(0 ..< dim))
     }
-
-    /// Returns the index of the largest element in the tensor.
-    #if canImport(Metal) && canImport(MetalPerformanceShaders)
-    @_specialize(where Element == Float, Device == GPU)
-    #endif
-    @_specialize(where Element == Float, Device == CPU)
-    func argmax() -> Int {
-        Device.Engine.argmax(values: values.values, count: count).0
-    }
 }
 
 extension Tensor {
@@ -166,7 +172,6 @@ extension Tensor {
         let maximumBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         let positionBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
         Device.Engine.reduceMax(values: values, result: maximumBuffer, context: positionBuffer, axis: axis)
-        Device.Memory.free(maximumBuffer)
         return Tensor<Int32, Device>(using: positionBuffer, context: nil)
     }
 }
@@ -178,74 +183,11 @@ public func sum<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<El
     tensor.reduceSum()
 }
 
-/// Computes the sum along the given axes on the given tensor.
-/// - Parameters:
-///   - tensor: Tensor to reduce
-///   - axes: Axes to reduce along
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
-public func sum<Element, Device>(_ tensor: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
-    tensor.reduceSum(along: axes)
-}
-
-/// Computes the sum along the given axes on the given tensor.
-/// - Parameters:
-///   - tensor: Tensor to reduce
-///   - axes: Axes to reduce along
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
-public func sum<Element, Device>(_ tensor: Tensor<Element, Device>, axes: Int...) -> Tensor<Element, Device> {
-    tensor.reduceSum(along: axes)
-}
-
 /// Computes the mean of all elements in the given tensor
 /// - Parameter tensor: Tensor to average
 /// - Returns: Scalar, mean of all elements
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
 public func mean<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
     tensor.reduceMean()
-}
-
-/// Computes the mean along the given axes on the given tensor.
-/// - Parameters:
-///   - tensor: Tensor to reduce
-///   - axes: Axes to reduce along
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
-public func mean<Element, Device>(_ tensor: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
-    tensor.reduceMean(along: axes)
-}
-
-/// Computes the mean along the given axes on the given tensor.
-/// - Parameters:
-///   - tensor: Tensor to reduce
-///   - axes: Axes to reduce along
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
-public func mean<Element, Device>(_ tensor: Tensor<Element, Device>, axes: Int...) -> Tensor<Element, Device> {
-    tensor.reduceMean(along: axes)
-}
-
-/// Computes the variance of all elements in the given tensor
-/// - Parameter tensor: Tensor to average
-/// - Returns: Scalar, variance of all elements
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
-public func variance<Element, Device>(_ tensor: Tensor<Element, Device>) -> Tensor<Element, Device> {
-    tensor.variance()
-}
-
-/// Computes the variance along the given axes on the given tensor.
-/// - Parameters:
-///   - tensor: Tensor to reduce
-///   - axes: Axes to reduce along
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
-public func variance<Element, Device>(_ tensor: Tensor<Element, Device>, axes: [Int]) -> Tensor<Element, Device> {
-    tensor.variance(along: axes)
-}
-
-/// Computes the variance along the given axes on the given tensor.
-/// - Parameters:
-///   - tensor: Tensor to reduce
-///   - axes: Axes to reduce along
-/// - Returns: Tensor with shape equal to self.shape without the given reduction axes.
-public func variance<Element, Device>(_ tensor: Tensor<Element, Device>, axes: Int...) -> Tensor<Element, Device> {
-    tensor.variance(along: axes)
 }
 
 // MARK: Min/Max
@@ -259,6 +201,9 @@ public extension Tensor {
     #endif
     @_specialize(where Element == Float, Device == CPU)
     func reduceMax(along axes: [Int]) -> Self {
+        if axes.isEmpty {
+            return self
+        }
         let axes = Self.reductionAxes(axes, dim: dim)
         // The gradient scatters along one axis, so neighboring axes are merged into one first.
         if requiresGradient, let first = axes.first, let last = axes.last, axes.count > 1 {
@@ -278,16 +223,9 @@ public extension Tensor {
 
             let axisShape = shape[axis]
 
-            return Tensor(
-                using: resultBuffer,
-                context: TensorContext(
-                    tag: "max\(axes)",
-                    sources: [self],
-                    backpropagate: [{ resultGradient in
-                        resultGradient.scatter(using: context, alongAxis: axis, withSize: axisShape)
-                    }],
-                ),
-            )
+            return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "max\(axes)", source: self) { resultGradient, gradient in
+                gradient.add(resultGradient.scatter(using: context, alongAxis: axis, withSize: axisShape))
+            }
         } else {
             if let axis = axes.first, axes.count == 1 {
                 Device.Engine.reduceMax(values: values, result: resultBuffer, context: nil, axis: axis)

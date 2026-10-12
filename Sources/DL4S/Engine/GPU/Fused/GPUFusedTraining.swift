@@ -27,7 +27,7 @@
 import Foundation
 
 public extension GPUFusedOperations {
-    static func adamUpdate<N: NumericType>(
+    static func adamUpdate<N: FloatingPointNumericType>(
         parameter: ShapedBuffer<N, GPU>,
         gradient: ShapedBuffer<N, GPU>,
         firstMoment: MutableShapedBuffer<N, GPU>,
@@ -68,12 +68,7 @@ public extension GPUFusedOperations {
         let moments = [m, v] + (maximum.map { [$0] } ?? [])
         let kernel = GPUKernels.kernel("adam_update", in: .fused)
         GPUContext.compute(kernel, reading: [p, g] + moments, writing: moments + [updated]) { arguments in
-            arguments.buffer(p)
-            arguments.buffer(g)
-            arguments.buffer(m)
-            arguments.buffer(v)
-            arguments.buffer(maximum ?? v)
-            arguments.buffer(updated)
+            arguments.buffers(p, g, m, v, maximum ?? v, updated)
             arguments.value(parameters)
             arguments.dispatch(count: parameter.count)
         }
@@ -82,7 +77,7 @@ public extension GPUFusedOperations {
     // One step of a gated recurrent unit is three matrix products and two element-wise kernels.
     // The backward pass computes the gates again, then the gradients with three element-wise kernels and the products.
 
-    static func gatedRecurrentUnitStep<N: NumericType>(
+    static func gatedRecurrentUnitStep<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, GPU>,
         resetInput: ShapedBuffer<N, GPU>,
         candidateInput: ShapedBuffer<N, GPU>,
@@ -101,15 +96,12 @@ public extension GPUFusedOperations {
             return
         }
         let math = BufferMath<N, GPU>()
-        defer {
-            math.release()
-        }
         let gates = GPUGatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, math: math)
         let (z, input, product, h, y) = (gates.update.gpuBuffer, candidateInput.gpuBuffer, gates.candidateProduct.gpuBuffer, state.gpuBuffer, result.gpuBuffer)
         GPUGatedRecurrentUnitKernel.record("gru_state", buffers: [z, input, product, h, y], reading: [z, input, product, h], writing: [y], count: state.count)
     }
 
-    static func gatedRecurrentUnitStepBackward<N: NumericType>(
+    static func gatedRecurrentUnitStepBackward<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, GPU>,
         resetInput: ShapedBuffer<N, GPU>,
         candidateInput: ShapedBuffer<N, GPU>,
@@ -131,33 +123,24 @@ public extension GPUFusedOperations {
             return
         }
         let math = BufferMath<N, GPU>()
-        defer {
-            math.release()
-        }
         let gates = GPUGatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, math: math)
-        let (updateGradient, candidateGradient, stateGradient) = (math.temporary(state.shape), math.temporary(state.shape), math.temporary(state.shape))
+        let (updateGradient, candidateGradient, stateGradient) = (GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self), GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self), GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self))
         let (z, input, product, h, g) = (gates.update.gpuBuffer, candidateInput.gpuBuffer, gates.candidateProduct.gpuBuffer, state.gpuBuffer, outputGradient.gpuBuffer)
         let (dz, dc, dh) = (updateGradient.gpuBuffer, candidateGradient.gpuBuffer, stateGradient.gpuBuffer)
         GPUGatedRecurrentUnitKernel.record("gru_backward_gates", buffers: [z, input, product, h, g, dz, dc, dh], reading: [z, input, product, h, g], writing: [dz, dc, dh], count: state.count)
-        if let weightGradient = gradients.updateWeights {
-            math.multiplyMatrices(state, updateGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-        }
-        if let weightGradient = gradients.candidateWeights {
-            math.multiplyMatrices(gates.resetState, candidateGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-        }
+        math.writeProduct(state, updateGradient, lhsTransposed: true, into: gradients.updateWeights)
+        math.writeProduct(gates.resetState, candidateGradient, lhsTransposed: true, into: gradients.candidateWeights)
         math.writeSum(of: updateGradient, into: gradients.updateInput)
         math.writeSum(of: candidateGradient, into: gradients.candidateInput)
         guard gradients.resetInput != nil || gradients.state != nil || gradients.resetWeights != nil else {
             return
         }
-        let (resetStateGradient, resetGradient) = (math.temporary(state.shape), math.temporary(state.shape))
+        let (resetStateGradient, resetGradient) = (GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self), GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self))
         math.multiplyMatrices(candidateGradient, candidateWeights, rhsTransposed: true, into: resetStateGradient)
         let (r, drs, dr) = (gates.reset.gpuBuffer, resetStateGradient.gpuBuffer, resetGradient.gpuBuffer)
         // The kernel adds the gradient through the reset gate to the gradient of the state.
-        GPUGatedRecurrentUnitKernel.record("gru_backward_reset", buffers: [r, h, drs, dr, dh], reading: [r, h, drs, dh], writing: [dr, dh], count: state.count)
-        if let weightGradient = gradients.resetWeights {
-            math.multiplyMatrices(state, resetGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-        }
+        GPUGatedRecurrentUnitKernel.record("gru_backward_reset", buffers: [r, h, drs, dr, dh], reading: [r, h, drs], writing: [dr, dh], count: state.count)
+        math.writeProduct(state, resetGradient, lhsTransposed: true, into: gradients.resetWeights)
         math.writeSum(of: resetGradient, into: gradients.resetInput)
         if let gradient = gradients.state {
             // The products of the gate gradients with the weights are added to the gradient of the state in place.
@@ -169,7 +152,7 @@ public extension GPUFusedOperations {
 }
 
 /// Gates of one step of a gated recurrent unit on the GPU, in intermediate buffers.
-private struct GPUGatedRecurrentUnitGates<N: NumericType> {
+private struct GPUGatedRecurrentUnitGates<N: FloatingPointNumericType> {
     /// Update gate
     let update: MutableShapedBuffer<N, GPU>
     /// Reset gate
@@ -188,11 +171,11 @@ private struct GPUGatedRecurrentUnitGates<N: NumericType> {
     }
 
     init(updateInput: ShapedBuffer<N, GPU>, resetInput: ShapedBuffer<N, GPU>, state: ShapedBuffer<N, GPU>, updateWeights: ShapedBuffer<N, GPU>, resetWeights: ShapedBuffer<N, GPU>, candidateWeights: ShapedBuffer<N, GPU>, math: BufferMath<N, GPU>) {
-        let (update, reset, resetState, candidateProduct) = (math.temporary(state.shape), math.temporary(state.shape), math.temporary(state.shape), math.temporary(state.shape))
+        let (update, reset, resetState, candidateProduct) = (GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self), GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self), GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self), GPU.Memory.allocateBuffer(withShape: state.shape, type: N.self))
         math.multiplyMatrices(state, updateWeights, into: update)
         math.multiplyMatrices(state, resetWeights, into: reset)
         let (zInput, z, rInput, r, h, rs) = (updateInput.gpuBuffer, update.gpuBuffer, resetInput.gpuBuffer, reset.gpuBuffer, state.gpuBuffer, resetState.gpuBuffer)
-        GPUGatedRecurrentUnitKernel.record("gru_gates", buffers: [zInput, z, rInput, r, h, rs], reading: [zInput, z, rInput, r, h], writing: [z, r, rs], count: state.count)
+        GPUGatedRecurrentUnitKernel.record("gru_gates", buffers: [zInput, z, rInput, r, h, rs], reading: [zInput, rInput, h], writing: [z, r, rs], count: state.count)
         math.multiplyMatrices(resetState, candidateWeights, into: candidateProduct)
         self.update = update
         self.reset = reset

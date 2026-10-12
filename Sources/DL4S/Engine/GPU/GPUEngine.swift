@@ -132,8 +132,7 @@ public struct GPUEngine: EngineType {
     private static func diagonal(values: GPUBuffer, result: GPUBuffer, count: Int, stride: Int, extracts: Bool) {
         let kernel = GPUKernels.kernel("diagonal_u32", in: .elementwise)
         GPUContext.compute(kernel, reading: [values], writing: [result]) { arguments in
-            arguments.buffer(values)
-            arguments.buffer(result)
+            arguments.buffers(values, result)
             arguments.value(SIMD3<UInt32>(UInt32(count), UInt32(stride), extracts ? 1 : 0))
             arguments.dispatch(count: count)
         }
@@ -195,8 +194,7 @@ public struct GPUEngine: EngineType {
         let kernel = GPUKernels.kernel("band_u32", in: .elementwise)
         let (values, target) = (buffer.values.memory, result.values.memory)
         GPUContext.compute(kernel, reading: [values], writing: [target]) { arguments in
-            arguments.buffer(values)
-            arguments.buffer(target)
+            arguments.buffers(values, target)
             arguments.value(SIMD4<Int32>(Int32(rows), Int32(columns), Int32(belowDiagonal ?? limit), Int32(aboveDiagonal ?? limit)))
             arguments.dispatch(threads: .init(width: columns, height: rows, depth: 1), threadgroup: .init(width: 32, height: 8, depth: 1))
         }
@@ -239,7 +237,7 @@ public struct GPUEngine: EngineType {
     /// Row-major strides of a shape that is padded with ones to the given dimensionality, with the stride 0 for axes of size 1.
     private static func broadcastStrides(of shape: [Int], dim: Int) -> [Int] {
         let padded = [Int](repeating: 1, count: dim - shape.count) + shape
-        return zip(padded, GPULayout.contiguousStrides(padded)).map { $0 == 1 ? 0 : $1 }
+        return zip(padded, ShapeUtil.contiguousStrides(of: padded)).map { $0 == 1 ? 0 : $1 }
     }
 
     public static func broadcastAdd<N: NumericType>(lhs: ShapedBuffer<N, GPU>, rhs: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
@@ -309,7 +307,7 @@ public struct GPUEngine: EngineType {
         }
         let (shape, strides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arrangement)
         let permuted = GPUKernels.temporary(count: values.count, near: result.values.memory)
-        GPUKernels.stridedCopy(source: values.values.memory, result: permuted, layout: GPULayout(shape: shape, strides: [strides, GPULayout.contiguousStrides(shape)]))
+        GPUKernels.stridedCopy(source: values.values.memory, result: permuted, layout: GPULayout(shape: shape, strides: [strides, ShapeUtil.contiguousStrides(of: shape)]))
         GPUKernels.reduce(reduction, element, values: permuted, result: result.values.memory, context: context?.values.memory, outer: values.count / length, length: length, inner: 1, scale: scale)
     }
 
@@ -399,15 +397,15 @@ public struct GPUEngine: EngineType {
         GPUKernels.unary(name, element, values: values.values.memory, result: result.values.memory, count: result.count)
     }
 
-    public static func exp<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    public static func exp<N: FloatingPointNumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("exp", values: values, result: result, host: CPUEngine.exp)
     }
 
-    public static func log<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    public static func log<N: FloatingPointNumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("log", values: values, result: result, host: CPUEngine.log)
     }
 
-    public static func sqrt<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    public static func sqrt<N: FloatingPointNumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("sqrt", values: values, result: result, host: CPUEngine.sqrt)
     }
 
@@ -419,19 +417,19 @@ public struct GPUEngine: EngineType {
         unary("heaviside", supportsIntegers: true, values: values, result: result, host: CPUEngine.heaviside)
     }
 
-    public static func sin<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    public static func sin<N: FloatingPointNumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("sin", values: values, result: result, host: CPUEngine.sin)
     }
 
-    public static func cos<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    public static func cos<N: FloatingPointNumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("cos", values: values, result: result, host: CPUEngine.cos)
     }
 
-    public static func tan<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    public static func tan<N: FloatingPointNumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("tan", values: values, result: result, host: CPUEngine.tan)
     }
 
-    public static func tanh<N: NumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    public static func tanh<N: FloatingPointNumericType>(values: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         unary("tanh", values: values, result: result, host: CPUEngine.tanh)
     }
 
@@ -515,7 +513,7 @@ public struct GPUEngine: EngineType {
         guard values.count > 0 else {
             return
         }
-        guard let element = gpuElement(N.self, elements: values.count, reading: [values.values.memory, indices.values.memory, result.values.memory], writing: [result.values.memory]) else {
+        guard let element = gpuElement(N.self, elements: values.count, reading: [values.values.memory, indices.values.memory], writing: [result.values.memory]) else {
             CPUEngine.scatterAddRows(values: values.host, indices: indices.host, result: result.host, ignoreIndex: ignoreIndex)
             return
         }
@@ -533,10 +531,9 @@ public struct GPUEngine: EngineType {
     private static func indexed(_ name: String, values: GPUBuffer, indices: GPUBuffer, result: GPUBuffer, sizes: SIMD4<Int32>) {
         let kernel = GPUKernels.kernel(name, in: .copy)
         GPUContext.compute(kernel, reading: [values, indices], writing: [result]) { arguments in
-            arguments.buffer(values)
-            arguments.buffer(indices)
-            arguments.buffer(result)
+            arguments.buffers(values, indices, result)
             arguments.value(sizes)
+            arguments.indexErrors()
             arguments.dispatch(count: Int(sizes.x))
         }
     }
@@ -556,7 +553,7 @@ public struct GPUEngine: EngineType {
             GPUKernels.transpose(source: values.values.memory, result: result.values.memory, batch: dim == 3 ? shape[0] : 1, rows: shape[dim - 1], columns: shape[dim - 2])
             return
         }
-        let layout = GPULayout(shape: shape, strides: [sourceStrides, GPULayout.contiguousStrides(shape)])
+        let layout = GPULayout(shape: shape, strides: [sourceStrides, ShapeUtil.contiguousStrides(of: shape)])
         guard layout.isSupported else {
             CPUEngine.permuteAxes(values: values.host, result: result.host, arrangement: arrangement)
             return
@@ -569,13 +566,7 @@ public struct GPUEngine: EngineType {
             return
         }
         let (shape, sourceStrides) = StridedIteration.permutationLayout(sourceShape: values.shape, arrangement: arrangement)
-        let contiguous = GPULayout.contiguousStrides(shape)
-        let layout = GPULayout(shape: shape, strides: [sourceStrides, contiguous, contiguous])
-        guard let element = gpuElement(N.self, elements: result.count, reading: [values.values.memory, add.values.memory], writing: [result.values.memory]), layout.isSupported else {
-            CPUEngine.permuteAxesAdd(values: values.host, add: add.host, result: result.host, arrangement: arrangement)
-            return
-        }
-        GPUKernels.stridedCopy(source: values.values.memory, adding: add.values.memory, element: element, result: result.values.memory, layout: layout)
+        stridedAdd(source: values.values, strides: sourceStrides, adding: add.values, result: result.values, shape: shape)
     }
 
     public static func arange<N: NumericType>(lowerBound: N, upperBound: N, result: MutableShapedBuffer<N, GPU>) {
@@ -605,23 +596,11 @@ public struct GPUEngine: EngineType {
     }
 
     public static func unstackAdd<N: NumericType>(stacked: ShapedBuffer<N, GPU>, add: [ShapedBuffer<N, GPU>], result: [MutableShapedBuffer<N, GPU>], axis: Int) {
-        let stackedStrides = GPULayout.contiguousStrides(stacked.shape)
+        let stackedStrides = ShapeUtil.contiguousStrides(of: stacked.shape)
         var position = 0
         for (target, summand) in zip(result, add) {
-            let contiguous = GPULayout.contiguousStrides(target.shape)
-            let layout = GPULayout(shape: target.shape, strides: [stackedStrides, contiguous, contiguous])
             let source = stacked.values.advanced(by: position * stackedStrides[axis])
-            if let element = gpuElement(N.self, elements: target.count, reading: [source.memory, summand.values.memory], writing: [target.values.memory]), layout.isSupported {
-                GPUKernels.stridedCopy(source: source.memory, adding: summand.values.memory, element: element, result: target.values.memory, layout: layout)
-            } else {
-                let (sourcePointer, summandPointer) = (source.host.memory.assumingMemoryBound(to: N.self), summand.values.host.memory.assumingMemoryBound(to: N.self))
-                let targetPointer = target.values.host.memory.assumingMemoryBound(to: N.self)
-                var index = 0
-                StridedIteration.forEachOffset(shape: layout.shape, strides: layout.strides[0], layout.strides[1]) { sourceOffset, targetOffset in
-                    targetPointer[targetOffset] = sourcePointer[sourceOffset] + summandPointer[index]
-                    index += 1
-                }
-            }
+            stridedAdd(source: source, strides: stackedStrides, adding: summand.values, result: target.values, shape: target.shape)
             position += target.shape[axis]
         }
     }
@@ -657,13 +636,23 @@ public struct GPUEngine: EngineType {
             return
         }
         let (count, rowLength) = (values.shape[0], values.count / values.shape[0])
-        let layout = GPULayout(shape: [count, rowLength], strides: [[-rowLength, 1], [rowLength, 1], [rowLength, 1]])
-        let source = values.values.advanced(by: (count - 1) * rowLength)
-        guard let element = gpuElement(N.self, elements: result.count, reading: [values.values.memory, add.values.memory], writing: [result.values.memory]) else {
-            CPUEngine.reverseAdd(values: values.host, add: add.host, result: result.host)
+        // The source starts at its last row and moves backwards.
+        stridedAdd(source: values.values.advanced(by: (count - 1) * rowLength), strides: [-rowLength, 1], adding: add.values, result: result.values, shape: [count, rowLength])
+    }
+
+    /// Writes the sum of the source, which is read with the given strides, and the summand into the result. The summand
+    /// and the result are contiguous with the given shape. The sum is computed on the host when the GPU has no kernel for it.
+    private static func stridedAdd<N: NumericType>(source: Buffer<N, GPU>, strides: [Int], adding summand: Buffer<N, GPU>, result: MutableBuffer<N, GPU>, shape: [Int]) {
+        let contiguous = ShapeUtil.contiguousStrides(of: shape)
+        let layout = GPULayout(shape: shape, strides: [strides, contiguous, contiguous])
+        if let element = gpuElement(N.self, elements: shape.reduce(1, *), reading: [source.memory, summand.memory], writing: [result.memory]), layout.isSupported {
+            GPUKernels.stridedCopy(source: source.memory, adding: summand.memory, element: element, result: result.memory, layout: layout)
             return
         }
-        GPUKernels.stridedCopy(source: source.memory, adding: add.values.memory, element: element, result: result.values.memory, layout: layout)
+        let (sourceElements, summandElements, resultElements) = (source.host.immutable.baseAddress!, summand.host.immutable.baseAddress!, result.host.pointer.baseAddress!)
+        StridedIteration.forEachOffset(shape: layout.shape, strides: layout.strides[0], layout.strides[1]) { sourceOffset, offset in
+            resultElements[offset] = sourceElements[sourceOffset] + summandElements[offset]
+        }
     }
 
     // MARK: Convolution helpers
@@ -700,8 +689,7 @@ public struct GPUEngine: EngineType {
         let kernel = GPUKernels.kernel("img2col_u32", in: .copy)
         let (image, matrix) = (values.values.memory, result.values.memory)
         GPUContext.compute(kernel, reading: [image], writing: [matrix]) { arguments in
-            arguments.buffer(image)
-            arguments.buffer(matrix)
+            arguments.buffers(image, matrix)
             arguments.value(geometry)
             arguments.dispatch(threads: .init(width: columns, height: rows, depth: 1), threadgroup: .init(width: 64, height: 4, depth: 1))
         }
@@ -717,8 +705,7 @@ public struct GPUEngine: EngineType {
         let kernel = GPUKernels.kernel("col2img_float", in: .copy)
         let (source, target) = (matrix.values.memory, image.values.memory)
         GPUContext.compute(kernel, reading: [source], writing: [target]) { arguments in
-            arguments.buffer(source)
-            arguments.buffer(target)
+            arguments.buffers(source, target)
             arguments.value(geometry)
             arguments.dispatch(count: image.count)
         }

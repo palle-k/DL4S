@@ -44,9 +44,9 @@ extension GPUTests {
         @Test(arguments: [false, true])
         func decodingStepsMatchCPU(attendsToEncoder: Bool) {
             let cpuDecoder = DecodingFixture.decoder(Float.self, attendsToEncoder: attendsToEncoder)
-            let input = GPUTest.random([2, 5, DecodingFixture.hiddenDim], seed: 80)
-            let next = GPUTest.random([3, 1, DecodingFixture.hiddenDim], seed: 81)
-            let encoder = attendsToEncoder ? GPUTest.random([2, 5, DecodingFixture.hiddenDim], seed: 82) : nil
+            let input = Tensor<Float, CPU>.uniform([2, 5, DecodingFixture.hiddenDim], seed: 80)
+            let next = Tensor<Float, CPU>.uniform([3, 1, DecodingFixture.hiddenDim], seed: 81)
+            let encoder = attendsToEncoder ? Tensor<Float, CPU>.uniform([2, 5, DecodingFixture.hiddenDim], seed: 82) : nil
             GPUTest.compare("decoding, encoder attention: \(attendsToEncoder)") { gpu in
                 guard gpu else {
                     return decodeSteps(cpuDecoder, input: input, next: next, encoder: encoder)

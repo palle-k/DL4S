@@ -30,7 +30,7 @@ import Foundation
 /// The layer sequences a dense layer, GeLU activation, another dense layer and a dropout layer.
 /// Furthermore, it has a residual connection and the output is layer normalized.
 @Layer
-public struct PointwiseFeedForward<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct PointwiseFeedForward<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     public var dense1: Dense<Element, Device>
     public var dense2: Dense<Element, Device>
     public var norm: LayerNorm<Element, Device>

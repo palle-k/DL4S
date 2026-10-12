@@ -46,7 +46,7 @@ import Metal
 //   permutations took 0.8 ms in the forward pass and 1.5 ms in the backward pass.
 
 public extension GPUFusedOperations {
-    static func scaledDotProductAttention<N: NumericType>(queries: ShapedBuffer<N, GPU>, keys: ShapedBuffer<N, GPU>, values: ShapedBuffer<N, GPU>, mask: ShapedBuffer<N, GPU>?, temperature: N, result: MutableShapedBuffer<N, GPU>) {
+    static func scaledDotProductAttention<N: FloatingPointNumericType>(queries: ShapedBuffer<N, GPU>, keys: ShapedBuffer<N, GPU>, values: ShapedBuffer<N, GPU>, mask: ShapedBuffer<N, GPU>?, temperature: N, result: MutableShapedBuffer<N, GPU>) {
         guard let attention = GPUAttention(queries: queries, keys: keys, values: values, mask: mask, temperature: temperature) else {
             matrixProductAttention(queries: queries, keys: keys, values: values, mask: mask, temperature: temperature, result: result)
             return
@@ -55,7 +55,7 @@ public extension GPUFusedOperations {
         attention.forward(result: result.gpuBuffer)
     }
 
-    static func scaledDotProductAttentionBackward<N: NumericType>(
+    static func scaledDotProductAttentionBackward<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, GPU>,
         keys: ShapedBuffer<N, GPU>,
         values: ShapedBuffer<N, GPU>,
@@ -77,7 +77,7 @@ public extension GPUFusedOperations {
     // Multi-head attention with the kernels passes the projections to the attention in their layout, so that no heads are
     // split or joined: [batchSize, count, heads, size].
 
-    static func multiHeadAttention<N: NumericType>(
+    static func multiHeadAttention<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, GPU>,
         keys: ShapedBuffer<N, GPU>,
         values: ShapedBuffer<N, GPU>,
@@ -112,7 +112,7 @@ public extension GPUFusedOperations {
         }
     }
 
-    static func multiHeadAttentionBackward<N: NumericType>(
+    static func multiHeadAttentionBackward<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, GPU>,
         keys: ShapedBuffer<N, GPU>,
         values: ShapedBuffer<N, GPU>,
@@ -158,7 +158,7 @@ public extension GPUFusedOperations {
 extension GPUFusedOperations {
     /// Shapes of the attention of the heads of multi-head attention, or nil when its kernels do not support them or the
     /// operation runs on the host.
-    private static func kernelAttentionShape<N: NumericType>(
+    private static func kernelAttentionShape<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, GPU>,
         keys: ShapedBuffer<N, GPU>,
         values: ShapedBuffer<N, GPU>,
@@ -181,15 +181,15 @@ extension GPUFusedOperations {
 }
 
 /// Scaled dot product attention with the kernels of `attention.metal`.
-private struct GPUAttention<N: NumericType> {
+private struct GPUAttention<N: FloatingPointNumericType> {
     /// Threadgroups of the kernels for a head size: the rows of queries or keys and the threads of a threadgroup.
     /// The values follow from the template arguments of the kernels in `attention.metal`, `ATTENTION_KERNELS`.
     private struct Configuration {
         let forward: AttentionThreadgroup
         let keyValueGradient: AttentionThreadgroup
-        let queryGradient: AttentionThreadgroup
-        /// Whether `attention_gradients` exists for the head size, which adds the query gradient in the key and value kernel.
-        let fusesQueryGradient: Bool
+        /// Threadgroup of `attention_query_gradient`, or nil when `attention_gradients` adds the query gradient in the key and
+        /// value kernel for the head size.
+        let queryGradient: AttentionThreadgroup?
 
         /// Number of queries of a block of the key and value kernels, `KB` in `ATTENTION_KERNELS`
         static var keyValueQueryBlock: Int {
@@ -199,11 +199,11 @@ private struct GPUAttention<N: NumericType> {
         static func forHeadSize(_ size: Int) -> Configuration? {
             switch size {
             case 32:
-                Configuration(forward: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), keyValueGradient: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), queryGradient: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), fusesQueryGradient: true)
+                Configuration(forward: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), keyValueGradient: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), queryGradient: nil)
             case 64:
-                Configuration(forward: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), keyValueGradient: AttentionThreadgroup(rowsPerSIMDGroup: 8, simdGroups: 8), queryGradient: AttentionThreadgroup(rowsPerSIMDGroup: 8, simdGroups: 8), fusesQueryGradient: true)
+                Configuration(forward: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), keyValueGradient: AttentionThreadgroup(rowsPerSIMDGroup: 8, simdGroups: 8), queryGradient: nil)
             case 128:
-                Configuration(forward: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), keyValueGradient: AttentionThreadgroup(rowsPerSIMDGroup: 8, simdGroups: 8), queryGradient: AttentionThreadgroup(rowsPerSIMDGroup: 8, simdGroups: 8), fusesQueryGradient: false)
+                Configuration(forward: AttentionThreadgroup(rowsPerSIMDGroup: 16, simdGroups: 4), keyValueGradient: AttentionThreadgroup(rowsPerSIMDGroup: 8, simdGroups: 8), queryGradient: AttentionThreadgroup(rowsPerSIMDGroup: 8, simdGroups: 8))
             default:
                 nil
             }
@@ -353,7 +353,7 @@ private struct GPUAttention<N: NumericType> {
         let statistics = Statistics(maximum: GPUKernels.temporary(count: rows, near: gradient), inverseSum: GPUKernels.temporary(count: rows, near: gradient), gradientDot: GPUKernels.temporary(count: rows, near: gradient), outputGradient: gradient)
         // With the head sizes 32 and 64, the key and value kernel also adds the query gradient with atomics, so that no second
         // kernel computes the weights again. The forward kernel sets the query gradient to zero when it does not accumulate.
-        let fusedQueryGradient = configuration.fusesQueryGradient ? queryGradient : nil
+        let fusedQueryGradient = configuration.queryGradient == nil ? queryGradient : nil
         let zeros = fusedQueryGradient?.adds == false ? fusedQueryGradient?.gpuBuffer : nil
         let tiles = encodeMaskTiles()
         encodeForward(result: output?.gpuBuffer, statistics: statistics, zeros: zeros, tiles: tiles)
@@ -380,24 +380,18 @@ private struct GPUAttention<N: NumericType> {
             let targets = kernelGradients.compactMap { $0?.gpuBuffer }
             let (dk, dv) = (keyGradient?.gpuBuffer ?? targets[0], valueGradient?.gpuBuffer ?? targets[0])
             let dq = fusedQueryGradient?.gpuBuffer ?? targets[0]
-            // The atomics read the gradients that they add to.
-            let atomics = parameters.splits > 1
-            let accumulated = [keyGradient, valueGradient].compactMap { $0?.adds == true || atomics ? $0?.gpuBuffer : nil } + (fusedQueryGradient == nil ? [] : [dq])
             let threadgroups = MTLSize(width: keyBlocks, height: shape.keyHeads, depth: shape.keyBatchSize * Int(parameters.splits))
             let name = fusedQueryGradient == nil ? "attention_key_value_gradient_\(size)" : "attention_gradients_\(size)"
-            context.compute(GPUKernels.kernel(name, in: .attention), reading: common + accumulated, writing: targets) { arguments in
+            context.compute(GPUKernels.kernel(name, in: .attention), reading: common, writing: targets) { arguments in
                 encodeInputs(&arguments, statistics: statistics)
-                arguments.buffer(dk)
-                arguments.buffer(dv)
+                arguments.buffers(dk, dv)
                 arguments.value(parameters)
-                arguments.buffer(tiles ?? queries)
-                arguments.buffer(dq)
+                arguments.buffers(tiles ?? queries, dq)
                 arguments.dispatch(threadgroups: threadgroups, threadgroup: MTLSize(width: kernel.threads, height: 1, depth: 1))
             }
         }
-        if let queryGradient, fusedQueryGradient == nil {
+        if let queryGradient, let kernel = configuration.queryGradient {
             let dq = queryGradient.gpuBuffer
-            let kernel = configuration.queryGradient
             let threadgroups = MTLSize(width: (shape.queryCount + kernel.rows - 1) / kernel.rows, height: shape.heads, depth: shape.batchSize)
             context.compute(GPUKernels.kernel("attention_query_gradient_\(size)", in: .attention), reading: common + (queryGradient.adds ? [dq] : []), writing: [dq]) { arguments in
                 encodeInputs(&arguments, statistics: statistics)
@@ -431,20 +425,12 @@ private struct GPUAttention<N: NumericType> {
         let kernel = configuration.forward
         let threadgroups = MTLSize(width: (shape.queryCount + kernel.rows - 1) / kernel.rows, height: shape.heads, depth: shape.batchSize)
         GPUContext.compute(GPUKernels.kernel("attention_forward_\(shape.keyDim)", in: .attention), reading: reading, writing: writing) { arguments in
-            arguments.buffer(queries)
-            arguments.buffer(keys)
-            arguments.buffer(values)
+            arguments.buffers(queries, keys, values)
             // The kernel does not write the buffers of outputs that it does not compute.
-            arguments.buffer(mask ?? queries)
-            arguments.buffer(result ?? queries)
-            arguments.buffer(statistics?.maximum ?? queries)
-            arguments.buffer(statistics?.inverseSum ?? queries)
-            arguments.buffer(statistics?.gradientDot ?? queries)
-            arguments.buffer(statistics?.outputGradient ?? queries)
+            arguments.buffers(mask ?? queries, result ?? queries, statistics?.maximum ?? queries, statistics?.inverseSum ?? queries, statistics?.gradientDot ?? queries, statistics?.outputGradient ?? queries)
             arguments.value(parameters)
             arguments.value(Int32(outputs))
-            arguments.buffer(tiles ?? queries)
-            arguments.buffer(zeros ?? queries)
+            arguments.buffers(tiles ?? queries, zeros ?? queries)
             arguments.dispatch(threadgroups: threadgroups, threadgroup: MTLSize(width: kernel.threads, height: 1, depth: 1))
         }
     }
@@ -457,8 +443,7 @@ private struct GPUAttention<N: NumericType> {
         let tiles = GPUKernels.temporary(byteCount: maskTiles.count, near: mask)
         let maskShape = SIMD2<Int32>(Int32(maskTiles.batchSize), Int32(maskTiles.heads))
         GPUContext.compute(GPUKernels.kernel("attention_mask_tiles", in: .attention), reading: [mask], writing: [tiles]) { arguments in
-            arguments.buffer(mask)
-            arguments.buffer(tiles)
+            arguments.buffers(mask, tiles)
             arguments.value(parameters)
             arguments.value(maskShape)
             arguments.dispatch(threads: MTLSize(width: maskTiles.keyTiles, height: maskTiles.queryTiles, depth: maskTiles.batchSize * maskTiles.heads), threadgroup: MTLSize(width: 8, height: 8, depth: 1))
@@ -469,14 +454,7 @@ private struct GPUAttention<N: NumericType> {
     /// Sets the queries, keys, values, mask, the statistics of the forward pass, and the gradient of the result, the first
     /// arguments of both backward kernels.
     private func encodeInputs(_ arguments: inout GPUArguments, statistics: Statistics) {
-        arguments.buffer(queries)
-        arguments.buffer(keys)
-        arguments.buffer(values)
-        arguments.buffer(mask ?? queries)
-        arguments.buffer(statistics.maximum)
-        arguments.buffer(statistics.inverseSum)
-        arguments.buffer(statistics.gradientDot)
-        arguments.buffer(statistics.outputGradient)
+        arguments.buffers(queries, keys, values, mask ?? queries, statistics.maximum, statistics.inverseSum, statistics.gradientDot, statistics.outputGradient)
     }
 }
 

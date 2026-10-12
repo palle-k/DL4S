@@ -30,16 +30,8 @@ extension Float: NumericType {
         String(format: "%.\(maxDecimals)f", self)
     }
 
-    public func toUInt8() -> UInt8 {
-        UInt8(Swift.max(Swift.min(self, 255), 0))
-    }
-
     public static var one: Float {
         1.0
-    }
-
-    public func toInt() -> Int {
-        Int(self)
     }
 
     public var floatValue: Float {
@@ -48,10 +40,6 @@ extension Float: NumericType {
 
     public var doubleValue: Double {
         Double(self)
-    }
-
-    public var intValue: Int32 {
-        Int32(self)
     }
 
     public func sqrt() -> Float {
@@ -72,18 +60,6 @@ extension Float: NumericType {
 
     public func cos() -> Float {
         Foundation.cos(self)
-    }
-
-    public func tan() -> Float {
-        Foundation.tanh(self)
-    }
-
-    public func sinh() -> Float {
-        Foundation.sinh(self)
-    }
-
-    public func cosh() -> Float {
-        Foundation.cosh(self)
     }
 
     public func tanh() -> Float {

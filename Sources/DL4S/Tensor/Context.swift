@@ -134,7 +134,8 @@ extension Tensor {
         let (tag, shape) = (tag(), source.shape)
         var result = self
         result.context = TensorContext(tag: tag, sources: [source], backpropagateAccumulate: [{ resultGradient, accumulated in
-            var gradient = GradientAccumulator<Element, Device>(isRequested: true, shape: shape, value: accumulated)
+            // The accumulated gradient moves into the accumulator, so that the accumulator is the only reference to its storage.
+            var gradient = GradientAccumulator<Element, Device>(isRequested: true, shape: shape, value: consume accumulated)
             backpropagate(resultGradient, &gradient)
             guard let value = gradient.value.take() else {
                 preconditionFailure("The backward pass of \(tag) did not compute the gradient of its source.")

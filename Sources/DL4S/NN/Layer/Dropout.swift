@@ -27,7 +27,7 @@ import Foundation
 
 /// A dropout layer
 @Layer
-public struct Dropout<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct Dropout<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Rate, with which dropout is applied.
     public var rate: Float
 

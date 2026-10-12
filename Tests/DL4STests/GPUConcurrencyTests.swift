@@ -25,7 +25,6 @@
 
 #if canImport(Metal) && canImport(MetalPerformanceShaders)
 import DL4S
-import Foundation
 import Synchronization
 import Testing
 
@@ -35,20 +34,6 @@ import Testing
 extension GPUTests {
     @Suite(.serialized)
     struct GPUConcurrencyTests {
-        private func run(threadCount: Int, _ body: @escaping @Sendable (_ threadIndex: Int) -> Void) {
-            let group = DispatchGroup()
-            for index in 0 ..< threadCount {
-                group.enter()
-                let thread = Thread {
-                    body(index)
-                    group.leave()
-                }
-                thread.name = "DL4S.GPUConcurrencyTests.\(index)"
-                thread.start()
-            }
-            group.wait()
-        }
-
         /// Trains a model with the given seed for a few steps and returns its predictions.
         private static func train(seed: UInt64, steps: Int) -> [Float] {
             var generator = WyHash(seed: seed)
@@ -77,7 +62,7 @@ extension GPUTests {
             GPUTest.withHostExecutionLimit(0) {
                 let references = (0 ..< threadCount).map { Self.train(seed: UInt64($0), steps: 10) }
                 let results = Mutex<[Int: [Float]]>([:])
-                run(threadCount: threadCount) { index in
+                runOnThreads(threadCount, name: "DL4S.GPUConcurrencyTests") { index in
                     let result = Self.train(seed: UInt64(index), steps: 10)
                     results.withLock { $0[index] = result }
                 }
@@ -92,7 +77,7 @@ extension GPUTests {
             let threadCount = 6
             let references = (0 ..< threadCount).map { Self.train(seed: UInt64($0), steps: 10) }
             let results = Mutex<[Int: [Float]]>([:])
-            run(threadCount: threadCount) { index in
+            runOnThreads(threadCount, name: "DL4S.GPUConcurrencyTests") { index in
                 let result = Self.train(seed: UInt64(index), steps: 10)
                 results.withLock { $0[index] = result }
             }
@@ -109,7 +94,7 @@ extension GPUTests {
             let input = Tensor<Float, GPU>(uniformlyDistributedWithShape: [128, 256], min: -1, max: 1, using: &generator)
             let reference = input.matrixMultiplied(with: weights).gaussianErrorLinear().softmax(axis: 1).elements
             let mismatches = Atomic<Int>(0)
-            run(threadCount: 8) { _ in
+            runOnThreads(8, name: "DL4S.GPUConcurrencyTests") { _ in
                 for _ in 0 ..< 20 {
                     // Some results are read at once and some later, so reads and new work of other threads interleave.
                     let result = input.matrixMultiplied(with: weights).gaussianErrorLinear().softmax(axis: 1)

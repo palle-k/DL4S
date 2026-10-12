@@ -90,22 +90,22 @@ enum CPUKernels {
     }
 
     @inline(__always)
-    static func exp<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func exp<N: FloatingPointNumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         N.exp(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
     @inline(__always)
-    static func log<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func log<N: FloatingPointNumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         N.log(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
     @inline(__always)
-    static func tanh<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func tanh<N: FloatingPointNumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         N.tanh(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
     @inline(__always)
-    static func sqrt<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func sqrt<N: FloatingPointNumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         N.sqrt(val: UnsafeBufferPointer(start: values, count: count), result: UnsafeMutableBufferPointer(start: result, count: count), count: count)
     }
 
@@ -115,7 +115,7 @@ enum CPUKernels {
     ///
     /// The input and the result can be the same memory.
     @inline(__always)
-    static func tanhOfHalf<N: NumericType>(_ x: UnsafePointer<N>, scale: N = 1, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func tanhOfHalf<N: FloatingPointNumericType>(_ x: UnsafePointer<N>, scale: N = 1, into result: UnsafeMutablePointer<N>, count: Int) {
         let factor = scale * N(0.5)
         for i in 0 ..< count {
             result[i] = x[i] * factor
@@ -127,7 +127,7 @@ enum CPUKernels {
     ///
     /// The input and the result can be the same memory.
     @inline(__always)
-    static func sigmoid<N: NumericType>(_ x: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func sigmoid<N: FloatingPointNumericType>(_ x: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         let half = N(0.5)
         tanhOfHalf(x, into: result, count: count)
         for i in 0 ..< count {
@@ -139,7 +139,7 @@ enum CPUKernels {
     ///
     /// `scratch` holds `rows * rowLength` elements. The values and the scratch buffer can be the same memory.
     @inline(__always)
-    static func softmaxRows<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, scratch: UnsafeMutablePointer<N>, rows: Int, rowLength: Int) {
+    static func softmaxRows<N: FloatingPointNumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, scratch: UnsafeMutablePointer<N>, rows: Int, rowLength: Int) {
         subtractRowMaxima(values, into: scratch, rows: rows, rowLength: rowLength)
         exp(scratch, into: result, count: rows * rowLength)
         for row in 0 ..< rows {
@@ -155,7 +155,7 @@ enum CPUKernels {
     ///
     /// `scratch` holds `rowLength` elements. The gradient of the result and the result can be the same memory.
     @inline(__always)
-    static func softmaxRowsBackward<N: NumericType>(
+    static func softmaxRowsBackward<N: FloatingPointNumericType>(
         output: UnsafePointer<N>,
         outputGradient: UnsafePointer<N>,
         scale: N = 1,
@@ -179,7 +179,7 @@ enum CPUKernels {
 
     /// Subtracts the maximum of every row from the row, so that the exponentials do not overflow.
     @inline(__always)
-    static func subtractRowMaxima<N: NumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, rows: Int, rowLength: Int) {
+    static func subtractRowMaxima<N: FloatingPointNumericType>(_ values: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, rows: Int, rowLength: Int) {
         for row in 0 ..< rows {
             let (source, target) = (values + row * rowLength, result + row * rowLength)
             let maximum = maximum(source, count: rowLength)
@@ -237,12 +237,12 @@ enum CPUKernels {
         let sourceShape = Array(repeating: 1, count: shape.count - values.dim) + values.shape
         // A broadcast axis has the stride 0, so every position along it reads the same element.
         // The last axis is copied or filled as a row.
-        let denseStrides = MemoryOps.strides(from: sourceShape)
+        let denseStrides = ShapeUtil.contiguousStrides(of: sourceShape)
         let sourceStrides = zip(sourceShape, denseStrides).map { $0 == 1 ? 0 : $1 }
         let (source, target) = (values.elementPointer, result.elementPointer)
         let rowLength = shape.last ?? 1
         let rowStride = sourceStrides.last ?? 0
-        StridedIteration.forEachOffset(shape: Array(shape.dropLast()), strides: Array(sourceStrides.dropLast()), Array(MemoryOps.strides(from: shape).dropLast())) { sourceOffset, targetOffset in
+        StridedIteration.forEachOffset(shape: Array(shape.dropLast()), strides: Array(sourceStrides.dropLast()), Array(ShapeUtil.contiguousStrides(of: shape).dropLast())) { sourceOffset, targetOffset in
             if rowStride == 0 {
                 fill(target + targetOffset, with: source[sourceOffset], count: rowLength)
             } else {

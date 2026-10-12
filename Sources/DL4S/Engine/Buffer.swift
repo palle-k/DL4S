@@ -176,12 +176,6 @@ public extension MemoryOperatorsType {
     static func allocateBuffer<Element>(withShape shape: [Int], type: Element.Type) -> MutableShapedBuffer<Element, Device> {
         MutableShapedBuffer(values: allocateBuffer(withCapacity: shape.reduce(1, *), type: type), shape: shape)
     }
-
-    /// Releases all resources associated with the given buffer
-    /// - Parameter buffer: Buffer to release
-    static func free<Element>(_ buffer: MutableShapedBuffer<Element, Device>) {
-        free(buffer.values)
-    }
 }
 
 extension Buffer: CustomStringConvertible {

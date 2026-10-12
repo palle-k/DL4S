@@ -28,7 +28,7 @@ import Foundation
 // MARK: Composed gradients
 
 extension Composed {
-    static func gatedRecurrentUnitStepBackward<N, Device>(
+    static func gatedRecurrentUnitStepBackward<N: FloatingPointNumericType, Device>(
         updateInput: Tensor<N, Device>,
         resetInput: Tensor<N, Device>,
         candidateInput: Tensor<N, Device>,

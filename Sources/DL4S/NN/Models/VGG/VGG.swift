@@ -25,7 +25,7 @@
 
 import Foundation
 
-public protocol VGGBase: LayerType where Parameter: RandomizableType {
+public protocol VGGBase: LayerType where Parameter: FloatingPointNumericType {
     associatedtype Conv1: LayerType where Conv1.Parameter == Parameter, Conv1.Device == Device, Conv1.Inputs == Tensor<Parameter, Device>, Conv1.Outputs == Tensor<Parameter, Device>
     associatedtype Conv2: LayerType where Conv2.Parameter == Parameter, Conv2.Device == Device, Conv2.Inputs == Tensor<Parameter, Device>, Conv2.Outputs == Tensor<Parameter, Device>
     associatedtype Conv3: LayerType where Conv3.Parameter == Parameter, Conv3.Device == Device, Conv3.Inputs == Tensor<Parameter, Device>, Conv3.Outputs == Tensor<Parameter, Device>

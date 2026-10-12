@@ -39,9 +39,9 @@
 // The kernel for a single row computes a vector-matrix product, which is limited by the bandwidth of the reads of the matrix.
 
 struct GemmParameters {
-    int M, N, K;
+    int rows, columns, inner;
     int lda, ldb, ldc;
-    int transposeA, transposeB;
+    int transposeA;
     float alpha, beta;
     long batchStrideA, batchStrideB, batchStrideC;
     // Number of parts of the inner axis and the length of a part. With more than one part, the threadgroups along z
@@ -50,6 +50,13 @@ struct GemmParameters {
 };
 
 constant constexpr int BK = 16;
+
+// Writes alpha * value + beta * target. The target is not read when beta is 0, so that it can hold NaN or uninitialized values.
+inline void store_product(device float* target, float value, constant GemmParameters& p) {
+    float result = p.alpha * value;
+    if (p.beta != 0.0f) { result += p.beta * *target; }
+    *target = result;
+}
 
 template <bool TA, bool TB, int TILE>
 kernel void gemm(device const float* A [[buffer(0)]], device const float* B [[buffer(1)]], device float* C [[buffer(2)]], constant GemmParameters& p [[buffer(3)]],
@@ -70,7 +77,7 @@ kernel void gemm(device const float* A [[buffer(0)]], device const float* B [[bu
 
     const int batch = int(group.z) / p.splits;
     const int kBegin = (int(group.z) % p.splits) * p.splitLength;
-    const int kEnd = min(p.K, kBegin + p.splitLength);
+    const int kEnd = min(p.inner, kBegin + p.splitLength);
     A += long(batch) * p.batchStrideA;
     B += long(batch) * p.batchStrideB;
     C += long(group.z) * p.batchStrideC;
@@ -79,9 +86,9 @@ kernel void gemm(device const float* A [[buffer(0)]], device const float* B [[bu
     // Rows and columns of the tile in the stored layout of the operands.
     const int aRow0 = TA ? 0 : m0, aColumn0 = TA ? m0 : 0;
     const int bRow0 = TB ? n0 : 0, bColumn0 = TB ? 0 : n0;
-    const int aRowLimit = TA ? kEnd : p.M, aColumnLimit = TA ? p.M : kEnd;
-    const int bRowLimit = TB ? p.N : kEnd, bColumnLimit = TB ? kEnd : p.N;
-    const bool interior = m0 + TILE <= p.M && n0 + TILE <= p.N;
+    const int aRowLimit = TA ? kEnd : p.rows, aColumnLimit = TA ? p.rows : kEnd;
+    const int bRowLimit = TB ? p.columns : kEnd, bColumnLimit = TB ? kEnd : p.columns;
+    const bool interior = m0 + TILE <= p.rows && n0 + TILE <= p.columns;
 
     simdgroup_float8x8 accumulators[BLOCKS][BLOCKS];
     UNROLL for (int i = 0; i < BLOCKS; i++) {
@@ -164,13 +171,8 @@ kernel void gemm(device const float* A [[buffer(0)]], device const float* B [[bu
             int row = m0 + sm + i * 8 + blockRow;
             UNROLL for (int e = 0; e < 2; e++) {
                 int column = n0 + sn + j * 8 + blockColumn + e;
-                if (row < p.M && column < p.N) {
-                    device float* target = C + long(row) * p.ldc + column;
-                    float value = p.alpha * elements[e];
-                    if (p.beta != 0.0f) {
-                        value += p.beta * *target;
-                    }
-                    *target = value;
+                if (row < p.rows && column < p.columns) {
+                    store_product(C + long(row) * p.ldc + column, elements[e], p);
                 }
             }
         }
@@ -194,17 +196,14 @@ GEMM(true, true, 32, "gemm_tt_32")
 kernel void gemm_split_sum(device const float* partial [[buffer(0)]], device float* C [[buffer(1)]], constant GemmParameters& p [[buffer(2)]],
                            uint3 position [[thread_position_in_grid]]) {
     int column = int(position.x), row = int(position.y), batch = int(position.z);
-    if (column >= p.N || row >= p.M) { return; }
-    long matrix = long(p.M) * p.N;
-    device const float* parts = partial + long(batch) * p.splits * matrix + long(row) * p.N + column;
+    if (column >= p.columns || row >= p.rows) { return; }
+    long matrix = long(p.rows) * p.columns;
+    device const float* parts = partial + long(batch) * p.splits * matrix + long(row) * p.columns + column;
     float sum = 0.0f;
     for (int part = 0; part < p.splits; part++) {
         sum += parts[long(part) * matrix];
     }
-    device float* target = C + long(batch) * p.batchStrideC + long(row) * p.ldc + column;
-    float value = p.alpha * sum;
-    if (p.beta != 0.0f) { value += p.beta * *target; }
-    *target = value;
+    store_product(C + long(batch) * p.batchStrideC + long(row) * p.ldc + column, sum, p);
 }
 
 // Vector-matrix products for results with one row, which read every element of the matrix once.
@@ -225,9 +224,9 @@ kernel void gemv_n(device const float* A [[buffer(0)]], device const float* B [[
     C += long(group.z) * p.batchStrideC;
     // The row vector is A with the stride 1, or the first column of a transposed A with the stride lda.
     const int aStride = p.transposeA ? p.lda : 1;
-    const int start = part * p.splitLength, end = min(start + p.splitLength, p.K);
+    const int start = part * p.splitLength, end = min(start + p.splitLength, p.inner);
     float4 sum = float4(0.0f);
-    if (column + 3 < p.N) {
+    if (column + 3 < p.columns) {
         for (int k = start + int(simd); k < end; k += 8) {
             float4 row = float4(*reinterpret_cast<device const packed_float4*>(B + long(k) * p.ldb + column));
             sum = fma(float4(A[long(k) * aStride]), row, sum);
@@ -237,7 +236,7 @@ kernel void gemv_n(device const float* A [[buffer(0)]], device const float* B [[
             float a = A[long(k) * aStride];
             device const float* row = B + long(k) * p.ldb;
             UNROLL for (int e = 0; e < 4; e++) {
-                if (column + e < p.N) { sum[e] = fma(a, row[column + e], sum[e]); }
+                if (column + e < p.columns) { sum[e] = fma(a, row[column + e], sum[e]); }
             }
         }
     }
@@ -247,10 +246,8 @@ kernel void gemv_n(device const float* A [[buffer(0)]], device const float* B [[
     float4 total = float4(0.0f);
     UNROLL for (int s = 0; s < 8; s++) { total += partials[s][lane]; }
     UNROLL for (int e = 0; e < 4; e++) {
-        if (column + e < p.N) {
-            float value = p.alpha * total[e];
-            if (p.beta != 0.0f) { value += p.beta * C[column + e]; }
-            C[column + e] = value;
+        if (column + e < p.columns) {
+            store_product(C + column + e, total[e], p);
         }
     }
 }
@@ -259,20 +256,18 @@ kernel void gemv_n(device const float* A [[buffer(0)]], device const float* B [[
 kernel void gemv_t(device const float* A [[buffer(0)]], device const float* B [[buffer(1)]], device float* C [[buffer(2)]], constant GemmParameters& p [[buffer(3)]],
                    uint2 group [[threadgroup_position_in_grid]], uint simd [[simdgroup_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]]) {
     int column = int(group.x) * 8 + int(simd);
-    if (column >= p.N) { return; }
+    if (column >= p.columns) { return; }
     A += long(group.y) * p.batchStrideA;
     B += long(group.y) * p.batchStrideB;
     C += long(group.y) * p.batchStrideC;
     int aStride = p.transposeA ? p.lda : 1;
     device const float* row = B + long(column) * p.ldb;
     float sum = 0.0f;
-    for (int k = int(lane); k < p.K; k += 32) {
+    for (int k = int(lane); k < p.inner; k += 32) {
         sum = fma(A[long(k) * aStride], row[k], sum);
     }
     sum = simd_sum(sum);
     if (lane == 0) {
-        float value = p.alpha * sum;
-        if (p.beta != 0.0f) { value += p.beta * C[column]; }
-        C[column] = value;
+        store_product(C + column, sum, p);
     }
 }

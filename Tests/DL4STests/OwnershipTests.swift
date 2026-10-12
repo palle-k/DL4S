@@ -33,7 +33,7 @@ struct OwnershipTests {
     /// The closure receives the gradient of the probe and the accumulated gradient of `source`, and returns the new accumulated gradient.
     func probeBackpropagation(_ source: Tensor<Float, CPU>, _ backpropagate: @escaping @Sendable (Tensor<Float, CPU>, consuming Tensor<Float, CPU>?) -> Tensor<Float, CPU>) -> Tensor<Float, CPU> {
         Tensor(
-            handle: source.handle,
+            memory: source.memory,
             shape: source.shape,
             context: TensorContext(tag: "probe", sources: [source], backpropagateAccumulate: [backpropagate]),
         )
@@ -59,20 +59,20 @@ struct OwnershipTests {
 
     @Test func testAccumulationIntoSharedBufferLeavesOtherTensorUnchanged() {
         let original = Tensor<Float, CPU>([[1, 2], [3, 4]])
-        var accumulator = original
-        accumulator.addingPermuted(Tensor([[10, 20], [30, 40]]), permutation: [1, 0])
+        var accumulator = GradientAccumulator(isRequested: true, shape: [2, 2], value: original)
+        accumulator.add(Tensor([[10, 20], [30, 40]]))
 
         #expect(original == Tensor([[1, 2], [3, 4]]))
-        #expect(accumulator == Tensor([[11, 32], [23, 44]]))
+        #expect(accumulator.value == Tensor([[11, 22], [33, 44]]))
     }
 
     @Test func testAccumulationIntoUniqueBufferIsInPlace() {
-        var accumulator = Tensor<Float, CPU>([[1, 2], [3, 4]])
-        let address = accumulator.bufferAddress
-        accumulator.addingPermuted(Tensor([[10, 20], [30, 40]]), permutation: [1, 0])
+        var accumulator = GradientAccumulator<Float, CPU>(isRequested: true, shape: [2, 2], value: Tensor([[1, 2], [3, 4]]))
+        let address = accumulator.value?.bufferAddress
+        accumulator.add(Tensor([[10, 20], [30, 40]]))
 
-        #expect(accumulator.bufferAddress == address)
-        #expect(accumulator == Tensor([[11, 32], [23, 44]]))
+        #expect(accumulator.value?.bufferAddress == address)
+        #expect(accumulator.value == Tensor([[11, 22], [33, 44]]))
     }
 
     /// A residual connection makes the gradient of the sum and the gradient of the product share one buffer.
@@ -197,6 +197,6 @@ struct OwnershipTests {
 private extension Tensor where Device == CPU {
     /// Address of the storage as an integer, so tests can record it from `@Sendable` closures.
     var bufferAddress: UInt? {
-        values.values.memory.baseAddress.map { UInt(bitPattern: $0) }
+        values.values.bytes.baseAddress.map { UInt(bitPattern: $0) }
     }
 }

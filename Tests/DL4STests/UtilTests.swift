@@ -28,19 +28,25 @@ import Foundation
 import Testing
 
 struct UtilTests {
-    @Test func testFileReader() throws {
-        let packageManifestURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // DL4STests
-            .deletingLastPathComponent() // Tests
-            .deletingLastPathComponent() // repository root
-            .appendingPathComponent("Package.swift")
+    @Test func emptyTensorsPassThroughOperations() {
+        var batch = Tensor<Float, CPU>(uninitializedShape: [0, 4])
+        batch.requiresGradient = true
+        let weights = Tensor<Float, CPU>(repeating: 1, shape: [4, 3], requiresGradient: true)
+        let scale = Tensor<Float, CPU>(repeating: 1, shape: [4], requiresGradient: true)
+        let shift = Tensor<Float, CPU>(repeating: 0, shape: [4], requiresGradient: true)
+        let outputs = [
+            batch.softmax(axis: 1),
+            batch.layerNormalized(scale: scale, shift: shift),
+            batch.matrixMultiplied(with: weights),
+            batch + Tensor<Float, CPU>(repeating: 1, shape: [1, 4]),
+        ]
+        #expect(outputs.map(\.shape) == [[0, 4], [0, 4], [0, 3], [0, 4]])
+        let gradients = outputs[2].reduceSum().gradients(of: [batch, weights])
+        #expect(gradients[0].shape == [0, 4])
+        #expect(gradients[1].elements == [Float](repeating: 0, count: 12))
 
-        let lines = Array(File(url: packageManifestURL))
-
-        let expected = try String(contentsOf: packageManifestURL, encoding: .utf8)
-            .split(separator: "\n", omittingEmptySubsequences: false)
-            .map(String.init)
-        #expect(lines == expected)
-        #expect(lines.first == "// swift-tools-version:6.2")
+        let pieces = Tensor<Float, CPU>([1, 2, 3]).unstacked(along: 0, withLengths: [3, 0])
+        #expect(pieces.map(\.shape) == [[3], [0]])
+        #expect(Tensor<Float, CPU>(uninitializedShape: [3, 0])[1].shape == [0])
     }
 }

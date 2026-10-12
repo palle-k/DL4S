@@ -525,3 +525,5 @@ extension Double: CPUNumeric {
         #endif
     }
 }
+
+extension Double: CPUFloatingPointNumeric {}

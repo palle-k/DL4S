@@ -27,7 +27,7 @@ import Foundation
 
 /// Transformer encoder layer consisting of a self-attention and a pointwise feed forward layer as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 @Layer
-public struct TransformerEncoderBlock<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct TransformerEncoderBlock<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     public var selfAttention: MultiHeadAttention<Element, Device>
     public var pointwiseFeedForward: PointwiseFeedForward<Element, Device>
 

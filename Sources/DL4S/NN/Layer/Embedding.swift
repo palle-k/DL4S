@@ -27,7 +27,7 @@ import Foundation
 
 /// Transforms discrete values, such as word indices, into a lower dimensional embedding.
 @Layer
-public struct Embedding<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct Embedding<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Matrix of embedding vectors, shape [inputFeatures, outputSize]
     public var embeddingMatrix: Tensor<Element, Device>
 

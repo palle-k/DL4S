@@ -128,11 +128,7 @@ struct GPUImplicitConvolution {
         let tileHeight = parameters.m >= 128 ? 128 : 64
         let threadgroups = MTLSize(width: (Int(parameters.n) + 63) / 64, height: (Int(parameters.m) + tileHeight - 1) / tileHeight, depth: 1)
         GPUContext.compute(GPUKernels.kernel("implicit_gemm_\(tileHeight)", in: .convolution), reading: reading, writing: [c]) { arguments in
-            arguments.buffer(a)
-            arguments.buffer(b)
-            arguments.buffer(c)
-            arguments.buffer(columnTable)
-            arguments.buffer(bias ?? a)
+            arguments.buffers(a, b, c, columnTable, bias ?? a)
             arguments.value(parameters)
             arguments.dispatch(threadgroups: threadgroups, threadgroup: MTLSize(width: tileHeight * 2, height: 1, depth: 1))
         }
@@ -141,9 +137,7 @@ struct GPUImplicitConvolution {
     private static func gatherColumns(_ source: GPUBuffer, rowStride: Int, table: GPUBuffer, rows: Int, columns: Int, into result: GPUBuffer) {
         let parameters = SIMD3<Int32>(Int32(rows), Int32(columns), Int32(rowStride))
         GPUContext.compute(GPUKernels.kernel("gather_columns", in: .convolution), reading: [source, table], writing: [result]) { arguments in
-            arguments.buffer(source)
-            arguments.buffer(table)
-            arguments.buffer(result)
+            arguments.buffers(source, table, result)
             arguments.value(parameters)
             arguments.dispatch(threads: MTLSize(width: columns, height: rows, depth: 1), threadgroup: MTLSize(width: 32, height: 8, depth: 1))
         }

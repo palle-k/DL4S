@@ -27,7 +27,7 @@ import Foundation
 
 /// Multi-Head Attention Layer following [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 @Layer
-public struct MultiHeadAttention<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct MultiHeadAttention<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Matrix multiplied with queries before dot product attention
     public var qDense: Tensor<Element, Device>
     /// Matrix multiplied with keys before dot product attention

@@ -45,7 +45,8 @@ public protocol DeviceType: Sendable {
 /// Memory manager for a device
 public protocol MemoryOperatorsType {
     associatedtype Device: DeviceType where Device.Memory == Self
-    associatedtype RawBuffer
+    /// A region of the memory of the device. It keeps the memory alive while it exists.
+    associatedtype RawBuffer: Sendable
 
     /// Allocates a buffer with capacity for the given amount of elements of the given type.
     ///
@@ -54,9 +55,11 @@ public protocol MemoryOperatorsType {
     ///   - type: Type of elements in the buffer
     static func allocateBuffer<Element>(withCapacity: Int, type: Element.Type) -> MutableBuffer<Element, Device>
 
-    /// Releases all resources associated with the given buffer
-    /// - Parameter buffer: Buffer to release
-    static func free<Element>(_ buffer: MutableBuffer<Element, Device>)
+    /// Returns whether no other buffer refers to the memory of the given buffer.
+    ///
+    /// A tensor writes its memory in place only when no other buffer refers to it.
+    /// - Parameter buffer: Buffer to check
+    static func isUniquelyReferenced(_ buffer: inout RawBuffer) -> Bool
 
     /// Copies values from the given host buffer to the memory of the device
     /// - Parameters:
@@ -84,7 +87,7 @@ public protocol MemoryOperatorsType {
     static func getValue<Element>(from source: Buffer<Element, Device>) -> Element
 
     /// Returns the number of elements in the buffer
-    /// - Parameter buffer: Number of elements in the buffer
+    /// - Parameter buffer: Buffer to count the elements of
     static func getSize<Element>(of buffer: Buffer<Element, Device>) -> Int
 
     /// Retrieves a slice of values from the given buffer
@@ -92,18 +95,16 @@ public protocol MemoryOperatorsType {
     ///   - slice: Index
     ///   - buffer: Buffer to read from
     ///   - shape: Shape of the buffer
-    /// - Returns: The result buffer, a boolean indicating whether the result buffer is a copy (true) or a pointer in the same memory region (false) and the shape of the result.
-    ///   The result becomes the storage of a new tensor handle. When it is not a copy, that handle must list the source as its parent.
-    static func get<Element>(slice: [Int?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (MutableBuffer<Element, Device>, Bool, [Int])
+    /// - Returns: The elements of the slice with its shape. The result can refer to the memory of `buffer`.
+    static func get<Element>(slice: [Int?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> MutableShapedBuffer<Element, Device>
 
     /// Retrieves a slice of values from the given buffer
     /// - Parameters:
     ///   - slice: Index
     ///   - buffer: Buffer to read from
     ///   - shape: Shape of the buffer
-    /// - Returns: The result buffer, a boolean indicating whether the result buffer is a copy (true) or a pointer in the same memory region (false) and the shape of the result.
-    ///   The result becomes the storage of a new tensor handle. When it is not a copy, that handle must list the source as its parent.
-    static func get<Element>(slice: [CountableRange<Int>?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> (MutableBuffer<Element, Device>, Bool, [Int])
+    /// - Returns: The elements of the slice with its shape. The result can refer to the memory of `buffer`.
+    static func get<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, Device>, with shape: [Int]) -> MutableShapedBuffer<Element, Device>
 
     /// Writes a slice into a target buffer
     /// - Parameters:
@@ -215,7 +216,7 @@ public protocol EngineType {
 
     /// Extracts the diagonal of a matrix
     /// - Parameters:
-    ///   - value: Matrix to extract diagonal from
+    ///   - values: Matrix to extract diagonal from
     ///   - target: Vector to write diagonal values to
     static func extractDiagonal<N: NumericType>(values: ShapedBuffer<N, Device>, target: MutableShapedBuffer<N, Device>)
 
@@ -383,19 +384,19 @@ public protocol EngineType {
     /// - Parameters:
     ///   - values: Buffer of values to exponentiate
     ///   - result: Result buffer
-    static func exp<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func exp<N: FloatingPointNumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Element-wise log
     /// - Parameters:
     ///   - values: Buffer of values to compute the log of
     ///   - result: Result buffer
-    static func log<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func log<N: FloatingPointNumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Element-wise square root
     /// - Parameters:
     ///   - values: Buffer of values to compute the square root of
     ///   - result: Result buffer
-    static func sqrt<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func sqrt<N: FloatingPointNumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Element-wise recitified linear unit
     /// - Parameters:
@@ -413,25 +414,25 @@ public protocol EngineType {
     /// - Parameters:
     ///   - values: Buffer of values to compute the sine of
     ///   - result: Result buffer
-    static func sin<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func sin<N: FloatingPointNumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Element-wise cosine
     /// - Parameters:
     ///   - values: Buffer of values to compute the cosine of
     ///   - result: Result buffer
-    static func cos<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func cos<N: FloatingPointNumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Element-wise tangent
     /// - Parameters:
     ///   - values: Buffer of values to compute the tangent of
     ///   - result: Result buffer
-    static func tan<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func tan<N: FloatingPointNumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Element-wise hyperbolic tangent
     /// - Parameters:
     ///   - values: Buffer of values to compute the hyperbolic tangent of
     ///   - result: Result buffer
-    static func tanh<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func tanh<N: FloatingPointNumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Element-wise maximum
     /// - Parameters:
@@ -507,7 +508,7 @@ public protocol EngineType {
     /// - Parameters:
     ///   - values: Buffer of values to permute
     ///   - result: Result buffer
-    ///   - arrangement: Arangement of axes.
+    ///   - arrangement: Arrangement of axes.
     static func permuteAxes<N: NumericType>(values: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, arrangement: [Int])
 
     /// Performs an axis permutation / transpose oepration and adds another value vector
@@ -515,7 +516,7 @@ public protocol EngineType {
     ///   - values: Buffer of values to permute
     ///   - add: Buffer of values to add to the result
     ///   - result: Result buffer
-    ///   - arrangement: Arangement of axes.
+    ///   - arrangement: Arrangement of axes.
     static func permuteAxesAdd<N: NumericType>(values: ShapedBuffer<N, Device>, add: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>, arrangement: [Int])
 
     /// Reverses the order of elements along the first dimension of the buffer
@@ -575,8 +576,8 @@ public protocol EngineType {
 
     /// Performs an col2img transformation that aggregates all windows from a convolution matrix into an image tensor.
     /// - Parameters:
-    ///   - values: Buffer, shape [channels * kernelWidth * kernelHeight, number of windows]
-    ///   - result: Image buffer, shape [batchSize, channels, height, width]
+    ///   - matrix: Buffer, shape [channels * kernelWidth * kernelHeight, number of windows]
+    ///   - image: Image buffer, shape [batchSize, channels, height, width]
     ///   - kernelWidth: Width of the convolution kernel
     ///   - kernelHeight: Height of the convolution kernel
     ///   - padding: Zero padding applied around the input image

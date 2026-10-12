@@ -66,16 +66,9 @@ public extension Tensor {
             stride: stride,
         )
 
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "im2col",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    resultGradient.col2img(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride, resultShape: self.shape)
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "im2col", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.col2img(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride, resultShape: self.shape))
+        }
     }
 
     /// Computes the inverse of the img2col operation.
@@ -104,16 +97,9 @@ public extension Tensor {
             stride: stride,
         )
 
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "col2im",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    resultGradient.img2col(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "col2im", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.img2col(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride))
+        }
     }
 }
 
@@ -147,6 +133,9 @@ public extension Tensor {
             ConvUtil.outputSize(inputSize: shape[2], kernelSize: filters.shape[2], padding: padding, stride: stride),
             ConvUtil.outputSize(inputSize: shape[3], kernelSize: filters.shape[3], padding: padding, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.convolution2d(input: values, filters: filters.values, bias: bias?.values, padding: padding, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "conv2d", sources: self, filters, bias) { resultGradient, inputGradient, filterGradient, biasGradient in
@@ -183,6 +172,9 @@ public extension Tensor {
             ConvUtil.transposedOutputSize(inputSize: shape[2], kernelSize: filters.shape[2], inset: inset, stride: stride),
             ConvUtil.transposedOutputSize(inputSize: shape[3], kernelSize: filters.shape[3], inset: inset, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.transposedConvolution2d(input: values, filters: filters.values, bias: bias?.values, inset: inset, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "transposedConv2d", sources: self, filters, bias) { resultGradient, inputGradient, filterGradient, biasGradient in
@@ -218,6 +210,9 @@ public extension Tensor {
             ConvUtil.outputSize(inputSize: shape[2], kernelSize: windowSize, padding: padding, stride: stride),
             ConvUtil.outputSize(inputSize: shape[3], kernelSize: windowSize, padding: padding, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.maxPooling2d(input: values, windowSize: windowSize, padding: padding, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "maxPool2d", source: self) { resultGradient, gradient in
@@ -249,6 +244,9 @@ public extension Tensor {
             ConvUtil.outputSize(inputSize: shape[2], kernelSize: windowSize, padding: padding, stride: stride),
             ConvUtil.outputSize(inputSize: shape[3], kernelSize: windowSize, padding: padding, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.averagePooling2d(input: values, windowSize: windowSize, padding: padding, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "averagePool2d", source: self) { resultGradient, gradient in

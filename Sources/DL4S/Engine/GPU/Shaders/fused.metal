@@ -46,6 +46,9 @@ struct ElementwiseParameters {
     uint accumulate;
 };
 
+// Factor of the input in the sigmoid of the approximation of GELU, see `FusedConstants.geluSlope`.
+constant constexpr float GELU_SLOPE = 1.702f;
+
 #define ACTIVATION_FORWARD(NAME, EXPRESSION) \
 kernel void NAME##_forward(device const float* input [[buffer(0)]], device float* result [[buffer(1)]], device const float* parameters [[buffer(2)]], \
                            constant ElementwiseParameters& p [[buffer(3)]], uint i [[thread_position_in_grid]]) { \
@@ -121,6 +124,23 @@ inline float group_max(float value, threadgroup float* scratch, uint lane, uint 
     uint row [[threadgroup_position_in_grid]], uint t [[thread_position_in_threadgroup]], uint size [[threads_per_threadgroup]], \
     uint lane [[thread_index_in_simdgroup]], uint simd [[simdgroup_index_in_threadgroup]]
 
+// The variance is the mean of the squares of the centered values, which cannot be negative. E[x²] - E[x]² can be
+// negative after rounding.
+struct Moments {
+    float mean;
+    float variance;
+};
+
+// Mean and biased variance of a row, which the threads of a threadgroup read together. Every thread receives the result.
+inline Moments row_moments(device const float* x, uint length, threadgroup float* scratch, uint t, uint size, uint lane, uint simd, uint simds) {
+    float sum = 0.0f;
+    for (uint i = t; i < length; i += size) { sum += x[i]; }
+    float mean = group_sum(sum, scratch, lane, simd, simds) / float(length);
+    float squares = 0.0f;
+    for (uint i = t; i < length; i += size) { float centered = x[i] - mean; squares += centered * centered; }
+    return { mean, group_sum(squares, scratch, lane, simd, simds) / float(length) };
+}
+
 kernel void softmax_forward(device const float* input [[buffer(0)]], device float* result [[buffer(1)]], constant RowParameters& p [[buffer(2)]], ROW_ARGUMENTS) {
     threadgroup float scratch[32];
     uint simds = (size + 31) / 32;
@@ -182,13 +202,9 @@ kernel void layer_norm_forward(device const float* input [[buffer(0)]], device c
     uint simds = (size + 31) / 32;
     device const float* x = input + ulong(row) * p.length;
     device float* y = result + ulong(row) * p.length;
-    float sum = 0.0f;
-    for (uint i = t; i < p.length; i += size) { sum += x[i]; }
-    float mean = group_sum(sum, scratch, lane, simd, simds) / float(p.length);
-    float squares = 0.0f;
-    for (uint i = t; i < p.length; i += size) { float centered = x[i] - mean; squares += centered * centered; }
-    float variance = group_sum(squares, scratch, lane, simd, simds) / float(p.length);
-    float inverse = 1.0f / (precise::sqrt(variance) + p.epsilon);
+    Moments moments = row_moments(x, p.length, scratch, t, size, lane, simd, simds);
+    float mean = moments.mean;
+    float inverse = 1.0f / (precise::sqrt(moments.variance) + p.epsilon);
     for (uint i = t; i < p.length; i += size) { y[i] = (x[i] - mean) * inverse * scale[i] + shift[i]; }
 }
 
@@ -203,12 +219,9 @@ kernel void layer_norm_backward(device const float* input [[buffer(0)]], device 
     ulong offset = ulong(row) * p.length;
     device const float* x = input + offset;
     device const float* g = outputGradient + offset;
-    float sum = 0.0f;
-    for (uint i = t; i < p.length; i += size) { sum += x[i]; }
-    float mean = group_sum(sum, scratch, lane, simd, simds) / float(p.length);
-    float squares = 0.0f;
-    for (uint i = t; i < p.length; i += size) { float centered = x[i] - mean; squares += centered * centered; }
-    float deviation = precise::sqrt(group_sum(squares, scratch, lane, simd, simds) / float(p.length));
+    Moments moments = row_moments(x, p.length, scratch, t, size, lane, simd, simds);
+    float mean = moments.mean;
+    float deviation = precise::sqrt(moments.variance);
     float divisor = deviation + p.epsilon;
     float inverse = 1.0f / divisor;
     if (outputs.y != 0) {
@@ -241,17 +254,23 @@ struct ColumnParameters {
     float epsilon;
 };
 
+// Mean and biased variance of column j.
+inline Moments column_moments(device const float* input, constant ColumnParameters& p, uint j) {
+    float sum = 0.0f;
+    for (uint row = 0; row < p.rows; row++) { sum += input[ulong(row) * p.columns + j]; }
+    float mean = sum / float(p.rows);
+    float squares = 0.0f;
+    for (uint row = 0; row < p.rows; row++) { float centered = input[ulong(row) * p.columns + j] - mean; squares += centered * centered; }
+    return { mean, squares / float(p.rows) };
+}
+
 // Normalizes with the statistics of the batch and writes the mean and the biased variance of every column.
 kernel void batch_norm_forward(device const float* input [[buffer(0)]], device const float* scale [[buffer(1)]], device const float* shift [[buffer(2)]],
                                device float* result [[buffer(3)]], device float* mean [[buffer(4)]], device float* variance [[buffer(5)]],
                                constant ColumnParameters& p [[buffer(6)]], uint j [[thread_position_in_grid]]) {
     if (j >= p.columns) { return; }
-    float sum = 0.0f;
-    for (uint row = 0; row < p.rows; row++) { sum += input[ulong(row) * p.columns + j]; }
-    float mu = sum / float(p.rows);
-    float squares = 0.0f;
-    for (uint row = 0; row < p.rows; row++) { float centered = input[ulong(row) * p.columns + j] - mu; squares += centered * centered; }
-    float sigma2 = squares / float(p.rows);
+    Moments moments = column_moments(input, p, j);
+    float mu = moments.mean, sigma2 = moments.variance;
     mean[j] = mu;
     variance[j] = sigma2;
     float factor = scale[j] / (precise::sqrt(sigma2) + p.epsilon);
@@ -269,12 +288,9 @@ kernel void batch_norm_backward(device const float* input [[buffer(0)]], device 
                                 device float* inputGradient [[buffer(3)]], device float* scaleSums [[buffer(4)]], device float* shiftSums [[buffer(5)]],
                                 constant ColumnParameters& p [[buffer(6)]], constant uint& computesInput [[buffer(7)]], uint j [[thread_position_in_grid]]) {
     if (j >= p.columns) { return; }
-    float sum = 0.0f;
-    for (uint row = 0; row < p.rows; row++) { sum += input[ulong(row) * p.columns + j]; }
-    float mu = sum / float(p.rows);
-    float squares = 0.0f;
-    for (uint row = 0; row < p.rows; row++) { float centered = input[ulong(row) * p.columns + j] - mu; squares += centered * centered; }
-    float deviation = precise::sqrt(squares / float(p.rows));
+    Moments moments = column_moments(input, p, j);
+    float mu = moments.mean;
+    float deviation = precise::sqrt(moments.variance);
     float divisor = deviation + p.epsilon;
     float inverse = 1.0f / divisor;
     float gamma = scale[j];
@@ -466,19 +482,25 @@ inline int2 pooling_windows(int position, uint windowSize, int padding, uint str
     return int2(first, last);
 }
 
-kernel void max_pool_forward(device const float* input [[buffer(0)]], device float* result [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],
-                             uint3 position [[thread_position_in_grid]]) {
+// The forward pass of max pooling (MAXIMUM) and of average pooling.
+template <bool MAXIMUM>
+kernel void pool_forward(device const float* input [[buffer(0)]], device float* result [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],
+                         uint3 position [[thread_position_in_grid]]) {
     if (position.x >= p.outputWidth || position.y >= p.outputHeight) { return; }
     device const float* image = input + position.z * p.height * p.width;
     int firstRow = int(position.y * p.stride) - p.padding, firstColumn = int(position.x * p.stride) - p.padding;
-    float best = -INFINITY;
+    float combined = MAXIMUM ? -INFINITY : 0.0f;
     for (uint i = 0; i < p.windowSize; i++) {
         for (uint j = 0; j < p.windowSize; j++) {
-            best = max(best, pooling_element(image, firstRow + int(i), firstColumn + int(j), p));
+            float value = pooling_element(image, firstRow + int(i), firstColumn + int(j), p);
+            combined = MAXIMUM ? max(combined, value) : combined + value;
         }
     }
-    result[(position.z * p.outputHeight + position.y) * p.outputWidth + position.x] = best;
+    result[(position.z * p.outputHeight + position.y) * p.outputWidth + position.x] = MAXIMUM ? combined : combined * p.scale;
 }
+
+template [[host_name("max_pool_forward")]] kernel void pool_forward<true>(device const float*, device float*, constant PoolingParameters&, uint3);
+template [[host_name("average_pool_forward")]] kernel void pool_forward<false>(device const float*, device float*, constant PoolingParameters&, uint3);
 
 // Writes the position in its window of the first largest value of every window in row-major order, as on the CPU, or 255
 // for a padding element, whose gradient is dropped. The backward kernel reads the positions, so it scans every window once.
@@ -519,20 +541,6 @@ kernel void max_pool_backward(device const uchar* positions [[buffer(0)]], devic
         }
     }
     store(result, (position.z * p.height + position.y) * p.width + position.x, sum, p.accumulate);
-}
-
-kernel void average_pool_forward(device const float* input [[buffer(0)]], device float* result [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],
-                                 uint3 position [[thread_position_in_grid]]) {
-    if (position.x >= p.outputWidth || position.y >= p.outputHeight) { return; }
-    device const float* image = input + position.z * p.height * p.width;
-    int firstRow = int(position.y * p.stride) - p.padding, firstColumn = int(position.x * p.stride) - p.padding;
-    float sum = 0.0f;
-    for (uint i = 0; i < p.windowSize; i++) {
-        for (uint j = 0; j < p.windowSize; j++) {
-            sum += pooling_element(image, firstRow + int(i), firstColumn + int(j), p);
-        }
-    }
-    result[(position.z * p.outputHeight + position.y) * p.outputWidth + position.x] = sum * p.scale;
 }
 
 kernel void average_pool_backward(device const float* outputGradient [[buffer(0)]], device float* result [[buffer(1)]], constant PoolingParameters& p [[buffer(2)]],

@@ -110,12 +110,9 @@ public extension GPUFusedOperations {
             return
         }
         let math = BufferMath<N, GPU>()
-        defer {
-            math.release()
-        }
         // The graph stores its results, so a gradient that is added to the accumulated gradient goes through an intermediate buffer.
         let gradients = requested.compactMap { $0 }
-        let targets = gradients.map { $0.adds ? math.temporary($0.shape) : $0.values }
+        let targets = gradients.map { $0.adds ? GPU.Memory.allocateBuffer(withShape: $0.shape, type: N.self) : $0.values }
         let context = GPUContext.of(reading: [input.gpuBuffer, filters.gpuBuffer, outputGradient.gpuBuffer], writing: [])
         let graph = GPUCache.value(in: context.graphs, for: geometry.key(outputs: outputs)) {
             GPUGraph(device: context.device, inputShapes: [input.shape, filters.shape, outputGradient.shape]) { graph, inputs in

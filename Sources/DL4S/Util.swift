@@ -24,6 +24,7 @@
 //  SOFTWARE.
 
 import Foundation
+import Synchronization
 
 #if os(Linux)
 /// Stub that just calls the passed function on Linux.
@@ -33,17 +34,16 @@ func autoreleasepool<Result>(_ function: () -> Result) -> Result {
 }
 #endif
 
-extension Sequence {
-    func count(where predicate: (Element) throws -> Bool) rethrows -> Int {
-        try lazy.filter(predicate).count
-    }
-}
-
+/// The shape of the result of a broadcast operation. An axis of size 1 takes the size of the other operand, also when that
+/// size is 0.
 func shapeForBroadcastedOperands(_ lhs: [Int], _ rhs: [Int]) -> [Int] {
     let dim = Swift.max(lhs.count, rhs.count)
     let pLhs = Array(repeating: 1, count: dim - lhs.count) + lhs
     let pRhs = Array(repeating: 1, count: dim - rhs.count) + rhs
-    return zip(pLhs, pRhs).map(Swift.max)
+    return zip(pLhs, pRhs).map { lhsSize, rhsSize in
+        precondition(lhsSize == rhsSize || lhsSize == 1 || rhsSize == 1, "The shapes \(lhs) and \(rhs) cannot be broadcast.")
+        return lhsSize == 1 ? rhsSize : lhsSize
+    }
 }
 
 /// Iteration over the indices of a shape, with running offsets in two memory layouts instead of index arrays.
@@ -92,7 +92,7 @@ enum StridedIteration {
     ///   - arrangement: Destination axis of every source axis
     /// - Returns: The shape of the destination after merging, at least one axis, and the source stride of every axis.
     static func permutationLayout(sourceShape: [Int], arrangement: [Int]) -> (shape: [Int], sourceStrides: [Int]) {
-        let sourceStrides = MemoryOps.strides(from: sourceShape)
+        let sourceStrides = ShapeUtil.contiguousStrides(of: sourceShape)
         var shape = [Int](repeating: 1, count: sourceShape.count)
         var strides = [Int](repeating: 0, count: sourceShape.count)
         for axis in sourceShape.indices {
@@ -135,12 +135,6 @@ enum StridedIteration {
     }
 }
 
-prefix func ! <Parameters>(predicate: @escaping (Parameters) -> Bool) -> (Parameters) -> Bool {
-    { params in
-        !predicate(params)
-    }
-}
-
 public struct ProgressBar<UserInfo> {
     public let totalUnitCount: Int
     public private(set) var currentUnitCount: Int
@@ -170,8 +164,9 @@ public struct ProgressBar<UserInfo> {
         let remainingDuration = perUnitDuration * Double(totalUnitCount - currentUnitCount)
         let remainingString = Self.formatRemainingTime(remainingDuration)
 
-        let filled = String(repeating: "#", count: currentUnitCount * 30 / totalUnitCount)
-        let empty = String(repeating: " ", count: 30 - (currentUnitCount * 30 / totalUnitCount))
+        let filledCount = Self.filledCount(completed: currentUnitCount, total: totalUnitCount)
+        let filled = String(repeating: "#", count: filledCount)
+        let empty = String(repeating: " ", count: 30 - filledCount)
         print("\r\u{1b}[K\(label) [\(filled)\(empty)] (\(currentUnitCount)/\(totalUnitCount) - \(remainingString)) \(formatUserInfo(userInfo))", terminator: "")
         fflush(nil)
     }
@@ -180,118 +175,50 @@ public struct ProgressBar<UserInfo> {
         currentUnitCount = totalUnitCount
         print("\r\u{1b}[K\(label): Done.")
     }
-}
 
-public struct Progress<Element>: Sequence {
-    private struct ProgressIterator: IteratorProtocol {
-        var baseIterator: AnyIterator<Element>
-        let totalUnitCount: Int
-        var currentCount: Int
-        let label: String?
-        let unit: String?
-
-        mutating func next() -> Element? {
-            if let next = baseIterator.next() {
-                currentCount += 1
-                print(completed: currentCount, total: totalUnitCount)
-                return next
-            } else {
-                printCompleted()
-                return nil
-            }
+    // The total of a sequence is an underestimate, which the count of completed units can exceed, and it can be 0.
+    /// Number of the 30 characters of a bar that are filled.
+    static func filledCount(completed: Int, total: Int) -> Int {
+        guard total > 0 else {
+            return 30
         }
-
-        func print(completed: Int, total: Int) {
-            let filled = String(repeating: "#", count: currentCount * 30 / totalUnitCount)
-            let empty = String(repeating: " ", count: 30 - (currentCount * 30 / totalUnitCount))
-
-            let label = label.map { "\($0) " } ?? ""
-            let unitString = unit.map { "\($0) " } ?? ""
-            let userInfo = "(\(unitString)\(currentCount)/\(totalUnitCount))"
-
-            Swift.print("\r\033[K\(label)[\(filled)\(empty)] \(userInfo)", terminator: "")
-            fflush(nil)
-        }
-
-        func printCompleted() {
-            Swift.print("\r\033[K", terminator: "")
-            if let label {
-                Swift.print("\(label): ", terminator: "")
-            }
-            Swift.print("Done.")
-        }
-    }
-
-    private let base: AnySequence<Element>
-    public var label: String?
-    public var unit: String?
-
-    public init<S: Sequence>(_ sequence: S, label: String? = nil, unit: String? = nil) where S.Element == Element {
-        base = AnySequence(sequence)
-        self.label = label
-        self.unit = unit
-    }
-
-    public consuming func makeIterator() -> AnyIterator<Element> {
-        let baseIterator = base.makeIterator()
-        let progressIterator = ProgressIterator(
-            baseIterator: baseIterator,
-            totalUnitCount: base.underestimatedCount,
-            currentCount: 0,
-            label: label,
-            unit: unit,
-        )
-        return AnyIterator(progressIterator)
+        return Swift.min(Swift.max(completed * 30 / total, 0), 30)
     }
 }
 
-public extension Collection {
-    // @_specialize(where Self == Array<Int>)
-    func dropLast(while predicate: (Element) throws -> Bool) rethrows -> SubSequence {
-        var index = index(endIndex, offsetBy: -1)
-
-        while index > startIndex {
-            if try predicate(self[index]) {
-                index = self.index(index, offsetBy: -1)
-            } else {
-                return self[...index]
-            }
-        }
-
-        return self[..<index]
-    }
-
-    // @_specialize(where Self == Array<Int>)
+extension BidirectionalCollection {
+    /// Returns the elements at the end of the collection that satisfy the predicate.
     func suffix(while predicate: (Element) throws -> Bool) rethrows -> SubSequence {
-        var index = endIndex
-
-        while index > startIndex {
-            let nextIndex = self.index(index, offsetBy: -1)
-            if try predicate(self[nextIndex]) {
-                index = nextIndex
-            } else {
-                return self[index...]
+        var start = endIndex
+        while start > startIndex {
+            let previous = index(before: start)
+            guard try predicate(self[previous]) else {
+                break
             }
+            start = previous
         }
-
-        return self[...]
+        return self[start...]
     }
 }
 
-public extension Sequence {
-    @inline(__always)
+extension Sequence {
+    /// Returns the elements at the end of the sequence that satisfy the predicate.
     func suffix(while predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
         try Array(self).suffix(while: predicate)
-    }
-
-    @inline(__always)
-    func dropLast(while predicate: (Element) throws -> Bool) rethrows -> ArraySlice<Element> {
-        try Array(self).dropLast(while: predicate)
     }
 }
 
 /// Shapes of reductions and broadcasts.
 enum ShapeUtil {
+    /// Row-major strides of a shape.
+    static func contiguousStrides(of shape: [Int]) -> [Int] {
+        var strides = [Int](repeating: 1, count: shape.count)
+        for axis in shape.indices.dropLast().reversed() {
+            strides[axis] = strides[axis + 1] &* shape[axis + 1]
+        }
+        return strides
+    }
+
     /// The shape without the given axes.
     static func reducedShape(of shape: [Int], along axes: [Int]) -> [Int] {
         shape.indices.filter { !axes.contains($0) }.map { shape[$0] }
@@ -362,49 +289,67 @@ public enum ConvUtil {
     }
 }
 
-struct File: Sequence {
-    struct LineIterator: IteratorProtocol {
-        private var buffer: Data?
-        private let handle: FileHandle?
-        private var isCompleted = false
+/// A value that the copies of a value type share, and that several threads can read and replace.
+final class SharedValue<Value: Sendable>: Sendable {
+    private let storage: Mutex<Value>
 
-        init(handle: FileHandle?) {
-            self.handle = handle
-            buffer = nil
+    init(_ value: Value) {
+        storage = Mutex(value)
+    }
+
+    /// The current value.
+    var value: Value {
+        get {
+            storage.withLock { $0 }
         }
+        set {
+            storage.withLock { $0 = newValue }
+        }
+    }
+}
 
-        mutating func next() -> String? {
-            autoreleasepool { () -> String? in
-                guard let handle, !isCompleted else {
-                    return nil
-                }
+// MARK: Pointers
 
-                let chunkSize = 4096
+extension UnsafeMutableBufferPointer {
+    var immutable: UnsafeBufferPointer<Element> {
+        UnsafeBufferPointer(self)
+    }
 
-                if let buffer, let index = buffer.firstIndex(of: Character("\n").asciiValue!) {
-                    let line = String(data: buffer.prefix(upTo: index), encoding: .utf8)
-                    self.buffer = Data(buffer.dropFirst(index + 1)) // creating a copy resets the indexing, otherwise index points to the wrong position
-                    return line
-                } else {
-                    let nextChunk = handle.readData(ofLength: chunkSize)
-
-                    let buffer = (buffer ?? Data()) + nextChunk
-                    self.buffer = buffer
-
-                    if nextChunk.count == 0 {
-                        isCompleted = true
-                        return String(data: buffer, encoding: .utf8)
-                    }
-
-                    return next()
-                }
-            }
+    var pointee: Element {
+        get {
+            precondition(count > 0, "Out of bounds access")
+            return self[0]
+        }
+        nonmutating set {
+            precondition(count > 0, "Out of bounds access")
+            self[0] = newValue
         }
     }
 
-    let url: URL
+    func advanced(by offset: Int) -> UnsafeMutableBufferPointer<Element> {
+        precondition(offset >= 0 && offset <= count, "Out of bounds access")
+        return UnsafeMutableBufferPointer(start: baseAddress.map { $0 + offset }, count: count - offset)
+    }
 
-    consuming func makeIterator() -> LineIterator {
-        LineIterator(handle: try? FileHandle(forReadingFrom: url))
+    func pointer(capacity: Int) -> UnsafeMutablePointer<Element> {
+        precondition(capacity <= count, "Out of bounds access")
+        return baseAddress!
+    }
+}
+
+extension UnsafeBufferPointer {
+    var pointee: Element {
+        precondition(count > 0, "Out of bounds memory access")
+        return self[0]
+    }
+
+    func advanced(by offset: Int) -> UnsafeBufferPointer<Element> {
+        precondition(offset >= 0 && offset <= count, "Out of bounds access")
+        return UnsafeBufferPointer(start: baseAddress.map { $0 + offset }, count: count - offset)
+    }
+
+    func pointer(capacity: Int) -> UnsafePointer<Element> {
+        precondition(capacity <= count, "Out of bounds access")
+        return baseAddress!
     }
 }

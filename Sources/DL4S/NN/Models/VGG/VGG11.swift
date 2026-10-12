@@ -25,7 +25,7 @@
 
 import Foundation
 
-public struct VGG11<E: RandomizableType, D: DeviceType>: VGGBase, Sendable {
+public struct VGG11<E: FloatingPointNumericType, D: DeviceType>: VGGBase, Sendable {
     public typealias Parameter = E
     public typealias Device = D
 

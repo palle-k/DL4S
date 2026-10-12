@@ -27,7 +27,7 @@ import Foundation
 
 // MARK: Normalization
 
-public extension Tensor {
+public extension Tensor where Element: FloatingPointNumericType {
     /// Normalizes every sample to a mean of 0 and a standard deviation of 1, then scales and shifts it.
     ///
     /// The result is `(self - mean) / (sqrt(variance) + epsilon) * scale + shift`.
@@ -47,6 +47,9 @@ public extension Tensor {
         precondition(Array(shape.suffix(scale.dim)) == scale.shape, "The scale must have the shape of the trailing axes of the tensor.")
         precondition(shift.shape == scale.shape, "The shift must have the shape of the scale.")
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.layerNormalization(input: values, scale: scale.values, shift: shift.values, epsilon: epsilon, result: result.mutableValues)
 
         return result.attachingContext(tag: "layerNorm", sources: self, scale, shift) { resultGradient, inputGradient, scaleGradient, shiftGradient in
@@ -70,9 +73,13 @@ public extension Tensor {
     #endif
     @_specialize(where Element == Float, Device == CPU)
     func batchNormalized(scale: Self, shift: Self, epsilon: Element = Element(1e-5)) -> BatchNormalizationResult<Element, Device> {
+        precondition(dim >= 1 && shape[0] > 0, "The statistics of a batch need at least one element per column.")
         var result = Self(uninitializedShape: shape)
         var mean = Self(uninitializedShape: Array(shape.dropFirst()))
         var variance = Self(uninitializedShape: Array(shape.dropFirst()))
+        guard result.count > 0 else {
+            return BatchNormalizationResult(output: result, mean: mean, variance: variance)
+        }
         Device.FusedOperations.batchNormalization(input: values, scale: scale.values, shift: shift.values, epsilon: epsilon, result: result.mutableValues, mean: mean.mutableValues, variance: variance.mutableValues)
 
         let output = result.attachingContext(tag: "batchNorm", sources: self, scale, shift) { resultGradient, inputGradient, scaleGradient, shiftGradient in
@@ -103,6 +110,9 @@ public extension Tensor {
         let mean = mean.detached()
         let variance = variance.detached()
         var result = Self(uninitializedShape: shape)
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.batchNormalization(input: values, scale: scale.values, shift: shift.values, mean: mean.values, variance: variance.values, epsilon: epsilon, result: result.mutableValues)
 
         return result.attachingContext(tag: "batchNorm", sources: self, scale, shift) { resultGradient, inputGradient, scaleGradient, shiftGradient in

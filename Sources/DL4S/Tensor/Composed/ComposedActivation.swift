@@ -28,7 +28,7 @@ import Foundation
 // MARK: Composed gradients
 
 extension Composed {
-    static func tanhBackward<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func tanhBackward<N: FloatingPointNumericType, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -42,14 +42,14 @@ extension Composed {
         inputGradient.add(input.heaviside() * outputGradient)
     }
 
-    static func sigmoidBackward<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func sigmoidBackward<N: FloatingPointNumericType, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
         inputGradient.add(output * (1 - output) * outputGradient)
     }
 
-    static func softmaxBackward<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func softmaxBackward<N: FloatingPointNumericType, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -57,18 +57,18 @@ extension Composed {
     }
 
     /// The gradient of the softmax along an axis, `output * (outputGradient - sum(outputGradient * output, axis))`.
-    static func softmaxGradient<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int) -> Tensor<N, Device> {
+    static func softmaxGradient<N: FloatingPointNumericType, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int) -> Tensor<N, Device> {
         output * (outputGradient - (outputGradient * output).reduceSum(along: [axis]).unsqueezed(at: axis))
     }
 
-    static func logSoftmaxBackward<N, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func logSoftmaxBackward<N: FloatingPointNumericType, Device>(output: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axis: Int, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
         inputGradient.add(outputGradient - output.exp() * outputGradient.reduceSum(along: [axis]).unsqueezed(at: axis))
     }
 
-    static func leakyReluBackward<N, Device>(
+    static func leakyReluBackward<N: FloatingPointNumericType, Device>(
         input: Tensor<N, Device>,
         leakage: Tensor<N, Device>,
         outputGradient: Tensor<N, Device>,
@@ -84,7 +84,7 @@ extension Composed {
         }
     }
 
-    static func geluBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func geluBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -92,7 +92,7 @@ extension Composed {
         inputGradient.add((s + 1.702 * input * s * (1 - s)) * outputGradient)
     }
 
-    static func swishBackward<N, Device>(
+    static func swishBackward<N: FloatingPointNumericType, Device>(
         input: Tensor<N, Device>,
         beta: Tensor<N, Device>,
         outputGradient: Tensor<N, Device>,
@@ -109,7 +109,7 @@ extension Composed {
         }
     }
 
-    static func mishBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func mishBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -118,7 +118,7 @@ extension Composed {
         inputGradient.add((t + input * (1 - t * t) * input.sigmoid()) * outputGradient)
     }
 
-    static func lishtBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func lishtBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -126,7 +126,7 @@ extension Composed {
         inputGradient.add((t + input * (1 - t * t)) * outputGradient)
     }
 
-    static func eluBackward<N, Device>(
+    static func eluBackward<N: FloatingPointNumericType, Device>(
         input: Tensor<N, Device>,
         alpha: Tensor<N, Device>,
         outputGradient: Tensor<N, Device>,
@@ -143,14 +143,14 @@ extension Composed {
         }
     }
 
-    static func softplusBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func softplusBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
         inputGradient.add(input.sigmoid() * outputGradient)
     }
 
-    static func squareplusBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func squareplusBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }

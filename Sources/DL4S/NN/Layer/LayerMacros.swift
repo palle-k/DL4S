@@ -37,7 +37,7 @@
 ///
 /// ```swift
 /// @Layer
-/// public struct Dense<Element: RandomizableType, Device: DeviceType>: Codable {
+/// public struct Dense<Element: FloatingPointNumericType, Device: DeviceType>: Codable {
 ///     public var weights: Tensor<Element, Device>
 ///     public var bias: Tensor<Element, Device>
 ///

@@ -28,31 +28,25 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func variance<N: NumericType>(input: ShapedBuffer<N, Device>, axes: [Int], result: MutableShapedBuffer<N, Device>) {
+    static func variance<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, axes: [Int], result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // mean((input - mean(input))²), which cannot be negative, as mean(input²) - mean(input)² can be after rounding
         let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
-        let mean = math.temporary(keptShape)
-        let squares = math.temporary(input.shape)
+        let mean = Device.Memory.allocateBuffer(withShape: keptShape, type: N.self)
+        let squares = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.mean(input, along: axes, into: mean)
         math.subtract(input, mean, into: squares)
         math.multiply(squares, squares, into: squares)
         math.mean(squares, along: axes, into: result)
     }
 
-    static func varianceBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axes: [Int], inputGradient: GradientBuffer<N, Device>?) {
+    static func varianceBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axes: [Int], inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // 2 / n * (input - mean(input)) * outputGradient
         let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
         let count = axes.map { input.shape[$0] }.reduce(1, *)
         math.write(inputGradient) { dx in
-            let mean = math.temporary(keptShape)
+            let mean = Device.Memory.allocateBuffer(withShape: keptShape, type: N.self)
             math.mean(input, along: axes, into: mean)
             math.subtract(input, mean, into: dx)
             math.multiply(dx, outputGradient.reshaped(to: keptShape), into: dx)
@@ -60,16 +54,13 @@ public extension FusedOperationsType {
         }
     }
 
-    static func layerNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>) {
+    static func layerNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let axes = Array(input.dim - scale.dim ..< input.dim)
         let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
-        let mean = math.temporary(keptShape)
-        let deviation = math.temporary(keptShape)
-        let squares = math.temporary(input.shape)
+        let mean = Device.Memory.allocateBuffer(withShape: keptShape, type: N.self)
+        let deviation = Device.Memory.allocateBuffer(withShape: keptShape, type: N.self)
+        let squares = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         // (input - mean) / (sqrt(variance) + epsilon) * scale + shift, with the centered values in the result
         math.mean(input, along: axes, into: mean)
         math.subtract(input, mean, into: result)
@@ -82,7 +73,7 @@ public extension FusedOperationsType {
         math.add(result, shift, into: result)
     }
 
-    static func layerNormalizationBackward<N: NumericType>(
+    static func layerNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, Device>,
         scale: ShapedBuffer<N, Device>,
         shift: ShapedBuffer<N, Device>,
@@ -104,15 +95,12 @@ public extension FusedOperationsType {
         )
     }
 
-    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>, mean: MutableShapedBuffer<N, Device>, variance: MutableShapedBuffer<N, Device>) {
+    static func batchNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>, mean: MutableShapedBuffer<N, Device>, variance: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // The statistics have the shape of the input without the batch axis, which broadcasts to the input.
         // The variance of the centered values cannot be negative, which mean(input²) - mean(input)² can be after rounding.
-        let squares = math.temporary(input.shape)
-        let deviation = math.temporary(mean.shape)
+        let squares = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
+        let deviation = Device.Memory.allocateBuffer(withShape: mean.shape, type: N.self)
         math.mean(input, along: [0], into: mean)
         math.subtract(input, mean, into: result)
         math.multiply(result, result, into: squares)
@@ -124,7 +112,7 @@ public extension FusedOperationsType {
         math.add(result, shift, into: result)
     }
 
-    static func batchNormalizationBackward<N: NumericType>(
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, Device>,
         scale: ShapedBuffer<N, Device>,
         shift: ShapedBuffer<N, Device>,
@@ -146,12 +134,9 @@ public extension FusedOperationsType {
         )
     }
 
-    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, mean: ShapedBuffer<N, Device>, variance: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>) {
+    static func batchNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, mean: ShapedBuffer<N, Device>, variance: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
-        let divisor = math.temporary(variance.shape)
+        let divisor = Device.Memory.allocateBuffer(withShape: variance.shape, type: N.self)
         math.sqrt(variance, into: divisor)
         math.add(divisor, epsilon, into: divisor)
         math.subtract(input, mean, into: result)
@@ -160,7 +145,7 @@ public extension FusedOperationsType {
         math.add(result, shift, into: result)
     }
 
-    static func batchNormalizationBackward<N: NumericType>(
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, Device>,
         scale: ShapedBuffer<N, Device>,
         shift: ShapedBuffer<N, Device>,
@@ -173,10 +158,7 @@ public extension FusedOperationsType {
         shiftGradient: GradientBuffer<N, Device>?,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
-        let divisor = math.temporary(variance.shape)
+        let divisor = Device.Memory.allocateBuffer(withShape: variance.shape, type: N.self)
         math.sqrt(variance, into: divisor)
         math.add(divisor, epsilon, into: divisor)
         // outputGradient * scale / divisor
@@ -186,7 +168,7 @@ public extension FusedOperationsType {
         }
         if scaleGradient != nil {
             // outputGradient * (input - mean) / divisor
-            let products = math.temporary(input.shape)
+            let products = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
             math.subtract(input, mean, into: products)
             math.divide(products, divisor, into: products)
             math.multiply(products, outputGradient, into: products)
@@ -198,7 +180,7 @@ public extension FusedOperationsType {
 
 extension FusedOperationsType {
     /// Computes the gradients of a normalization with the statistics of the input along the given axes, followed by a scale and a shift.
-    static func normalizationBackward<N: NumericType>(
+    static func normalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, Device>,
         scale: ShapedBuffer<N, Device>,
         outputGradient: ShapedBuffer<N, Device>,
@@ -209,19 +191,16 @@ extension FusedOperationsType {
         shiftGradient: GradientBuffer<N, Device>?,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         math.writeSum(of: outputGradient, into: shiftGradient)
         guard inputGradient != nil || scaleGradient != nil else {
             return
         }
         let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
-        let statistic = math.temporary(keptShape)
-        let standardDeviation = math.temporary(keptShape)
-        let divisor = math.temporary(keptShape)
-        let normalized = math.temporary(input.shape)
-        let products = math.temporary(input.shape)
+        let statistic = Device.Memory.allocateBuffer(withShape: keptShape, type: N.self)
+        let standardDeviation = Device.Memory.allocateBuffer(withShape: keptShape, type: N.self)
+        let divisor = Device.Memory.allocateBuffer(withShape: keptShape, type: N.self)
+        let normalized = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
+        let products = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         // The variance of the centered values equals the variance of the forward pass up to rounding, and needs fewer operations.
         math.mean(input, along: axes, into: statistic)
         math.subtract(input, statistic, into: normalized)

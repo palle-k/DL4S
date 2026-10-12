@@ -67,45 +67,56 @@ kernel void transpose_u32(device const uint* source [[buffer(0)]], device uint* 
     }
 }
 
+// The kernels that read indices skip an index outside of the axis and set `errors`, which the host checks when it waits for
+// the GPU, see `GPUContext.indexErrors`.
+
 // Gathers along an axis. The source has the shape [outer, axisSize, inner], the indices and the result have the shape [outer, inner].
-kernel void gather_u32(device const uint* source [[buffer(0)]], device const int* indices [[buffer(1)]], device uint* result [[buffer(2)]], constant int4& sizes [[buffer(3)]], uint i [[thread_position_in_grid]]) {
+kernel void gather_u32(device const uint* source [[buffer(0)]], device const int* indices [[buffer(1)]], device uint* result [[buffer(2)]], constant int4& sizes [[buffer(3)]],
+                       device atomic_uint* errors [[buffer(4)]], uint i [[thread_position_in_grid]]) {
     int count = sizes.x, axisSize = sizes.y, inner = sizes.z, ignoreIndex = sizes.w;
     if (int(i) >= count) { return; }
     int index = indices[i];
     if (index == ignoreIndex) { result[i] = 0; return; }
+    if (index < 0 || index >= axisSize) { atomic_store_explicit(errors, 1u, memory_order_relaxed); result[i] = 0; return; }
     int outer = int(i) / inner, position = int(i) % inner;
     result[i] = source[(outer * axisSize + index) * inner + position];
 }
 
 // Scatters along an axis into a result that is filled with zeros. The result has the shape [outer, axisSize, inner].
-kernel void scatter_u32(device const uint* values [[buffer(0)]], device const int* indices [[buffer(1)]], device uint* result [[buffer(2)]], constant int4& sizes [[buffer(3)]], uint i [[thread_position_in_grid]]) {
+kernel void scatter_u32(device const uint* values [[buffer(0)]], device const int* indices [[buffer(1)]], device uint* result [[buffer(2)]], constant int4& sizes [[buffer(3)]],
+                        device atomic_uint* errors [[buffer(4)]], uint i [[thread_position_in_grid]]) {
     int count = sizes.x, axisSize = sizes.y, inner = sizes.z, ignoreIndex = sizes.w;
     if (int(i) >= count) { return; }
     int index = indices[i];
     if (index == ignoreIndex) { return; }
+    if (index < 0 || index >= axisSize) { atomic_store_explicit(errors, 1u, memory_order_relaxed); return; }
     int outer = int(i) / inner, position = int(i) % inner;
     result[(outer * axisSize + index) * inner + position] = values[i];
 }
 
 // Copies the rows that the indices select. The sizes are the element count of the result, the row count of the source, the
 // row length, and the ignored index. The result row of an ignored index or of an index outside of the source is zero.
-kernel void gather_rows_u32(device const uint* source [[buffer(0)]], device const int* indices [[buffer(1)]], device uint* result [[buffer(2)]], constant int4& sizes [[buffer(3)]], uint i [[thread_position_in_grid]]) {
+kernel void gather_rows_u32(device const uint* source [[buffer(0)]], device const int* indices [[buffer(1)]], device uint* result [[buffer(2)]], constant int4& sizes [[buffer(3)]],
+                            device atomic_uint* errors [[buffer(4)]], uint i [[thread_position_in_grid]]) {
     int count = sizes.x, rowCount = sizes.y, rowLength = sizes.z, ignoreIndex = sizes.w;
     if (int(i) >= count) { return; }
     int row = int(i) / rowLength, index = indices[row];
-    bool valid = index != ignoreIndex && index >= 0 && index < rowCount;
-    result[i] = valid ? source[ulong(index) * rowLength + (int(i) - row * rowLength)] : 0;
+    bool inside = index >= 0 && index < rowCount;
+    if (index != ignoreIndex && !inside) { atomic_store_explicit(errors, 1u, memory_order_relaxed); }
+    result[i] = index != ignoreIndex && inside ? source[ulong(index) * rowLength + (int(i) - row * rowLength)] : 0;
 }
 
 // Adds rows to the rows of the result that the indices select, with atomics, because several rows can have the same index.
 // The sizes are the element count of the values, the row count of the result, the row length, and the ignored index. Rows
 // with an ignored index or an index outside of the result are not added.
 #define SCATTER_ADD_ROWS(T, A) \
-kernel void scatter_add_rows_##T(device const T* values [[buffer(0)]], device const int* indices [[buffer(1)]], device A* result [[buffer(2)]], constant int4& sizes [[buffer(3)]], uint i [[thread_position_in_grid]]) { \
+kernel void scatter_add_rows_##T(device const T* values [[buffer(0)]], device const int* indices [[buffer(1)]], device A* result [[buffer(2)]], constant int4& sizes [[buffer(3)]], \
+                                 device atomic_uint* errors [[buffer(4)]], uint i [[thread_position_in_grid]]) { \
     int count = sizes.x, rowCount = sizes.y, rowLength = sizes.z, ignoreIndex = sizes.w; \
     if (int(i) >= count) { return; } \
     int row = int(i) / rowLength, index = indices[row]; \
-    if (index == ignoreIndex || index < 0 || index >= rowCount) { return; } \
+    if (index == ignoreIndex) { return; } \
+    if (index < 0 || index >= rowCount) { atomic_store_explicit(errors, 1u, memory_order_relaxed); return; } \
     atomic_fetch_add_explicit(result + ulong(index) * rowLength + (int(i) - row * rowLength), values[i], memory_order_relaxed); \
 }
 SCATTER_ADD_ROWS(float, atomic_float)

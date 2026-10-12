@@ -28,7 +28,7 @@ import Foundation
 /// Adam optimizer (Adaptive moment estimation)
 ///
 /// Follows [Kingma et al. - Adam: A method for stochastic optimization](https://arxiv.org/pdf/1412.6980.pdf)
-public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct Adam<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Whether the maximum of the past second moments normalizes the step, as in AMSGrad
@@ -138,6 +138,7 @@ public struct Adam<Element: NumericType, Device: DeviceType>: Optimizer, Sendabl
                 beta2Power: power2,
                 result: updated.mutableValues,
             )
+            updated.requiresGradient = parameters[index].requiresGradient
             parameters[index] = updated
         }
         beta1t *= beta1

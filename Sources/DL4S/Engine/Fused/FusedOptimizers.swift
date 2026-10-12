@@ -28,7 +28,7 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func adamUpdate<N: NumericType>(
+    static func adamUpdate<N: FloatingPointNumericType>(
         parameter: ShapedBuffer<N, Device>,
         gradient: ShapedBuffer<N, Device>,
         firstMoment: MutableShapedBuffer<N, Device>,
@@ -43,10 +43,7 @@ public extension FusedOperationsType {
         result: MutableShapedBuffer<N, Device>,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
-        let scaled = math.temporary(gradient.shape)
+        let scaled = Device.Memory.allocateBuffer(withShape: gradient.shape, type: N.self)
         math.multiply(firstMoment, beta1, into: firstMoment)
         math.multiply(gradient, 1 - beta1, into: scaled)
         math.add(firstMoment, scaled, into: firstMoment)

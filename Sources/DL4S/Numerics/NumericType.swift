@@ -51,7 +51,6 @@ public protocol NumericType: ZeroableType, CPUNumeric, Sendable, Codable {
 
     var floatValue: Float { get }
     var doubleValue: Double { get }
-    var intValue: Int32 { get }
 
     static prefix func - (value: Self) -> Self
     static func + (lhs: Self, rhs: Self) -> Self
@@ -59,50 +58,24 @@ public protocol NumericType: ZeroableType, CPUNumeric, Sendable, Codable {
     static func / (lhs: Self, rhs: Self) -> Self
     static func * (lhs: Self, rhs: Self) -> Self
 
-    func sqrt() -> Self
-    func log() -> Self
-    func exp() -> Self
-    func sin() -> Self
-    func cos() -> Self
-    func tan() -> Self
-    func sinh() -> Self
-    func cosh() -> Self
-    func tanh() -> Self
-
     var isFinite: Bool { get }
     var isNaN: Bool { get }
 
     init(_ float: Float)
     init(_ int: Int)
-    init(_ uint: UInt)
-    init(_ uint8: UInt8)
-
-    func toUInt8() -> UInt8
-    func toInt() -> Int
 }
 
-public extension UInt8 {
-    init<Element: NumericType>(_ element: Element) {
-        self = element.toUInt8()
-    }
-}
-
-public extension Int32 {
-    init<Element: NumericType>(element: Element) {
-        self = element.intValue
-    }
-}
-
-public extension Float {
-    init<Element: NumericType>(element: Element) {
-        self = element.floatValue
-    }
-}
-
-public extension Double {
-    init<Element: NumericType>(element: Element) {
-        self = element.doubleValue
-    }
+/// A floating point number that can be used in a Tensor, with the transcendental functions.
+///
+/// Operations that compute fractions, powers, or transcendental functions, such as activations, normalizations, losses,
+/// and the layers, need elements of this type.
+public protocol FloatingPointNumericType: RandomizableType, CPUFloatingPointNumeric {
+    func sqrt() -> Self
+    func log() -> Self
+    func exp() -> Self
+    func sin() -> Self
+    func cos() -> Self
+    func tanh() -> Self
 }
 
 public extension NumericType {

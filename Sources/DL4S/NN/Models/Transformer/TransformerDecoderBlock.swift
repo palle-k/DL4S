@@ -29,7 +29,7 @@ import Foundation
 ///
 /// A block without encoder attention is a block of a decoder-only model.
 @Layer
-public struct TransformerDecoderBlock<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct TransformerDecoderBlock<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     public var selfAttention: MultiHeadAttention<Element, Device>
     /// Attention to the encoder states, or nil in a decoder-only model
     public var encoderAttention: MultiHeadAttention<Element, Device>?

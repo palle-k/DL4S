@@ -30,7 +30,7 @@ import Foundation
 /// The transformer model shares an embedding matrix between the encoder and decoder and reuses the embedding weights to compute the decoder output distribution.
 /// Outputs of the transformer are normalized using log softmax.
 @Layer
-public struct Transformer<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct Transformer<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     public typealias Outputs = Tensor<Element, Device> // disambiguates callAsFunction protocol requirement
 
     public var embedding: Embedding<Element, Device>

@@ -33,7 +33,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func scaledDotProductAttention<N: NumericType>(queries: ShapedBuffer<N, CPU>, keys: ShapedBuffer<N, CPU>, values: ShapedBuffer<N, CPU>, mask: ShapedBuffer<N, CPU>?, temperature: N, result: MutableShapedBuffer<N, CPU>) {
+    static func scaledDotProductAttention<N: FloatingPointNumericType>(queries: ShapedBuffer<N, CPU>, keys: ShapedBuffer<N, CPU>, values: ShapedBuffer<N, CPU>, mask: ShapedBuffer<N, CPU>?, temperature: N, result: MutableShapedBuffer<N, CPU>) {
         let shape = AttentionShape(queries: queries, keys: keys, values: values)
         guard shape.hasOneBatchSize else {
             matrixProductAttention(queries: queries, keys: keys, values: values, mask: mask, temperature: temperature, result: result)
@@ -55,7 +55,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func scaledDotProductAttentionBackward<N: NumericType>(
+    static func scaledDotProductAttentionBackward<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, CPU>,
         keys: ShapedBuffer<N, CPU>,
         values: ShapedBuffer<N, CPU>,
@@ -88,7 +88,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func multiHeadAttentionBackward<N: NumericType>(queries: ShapedBuffer<N, CPU>, keys: ShapedBuffer<N, CPU>, values: ShapedBuffer<N, CPU>, mask: ShapedBuffer<N, CPU>?, queryWeights: ShapedBuffer<N, CPU>, keyWeights: ShapedBuffer<N, CPU>, valueWeights: ShapedBuffer<N, CPU>, outputWeights: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, heads: Int, temperature: N, gradients: MultiHeadAttentionGradients<GradientBuffer<N, CPU>?>) {
+    static func multiHeadAttentionBackward<N: FloatingPointNumericType>(queries: ShapedBuffer<N, CPU>, keys: ShapedBuffer<N, CPU>, values: ShapedBuffer<N, CPU>, mask: ShapedBuffer<N, CPU>?, queryWeights: ShapedBuffer<N, CPU>, keyWeights: ShapedBuffer<N, CPU>, valueWeights: ShapedBuffer<N, CPU>, outputWeights: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, heads: Int, temperature: N, gradients: MultiHeadAttentionGradients<GradientBuffer<N, CPU>?>) {
         projectedAttentionBackward(
             queries: queries,
             keys: keys,
@@ -126,7 +126,7 @@ extension CPUFusedOperations {
     /// and values must have the batch size of the result.
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func attentionBackward<N: NumericType>(
+    static func attentionBackward<N: FloatingPointNumericType>(
         shape: AttentionShape,
         queries: ShapedBuffer<N, CPU>,
         keys: ShapedBuffer<N, CPU>,
@@ -242,7 +242,7 @@ extension AttentionShape {
 
     /// Computes `softmax(queries × keysᵀ / temperature - 10⁹ * mask)` of one slice into a [queryCount, keyCount] matrix.
     @inline(__always)
-    func attentionWeights<N: NumericType>(queries: UnsafePointer<N>, keys: UnsafePointer<N>, mask: AttentionMask<N>.Slice?, temperature: N, into weights: UnsafeMutablePointer<N>) {
+    func attentionWeights<N: FloatingPointNumericType>(queries: UnsafePointer<N>, keys: UnsafePointer<N>, mask: AttentionMask<N>.Slice?, temperature: N, into weights: UnsafeMutablePointer<N>) {
         CPUKernels.gemm(queries, shape: (queryCount, keyDim), keys, shape: (keyCount, keyDim), rhsTransposed: true, into: weights, alpha: 1 / temperature)
         mask?.apply(to: weights, queryCount: queryCount, keyCount: keyCount)
         CPUKernels.softmaxRows(weights, into: weights, scratch: weights, rows: queryCount, rowLength: keyCount)
@@ -250,7 +250,7 @@ extension AttentionShape {
 }
 
 /// A mask of scaled dot product attention that broadcasts to [batchSize, heads, queryCount, keyCount].
-struct AttentionMask<N: NumericType> {
+struct AttentionMask<N: FloatingPointNumericType> {
     /// The mask of one (batch, head) slice.
     struct Slice {
         let values: UnsafePointer<N>

@@ -103,13 +103,7 @@ public extension Tensor {
     #endif
     @_specialize(where Element == Float, Device == CPU)
     func padded(with value: Element = 0, padding: [Int]) -> Self {
-        precondition(padding.count == dim)
-
-        var result = Self(repeating: value, shape: zip(shape, padding).map { $0 + $1 * 2 })
-        let index = zip(shape, padding).map { $1 ..< ($0 + $1) }
-        result[index] = self
-
-        return result
+        padded(with: value, padding: padding.map { ($0, $0) })
     }
 
     /// Reverses the tensor along the 0th axis.
@@ -121,16 +115,15 @@ public extension Tensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.reverse(values: values, result: resultBuffer)
 
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "Reverse",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    resultGradient.reversed()
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "reverse", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.reversed())
+        } fused: { resultGradient, gradient in
+            if gradient.adds {
+                Device.Engine.reverseAdd(values: resultGradient, add: ShapedBuffer(gradient.values), result: gradient.values)
+            } else {
+                Device.Engine.reverse(values: resultGradient, result: gradient.values)
+            }
+        }
     }
 
     /// Computes a diagonal matrix with the given number of elements below and above the diagonal.
@@ -147,23 +140,14 @@ public extension Tensor {
         Device.Engine.fill(value: 0, result: resultBuffer.values, count: resultBuffer.count)
         Device.Engine.band(buffer: values, result: resultBuffer, belowDiagonal: belowDiagonal, aboveDiagonal: aboveDiagonal)
 
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "band",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    resultGradient.bandMatrix(belowDiagonal: belowDiagonal, aboveDiagonal: aboveDiagonal)
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "band", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.bandMatrix(belowDiagonal: belowDiagonal, aboveDiagonal: aboveDiagonal))
+        }
     }
 
     /// Computes the vector of diagonal elements of a matrix
     ///
     /// Source tensor must have dimensionality of 2.
-    /// For backpropagation, the matrix must have square shape.
-    ///
     /// - Returns: Vector containing matrix diagonal elements
     #if canImport(Metal) && canImport(MetalPerformanceShaders)
     @_specialize(where Element == Float, Device == GPU)
@@ -175,17 +159,19 @@ public extension Tensor {
         let resultCount = Swift.min(shape[0], shape[1])
         let resultBuffer = Device.Memory.allocateBuffer(withShape: [resultCount], type: Element.self)
         Device.Engine.extractDiagonal(values: values, target: resultBuffer)
+        let sourceShape = shape
 
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "diag",
-                sources: [self],
-                backpropagate: [{ vector in
-                    vector.diagonalMatrix()
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "diag", source: self) { vector, gradient in
+            let diagonal = vector.diagonalMatrix()
+            guard sourceShape[0] != sourceShape[1] else {
+                gradient.add(diagonal)
+                return
+            }
+            // The diagonal of a matrix that is not square lies in its leading square block.
+            var matrix = Self(repeating: 0, shape: sourceShape)
+            matrix[0 ..< resultCount, 0 ..< resultCount] = diagonal
+            gradient.add(matrix)
+        }
     }
 
     /// Computes a matrix that contains the elements of a vector in its diagonal. The remaining elements will be filled with zeros.
@@ -205,16 +191,9 @@ public extension Tensor {
         Device.Engine.fill(value: 0, result: matrixValues.values, count: matrixValues.count)
         Device.Engine.fillDiagonal(values: values, target: matrixValues)
 
-        return Tensor(
-            using: matrixValues,
-            context: requiresGradient ? TensorContext(
-                tag: "diag-mat",
-                sources: [self],
-                backpropagate: [{ matrix in
-                    matrix.diagonalElements()
-                }],
-            ) : nil,
-        )
+        return Tensor(using: matrixValues, context: nil).attachingContext(tag: "diag-mat", source: self) { matrix, gradient in
+            gradient.add(matrix.diagonalElements())
+        }
     }
 
     /// Creates a matrix filled with the given value on its diagonal and zeros everywhere else
@@ -237,7 +216,7 @@ public extension Tensor {
 
 // MARK: Dropout
 
-public extension Tensor {
+public extension Tensor where Element: FloatingPointNumericType {
     /// Sets random elements of the tensor to zero. The other elements keep their values.
     ///
     /// - Parameter rate: Probability, with which an element is set to zero

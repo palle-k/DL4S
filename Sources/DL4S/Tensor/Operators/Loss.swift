@@ -43,8 +43,9 @@ import Foundation
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func binaryCrossEntropy<Element: FloatingPointNumericType, Device: DeviceType>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
     precondition(expected.count == actual.count, "Expected and predicted values must have the same number of elements.")
+    precondition(actual.count > 0, "The loss of an empty batch is undefined.")
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.binaryCrossEntropy(expected: expected.values, actual: actual.values, result: result.mutableValues)
     return result.attachingContext(tag: "binaryCrossEntropy", sources: expected, actual) { resultGradient, expectedGradient, actualGradient in
@@ -71,10 +72,11 @@ public func binaryCrossEntropy<Element: NumericType, Device: DeviceType>(expecte
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
+public func categoricalCrossEntropy<Element: FloatingPointNumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
     precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
     precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
 
+    precondition(actual.count > 0, "The loss of an empty batch is undefined.")
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.categoricalCrossEntropy(expected: expected.values, actual: actual.values, ignoreIndex: ignoreIndex, result: result.mutableValues)
     return result.attachingContext(tag: "categoricalCrossEntropy", source: actual) { resultGradient, actualGradient in
@@ -103,10 +105,11 @@ public func categoricalCrossEntropy<Element: NumericType, Device: DeviceType>(ex
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func categoricalNegativeLogLikelihood<Element: NumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
+public func categoricalNegativeLogLikelihood<Element: FloatingPointNumericType, Device: DeviceType>(expected: Tensor<Int32, Device>, actual: Tensor<Element, Device>, ignoreIndex: Int32 = -1) -> Tensor<Element, Device> {
     precondition(expected.dim + 1 == actual.dim, "Dimensionality of actual sequence must be one larger than expected dimensionality.")
     precondition(expected.shape == actual.shape.dropLast(), "Shape of expected sequence must be equal to shape of actual sequence minus last axis")
 
+    precondition(actual.count > 0, "The loss of an empty batch is undefined.")
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.categoricalNegativeLogLikelihood(expected: expected.values, actual: actual.values, ignoreIndex: ignoreIndex, result: result.mutableValues)
     let actualShape = actual.shape
@@ -128,7 +131,8 @@ public func categoricalNegativeLogLikelihood<Element: NumericType, Device: Devic
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
+public func meanSquaredError<Element: FloatingPointNumericType, Device>(expected: Tensor<Element, Device>, actual: Tensor<Element, Device>) -> Tensor<Element, Device> {
+    precondition(actual.count > 0, "The loss of an empty batch is undefined.")
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.meanSquaredError(expected: expected.values, actual: actual.values, result: result.mutableValues)
     return result.attachingContext(tag: "meanSquaredError", sources: expected, actual) { resultGradient, expectedGradient, actualGradient in
@@ -146,7 +150,8 @@ public func meanSquaredError<Element, Device>(expected: Tensor<Element, Device>,
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
+public func l2loss<Element: FloatingPointNumericType, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
+    precondition(vector.count > 0, "The loss of an empty batch is undefined.")
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.l2Loss(input: vector.values, scale: loss, result: result.mutableValues)
     return result.attachingContext(tag: "l2loss", source: vector) { resultGradient, gradient in
@@ -164,7 +169,8 @@ public func l2loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Ele
 @_specialize(where Element == Float, Device == GPU)
 #endif
 @_specialize(where Element == Float, Device == CPU)
-public func l1loss<Element, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
+public func l1loss<Element: FloatingPointNumericType, Device>(_ vector: Tensor<Element, Device>, loss: Element) -> Tensor<Element, Device> {
+    precondition(vector.count > 0, "The loss of an empty batch is undefined.")
     var result = Tensor<Element, Device>(uninitializedShape: [])
     Device.FusedOperations.l1Loss(input: vector.values, scale: loss, result: result.mutableValues)
     return result.attachingContext(tag: "l1loss", source: vector) { resultGradient, gradient in

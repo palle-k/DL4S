@@ -31,7 +31,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func categoricalCrossEntropy<N: NumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, ignoreIndex: Int32, result: MutableShapedBuffer<N, CPU>) {
+    static func categoricalCrossEntropy<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, ignoreIndex: Int32, result: MutableShapedBuffer<N, CPU>) {
         let geometry = SelectionGeometry(expected: expected, actual: actual)
         var sum: N = 0
         geometry.forEachSelected(expected, ignoreIndex: ignoreIndex, actual: actual) { value, _ in
@@ -42,7 +42,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func categoricalCrossEntropyBackward<N: NumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, CPU>?) {
+    static func categoricalCrossEntropyBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, CPU>?) {
         guard let actualGradient else {
             return
         }
@@ -57,7 +57,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func categoricalNegativeLogLikelihood<N: NumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, ignoreIndex: Int32, result: MutableShapedBuffer<N, CPU>) {
+    static func categoricalNegativeLogLikelihood<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, ignoreIndex: Int32, result: MutableShapedBuffer<N, CPU>) {
         let geometry = SelectionGeometry(expected: expected, actual: actual)
         var sum: N = 0
         geometry.forEachSelected(expected, ignoreIndex: ignoreIndex, actual: actual) { value, _ in
@@ -68,7 +68,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func categoricalNegativeLogLikelihoodBackward<N: NumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, CPU>?) {
+    static func categoricalNegativeLogLikelihoodBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, CPU>, actual: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, CPU>?) {
         guard let actualGradient else {
             return
         }
@@ -83,7 +83,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func binaryCrossEntropy<N: NumericType>(expected: ShapedBuffer<N, CPU>, actual: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func binaryCrossEntropy<N: FloatingPointNumericType>(expected: ShapedBuffer<N, CPU>, actual: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         precondition(expected.count == actual.count, "The expected and the predicted values must have the same number of elements.")
         let (e, a) = (expected.elementPointer, actual.elementPointer)
         let logarithms = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
@@ -111,7 +111,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func binaryCrossEntropyBackward<N: NumericType>(
+    static func binaryCrossEntropyBackward<N: FloatingPointNumericType>(
         expected: ShapedBuffer<N, CPU>,
         actual: ShapedBuffer<N, CPU>,
         outputGradient: ShapedBuffer<N, CPU>,
@@ -152,7 +152,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func meanSquaredError<N: NumericType>(expected: ShapedBuffer<N, CPU>, actual: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func meanSquaredError<N: FloatingPointNumericType>(expected: ShapedBuffer<N, CPU>, actual: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         // The kernel does not support broadcasting between the expected and the predicted values.
         guard expected.shape == actual.shape else {
             DefaultFusedOperations<CPU>.meanSquaredError(expected: expected, actual: actual, result: result)
@@ -177,7 +177,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func meanSquaredErrorBackward<N: NumericType>(
+    static func meanSquaredErrorBackward<N: FloatingPointNumericType>(
         expected: ShapedBuffer<N, CPU>,
         actual: ShapedBuffer<N, CPU>,
         outputGradient: ShapedBuffer<N, CPU>,
@@ -227,7 +227,7 @@ struct SelectionGeometry {
 
     /// Calls `body` with the selected element and its position in the predictions for every row whose label is not ignored.
     @inline(__always)
-    func forEachSelected<N: NumericType>(_ expected: ShapedBuffer<Int32, CPU>, ignoreIndex: Int32, actual: ShapedBuffer<N, CPU>, _ body: (_ value: N, _ position: Int) -> Void) {
+    func forEachSelected<N: FloatingPointNumericType>(_ expected: ShapedBuffer<Int32, CPU>, ignoreIndex: Int32, actual: ShapedBuffer<N, CPU>, _ body: (_ value: N, _ position: Int) -> Void) {
         let (labels, a) = (expected.elementPointer, actual.elementPointer)
         for row in 0 ..< rows {
             let label = labels[row]

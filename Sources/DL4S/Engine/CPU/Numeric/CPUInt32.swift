@@ -298,39 +298,11 @@ extension Int32: CPUNumeric {
         }
     }
 
-    public static func exp(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("\(#function) not available for Int32")
-    }
-
-    public static func log(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("\(#function) not available for Int32")
-    }
-
-    public static func tanh(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("\(#function) not available for Int32")
-    }
-
-    public static func sqrt(val: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("\(#function) not available for Int32")
-    }
-
     public static func heaviside(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
         let src = values.pointer(capacity: count)
         let dst = result.pointer(capacity: count)
         for i in 0 ..< count {
             dst[i] = src[i] > 0 ? 1 : 0
         }
-    }
-
-    public static func sin(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("\(#function) not available for Int32")
-    }
-
-    public static func cos(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("\(#function) not available for Int32")
-    }
-
-    public static func tan(values: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Int32>, count: Int) {
-        fatalError("\(#function) not available for Int32")
     }
 }

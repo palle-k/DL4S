@@ -30,7 +30,7 @@ import Foundation
 // requested gradient, and parameters with other shapes than a scalar or the last axes of the input, use the default implementations.
 
 public extension GPUFusedOperations {
-    static func tanhBackward<N: NumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func tanhBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("tanh", input: output, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.tanhBackward(output: output, outputGradient: outputGradient, inputGradient: inputGradient)
         }
@@ -42,26 +42,26 @@ public extension GPUFusedOperations {
         }
     }
 
-    static func sigmoid<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func sigmoid<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         GPUFused.activation("sigmoid", input: input, result: result) {
             DefaultFusedOperations<GPU>.sigmoid(input: input, result: result)
         }
     }
 
-    static func sigmoidBackward<N: NumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func sigmoidBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("sigmoid", input: output, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.sigmoidBackward(output: output, outputGradient: outputGradient, inputGradient: inputGradient)
         }
     }
 
-    static func leakyRelu<N: NumericType>(input: ShapedBuffer<N, GPU>, leakage: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func leakyRelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, leakage: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         precondition(ShapeUtil.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
         GPUFused.activation("leaky_relu", input: input, parameter: leakage, result: result) {
             DefaultFusedOperations<GPU>.leakyRelu(input: input, leakage: leakage, result: result)
         }
     }
 
-    static func leakyReluBackward<N: NumericType>(
+    static func leakyReluBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         leakage: ShapedBuffer<N, GPU>,
         outputGradient: ShapedBuffer<N, GPU>,
@@ -80,26 +80,26 @@ public extension GPUFusedOperations {
         GPUFused.activationBackward("leaky_relu", input: input, outputGradient: outputGradient, parameter: leakage, inputGradient: inputGradient, fallback: fallback)
     }
 
-    static func gelu<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func gelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         GPUFused.activation("gelu", input: input, result: result) {
             DefaultFusedOperations<GPU>.gelu(input: input, result: result)
         }
     }
 
-    static func geluBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func geluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("gelu", input: input, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.geluBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
         }
     }
 
-    static func swish<N: NumericType>(input: ShapedBuffer<N, GPU>, beta: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func swish<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, beta: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         precondition(ShapeUtil.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
         GPUFused.activation("swish", input: input, parameter: beta, result: result) {
             DefaultFusedOperations<GPU>.swish(input: input, beta: beta, result: result)
         }
     }
 
-    static func swishBackward<N: NumericType>(
+    static func swishBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         beta: ShapedBuffer<N, GPU>,
         outputGradient: ShapedBuffer<N, GPU>,
@@ -118,38 +118,38 @@ public extension GPUFusedOperations {
         GPUFused.activationBackward("swish", input: input, outputGradient: outputGradient, parameter: beta, inputGradient: inputGradient, fallback: fallback)
     }
 
-    static func mish<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func mish<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         GPUFused.activation("mish", input: input, result: result) {
             DefaultFusedOperations<GPU>.mish(input: input, result: result)
         }
     }
 
-    static func mishBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func mishBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("mish", input: input, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.mishBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
         }
     }
 
-    static func lisht<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func lisht<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         GPUFused.activation("lisht", input: input, result: result) {
             DefaultFusedOperations<GPU>.lisht(input: input, result: result)
         }
     }
 
-    static func lishtBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func lishtBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("lisht", input: input, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.lishtBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
         }
     }
 
-    static func elu<N: NumericType>(input: ShapedBuffer<N, GPU>, alpha: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func elu<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, alpha: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         precondition(ShapeUtil.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
         GPUFused.activation("elu", input: input, parameter: alpha, result: result) {
             DefaultFusedOperations<GPU>.elu(input: input, alpha: alpha, result: result)
         }
     }
 
-    static func eluBackward<N: NumericType>(
+    static func eluBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, GPU>,
         alpha: ShapedBuffer<N, GPU>,
         outputGradient: ShapedBuffer<N, GPU>,
@@ -168,31 +168,31 @@ public extension GPUFusedOperations {
         GPUFused.activationBackward("elu", input: input, outputGradient: outputGradient, parameter: alpha, inputGradient: inputGradient, fallback: fallback)
     }
 
-    static func softplus<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func softplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         GPUFused.activation("softplus", input: input, result: result) {
             DefaultFusedOperations<GPU>.softplus(input: input, result: result)
         }
     }
 
-    static func softplusBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func softplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("softplus", input: input, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.softplusBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
         }
     }
 
-    static func squareplus<N: NumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
+    static func squareplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, result: MutableShapedBuffer<N, GPU>) {
         GPUFused.activation("squareplus", input: input, result: result) {
             DefaultFusedOperations<GPU>.squareplus(input: input, result: result)
         }
     }
 
-    static func squareplusBackward<N: NumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func squareplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("squareplus", input: input, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.squareplusBackward(input: input, outputGradient: outputGradient, inputGradient: inputGradient)
         }
     }
 
-    static func dropout<N: NumericType>(input: ShapedBuffer<N, GPU>, rate: Float, result: MutableShapedBuffer<N, GPU>, mask: MutableShapedBuffer<N, GPU>) {
+    static func dropout<N: FloatingPointNumericType>(input: ShapedBuffer<N, GPU>, rate: Float, result: MutableShapedBuffer<N, GPU>, mask: MutableShapedBuffer<N, GPU>) {
         let probability = 1 - rate
         guard GPUFused.runsKernel(N.self, elements: input.count, reading: [input.gpuBuffer], writing: [result.gpuBuffer, mask.gpuBuffer]) else {
             DefaultFusedOperations<GPU>.dropout(input: input, rate: rate, result: result, mask: mask)
@@ -212,15 +212,13 @@ public extension GPUFusedOperations {
         let (x, y, m) = (input.gpuBuffer, result.gpuBuffer, mask.gpuBuffer)
         let kernel = GPUKernels.kernel("dropout_forward", in: .fused)
         GPUContext.compute(kernel, reading: [x], writing: [y, m]) { arguments in
-            arguments.buffer(x)
-            arguments.buffer(y)
-            arguments.buffer(m)
+            arguments.buffers(x, y, m)
             arguments.value(parameters)
             arguments.dispatch(count: input.count)
         }
     }
 
-    static func dropoutBackward<N: NumericType>(mask: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
+    static func dropoutBackward<N: FloatingPointNumericType>(mask: ShapedBuffer<N, GPU>, outputGradient: ShapedBuffer<N, GPU>, inputGradient: GradientBuffer<N, GPU>?) {
         GPUFused.activationBackward("dropout", input: mask, outputGradient: outputGradient, inputGradient: inputGradient) {
             DefaultFusedOperations<GPU>.dropoutBackward(mask: mask, outputGradient: outputGradient, inputGradient: inputGradient)
         }

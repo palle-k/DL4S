@@ -77,8 +77,7 @@ enum GPUKernels {
         let count = byteCount / 4
         let kernel = Self.kernel("copy_u32", in: .elementwise)
         GPUContext.compute(kernel, reading: [source], writing: [result]) { arguments in
-            arguments.buffer(source)
-            arguments.buffer(result)
+            arguments.buffers(source, result)
             arguments.value(UInt32(count))
             arguments.dispatch(count: count)
         }
@@ -87,8 +86,7 @@ enum GPUKernels {
     static func unary(_ name: String, _ element: GPUElement, values: GPUBuffer, result: GPUBuffer, count: Int) {
         let kernel = Self.kernel("\(name)_\(element.rawValue)", in: .elementwise)
         GPUContext.compute(kernel, reading: [values], writing: [result]) { arguments in
-            arguments.buffer(values)
-            arguments.buffer(result)
+            arguments.buffers(values, result)
             arguments.value(UInt32(count))
             arguments.dispatch(count: count)
         }
@@ -104,9 +102,7 @@ enum GPUKernels {
     static func binary(_ name: String, _ element: GPUElement, _ form: BinaryForm, lhs: GPUBuffer, rhs: GPUBuffer, result: GPUBuffer, count: Int) {
         let kernel = Self.kernel("\(name)_\(form.rawValue)_\(element.rawValue)", in: .elementwise)
         GPUContext.compute(kernel, reading: [lhs, rhs], writing: [result]) { arguments in
-            arguments.buffer(lhs)
-            arguments.buffer(rhs)
-            arguments.buffer(result)
+            arguments.buffers(lhs, rhs, result)
             arguments.value(UInt32(count))
             arguments.dispatch(count: count)
         }
@@ -116,9 +112,7 @@ enum GPUKernels {
     static func broadcast(_ name: String, _ element: GPUElement, lhs: GPUBuffer, rhs: GPUBuffer, result: GPUBuffer, layout: GPULayout, count: Int) {
         let kernel = Self.kernel("\(name)_bc_\(element.rawValue)", in: .elementwise)
         GPUContext.compute(kernel, reading: [lhs, rhs], writing: [result]) { arguments in
-            arguments.buffer(lhs)
-            arguments.buffer(rhs)
-            arguments.buffer(result)
+            arguments.buffers(lhs, rhs, result)
             arguments.value(UInt32(count))
             arguments.values(layout.arguments)
             arguments.dispatch(count: count)
@@ -128,10 +122,7 @@ enum GPUKernels {
     static func select(_ name: String, _ element: GPUElement, lhs: GPUBuffer, rhs: GPUBuffer, result: GPUBuffer, context: GPUBuffer, count: Int) {
         let kernel = Self.kernel("\(name)_context_\(element.rawValue)", in: .elementwise)
         GPUContext.compute(kernel, reading: [lhs, rhs], writing: [result, context]) { arguments in
-            arguments.buffer(lhs)
-            arguments.buffer(rhs)
-            arguments.buffer(result)
-            arguments.buffer(context)
+            arguments.buffers(lhs, rhs, result, context)
             arguments.value(UInt32(count))
             arguments.dispatch(count: count)
         }
@@ -151,8 +142,7 @@ enum GPUKernels {
             return
         }
         GPUContext.compute(Self.kernel("strided_copy_u32", in: .copy), reading: [source], writing: [result]) { arguments in
-            arguments.buffer(source)
-            arguments.buffer(result)
+            arguments.buffers(source, result)
             arguments.values(layout.arguments)
             arguments.value(UInt32(count))
             arguments.dispatch(count: count)
@@ -172,9 +162,7 @@ enum GPUKernels {
             return
         }
         GPUContext.compute(Self.kernel("strided_copy_add_\(element.rawValue)", in: .copy), reading: [source, summand], writing: [result]) { arguments in
-            arguments.buffer(source)
-            arguments.buffer(result)
-            arguments.buffer(summand)
+            arguments.buffers(source, result, summand)
             arguments.values(layout.arguments)
             arguments.value(UInt32(count))
             arguments.dispatch(count: count)
@@ -185,8 +173,7 @@ enum GPUKernels {
     static func transpose(source: GPUBuffer, result: GPUBuffer, batch: Int, rows: Int, columns: Int) {
         let kernel = Self.kernel("transpose_u32", in: .copy)
         GPUContext.compute(kernel, reading: [source], writing: [result]) { arguments in
-            arguments.buffer(source)
-            arguments.buffer(result)
+            arguments.buffers(source, result)
             arguments.value(SIMD2<UInt32>(UInt32(rows), UInt32(columns)))
             arguments.dispatch(
                 threadgroups: MTLSize(width: (columns + 31) / 32, height: (rows + 31) / 32, depth: batch),
@@ -197,26 +184,26 @@ enum GPUKernels {
 
     /// Copies a region of a buffer with the given shape into a contiguous result.
     static func copyRegion<Element>(of source: Buffer<Element, GPU>, shape: [Int], ranges: [Range<Int>], to result: MutableBuffer<Element, GPU>) {
-        let strides = GPULayout.contiguousStrides(shape)
+        let strides = ShapeUtil.contiguousStrides(of: shape)
         let offset = zip(ranges, strides).map { $0.lowerBound * $1 }.reduce(0, +)
         let regionShape = ranges.map(\.count)
         copy(
             from: source.advanced(by: offset),
             strides: strides,
             to: result,
-            strides: GPULayout.contiguousStrides(regionShape),
+            strides: ShapeUtil.contiguousStrides(of: regionShape),
             shape: regionShape,
         )
     }
 
     /// Copies a contiguous source into a region of a buffer with the given shape.
     static func writeRegion<Element>(of result: MutableBuffer<Element, GPU>, shape: [Int], ranges: [Range<Int>], from source: Buffer<Element, GPU>) {
-        let strides = GPULayout.contiguousStrides(shape)
+        let strides = ShapeUtil.contiguousStrides(of: shape)
         let offset = zip(ranges, strides).map { $0.lowerBound * $1 }.reduce(0, +)
         let regionShape = ranges.map(\.count)
         copy(
             from: source,
-            strides: GPULayout.contiguousStrides(regionShape),
+            strides: ShapeUtil.contiguousStrides(of: regionShape),
             to: result.advanced(by: offset),
             strides: strides,
             shape: regionShape,
@@ -234,8 +221,8 @@ enum GPUKernels {
             stridedCopy(source: source.memory, result: result.memory, layout: layout)
             return
         }
-        let sourcePointer = source.host.memory.baseAddress!.assumingMemoryBound(to: Element.self)
-        let resultPointer = result.host.memory.baseAddress!.assumingMemoryBound(to: Element.self)
+        let sourcePointer = source.host.bytes.baseAddress!.assumingMemoryBound(to: Element.self)
+        let resultPointer = result.host.bytes.baseAddress!.assumingMemoryBound(to: Element.self)
         StridedIteration.forEachOffset(shape: layout.shape, strides: layout.strides[0], layout.strides[1]) { sourceOffset, resultOffset in
             resultPointer[resultOffset] = sourcePointer[sourceOffset]
         }
@@ -316,8 +303,7 @@ enum GPUKernels {
         let width = segmentLength <= 1024 ? 32 : 256
         let height = width == 32 ? 8 : 1
         GPUContext.compute(kernel, reading: accumulate ? [values, result] : [values], writing: [result] + (context.map { [$0] } ?? [])) { arguments in
-            arguments.buffer(values)
-            arguments.buffer(result)
+            arguments.buffers(values, result)
             if let context {
                 arguments.buffer(context)
             }
@@ -336,8 +322,7 @@ enum GPUKernels {
         let width = min(inner, 64)
         let height = max(1, min(outer, 256 / width))
         GPUContext.compute(kernel, reading: accumulate ? [values, result] : [values], writing: [result] + (context.map { [$0] } ?? [])) { arguments in
-            arguments.buffer(values)
-            arguments.buffer(result)
+            arguments.buffers(values, result)
             if let context {
                 arguments.buffer(context)
             }
@@ -396,11 +381,6 @@ struct GPULayout {
             }
         }
         return values
-    }
-
-    /// Row-major strides of a shape.
-    static func contiguousStrides(_ shape: [Int]) -> [Int] {
-        MemoryOps.strides(from: shape)
     }
 }
 #endif

@@ -27,7 +27,7 @@ import Foundation
 
 /// Transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 @Layer
-public struct TransformerEncoder<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct TransformerEncoder<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     public var encoderLayers: [TransformerEncoderBlock<Element, Device>]
 
     /// Creates a transformer encoder sequencing positional encoding and token embedding and multiple transformer encoder layers, as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).

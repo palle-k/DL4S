@@ -28,7 +28,7 @@ import Foundation
 /// Adagrad optimizer
 ///
 /// Follows [Duchi et al - Adaptive Subgradient Methods for Online Learning and Stochastic Optimization](http://jmlr.org/papers/volume12/duchi11a/duchi11a.pdf)
-public struct Adagrad<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct Adagrad<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Learning rate scaling factor

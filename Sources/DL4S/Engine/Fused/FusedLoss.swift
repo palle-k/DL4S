@@ -28,17 +28,14 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func binaryCrossEntropy<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func binaryCrossEntropy<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // -mean(expected * log(actual) + (1 - expected) * log(1 - actual)), with the elements in memory order
         let count = actual.count
         let (e, a) = (expected.reshaped(to: [count]), actual.reshaped(to: [count]))
-        let terms = math.temporary([count])
-        let complementTerms = math.temporary([count])
-        let complementExpected = math.temporary([count])
+        let terms = Device.Memory.allocateBuffer(withShape: [count], type: N.self)
+        let complementTerms = Device.Memory.allocateBuffer(withShape: [count], type: N.self)
+        let complementExpected = Device.Memory.allocateBuffer(withShape: [count], type: N.self)
         math.log(a, into: terms)
         math.multiply(terms, e, into: terms)
         math.subtract(1, a, into: complementTerms)
@@ -50,18 +47,15 @@ public extension FusedOperationsType {
         math.negate(result, into: result)
     }
 
-    static func binaryCrossEntropyBackward<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?) {
+    static func binaryCrossEntropyBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let count = actual.count
         let (e, a) = (expected.reshaped(to: [count]), actual.reshaped(to: [count]))
-        let factor = math.temporary([])
+        let factor = Device.Memory.allocateBuffer(withShape: [], type: N.self)
         math.multiply(outputGradient, 1 / N(count), into: factor)
         // factor * (actual - expected) / (actual * (1 - actual))
         math.write(actualGradient) { da in
-            let (gradient, divisor) = (da.reshaped(to: [count]), math.temporary([count]))
+            let (gradient, divisor) = (da.reshaped(to: [count]), Device.Memory.allocateBuffer(withShape: [count], type: N.self))
             math.subtract(a, e, into: gradient)
             math.subtract(1, a, into: divisor)
             math.multiply(divisor, a, into: divisor)
@@ -70,7 +64,7 @@ public extension FusedOperationsType {
         }
         // factor * (log(1 - actual) - log(actual))
         math.write(expectedGradient) { de in
-            let (gradient, complementLogarithms) = (de.reshaped(to: [count]), math.temporary([count]))
+            let (gradient, complementLogarithms) = (de.reshaped(to: [count]), Device.Memory.allocateBuffer(withShape: [count], type: N.self))
             math.subtract(1, a, into: complementLogarithms)
             math.log(complementLogarithms, into: complementLogarithms)
             math.log(a, into: gradient)
@@ -79,29 +73,23 @@ public extension FusedOperationsType {
         }
     }
 
-    static func categoricalCrossEntropy<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>) {
+    static func categoricalCrossEntropy<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // The gather yields 0 for the rows with the ignored label, so these rows add 0 to the loss.
-        let logarithms = math.temporary(actual.shape)
+        let logarithms = Device.Memory.allocateBuffer(withShape: actual.shape, type: N.self)
         math.log(actual, into: logarithms)
         categoricalNegativeLogLikelihood(expected: expected, actual: ShapedBuffer(logarithms), ignoreIndex: ignoreIndex, result: result)
     }
 
-    static func categoricalCrossEntropyBackward<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?) {
+    static func categoricalCrossEntropyBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let rows = expected.count
         let (labels, predictions) = (expected.reshaped(to: [rows]), actual.reshaped(to: [rows, actual.count / rows]))
         // -outputGradient / rows / selected, scattered to the labels. The rows with the ignored label select 0,
         // and the scatter drops their quotients.
         math.write(actualGradient) { da in
-            let selected = math.temporary([rows])
-            let factor = math.temporary([])
+            let selected = Device.Memory.allocateBuffer(withShape: [rows], type: N.self)
+            let factor = Device.Memory.allocateBuffer(withShape: [], type: N.self)
             Device.Engine.gather(expanded: predictions, context: labels, result: selected, axis: 1, ignoreIndex: ignoreIndex)
             math.multiply(outputGradient, -1 / N(rows), into: factor)
             math.divide(factor, selected, into: selected)
@@ -109,52 +97,40 @@ public extension FusedOperationsType {
         }
     }
 
-    static func categoricalNegativeLogLikelihood<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>) {
+    static func categoricalNegativeLogLikelihood<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let rows = expected.count
-        let selected = math.temporary([rows])
+        let selected = Device.Memory.allocateBuffer(withShape: [rows], type: N.self)
         Device.Engine.gather(expanded: actual.reshaped(to: [rows, actual.count / rows]), context: expected.reshaped(to: [rows]), result: selected, axis: 1, ignoreIndex: ignoreIndex)
         math.mean(selected, along: [0], into: result)
         math.negate(result, into: result)
     }
 
-    static func categoricalNegativeLogLikelihoodBackward<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?) {
+    static func categoricalNegativeLogLikelihoodBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let rows = expected.count
         // -outputGradient / rows at the label of every row, and 0 elsewhere
         math.write(actualGradient) { da in
-            let rowGradient = math.temporary([rows])
+            let rowGradient = Device.Memory.allocateBuffer(withShape: [rows], type: N.self)
             math.multiply(math.constant(-1 / N(rows), shape: [rows]), outputGradient, into: rowGradient)
             Device.Engine.scatter(reduced: ShapedBuffer(rowGradient), context: expected.reshaped(to: [rows]), result: da.reshaped(to: [rows, actual.count / rows]), axis: 1, ignoreIndex: ignoreIndex)
         }
     }
 
-    static func meanSquaredError<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
+    static func meanSquaredError<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
-        let differences = math.temporary(shapeForBroadcastedOperands(expected.shape, actual.shape))
+        let differences = Device.Memory.allocateBuffer(withShape: shapeForBroadcastedOperands(expected.shape, actual.shape), type: N.self)
         math.subtract(expected, actual, into: differences)
         math.multiply(differences, differences, into: differences)
         math.sum(differences, along: Array(differences.shape.indices), into: result)
         math.multiply(result, 1 / N(meanSquaredErrorDivisor(expectedShape: expected.shape)), into: result)
     }
 
-    static func meanSquaredErrorBackward<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?) {
+    static func meanSquaredErrorBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // 2 * (expected - actual) * outputGradient / divisor for the expected values, and its negative for the predictions
-        let differences = math.temporary(shapeForBroadcastedOperands(expected.shape, actual.shape))
-        let factor = math.temporary([])
+        let differences = Device.Memory.allocateBuffer(withShape: shapeForBroadcastedOperands(expected.shape, actual.shape), type: N.self)
+        let factor = Device.Memory.allocateBuffer(withShape: [], type: N.self)
         math.multiply(outputGradient, 2 / N(meanSquaredErrorDivisor(expectedShape: expected.shape)), into: factor)
         math.subtract(expected, actual, into: differences)
         math.multiply(differences, factor, into: differences)
@@ -165,14 +141,11 @@ public extension FusedOperationsType {
         }
     }
 
-    static func l1Loss<N: NumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>) {
+    static func l1Loss<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // mean(relu(input) + relu(-input)) * scale
-        let magnitudes = math.temporary(input.shape)
-        let negativePart = math.temporary(input.shape)
+        let magnitudes = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
+        let negativePart = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.relu(input, into: magnitudes)
         math.negate(input, into: negativePart)
         math.relu(negativePart, into: negativePart)
@@ -181,15 +154,12 @@ public extension FusedOperationsType {
         math.multiply(result, scale, into: result)
     }
 
-    static func l1LossBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?) {
+    static func l1LossBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // (heaviside(input) - heaviside(-input)) * outputGradient * scale / count. The gradient at 0 is 0.
         math.write(inputGradient) { dx in
-            let negative = math.temporary(input.shape)
-            let factor = math.temporary([])
+            let negative = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
+            let factor = Device.Memory.allocateBuffer(withShape: [], type: N.self)
             math.negate(input, into: negative)
             math.heaviside(negative, into: negative)
             math.heaviside(input, into: dx)
@@ -199,25 +169,19 @@ public extension FusedOperationsType {
         }
     }
 
-    static func l2Loss<N: NumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>) {
+    static func l2Loss<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
-        let squares = math.temporary(input.shape)
+        let squares = Device.Memory.allocateBuffer(withShape: input.shape, type: N.self)
         math.multiply(input, input, into: squares)
         math.mean(squares, along: Array(input.shape.indices), into: result)
         math.multiply(result, scale, into: result)
     }
 
-    static func l2LossBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?) {
+    static func l2LossBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // input * outputGradient * 2 * scale / count
         math.write(inputGradient) { dx in
-            let factor = math.temporary([])
+            let factor = Device.Memory.allocateBuffer(withShape: [], type: N.self)
             math.multiply(outputGradient, N(2) * scale / N(input.count), into: factor)
             math.multiply(input, factor, into: dx)
         }

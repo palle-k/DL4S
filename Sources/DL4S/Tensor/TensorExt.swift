@@ -76,14 +76,6 @@ extension Tensor: ExpressibleByIntegerLiteral {
 }
 
 public extension Tensor {
-    /// Creates a scalar tensor with the given value. The tensor will have a shape of []
-    /// - Parameter value: Value of the tensor.
-    init(_ value: Element) {
-        self.init([value], shape: [])
-    }
-}
-
-public extension Tensor {
     /// Element at the first index in the tensor.
     var item: Element {
         Device.Memory.getValue(from: values.values)
@@ -159,7 +151,7 @@ public extension Tensor {
 
 // MARK: Tensor initialization
 
-public extension Tensor where Element: RandomizableType {
+public extension Tensor where Element: FloatingPointNumericType {
     /// Creates a weight matrix with the Xavier (Glorot) normal initialization.
     ///
     /// The values are sampled from a normal distribution with mean 0 and standard deviation `sqrt(2 / (shape[0] + shape[1]))`.
@@ -258,7 +250,9 @@ public extension Tensor where Element: RandomizableType {
     init(normalDistributedWithShape shape: Int..., mean: Element = 0, stdev: Element = 1, requiresGradient: Bool = false) {
         self.init(normalDistributedWithShape: shape, mean: mean, stdev: stdev, requiresGradient: requiresGradient)
     }
+}
 
+public extension Tensor where Element: RandomizableType {
     /// Creates a tensor and fills it with random values sampled from a uniform distribution with the given minimum and maximum.
     /// - Parameters:
     ///   - shape: Shape of the tensor
@@ -341,7 +335,7 @@ extension Tensor: Codable where Element: Codable {
             )
         }
         let buffer = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
-        handle = TensorHandle(values: buffer.values)
+        memory = buffer.values.memory
         if elementCount > 0 {
             // Data does not guarantee the alignment of Element, so the bytes go through an aligned copy.
             withUnsafeTemporaryAllocation(of: Element.self, capacity: elementCount) { elements in
@@ -368,7 +362,7 @@ extension Tensor: Codable where Element: Codable {
 }
 
 public extension Tensor {
-    // Retreives the elements of the tensor as a flattened array.
+    // Retrieves the elements of the tensor as a flattened array.
     var elements: [Element] {
         var array = [Element](repeating: 0, count: count)
         array.withUnsafeMutableBufferPointer { pointer in

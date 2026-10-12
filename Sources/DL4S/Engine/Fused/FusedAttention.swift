@@ -28,11 +28,11 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func scaledDotProductAttention<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, result: MutableShapedBuffer<N, Device>) {
+    static func scaledDotProductAttention<N: FloatingPointNumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, result: MutableShapedBuffer<N, Device>) {
         matrixProductAttention(queries: queries, keys: keys, values: values, mask: mask, temperature: temperature, result: result)
     }
 
-    static func scaledDotProductAttentionBackward<N: NumericType>(
+    static func scaledDotProductAttentionBackward<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, Device>,
         keys: ShapedBuffer<N, Device>,
         values: ShapedBuffer<N, Device>,
@@ -46,7 +46,7 @@ public extension FusedOperationsType {
         matrixProductAttentionBackward(queries: queries, keys: keys, values: values, mask: mask, outputGradient: outputGradient, temperature: temperature, queryGradient: queryGradient, keyGradient: keyGradient, valueGradient: valueGradient)
     }
 
-    static func multiHeadAttention<N: NumericType>(
+    static func multiHeadAttention<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, Device>,
         keys: ShapedBuffer<N, Device>,
         values: ShapedBuffer<N, Device>,
@@ -75,7 +75,7 @@ public extension FusedOperationsType {
         }
     }
 
-    static func multiHeadAttentionBackward<N: NumericType>(
+    static func multiHeadAttentionBackward<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, Device>,
         keys: ShapedBuffer<N, Device>,
         values: ShapedBuffer<N, Device>,
@@ -120,7 +120,7 @@ public extension FusedOperationsType {
         }
     }
 
-    static func positionalEncoding<N: NumericType>(length: Int, hiddenSize: Int, result: MutableShapedBuffer<N, Device>) {
+    static func positionalEncoding<N: FloatingPointNumericType>(length: Int, hiddenSize: Int, result: MutableShapedBuffer<N, Device>) {
         // The encoding is a constant, so it is computed on the host and copied to the device once.
         var encoding = [N](repeating: 0, count: length * hiddenSize)
         for position in 0 ..< length {
@@ -152,21 +152,20 @@ enum HeadsLayout {
     }
 
     /// Arranges projected heads, [batchSize, count, heads, size], in the layout. Split heads are permuted into a new
-    /// buffer, and the input is freed. The caller frees the result.
-    func arranged<N: NumericType, Device>(consuming projected: MutableShapedBuffer<N, Device>, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
+    /// buffer, and the input is released.
+    func arranged<N: NumericType, Device>(consuming projected: consuming MutableShapedBuffer<N, Device>, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
         guard self == .split else {
             return projected
         }
         let (batchSize, count, heads, size) = (projected.shape[0], projected.shape[1], projected.shape[2], projected.shape[3])
         let split = Device.Memory.allocateBuffer(withShape: shape(batchSize: batchSize, count: count, heads: heads, size: size), type: N.self)
         math.permute(projected, to: [0, 2, 1, 3], into: split)
-        Device.Memory.free(projected)
         return split
     }
 
     /// Joins heads in the layout into a [batchSize \* count, heads \* size] matrix. Split heads are permuted into a new
-    /// buffer, and the input is freed. The caller frees the result.
-    func joined<N: NumericType, Device>(consuming input: MutableShapedBuffer<N, Device>, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
+    /// buffer, and the input is released.
+    func joined<N: NumericType, Device>(consuming input: consuming MutableShapedBuffer<N, Device>, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
         switch self {
         case .interleaved:
             let (batchSize, count, heads, size) = (input.shape[0], input.shape[1], input.shape[2], input.shape[3])
@@ -175,7 +174,6 @@ enum HeadsLayout {
             let (batchSize, heads, count, size) = (input.shape[0], input.shape[1], input.shape[2], input.shape[3])
             let joined = Device.Memory.allocateBuffer(withShape: HeadsLayout.interleaved.shape(batchSize: batchSize, count: count, heads: heads, size: size), type: N.self)
             math.permute(input, to: [0, 2, 1, 3], into: joined)
-            Device.Memory.free(input)
             return joined.reshaped(to: [batchSize * count, heads * size])
         }
     }
@@ -213,20 +211,17 @@ extension FusedOperationsType {
 
     /// Computes scaled dot product attention with batched matrix products, which write the scores to memory, and the softmax
     /// requirements of `Self`. It is the default implementation of the requirement.
-    static func matrixProductAttention<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, result: MutableShapedBuffer<N, Device>) {
+    static func matrixProductAttention<N: FloatingPointNumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, result: MutableShapedBuffer<N, Device>) {
         let shape = AttentionShape(queries: queries, keys: keys, values: values)
         precondition(result.shape == shape.resultShape, "The result must have the shape [batchSize, heads, queryCount, valueDim].")
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let weights = attentionWeights(queries: queries, keys: keys, mask: mask, temperature: temperature, shape: shape, math: math)
         math.multiplyBatchedMatrices(shape.valueGrouped(weights), values, into: shape.valueGrouped(result))
     }
 
     /// Computes the gradients of scaled dot product attention with batched matrix products and the softmax of `Self`, see
     /// ``matrixProductAttention(queries:keys:values:mask:temperature:result:)``.
-    static func matrixProductAttentionBackward<N: NumericType>(
+    static func matrixProductAttentionBackward<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, Device>,
         keys: ShapedBuffer<N, Device>,
         values: ShapedBuffer<N, Device>,
@@ -240,9 +235,6 @@ extension FusedOperationsType {
         let shape = AttentionShape(queries: queries, keys: keys, values: values)
         precondition(outputGradient.shape == shape.resultShape, "The gradient of the result must have the shape of the result.")
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // The attention weights are computed again instead of being kept alive between the forward and the backward pass.
         let weights = attentionWeights(queries: queries, keys: keys, mask: mask, temperature: temperature, shape: shape, math: math)
         let groupedOutputGradient = shape.valueGrouped(outputGradient)
@@ -253,9 +245,9 @@ extension FusedOperationsType {
         // The gradient of the scores is the gradient of the softmax. The products with the keys and the queries divide it by the temperature.
         let weightGradient = Device.Memory.allocateBuffer(withShape: weights.shape, type: N.self)
         math.multiplyBatchedMatrices(groupedOutputGradient, values, rhsTransposed: true, into: shape.valueGrouped(weightGradient))
-        let scoreGradient = math.temporary(weights.shape)
+        let scoreGradient = Device.Memory.allocateBuffer(withShape: weights.shape, type: N.self)
         softmaxBackward(output: ShapedBuffer(weights), outputGradient: ShapedBuffer(weightGradient), axis: 3, inputGradient: GradientBuffer(values: scoreGradient, adds: false))
-        Device.Memory.free(weightGradient)
+        _ = consume weightGradient
         let groupedScoreGradient = shape.keyGrouped(scoreGradient)
         math.writeBatchedProduct(groupedScoreGradient, keys, alpha: 1 / temperature, into: queryGradient.map(shape.keyGrouped))
         math.writeBatchedProduct(groupedScoreGradient, shape.keyGrouped(queries), lhsTransposed: true, alpha: 1 / temperature, into: keyGradient)
@@ -263,31 +255,27 @@ extension FusedOperationsType {
 
     /// Computes `softmax(queries × keysᵀ / temperature - 10⁹ * mask)` along the last axis with the softmax requirement of
     /// `Self`, shape [batchSize, heads, queryCount, keyCount].
-    static func attentionWeights<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, shape attention: AttentionShape, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
+    static func attentionWeights<N: FloatingPointNumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, shape attention: AttentionShape, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
         let shape = attention.scoreShape
         let scores = Device.Memory.allocateBuffer(withShape: shape, type: N.self)
-        defer {
-            Device.Memory.free(scores)
-        }
         math.multiplyBatchedMatrices(attention.keyGrouped(queries), keys, rhsTransposed: true, into: attention.keyGrouped(scores), alpha: 1 / temperature)
         if let mask {
             // The mask contains 1 for every entry that is blocked, so the softmax sets these entries to 0.
             let blocked = Device.Memory.allocateBuffer(withShape: mask.shape, type: N.self)
             math.multiply(mask, N(FusedConstants.maskScale), into: blocked)
             math.subtract(scores, blocked, into: scores)
-            Device.Memory.free(blocked)
         }
-        let weights = math.temporary(shape)
+        let weights = Device.Memory.allocateBuffer(withShape: shape, type: N.self)
         softmax(input: ShapedBuffer(scores), axis: shape.count - 1, result: weights)
         return weights
     }
 
-    // The helpers of multi-head attention allocate their results with the memory operators, and the caller frees every
-    // intermediate after its last use, so that the next allocations reuse memory that is still in the cache.
+    // The helpers of multi-head attention allocate their results with the memory operators, and the caller ends the lifetime
+    // of every intermediate after its last use, so that the next allocations reuse memory that is still in the cache.
 
     /// Projects a [batchSize, count, inputSize] buffer with weights of the shape [inputSize, heads \* size] into heads in the
-    /// given layout. The caller frees the result.
-    static func projectedHeads<N: NumericType>(_ input: ShapedBuffer<N, Device>, weights: ShapedBuffer<N, Device>, heads: Int, layout: HeadsLayout, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
+    /// given layout.
+    static func projectedHeads<N: FloatingPointNumericType>(_ input: ShapedBuffer<N, Device>, weights: ShapedBuffer<N, Device>, heads: Int, layout: HeadsLayout, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
         let (batchSize, count) = (input.shape[0], input.shape[1])
         let projected = Device.Memory.allocateBuffer(withShape: [batchSize, count, heads, weights.shape[1] / heads], type: N.self)
         math.multiplyMatrices(input.reshaped(to: [batchSize * count, input.shape[2]]), weights, into: projected.reshaped(to: [batchSize * count, weights.shape[1]]))
@@ -295,7 +283,7 @@ extension FusedOperationsType {
     }
 
     /// Computes multi-head attention, where `headAttention` computes the attention of the heads.
-    static func projectedAttention<N: NumericType>(
+    static func projectedAttention<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, Device>,
         keys: ShapedBuffer<N, Device>,
         values: ShapedBuffer<N, Device>,
@@ -311,23 +299,21 @@ extension FusedOperationsType {
         let shape = MultiHeadAttentionShape(queries: queries, keys: keys, values: values, queryWeights: queryWeights, keyWeights: keyWeights, valueWeights: valueWeights, outputWeights: outputWeights, heads: heads)
         precondition(result.shape == shape.resultShape, "The result must have the shape [batchSize, queryCount, outputDim].")
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let queryHeads = projectedHeads(queries, weights: queryWeights, heads: heads, layout: layout, math: math)
         let keyHeads = projectedHeads(keys, weights: keyWeights, heads: shape.keyHeads, layout: layout, math: math)
         let valueHeads = projectedHeads(values, weights: valueWeights, heads: shape.keyHeads, layout: layout, math: math)
         let attended = Device.Memory.allocateBuffer(withShape: layout.shape(batchSize: shape.batchSize, count: shape.queryCount, heads: heads, size: shape.valueDim), type: N.self)
         headAttention(ShapedBuffer(queryHeads), ShapedBuffer(keyHeads), ShapedBuffer(valueHeads), attended)
-        [queryHeads, keyHeads, valueHeads].forEach(Device.Memory.free)
-        let joined = layout.joined(consuming: attended, math: math)
+        _ = consume queryHeads
+        _ = consume keyHeads
+        _ = consume valueHeads
+        let joined = layout.joined(consuming: consume attended, math: math)
         math.multiplyMatrices(joined, outputWeights, into: result.reshaped(to: [joined.shape[0], shape.outputDim]))
-        Device.Memory.free(joined)
     }
 
     /// Computes the gradients of multi-head attention, where `headAttentionBackward` computes the gradients of the attention of
     /// the heads, and its result when the output projection has a requested gradient.
-    static func projectedAttentionBackward<N: NumericType>(
+    static func projectedAttentionBackward<N: FloatingPointNumericType>(
         queries: ShapedBuffer<N, Device>,
         keys: ShapedBuffer<N, Device>,
         values: ShapedBuffer<N, Device>,
@@ -344,9 +330,6 @@ extension FusedOperationsType {
         let shape = MultiHeadAttentionShape(queries: queries, keys: keys, values: values, queryWeights: queryWeights, keyWeights: keyWeights, valueWeights: valueWeights, outputWeights: outputWeights, heads: heads)
         precondition(outputGradient.shape == shape.resultShape, "The gradient of the result must have the shape of the result.")
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let queryHeads = projectedHeads(queries, weights: queryWeights, heads: heads, layout: layout, math: math)
         let keyHeads = projectedHeads(keys, weights: keyWeights, heads: shape.keyHeads, layout: layout, math: math)
         let valueHeads = projectedHeads(values, weights: valueWeights, heads: shape.keyHeads, layout: layout, math: math)
@@ -374,11 +357,12 @@ extension FusedOperationsType {
             keyHeadGradient,
             valueHeadGradient,
         )
-        [queryHeads, keyHeads, valueHeads, headOutputGradient].forEach(Device.Memory.free)
-        if let attended, let outputWeightGradient = gradients.outputWeights {
-            let joined = layout.joined(consuming: attended, math: math)
-            math.multiplyMatrices(joined, gradientMatrix, lhsTransposed: true, into: outputWeightGradient.values, beta: outputWeightGradient.beta)
-            Device.Memory.free(joined)
+        _ = consume queryHeads
+        _ = consume keyHeads
+        _ = consume valueHeads
+        _ = consume headOutputGradient
+        if let attended {
+            math.writeProduct(layout.joined(consuming: attended, math: math), gradientMatrix, lhsTransposed: true, into: gradients.outputWeights)
         }
         func addProjectionGradients(input: ShapedBuffer<N, Device>, weights: ShapedBuffer<N, Device>, headGradient: GradientBuffer<N, Device>?, inputGradient: GradientBuffer<N, Device>?, weightGradient: GradientBuffer<N, Device>?) {
             guard let headGradient else {
@@ -386,17 +370,12 @@ extension FusedOperationsType {
             }
             let joined = layout.joined(consuming: headGradient.values, math: math)
             let inputMatrixShape = [input.shape[0] * input.shape[1], input.shape[2]]
-            if let inputGradient {
-                math.multiplyMatrices(joined, weights, rhsTransposed: true, into: inputGradient.values.reshaped(to: inputMatrixShape), beta: inputGradient.beta)
-            }
-            if let weightGradient {
-                math.multiplyMatrices(input.reshaped(to: inputMatrixShape), joined, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-            }
-            Device.Memory.free(joined)
+            math.writeProduct(joined, weights, rhsTransposed: true, into: inputGradient?.reshaped(to: inputMatrixShape))
+            math.writeProduct(input.reshaped(to: inputMatrixShape), joined, lhsTransposed: true, into: weightGradient)
         }
-        addProjectionGradients(input: queries, weights: queryWeights, headGradient: queryHeadGradient, inputGradient: gradients.queries, weightGradient: gradients.queryWeights)
-        addProjectionGradients(input: keys, weights: keyWeights, headGradient: keyHeadGradient, inputGradient: gradients.keys, weightGradient: gradients.keyWeights)
-        addProjectionGradients(input: values, weights: valueWeights, headGradient: valueHeadGradient, inputGradient: gradients.values, weightGradient: gradients.valueWeights)
+        addProjectionGradients(input: queries, weights: queryWeights, headGradient: consume queryHeadGradient, inputGradient: gradients.queries, weightGradient: gradients.queryWeights)
+        addProjectionGradients(input: keys, weights: keyWeights, headGradient: consume keyHeadGradient, inputGradient: gradients.keys, weightGradient: gradients.keyWeights)
+        addProjectionGradients(input: values, weights: valueWeights, headGradient: consume valueHeadGradient, inputGradient: gradients.values, weightGradient: gradients.valueWeights)
     }
 }
 

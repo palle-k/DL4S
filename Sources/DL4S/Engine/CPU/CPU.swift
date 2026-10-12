@@ -43,196 +43,191 @@ public struct CPUFusedOperations: FusedOperationsType {
     public typealias Device = CPU
 }
 
+/// Memory of the CPU, which is freed when the last buffer that refers to it is released.
+final class CPUStorage {
+    let bytes: UnsafeMutableRawBufferPointer
+
+    init(byteCount: Int, alignment: Int) {
+        bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: alignment)
+        #if DL4S_TRACE_ALLOCATIONS
+        CPUMemoryOperators.recordAllocation(of: bytes)
+        #endif
+    }
+
+    deinit {
+        #if DL4S_TRACE_ALLOCATIONS
+        CPUMemoryOperators.recordFree(of: bytes)
+        #endif
+        bytes.deallocate()
+    }
+}
+
+// `@unchecked Sendable`: Tensors write their storage only through `Tensor.mutableValues`, which copies it first when
+// another buffer refers to it, so no two threads write or read and write the same memory.
+/// A region of memory of the CPU.
+///
+/// Views of a tensor refer to the storage of the tensor with an offset.
+public struct CPUBuffer: @unchecked Sendable {
+    /// The storage that owns the memory, or nil for memory that another object keeps alive, such as the host memory
+    /// of a GPU buffer.
+    var storage: CPUStorage?
+
+    /// The region in memory.
+    let bytes: UnsafeMutableRawBufferPointer
+}
+
 public struct CPUMemoryOperators: MemoryOperatorsType {
-    public typealias RawBuffer = UnsafeMutableRawBufferPointer
+    public typealias RawBuffer = CPUBuffer
     public typealias Device = CPU
 
     public static func allocateBuffer<Element>(withCapacity capacity: Int, type: Element.Type) -> MutableBuffer<Element, CPU> {
-        let stride = MemoryLayout<Element>.stride
-        let alignment = max(MemoryLayout<Element>.alignment, 16)
-
-        let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: stride * capacity, alignment: alignment)
-        #if DL4S_TRACE_ALLOCATIONS
-        recordAllocation(of: buffer, capacity: capacity)
-        #endif
-        return MutableBuffer<Element, CPU>(memory: buffer)
+        let storage = CPUStorage(byteCount: MemoryLayout<Element>.stride * capacity, alignment: max(MemoryLayout<Element>.alignment, 16))
+        return MutableBuffer(memory: CPUBuffer(storage: storage, bytes: storage.bytes))
     }
 
-    public static func free<Element>(_ buffer: MutableBuffer<Element, CPU>) {
-        #if DL4S_TRACE_ALLOCATIONS
-        recordFree(of: buffer.memory)
-        #endif
-        buffer.memory.deallocate()
+    public static func isUniquelyReferenced(_ buffer: inout CPUBuffer) -> Bool {
+        isKnownUniquelyReferenced(&buffer.storage)
     }
 
     public static func assign<Element>(from source: UnsafeBufferPointer<Element>, to destination: MutableBuffer<Element, CPU>, count: Int) {
         let byteCount = count * MemoryLayout<Element>.stride
-        precondition(count <= source.count && byteCount <= destination.memory.count, "The copy exceeds a buffer.")
+        precondition(count <= source.count && byteCount <= destination.bytes.count, "The copy exceeds a buffer.")
         guard byteCount > 0 else {
             return
         }
-        memcpy(destination.memory.baseAddress!, source.baseAddress!, byteCount)
+        memcpy(destination.bytes.baseAddress!, source.baseAddress!, byteCount)
     }
 
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: MutableBuffer<Element, CPU>, count: Int) {
         let byteCount = count * MemoryLayout<Element>.stride
-        precondition(byteCount <= source.memory.count && byteCount <= destination.memory.count, "The copy exceeds a buffer.")
+        precondition(byteCount <= source.bytes.count && byteCount <= destination.bytes.count, "The copy exceeds a buffer.")
         guard byteCount > 0 else {
             return
         }
-        memcpy(destination.memory.baseAddress!, source.memory.baseAddress!, byteCount)
+        memcpy(destination.bytes.baseAddress!, source.bytes.baseAddress!, byteCount)
     }
 
     public static func assign<Element>(from source: Buffer<Element, CPU>, to destination: UnsafeMutableBufferPointer<Element>, count: Int) {
         let byteCount = count * MemoryLayout<Element>.stride
-        precondition(byteCount <= source.memory.count && count <= destination.count, "The copy exceeds a buffer.")
+        precondition(byteCount <= source.bytes.count && count <= destination.count, "The copy exceeds a buffer.")
         guard byteCount > 0 else {
             return
         }
-        memcpy(destination.baseAddress!, source.memory.baseAddress!, byteCount)
+        memcpy(destination.baseAddress!, source.bytes.baseAddress!, byteCount)
     }
 
     @inline(__always)
     @_specialize(where Element == Float)
     @_specialize(where Element == Int32)
     @_specialize(where Element == Double)
-    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (MutableBuffer<Element, CPU>, Bool, [Int]) {
+    public static func get<Element>(slice: [Int?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> MutableShapedBuffer<Element, CPU> {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
 
-        // Prevent unneccessary copies when index ends with nil
+        // An index that ends with nil selects the same elements as the index without the trailing nils.
         var sliceCount = slice.count
         while sliceCount > 0, slice[sliceCount - 1] == nil {
             sliceCount -= 1
         }
-        let strides = MemoryOps.strides(from: shape)
+        let strides = ShapeUtil.contiguousStrides(of: shape)
+        let prefix = slice.prefix(sliceCount)
 
-        if slice.prefix(sliceCount).allSatisfy({ $0 != nil }) {
-            // Simple offset into storage
-            var offset = 0
-            for axis in 0 ..< sliceCount {
-                offset += slice[axis]! * strides[axis]
-            }
+        if prefix.allSatisfy({ $0 != nil }) {
+            // The elements are contiguous, so the result is a view of the storage.
+            let offset = zip(prefix, strides).map { $0! * $1 }.reduce(0, +)
             let resultShape = Array(shape.dropFirst(sliceCount))
-
-            let bound = buffer.memory
-                .bindMemory(to: Element.self)
-            let advanced = UnsafeMutableBufferPointer(
-                rebasing: bound.advanced(by: offset).prefix(resultShape.reduce(1, *)),
-            )
-            let advancedRaw = UnsafeMutableRawBufferPointer(advanced)
-            return (MutableBuffer<Element, CPU>(memory: advancedRaw), false, resultShape)
-        } else {
-            let padded = Array(slice.prefix(sliceCount)) + [Int?](repeating: nil, count: shape.count - sliceCount)
-
-            let resultShape = zip(padded, shape).map { el -> Int? in
-                let (index, dimSize) = el
-                return index == nil ? dimSize : nil
-            }
-            let flattenedResultShape = resultShape.compactMap(\.self)
-
-            let resultCount = flattenedResultShape.reduce(1, *)
-            let resultBuffer = allocateBuffer(withCapacity: resultCount, type: Element.self)
-
-            iterativeRead(source: buffer.memory.bindMemory(to: Element.self).immutable, destination: resultBuffer.memory.bindMemory(to: Element.self), srcIndex: padded, srcStrides: strides, srcShape: shape)
-
-            return (resultBuffer, true, flattenedResultShape)
+            let view = advance(buffer: MutableBuffer<Element, CPU>(memory: buffer.memory), by: offset, count: resultShape.reduce(1, *))
+            return MutableShapedBuffer(values: view, shape: resultShape)
         }
+        let ranges = shape.indices.map { axis in (axis < slice.count ? slice[axis] : nil).map { $0 ..< $0 + 1 } ?? 0 ..< shape[axis] }
+        let resultShape = zip(slice + [Int?](repeating: nil, count: shape.count - slice.count), shape).compactMap { index, size in index == nil ? size : nil }
+        let result = allocateBuffer(withCapacity: resultShape.reduce(1, *), type: Element.self)
+        copyRegion(of: buffer, shape: shape, ranges: ranges, to: result, inside: false)
+        return MutableShapedBuffer(values: result, shape: resultShape)
     }
 
-    public static func get<Element>(slice: [CountableRange<Int>?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> (MutableBuffer<Element, CPU>, Bool, [Int]) {
+    public static func get<Element>(slice: [Range<Int>?], of buffer: Buffer<Element, CPU>, with shape: [Int]) -> MutableShapedBuffer<Element, CPU> {
         precondition(slice.count <= shape.count, "Index must be smaller than or equal to vector size")
-
-        let strides = MemoryOps.strides(from: shape)
         let ranges = shape.indices.map { axis in (axis < slice.count ? slice[axis] : nil) ?? 0 ..< shape[axis] }
-        let resultShape = ranges.map(\.count)
-        let offset = zip(ranges, strides).map { $0.lowerBound * $1 }.reduce(0, +)
-
-        let resultBuffer = allocateBuffer(withCapacity: resultShape.reduce(1, *), type: Element.self)
-        copyRegion(
-            from: buffer.memory.bindMemory(to: Element.self).baseAddress! + offset,
-            strides: strides,
-            to: resultBuffer.memory.bindMemory(to: Element.self).baseAddress!,
-            strides: MemoryOps.strides(from: resultShape),
-            shape: resultShape,
-        )
-        return (resultBuffer, true, resultShape)
-    }
-
-    /// Copies the elements of a region between two buffers, one row of the region at a time.
-    ///
-    /// - Parameters:
-    ///   - source: First element of the region in the source.
-    ///   - sourceStrides: Strides of the source.
-    ///   - destination: First element of the region in the destination.
-    ///   - destinationStrides: Strides of the destination.
-    ///   - shape: Shape of the region. The last axis must be contiguous in the source and the destination.
-    private static func copyRegion<Element>(from source: UnsafeMutablePointer<Element>, strides sourceStrides: [Int], to destination: UnsafeMutablePointer<Element>, strides destinationStrides: [Int], shape: [Int]) {
-        guard let rowLength = shape.last else {
-            destination.pointee = source.pointee
-            return
-        }
-        guard shape.allSatisfy({ $0 > 0 }) else {
-            return
-        }
-        StridedIteration.forEachOffset(shape: Array(shape.dropLast()), strides: Array(sourceStrides.dropLast()), Array(destinationStrides.dropLast())) { sourceOffset, destinationOffset in
-            (destination + destinationOffset).update(from: source + sourceOffset, count: rowLength)
-        }
+        let result = allocateBuffer(withCapacity: ranges.map(\.count).reduce(1, *), type: Element.self)
+        copyRegion(of: buffer, shape: shape, ranges: ranges, to: result, inside: false)
+        return MutableShapedBuffer(values: result, shape: ranges.map(\.count))
     }
 
     public static func set<Element>(slice: [Int?], of buffer: MutableBuffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
         let countDelta = dstShape.count - slice.filter { $0 != nil }.count
         precondition(sourceShape.count == countDelta, "Dimensionality of source must be equal to dimensionality of destination minus number of knowns in slice")
-
-        let padded = slice + [Int?](repeating: nil, count: dstShape.count - slice.count)
-
-        let dstStrides = MemoryOps.strides(from: dstShape)
-        iterativeWrite(source: source.memory.bindMemory(to: Element.self).immutable, destination: buffer.memory.bindMemory(to: Element.self), dstIndex: padded, dstStrides: dstStrides, dstShape: dstShape)
+        let ranges = dstShape.indices.map { axis in (axis < slice.count ? slice[axis] : nil).map { $0 ..< $0 + 1 } ?? 0 ..< dstShape[axis] }
+        copyRegion(of: Buffer(buffer), shape: dstShape, ranges: ranges, to: MutableBuffer(memory: source.memory), inside: true)
     }
 
     public static func set<Element>(slice: [Range<Int>?], of buffer: MutableBuffer<Element, CPU>, with dstShape: [Int], from source: Buffer<Element, CPU>, with sourceShape: [Int]) {
         precondition(sourceShape.count == dstShape.count, "Dimensionality of source must be equal to dimensionality of destination")
-
-        let strides = MemoryOps.strides(from: dstShape)
         let ranges = dstShape.indices.map { axis in (axis < slice.count ? slice[axis] : nil) ?? 0 ..< dstShape[axis] }
-        let regionShape = ranges.map(\.count)
-        precondition(regionShape == sourceShape, "Shape of source must be equal to the shape of the slice")
-        let offset = zip(ranges, strides).map { $0.lowerBound * $1 }.reduce(0, +)
+        precondition(ranges.map(\.count) == sourceShape, "Shape of source must be equal to the shape of the slice")
+        copyRegion(of: Buffer(buffer), shape: dstShape, ranges: ranges, to: MutableBuffer(memory: source.memory), inside: true)
+    }
 
-        copyRegion(
-            from: UnsafeMutablePointer(mutating: source.memory.bindMemory(to: Element.self).baseAddress!),
-            strides: MemoryOps.strides(from: regionShape),
-            to: buffer.memory.bindMemory(to: Element.self).baseAddress! + offset,
-            strides: strides,
-            shape: regionShape,
-        )
+    /// Copies the elements of a region of a buffer from or into a contiguous buffer, one row of the region at a time.
+    ///
+    /// - Parameters:
+    ///   - buffer: Buffer that contains the region.
+    ///   - shape: Shape of `buffer`.
+    ///   - ranges: Range of the region along every axis.
+    ///   - contiguous: Buffer with the elements of the region in a contiguous layout.
+    ///   - inside: Whether the elements of `contiguous` are copied into the region (true), or the elements of the region
+    ///     into `contiguous` (false).
+    private static func copyRegion<Element>(of buffer: Buffer<Element, CPU>, shape: [Int], ranges: [Range<Int>], to contiguous: MutableBuffer<Element, CPU>, inside: Bool) {
+        let regionShape = ranges.map(\.count)
+        guard regionShape.allSatisfy({ $0 > 0 }) else {
+            return
+        }
+        let strides = ShapeUtil.contiguousStrides(of: shape)
+        let offset = zip(ranges, strides).map { $0.lowerBound * $1 }.reduce(0, +)
+        let region = UnsafeMutablePointer(mutating: buffer.immutable.baseAddress!) + offset
+        let elements = contiguous.pointer.baseAddress!
+        let merged = StridedIteration.mergingAxes(shape: regionShape, strides: [strides, ShapeUtil.contiguousStrides(of: regionShape)])
+        var (outerShape, regionStrides, elementStrides) = (merged.shape, merged.strides[0], merged.strides[1])
+        var rowLength = 1
+        if let length = outerShape.last, regionStrides.last == 1, elementStrides.last == 1 {
+            rowLength = length
+            outerShape.removeLast()
+            regionStrides.removeLast()
+            elementStrides.removeLast()
+        }
+        StridedIteration.forEachOffset(shape: outerShape, strides: regionStrides, elementStrides) { regionOffset, elementOffset in
+            if inside {
+                (region + regionOffset).update(from: elements + elementOffset, count: rowLength)
+            } else {
+                (elements + elementOffset).update(from: region + regionOffset, count: rowLength)
+            }
+        }
     }
 
     public static func getValue<Element>(from source: Buffer<Element, CPU>) -> Element {
-        source.memory.bindMemory(to: Element.self).pointee
+        source.immutable[0]
     }
 
     public static func getSize<Element>(of buffer: Buffer<Element, CPU>) -> Int {
-        buffer.memory.bindMemory(to: Element.self).count
+        buffer.bytes.count / MemoryLayout<Element>.stride
     }
 
     public static func advance<Element>(buffer: Buffer<Element, CPU>, by advancement: Int) -> Buffer<Element, CPU> {
-        Buffer<Element, CPU>(memory: advance(memory: buffer.memory, by: advancement, type: Element.self))
+        Buffer(advance(buffer: MutableBuffer(memory: buffer.memory), by: advancement, count: buffer.count - advancement))
     }
 
     public static func advance<Element>(buffer: MutableBuffer<Element, CPU>, by advancement: Int) -> MutableBuffer<Element, CPU> {
-        MutableBuffer<Element, CPU>(memory: advance(memory: buffer.memory, by: advancement, type: Element.self))
+        advance(buffer: buffer, by: advancement, count: buffer.count - advancement)
     }
 
-    private static func advance<Element>(memory: UnsafeMutableRawBufferPointer, by advancement: Int, type: Element.Type) -> UnsafeMutableRawBufferPointer {
-        UnsafeMutableRawBufferPointer(
-            memory
-                .bindMemory(to: Element.self)
-                .advanced(by: advancement),
-        )
+    /// Returns the region of `count` elements that starts `advancement` elements after the start of the buffer.
+    private static func advance<Element>(buffer: MutableBuffer<Element, CPU>, by advancement: Int, count: Int) -> MutableBuffer<Element, CPU> {
+        let stride = MemoryLayout<Element>.stride
+        let bytes = UnsafeMutableRawBufferPointer(rebasing: buffer.bytes[advancement * stride ..< (advancement + count) * stride])
+        return MutableBuffer(memory: CPUBuffer(storage: buffer.memory.storage, bytes: bytes))
     }
 
     public static func setPointee<Element>(of buffer: MutableBuffer<Element, CPU>, to newValue: Element) {
-        buffer.pointer.pointee = newValue
+        buffer.pointer[0] = newValue
     }
 }
 
@@ -276,7 +271,7 @@ public extension CPUMemoryOperators {
         allocationTraceState.withLock { $0.callStacks.count }
     }
 
-    internal static func recordAllocation(of buffer: UnsafeMutableRawBufferPointer, capacity: Int) {
+    internal static func recordAllocation(of buffer: UnsafeMutableRawBufferPointer) {
         let address = UInt(bitPattern: buffer.baseAddress!)
         let isEnabled = allocationTraceState.withLock { state in
             guard state.isEnabled else {
@@ -294,7 +289,7 @@ public extension CPUMemoryOperators {
             guard let callStack else {
                 return
             }
-            print("[ALLOC TRACE]: buffer of size \(capacity) not freed after \(allocationTraceReportDelaySeconds) seconds.")
+            print("[ALLOC TRACE]: buffer of \(buffer.count) bytes not freed after \(allocationTraceReportDelaySeconds) seconds.")
             print("[ALLOC TRACE] [begin callstack]")
             print(callStack.joined(separator: "\n"))
             print("[ALLOC TRACE] [end callstack]")

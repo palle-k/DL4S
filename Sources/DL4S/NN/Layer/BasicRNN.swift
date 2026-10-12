@@ -28,7 +28,7 @@ import Foundation
 /// A 'vanilla' RNN.
 /// In each step, the RNN performs the transformation matMul(x\_t, W) + matMul(h\_t-1, U) + b
 @Layer
-public struct BasicRNN<Element: RandomizableType, Device: DeviceType>: RNN, Codable, Sendable {
+public struct BasicRNN<Element: FloatingPointNumericType, Device: DeviceType>: RNN, Codable, Sendable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (Tensor<Element, Device>, () -> Tensor<Element, Device>)
 

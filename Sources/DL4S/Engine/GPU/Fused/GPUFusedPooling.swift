@@ -110,8 +110,7 @@ private struct GPUPooling {
     func forward(_ name: String, input: GPUBuffer, result: GPUBuffer) {
         let threads = MTLSize(width: Int(parameters.outputWidth), height: Int(parameters.outputHeight), depth: planes)
         GPUContext.compute(GPUKernels.kernel(name, in: .fused), reading: [input], writing: [result]) { arguments in
-            arguments.buffer(input)
-            arguments.buffer(result)
+            arguments.buffers(input, result)
             arguments.value(parameters)
             arguments.dispatch(threads: threads, threadgroup: Self.threadgroup)
         }
@@ -128,8 +127,7 @@ private struct GPUPooling {
             if let windows {
                 arguments.buffer(windows)
             }
-            arguments.buffer(outputGradient)
-            arguments.buffer(dx)
+            arguments.buffers(outputGradient, dx)
             arguments.value(parameters)
             arguments.dispatch(threads: threads, threadgroup: Self.threadgroup)
         }

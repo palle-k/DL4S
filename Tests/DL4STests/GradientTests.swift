@@ -293,6 +293,18 @@ struct GradientTests {
         let matrixWeights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 4], min: -1, max: 1, using: &generator)
         expectGradientsMatchCentralDifferences(of: { $0.diagonalElements() * vectorWeights }, at: matrix)
         expectGradientsMatchCentralDifferences(of: { $0.diagonalMatrix() * matrixWeights }, at: vector)
+        let wideMatrix = Tensor<Double, CPU>(uniformlyDistributedWithShape: [3, 5], min: -1, max: 1, requiresGradient: true, using: &generator)
+        expectGradientsMatchCentralDifferences(of: { $0.diagonalElements() * vectorWeights[0 ..< 3] }, at: wideMatrix)
+    }
+
+    // A cycle of three axes is not its own inverse, so it checks that the gradient undoes the permutation. The second
+    // permutation of the same tensor adds to the accumulated gradient.
+    @Test func testPermutationGradient() {
+        var generator = WyHash(seed: 27)
+        let input = Tensor<Double, CPU>(uniformlyDistributedWithShape: [2, 3, 4], min: -1, max: 1, requiresGradient: true, using: &generator)
+        let weights = Tensor<Double, CPU>(uniformlyDistributedWithShape: [4, 2, 3], min: -1, max: 1, using: &generator)
+        expectGradientsMatchCentralDifferences(of: { $0.permuted(to: [1, 2, 0]) * weights }, at: input)
+        expectGradientsMatchCentralDifferences(of: { $0.permuted(to: [1, 2, 0]) * weights + $0.permuted(to: [1, 2, 0]) * $0.permuted(to: [1, 2, 0]) }, at: input)
     }
 
     @Test func testReverseGradient() {
@@ -314,19 +326,5 @@ struct GradientTests {
         expectGradientsMatchCentralDifferences(of: { $0.scatter(using: Tensor<Int32, CPU>([2, 0, 1]), alongAxis: 0, withSize: 3) * weights[nil, 0 ..< 3] }, at: vector)
         expectGradientsMatchCentralDifferences(of: { $0.gather(using: columnIndices, alongAxis: 1) * weights[nil, 0] }, at: matrix)
         expectGradientsMatchCentralDifferences(of: { $0.gather(using: rowIndices, alongAxis: 0) * weights[0] }, at: matrix)
-    }
-
-    /// Checks the gradient of the weighted sum of `function` at `point` against central differences, with and
-    /// without a recorded backward graph.
-    private func expectGradientsMatchCentralDifferences(
-        of function: (Tensor<Double, CPU>) -> Tensor<Double, CPU>,
-        at point: Tensor<Double, CPU>,
-        sourceLocation: SourceLocation = #_sourceLocation,
-    ) {
-        let expected = numericalGradient(of: function, at: point)
-        for retainsGraph in [false, true] {
-            let gradient = function(point).reduceSum().gradients(of: [point], retainBackwardsGraph: retainsGraph)[0]
-            expectClose(gradient, expected, tolerance: 1e-14, sourceLocation: sourceLocation)
-        }
     }
 }

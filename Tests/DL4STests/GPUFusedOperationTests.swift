@@ -136,14 +136,14 @@ extension GPUTests {
         /// and returns the result and the gradients of the sources.
         private static func resultAndGradients<D: DeviceType>(_ sources: [Tensor<Float, D>], _ forward: ([Tensor<Float, D>]) -> Tensor<Float, D>) -> [Tensor<Float, D>] {
             let result = forward(sources)
-            let weights = Tensor<Float, D>(GPUTest.random(result.shape, seed: 99, min: 0.5, max: 1.5))
+            let weights = Tensor<Float, D>(Tensor<Float, CPU>.uniform(result.shape, min: 0.5, max: 1.5, seed: 99))
             let loss = (result * weights).reduceSum() + (forward(sources) * 0.5).reduceSum()
             return [result] + loss.gradients(of: sources.filter(\.requiresGradient))
         }
 
         @Test(arguments: GPUActivation.allCases, [[5, 7, 300], [3, 7]])
         func activationsMatchCPU(activation: GPUActivation, shape: [Int]) {
-            let x = GPUTest.random(shape, seed: 1, min: -3, max: 3, requiresGradient: true)
+            let x = Tensor<Float, CPU>.uniform(shape, min: -3, max: 3, seed: 1, requiresGradient: true)
             guard let parameterShape = activation.parameterShape else {
                 GPUTest.compare("\(activation) \(shape)") { gpu in
                     GPUTest.run(on: gpu, [x], cpu: { Self.resultAndGradients($0) { activation.apply($0[0], parameter: nil) } }, gpu: { GPUTest.host(Self.resultAndGradients($0) { activation.apply($0[0], parameter: nil) }) })
@@ -155,7 +155,7 @@ extension GPUTests {
             }
             // With a parameter that requires a gradient, the default implementation computes the gradients. Without, the kernel does.
             for parameterRequiresGradient in [false, true] {
-                let parameter = GPUTest.random(parameterShape, seed: 2, min: 0.2, max: 1.5, requiresGradient: parameterRequiresGradient)
+                let parameter = Tensor<Float, CPU>.uniform(parameterShape, min: 0.2, max: 1.5, seed: 2, requiresGradient: parameterRequiresGradient)
                 GPUTest.compare("\(activation) \(shape) parameter gradient \(parameterRequiresGradient)") { gpu in
                     GPUTest.run(on: gpu, [x, parameter], cpu: { Self.resultAndGradients($0) { activation.apply($0[0], parameter: $0[1]) } }, gpu: { GPUTest.host(Self.resultAndGradients($0) { activation.apply($0[0], parameter: $0[1]) }) })
                 }
@@ -164,7 +164,7 @@ extension GPUTests {
 
         @Test(arguments: [([300, 1000], 1), ([700, 10], 1), ([4, 3, 5], 0), ([2, 3, 4], 2), ([37, 3000], 1)])
         func softmaxMatchesCPU(shape: [Int], axis: Int) {
-            let x = GPUTest.random(shape, seed: 3, min: -4, max: 4, requiresGradient: true)
+            let x = Tensor<Float, CPU>.uniform(shape, min: -4, max: 4, seed: 3, requiresGradient: true)
             GPUTest.compare("softmax \(shape) \(axis)") { gpu in
                 GPUTest.run(on: gpu, [x], cpu: { Self.resultAndGradients($0) { $0[0].softmax(axis: axis) } }, gpu: { GPUTest.host(Self.resultAndGradients($0) { $0[0].softmax(axis: axis) }) })
             }
@@ -175,9 +175,9 @@ extension GPUTests {
 
         @Test(arguments: [([64, 512], [512]), ([6, 3, 100], [3, 100]), ([5, 20], [20]), ([3, 2000], [2000])])
         func layerNormalizationMatchesCPU(shape: [Int], scaleShape: [Int]) {
-            let x = GPUTest.random(shape, seed: 4, min: -2, max: 3, requiresGradient: true)
-            let scale = GPUTest.random(scaleShape, seed: 5, min: 0.5, max: 1.5, requiresGradient: true)
-            let shift = GPUTest.random(scaleShape, seed: 6, requiresGradient: true)
+            let x = Tensor<Float, CPU>.uniform(shape, min: -2, max: 3, seed: 4, requiresGradient: true)
+            let scale = Tensor<Float, CPU>.uniform(scaleShape, min: 0.5, max: 1.5, seed: 5, requiresGradient: true)
+            let shift = Tensor<Float, CPU>.uniform(scaleShape, seed: 6, requiresGradient: true)
             GPUTest.compare("layer normalization \(shape)", tolerance: 2e-3) { gpu in
                 GPUTest.run(on: gpu, [x, scale, shift], cpu: { Self.resultAndGradients($0) { $0[0].layerNormalized(scale: $0[1], shift: $0[2]) } }, gpu: { GPUTest.host(Self.resultAndGradients($0) { $0[0].layerNormalized(scale: $0[1], shift: $0[2]) }) })
             }
@@ -186,7 +186,7 @@ extension GPUTests {
         // The inputs are mostly negative, so that windows at the borders take their maximum from the zeros of the padding.
         @Test(arguments: [([2, 3, 7, 7], 3, 1, 2), ([2, 3, 8, 8], 2, 0, 2), ([2, 3, 9, 7], 2, 0, 2), ([1, 2, 5, 6], 3, 0, 1), ([2, 2, 6, 6], 3, 1, 3), ([4, 16, 33, 40], 3, 1, 2)])
         func poolingMatchesCPU(shape: [Int], windowSize: Int, padding: Int, stride: Int) {
-            let x = GPUTest.random(shape, seed: 17, min: -3, max: 1, requiresGradient: true)
+            let x = Tensor<Float, CPU>.uniform(shape, min: -3, max: 1, seed: 17, requiresGradient: true)
             GPUTest.compare("max pooling \(shape) window \(windowSize) padding \(padding) stride \(stride)") { gpu in
                 GPUTest.run(on: gpu, [x], cpu: { Self.resultAndGradients($0) { $0[0].maxPooled2d(windowSize: windowSize, padding: padding, stride: stride) } }, gpu: { GPUTest.host(Self.resultAndGradients($0) { $0[0].maxPooled2d(windowSize: windowSize, padding: padding, stride: stride) }) })
             }
@@ -197,12 +197,12 @@ extension GPUTests {
 
         @Test(arguments: [([32, 8, 4, 4], [8, 1, 1]), ([32, 8, 4, 4], [8, 4, 4]), ([256, 40], [40]), ([5, 3], [3])])
         func batchNormalizationMatchesCPU(shape: [Int], scaleShape: [Int]) {
-            let x = GPUTest.random(shape, seed: 12, min: -2, max: 3, requiresGradient: true)
-            let scale = GPUTest.random(scaleShape, seed: 13, min: 0.5, max: 1.5, requiresGradient: true)
-            let shift = GPUTest.random(scaleShape, seed: 14, requiresGradient: true)
+            let x = Tensor<Float, CPU>.uniform(shape, min: -2, max: 3, seed: 12, requiresGradient: true)
+            let scale = Tensor<Float, CPU>.uniform(scaleShape, min: 0.5, max: 1.5, seed: 13, requiresGradient: true)
+            let shift = Tensor<Float, CPU>.uniform(scaleShape, seed: 14, requiresGradient: true)
             let columnShape = Array(shape.dropFirst())
-            let mean = GPUTest.random(columnShape, seed: 15)
-            let variance = GPUTest.random(columnShape, seed: 16, min: 0.5, max: 2)
+            let mean = Tensor<Float, CPU>.uniform(columnShape, seed: 15)
+            let variance = Tensor<Float, CPU>.uniform(columnShape, min: 0.5, max: 2, seed: 16)
             func body<D: DeviceType>(_ values: [Tensor<Float, D>]) -> [Tensor<Float, D>] {
                 let statistics = values[0].batchNormalized(scale: values[1], shift: values[2])
                 let batch = Self.resultAndGradients(Array(values[0 ..< 3])) { $0[0].batchNormalized(scale: $0[1], shift: $0[2]).output }
@@ -246,9 +246,9 @@ extension GPUTests {
 
         private static func compareAttention(_ attention: GPUAttentionCase, modes: [GPUPlacementMode] = GPUPlacementMode.allCases) {
             let (batchSize, keyBatchSize, heads, keyHeads) = (attention.batchSize, attention.keyBatchSize, attention.heads, attention.keyHeads)
-            let queries = GPUTest.random([batchSize, heads, attention.queryCount, attention.keyDim], seed: 30, min: -2, max: 2, requiresGradient: attention.gradients[0])
-            let keys = GPUTest.random([keyBatchSize, keyHeads, attention.keyCount, attention.keyDim], seed: 31, min: -2, max: 2, requiresGradient: attention.gradients[1])
-            let values = GPUTest.random([keyBatchSize, keyHeads, attention.keyCount, attention.valueDim], seed: 32, requiresGradient: attention.gradients[2])
+            let queries = Tensor<Float, CPU>.uniform([batchSize, heads, attention.queryCount, attention.keyDim], min: -2, max: 2, seed: 30, requiresGradient: attention.gradients[0])
+            let keys = Tensor<Float, CPU>.uniform([keyBatchSize, keyHeads, attention.keyCount, attention.keyDim], min: -2, max: 2, seed: 31, requiresGradient: attention.gradients[1])
+            let values = Tensor<Float, CPU>.uniform([keyBatchSize, keyHeads, attention.keyCount, attention.valueDim], seed: 32, requiresGradient: attention.gradients[2])
             let mask = attention.maskTensor()
             let temperature = Float(attention.keyDim).squareRoot()
             func body<D: DeviceType>(_ sources: [Tensor<Float, D>]) -> [Tensor<Float, D>] {
@@ -274,10 +274,10 @@ extension GPUTests {
         private static func compareMultiHeadAttention(keyHeads: Int, gradients: [Bool]) {
             let (heads, hidden, keyDim) = (4, 64, 32)
             let inputs = [[2, 50, hidden], [2, 70, hidden], [2, 70, hidden]].enumerated().map { index, shape in
-                GPUTest.random(shape, seed: UInt64(40 + index), requiresGradient: gradients[index])
+                Tensor<Float, CPU>.uniform(shape, seed: UInt64(40 + index), requiresGradient: gradients[index])
             }
             let weights = [[hidden, heads * keyDim], [hidden, keyHeads * keyDim], [hidden, keyHeads * keyDim], [heads * keyDim, hidden]].enumerated().map { index, shape in
-                GPUTest.random(shape, seed: UInt64(43 + index), min: -0.2, max: 0.2, requiresGradient: gradients[3 + index])
+                Tensor<Float, CPU>.uniform(shape, min: -0.2, max: 0.2, seed: UInt64(43 + index), requiresGradient: gradients[3 + index])
             }
             let mask = Tensor<Float, CPU>((0 ..< 2 * 70).map { $0 % 9 == 4 ? 1 : 0 }, shape: [2, 1, 1, 70])
             func body<D: DeviceType>(_ sources: [Tensor<Float, D>]) -> [Tensor<Float, D>] {
@@ -301,8 +301,8 @@ extension GPUTests {
         }
 
         private func checkDropout() {
-            let x = Tensor<Float, GPU>(GPUTest.random([256, 1024], seed: 7, min: 1, max: 2), requiresGradient: true)
-            let (output, mask) = dropout(x, rate: 0.3)
+            let x = Tensor<Float, GPU>(Tensor<Float, CPU>.uniform([256, 1024], min: 1, max: 2, seed: 7), requiresGradient: true)
+            let (output, mask) = fusedDropout(x, rate: 0.3)
             let (values, maskValues, outputValues) = (x.elements, mask.elements, output.elements)
             let kept = Float(maskValues.reduce(0, +)) / Float(maskValues.count)
             #expect(Swift.abs(kept - 0.7) < 0.01, "kept fraction \(kept)")
@@ -314,13 +314,13 @@ extension GPUTests {
             }
             #expect(gradient.elements == outputValues)
             // Two calls use different random numbers.
-            #expect(dropout(x, rate: 0.3).mask.elements != maskValues)
+            #expect(fusedDropout(x, rate: 0.3).mask.elements != maskValues)
         }
 
         @Test func dropoutWithoutDroppedElementsKeepsTheInput() {
             GPUTest.withHostExecutionLimit(0) {
-                let x = Tensor<Float, GPU>(GPUTest.random([64, 100], seed: 8))
-                let (output, mask) = dropout(x, rate: 0)
+                let x = Tensor<Float, GPU>(Tensor<Float, CPU>.uniform([64, 100], seed: 8))
+                let (output, mask) = fusedDropout(x, rate: 0)
                 #expect(output.elements == x.elements)
                 #expect(mask.elements.allSatisfy { $0 == 1 })
                 // Double has no GPU kernels, so it uses the default implementation.
@@ -329,19 +329,10 @@ extension GPUTests {
             }
         }
 
-        /// The result and the mask of the dropout kernel of the GPU.
-        private func dropout(_ input: Tensor<Float, GPU>, rate: Float) -> (output: Tensor<Float, GPU>, mask: Tensor<Float, GPU>) {
-            var (output, mask) = (Tensor<Float, GPU>(uninitializedShape: input.shape), Tensor<Float, GPU>(uninitializedShape: input.shape))
-            withExtendedLifetime(input) {
-                GPU.FusedOperations.dropout(input: input.values, rate: rate, result: output.mutableValues, mask: mask.mutableValues)
-            }
-            return (output, mask)
-        }
-
         @Test(arguments: [false, true])
         func adamStepsMatchCPU(useAMSGrad: Bool) {
-            let parameter = GPUTest.random([300, 70], seed: 8, requiresGradient: true)
-            let gradients = (0 ..< 4).map { GPUTest.random([300, 70], seed: 20 + UInt64($0)) }
+            let parameter = Tensor<Float, CPU>.uniform([300, 70], seed: 8, requiresGradient: true)
+            let gradients = (0 ..< 4).map { Tensor<Float, CPU>.uniform([300, 70], seed: 20 + UInt64($0)) }
             GPUTest.compare("adam amsgrad \(useAMSGrad)") { gpu in
                 if gpu {
                     var optimizer = Adam<Float, GPU>(learningRate: 0.01, useAMSGrad: useAMSGrad)
@@ -364,7 +355,7 @@ extension GPUTests {
         func gatedRecurrentUnitsMatchCPU(steps: Int, batch: Int, inputSize: Int, hiddenSize: Int) {
             var generator = WyHash(seed: 9)
             let cpuLayer = GRU<Float, CPU>(inputSize: inputSize, hiddenSize: hiddenSize, direction: .forward, using: &generator)
-            let input = GPUTest.random([steps, batch, inputSize], seed: 10, requiresGradient: true)
+            let input = Tensor<Float, CPU>.uniform([steps, batch, inputSize], seed: 10, requiresGradient: true)
             func body<D: DeviceType>(_ layer: GRU<Float, D>, _ input: Tensor<Float, D>) -> [Tensor<Float, D>] {
                 let (states, final) = layer(input)
                 let loss = (states * states).reduceSum() + final().reduceSum()
@@ -397,7 +388,7 @@ extension GPUTests {
                 LogSoftmax<Float, GPU>()
             }
             var optimizer = Adam<Float, GPU>(learningRate: 0.001)
-            let input = Tensor<Float, GPU>(GPUTest.random([64, 100], seed: 11))
+            let input = Tensor<Float, GPU>(Tensor<Float, CPU>.uniform([64, 100], seed: 11))
             let labels = Tensor<Int32, GPU>((0 ..< 64).map { Int32($0 % 10) })
             var losses: [Tensor<Float, GPU>] = []
             let before = GPUContext.current.statistics

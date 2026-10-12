@@ -28,7 +28,7 @@ import Foundation
 // MARK: Composed gradients
 
 extension Composed {
-    static func varianceBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int], inputGradient: inout GradientAccumulator<N, Device>) {
+    static func varianceBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, axes: [Int], inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -41,7 +41,7 @@ extension Composed {
     /// Normalizes the input along the axes to `(input - mean) / (sqrt(variance) + epsilon)`.
     ///
     /// - Returns: The normalized input, and the mean and the biased variance with the shape of the input, where every reduced axis has the size 1.
-    static func normalized<N, Device>(_ input: Tensor<N, Device>, along axes: [Int], epsilon: N) -> (normalized: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>) {
+    static func normalized<N: FloatingPointNumericType, Device>(_ input: Tensor<N, Device>, along axes: [Int], epsilon: N) -> (normalized: Tensor<N, Device>, mean: Tensor<N, Device>, variance: Tensor<N, Device>) {
         let keptShape = ShapeUtil.keptShape(of: input.shape, along: axes)
         let mean = input.reduceMean(along: axes).view(as: keptShape)
         let variance = (input * input).reduceMean(along: axes).view(as: keptShape) - mean * mean
@@ -50,7 +50,7 @@ extension Composed {
 
     /// Computes the gradients of a normalization with the statistics of the input along the given axes,
     /// followed by a scale and a shift.
-    static func normalizationBackward<N, Device>(
+    static func normalizationBackward<N: FloatingPointNumericType, Device>(
         input: Tensor<N, Device>,
         scale: Tensor<N, Device>,
         outputGradient: Tensor<N, Device>,
@@ -88,7 +88,7 @@ extension Composed {
     }
 
     /// Computes the gradients of a normalization with fixed statistics, followed by a scale and a shift.
-    static func fixedNormalizationBackward<N, Device>(
+    static func fixedNormalizationBackward<N: FloatingPointNumericType, Device>(
         input: Tensor<N, Device>,
         scale: Tensor<N, Device>,
         mean: Tensor<N, Device>,

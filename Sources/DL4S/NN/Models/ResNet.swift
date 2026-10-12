@@ -27,7 +27,7 @@ import Foundation
 
 /// Residual neural network with 18 layers (17 convolutional, 1 dense)
 @Layer
-public struct ResNet18<Element: RandomizableType, Device: DeviceType>: Sendable {
+public struct ResNet18<Element: FloatingPointNumericType, Device: DeviceType>: Sendable {
     public var start: Sequential<Convolution2D<Element, Device>, BatchNorm<Element, Device>, Relu<Element, Device>>
     public var l1: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>
     public var l2: Sequential<ResidualBlock<Element, Device>, ResidualBlock<Element, Device>>

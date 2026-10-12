@@ -27,7 +27,7 @@ import Foundation
 
 /// Element-wise hyperbolic tangent activation layer.
 @Layer
-public struct Tanh<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct Tanh<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Element-wise hyperbolic tangent activation layer.
     public init() {}
 
@@ -42,7 +42,7 @@ public struct Tanh<Element: NumericType, Device: DeviceType>: Codable, Sendable 
 
 /// Element-wise sigmoid activation layer.
 @Layer
-public struct Sigmoid<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct Sigmoid<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Element-wise sigmoid activation layer.
     public init() {}
 
@@ -72,7 +72,7 @@ public struct Relu<Element: NumericType, Device: DeviceType>: Codable, Sendable 
 
 /// Element-wise leaky linear rectified unit activation layer.
 @Layer
-public struct LeakyRelu<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct LeakyRelu<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     public var leakage: Element
 
     /// Element-wise leaky rectified linear unit activation layer.
@@ -91,7 +91,7 @@ public struct LeakyRelu<Element: NumericType, Device: DeviceType>: Codable, Send
 
 /// Log Softmax activation layer
 @Layer
-public struct LogSoftmax<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct LogSoftmax<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Softmax activation layer
     public init() {}
 
@@ -106,7 +106,7 @@ public struct LogSoftmax<Element: NumericType, Device: DeviceType>: Codable, Sen
 
 /// Softmax activation layer
 @Layer
-public struct Softmax<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct Softmax<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Softmax activation layer
     public init() {}
 
@@ -121,7 +121,7 @@ public struct Softmax<Element: NumericType, Device: DeviceType>: Codable, Sendab
 
 /// Element-wise gaussian error linear unit activation layer.
 @Layer
-public struct Gelu<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct Gelu<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Element-wise Gaussian error linear unit activation layer.
     public init() {}
 
@@ -142,7 +142,7 @@ public struct Gelu<Element: NumericType, Device: DeviceType>: Codable, Sendable 
 /// The layer decides at runtime whether `beta` is trained: ``init(trainableWithChannels:)`` creates a weight
 /// and ``init(fixedWithBeta:)`` a frozen tensor. After ``LayerType/freeze()``, `beta`
 /// is reported as frozen, so ``LayerType/unfreeze()`` does not make it trainable again.
-public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codable, Sendable {
+public struct Swish<Element: FloatingPointNumericType, Device: DeviceType>: LayerType, Codable, Sendable {
     /// Slope of the sigmoid inside the activation, shape [channels] when trainable and a scalar when fixed
     public var beta: Tensor<Element, Device>
 
@@ -175,7 +175,7 @@ public struct Swish<Element: NumericType, Device: DeviceType>: LayerType, Codabl
 
 /// Element-wise Mish activation layer.
 @Layer
-public struct Mish<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct Mish<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Element-wise Mish activation layer.
     public init() {}
 
@@ -190,7 +190,7 @@ public struct Mish<Element: NumericType, Device: DeviceType>: Codable, Sendable 
 
 /// Element-wise LiSHT activation layer.
 @Layer
-public struct LiSHT<Element: NumericType, Device: DeviceType>: Codable, Sendable {
+public struct LiSHT<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Element-wise LiSHT activation layer.
     public init() {}
 

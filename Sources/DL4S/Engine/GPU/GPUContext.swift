@@ -161,8 +161,8 @@ struct GPUBufferPool: ~Copyable {
     }
 }
 
-/// A Metal device, its command queue, the state of the GPU work, and the caches of the device. Every function that calls
-/// Metal drains an autorelease pool.
+/// A Metal device, its command queue, the state of the GPU work, and the caches of the device. Every function that makes
+/// Metal autorelease objects drains a local autorelease pool.
 ///
 /// Every storage belongs to one context, and the kernels record their commands in the context of their operands.
 final class GPUContext: Sendable {
@@ -210,6 +210,10 @@ final class GPUContext: Sendable {
     /// Offset tables of the implicit convolutions, see ``clearCache()``.
     let convolutionTables = Mutex(GPUCache<GPUConvolutionTableKey, GPUConvolutionTables>(capacity: 64))
 
+    // A gather or scatter kernel that reads an index outside of its axis sets the flag, because a kernel cannot trap.
+    /// Flag that the kernels of indexed copies set when they read an index out of range. The host checks it in
+    /// every wait for the GPU and traps when it is set.
+    let indexErrors: GPUMetalBuffer
     private let matrixKernels = Atomic(true)
     /// Maximum number of bytes that the pool keeps.
     let poolLimit: Int
@@ -232,11 +236,13 @@ final class GPUContext: Sendable {
 
     /// Creates the context of a device, or returns nil when the kernels do not support the device.
     init?(device: any MTLDevice) {
-        guard device.supportsFamily(.apple7), let queue = device.makeCommandQueue() else {
+        guard device.supportsFamily(.apple7), let queue = device.makeCommandQueue(), let flag = device.makeBuffer(length: 4, options: .storageModeShared) else {
             return nil
         }
+        flag.contents().storeBytes(of: UInt32(0), as: UInt32.self)
         self.device = device
         self.queue = queue
+        indexErrors = GPUMetalBuffer(buffer: flag)
         kernels = GPUKernelLibrary(device: device)
         // The pool keeps at most a quarter of the memory that the GPU can use well, and at most 4 GB, so that released
         // tensors do not hold memory that other allocations of the process need.
@@ -279,7 +285,7 @@ final class GPUContext: Sendable {
         stream.withLock { stream in
             let encoder = stream.openEncoder(queue: queue)
             encoder.setComputePipelineState(pipeline)
-            var arguments = GPUArguments(encoder: encoder, pipeline: pipeline)
+            var arguments = GPUArguments(encoder: encoder, pipeline: pipeline, indexErrors: indexErrors.buffer)
             encode(&arguments)
             stream.record(reading: reading, writing: writing)
             finishCommand(&stream)
@@ -467,6 +473,7 @@ final class GPUContext: Sendable {
 
     private func wait(forSequence target: UInt64) {
         guard completed.load(ordering: .sequentiallyConsistent) < target else {
+            checkIndexErrors()
             return
         }
         waitCounter.add(1, ordering: .relaxed)
@@ -488,6 +495,13 @@ final class GPUContext: Sendable {
             preconditionFailure("DL4S: A GPU command buffer failed: \(failure)")
         }
         markCompleted(upTo: target)
+        checkIndexErrors()
+    }
+
+    /// Traps when a completed kernel read an index out of range.
+    private func checkIndexErrors() {
+        let flag = autoreleasepool { indexErrors.buffer.contents().load(as: UInt32.self) }
+        precondition(flag == 0, "DL4S: A gather or scatter on the GPU received an index out of range.")
     }
 
     /// Records that the command buffer with the given sequence number completed.
@@ -612,16 +626,32 @@ final class GPUContext: Sendable {
 struct GPUArguments: ~Copyable {
     let encoder: any MTLComputeCommandEncoder
     let pipeline: any MTLComputePipelineState
+    private let indexErrorFlag: any MTLBuffer
     private var index = 0
 
-    init(encoder: any MTLComputeCommandEncoder, pipeline: any MTLComputePipelineState) {
+    init(encoder: any MTLComputeCommandEncoder, pipeline: any MTLComputePipelineState, indexErrors: any MTLBuffer) {
         self.encoder = encoder
         self.pipeline = pipeline
+        indexErrorFlag = indexErrors
+    }
+
+    /// Sets the flag in which a kernel reports an index out of range, see ``GPUContext/indexErrors``.
+    mutating func indexErrors() {
+        encoder.setBuffer(indexErrorFlag, offset: 0, index: index)
+        index += 1
     }
 
     mutating func buffer(_ buffer: GPUBuffer) {
         encoder.setBuffer(buffer.storage.buffer, offset: buffer.byteOffset, index: index)
         index += 1
+    }
+
+    /// Sets the given buffers as the next arguments, in order.
+    @inline(__always)
+    mutating func buffers(_ buffers: GPUBuffer...) {
+        for buffer in buffers {
+            self.buffer(buffer)
+        }
     }
 
     mutating func value<Value: BitwiseCopyable>(_ value: Value) {

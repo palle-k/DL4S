@@ -28,7 +28,7 @@ import Foundation
 // MARK: Composed gradients
 
 extension Composed {
-    static func binaryCrossEntropyBackward<N, Device>(
+    static func binaryCrossEntropyBackward<N: FloatingPointNumericType, Device>(
         expected: Tensor<N, Device>,
         actual: Tensor<N, Device>,
         outputGradient: Tensor<N, Device>,
@@ -46,7 +46,7 @@ extension Composed {
         }
     }
 
-    static func categoricalCrossEntropyBackward<N, Device>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32, actualGradient: inout GradientAccumulator<N, Device>) {
+    static func categoricalCrossEntropyBackward<N: FloatingPointNumericType, Device>(expected: Tensor<Int32, Device>, actual: Tensor<N, Device>, outputGradient: Tensor<N, Device>, ignoreIndex: Int32, actualGradient: inout GradientAccumulator<N, Device>) {
         guard actualGradient.isRequested else {
             return
         }
@@ -63,7 +63,7 @@ extension Composed {
         )
     }
 
-    static func categoricalNegativeLogLikelihoodBackward<N, Device>(expected: Tensor<Int32, Device>, actualShape: [Int], outputGradient: Tensor<N, Device>, ignoreIndex: Int32, actualGradient: inout GradientAccumulator<N, Device>) {
+    static func categoricalNegativeLogLikelihoodBackward<N: FloatingPointNumericType, Device>(expected: Tensor<Int32, Device>, actualShape: [Int], outputGradient: Tensor<N, Device>, ignoreIndex: Int32, actualGradient: inout GradientAccumulator<N, Device>) {
         guard actualGradient.isRequested else {
             return
         }
@@ -76,7 +76,7 @@ extension Composed {
         )
     }
 
-    static func meanSquaredErrorBackward<N, Device>(
+    static func meanSquaredErrorBackward<N: FloatingPointNumericType, Device>(
         expected: Tensor<N, Device>,
         actual: Tensor<N, Device>,
         outputGradient: Tensor<N, Device>,
@@ -93,7 +93,7 @@ extension Composed {
     }
 
     /// The gradient at 0 is 0.
-    static func l1LossBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func l1LossBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }
@@ -101,7 +101,7 @@ extension Composed {
         inputGradient.add((input.heaviside() - (-input).heaviside()) * factor)
     }
 
-    static func l2LossBackward<N, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, inputGradient: inout GradientAccumulator<N, Device>) {
+    static func l2LossBackward<N: FloatingPointNumericType, Device>(input: Tensor<N, Device>, outputGradient: Tensor<N, Device>, scale: N, inputGradient: inout GradientAccumulator<N, Device>) {
         guard inputGradient.isRequested else {
             return
         }

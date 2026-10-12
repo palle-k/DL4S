@@ -27,7 +27,7 @@ import Foundation
 
 /// Residual block with two convolution and batch normalization layers as well as an optional downsampling block.
 @Layer
-public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Sendable {
+public struct ResidualBlock<Element: FloatingPointNumericType, Device: DeviceType>: Sendable {
     /// First convolution layer
     public var conv1: Convolution2D<Element, Device>
     /// Second convolution layer

@@ -202,16 +202,9 @@ public extension Tensor {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: value.shape, type: Element.self)
         Device.Engine.vNeg(val: value.values.values, result: resultBuffer.values, count: value.count)
 
-        return Tensor(
-            using: resultBuffer,
-            context: value.requiresGradient ? TensorContext(
-                tag: "neg",
-                sources: [value],
-                backpropagate: [{ resultGradient in
-                    -resultGradient
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "neg", source: value) { resultGradient, gradient in
+            gradient.add(-resultGradient)
+        }
     }
 
     /// In-place broadcast adds the given tensors.
@@ -321,7 +314,7 @@ public extension Tensor {
     @_specialize(where Element == Float, Device == GPU)
     #endif
     @_specialize(where Element == Float, Device == CPU)
-    func raised(toPowerOf power: Self) -> Self {
+    func raised(toPowerOf power: Self) -> Self where Element: FloatingPointNumericType {
         (log() * power).exp()
     }
 
@@ -344,20 +337,14 @@ public extension Tensor {
             Device.Engine.max(first.values, second.values, result: resultBuffer, context: contextBuffer)
             let contextTensor = Tensor(using: contextBuffer, context: nil)
 
-            let context = TensorContext(
-                tag: "max",
-                sources: [first, second],
-                backpropagate: [
-                    { targetGrad in
-                        targetGrad * (1 - contextTensor)
-                    },
-                    { targetGrad in
-                        targetGrad * contextTensor
-                    },
-                ],
-            )
-
-            return Tensor(using: resultBuffer, context: context)
+            return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "max", sources: [first, second]) { resultGradient, gradients in
+                if gradients[0].isRequested {
+                    gradients[0].add(resultGradient * (1 - contextTensor))
+                }
+                if gradients[1].isRequested {
+                    gradients[1].add(resultGradient * contextTensor)
+                }
+            }
         } else {
             Device.Engine.max(first.values, second.values, result: resultBuffer)
             return Tensor(using: resultBuffer, context: nil)
@@ -383,20 +370,14 @@ public extension Tensor {
             Device.Engine.min(first.values, second.values, result: resultBuffer, context: contextBuffer)
             let contextTensor = Tensor(using: contextBuffer, context: nil)
 
-            let context = TensorContext(
-                tag: "min",
-                sources: [first, second],
-                backpropagate: [
-                    { targetGrad in
-                        targetGrad * (1 - contextTensor)
-                    },
-                    { targetGrad in
-                        targetGrad * contextTensor
-                    },
-                ],
-            )
-
-            return Tensor(using: resultBuffer, context: context)
+            return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "min", sources: [first, second]) { resultGradient, gradients in
+                if gradients[0].isRequested {
+                    gradients[0].add(resultGradient * (1 - contextTensor))
+                }
+                if gradients[1].isRequested {
+                    gradients[1].add(resultGradient * contextTensor)
+                }
+            }
         } else {
             Device.Engine.min(first.values, second.values, result: resultBuffer)
             return Tensor(using: resultBuffer, context: nil)

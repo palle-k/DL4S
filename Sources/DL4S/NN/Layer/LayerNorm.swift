@@ -30,7 +30,7 @@ import Foundation
 /// Every leading dimension of the input is treated as an independent sample. With `inputSize: [hidden]`,
 /// a `[batch, sequence, hidden]` input is normalized per sequence element.
 @Layer
-public struct LayerNorm<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct LayerNorm<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Learned shift vector
     public var shift: Tensor<Element, Device>
 

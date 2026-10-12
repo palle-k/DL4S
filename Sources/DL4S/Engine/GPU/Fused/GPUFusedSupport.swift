@@ -104,9 +104,7 @@ enum GPUFused {
         }
         let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(length), accumulate: 0)
         GPUContext.compute(GPUKernels.kernel("\(name)_forward", in: .fused), reading: [x, a], writing: [y]) { arguments in
-            arguments.buffer(x)
-            arguments.buffer(y)
-            arguments.buffer(a)
+            arguments.buffers(x, y, a)
             arguments.value(parameters)
             arguments.dispatch(count: input.count)
         }
@@ -135,11 +133,8 @@ enum GPUFused {
             return
         }
         let parameters = ElementwiseParameters(count: UInt32(input.count), parameterLength: UInt32(length), accumulate: inputGradient.accumulateFlag)
-        GPUContext.compute(GPUKernels.kernel("\(name)_backward", in: .fused), reading: [x, g, a, dx], writing: [dx]) { arguments in
-            arguments.buffer(x)
-            arguments.buffer(g)
-            arguments.buffer(dx)
-            arguments.buffer(a)
+        GPUContext.compute(GPUKernels.kernel("\(name)_backward", in: .fused), reading: [x, g, a], writing: [dx]) { arguments in
+            arguments.buffers(x, g, dx, a)
             arguments.value(parameters)
             arguments.dispatch(count: input.count)
         }

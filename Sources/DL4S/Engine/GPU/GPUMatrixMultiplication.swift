@@ -54,7 +54,6 @@ enum GPUMatrixMultiplication {
         var ldb: Int32
         var ldc: Int32
         var transposeA: Int32
-        var transposeB: Int32
         var alpha: Float
         var beta: Float
         var batchStrideA: Int64
@@ -117,7 +116,7 @@ enum GPUMatrixMultiplication {
         let parameters = GemmParameters(
             rows: Int32(rows), columns: Int32(columns), inner: Int32(inner),
             lda: Int32(lhsColumns), ldb: Int32(rhsColumns), ldc: Int32(columns),
-            transposeA: transposeFirst ? 1 : 0, transposeB: transposeSecond ? 1 : 0,
+            transposeA: transposeFirst ? 1 : 0,
             alpha: alpha, beta: beta,
             batchStrideA: Int64(strides.lhs), batchStrideB: Int64(strides.rhs), batchStrideC: Int64(strides.result),
             splitLength: Int32(inner),
@@ -125,10 +124,8 @@ enum GPUMatrixMultiplication {
         if rows == 1 {
             // A product with one row is a vector-matrix product, which is limited by the reads of the matrix.
             if transposeSecond {
-                GPUContext.compute(GPUKernels.kernel("gemv_t", in: .matrix), reading: [lhs, rhs, result], writing: [result]) { arguments in
-                    arguments.buffer(lhs)
-                    arguments.buffer(rhs)
-                    arguments.buffer(result)
+                GPUContext.compute(GPUKernels.kernel("gemv_t", in: .matrix), reading: [lhs, rhs], writing: [result]) { arguments in
+                    arguments.buffers(lhs, rhs, result)
                     arguments.value(parameters)
                     arguments.dispatch(threadgroups: MTLSize(width: (columns + 7) / 8, height: count, depth: 1), threadgroup: MTLSize(width: 256, height: 1, depth: 1))
                 }
@@ -149,10 +146,8 @@ enum GPUMatrixMultiplication {
         // threadgroups, a [512, 512] product with the inner length 8192 is 40 percent slower.
         let splits = min(max(1, 512 / tiles), inner / 512)
         guard splits > 1 else {
-            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
-                arguments.buffer(lhs)
-                arguments.buffer(rhs)
-                arguments.buffer(result)
+            GPUContext.compute(kernel, reading: [lhs, rhs], writing: [result]) { arguments in
+                arguments.buffers(lhs, rhs, result)
                 arguments.value(parameters)
                 arguments.dispatch(
                     threadgroups: MTLSize(width: (columns + tile - 1) / tile, height: (rows + tile - 1) / tile, depth: count),
@@ -172,9 +167,7 @@ enum GPUMatrixMultiplication {
         splitParameters.splits = Int32(splitCount)
         splitParameters.splitLength = Int32(splitLength)
         GPUContext.compute(kernel, reading: [lhs, rhs], writing: [partial]) { arguments in
-            arguments.buffer(lhs)
-            arguments.buffer(rhs)
-            arguments.buffer(partial)
+            arguments.buffers(lhs, rhs, partial)
             arguments.value(splitParameters)
             arguments.dispatch(
                 threadgroups: MTLSize(width: (columns + tile - 1) / tile, height: (rows + tile - 1) / tile, depth: count * splitCount),
@@ -184,9 +177,8 @@ enum GPUMatrixMultiplication {
         var sumParameters = parameters
         sumParameters.splits = Int32(splitCount)
         let sum = GPUKernels.kernel("gemm_split_sum", in: .matrix)
-        GPUContext.compute(sum, reading: [partial, result], writing: [result]) { arguments in
-            arguments.buffer(partial)
-            arguments.buffer(result)
+        GPUContext.compute(sum, reading: [partial], writing: [result]) { arguments in
+            arguments.buffers(partial, result)
             arguments.value(sumParameters)
             arguments.dispatch(threads: MTLSize(width: columns, height: rows, depth: count), threadgroup: MTLSize(width: min(columns, 32), height: min(rows, 8), depth: 1))
         }
@@ -207,10 +199,8 @@ enum GPUMatrixMultiplication {
         var vectorParameters = parameters
         vectorParameters.splitLength = Int32(splitLength)
         guard splitCount > 1 else {
-            GPUContext.compute(kernel, reading: [lhs, rhs, result], writing: [result]) { arguments in
-                arguments.buffer(lhs)
-                arguments.buffer(rhs)
-                arguments.buffer(result)
+            GPUContext.compute(kernel, reading: [lhs, rhs], writing: [result]) { arguments in
+                arguments.buffers(lhs, rhs, result)
                 arguments.value(vectorParameters)
                 arguments.dispatch(threadgroups: threadgroups, threadgroup: threadgroup)
             }
@@ -222,17 +212,14 @@ enum GPUMatrixMultiplication {
         vectorParameters.batchStrideC = Int64(columns)
         vectorParameters.splits = Int32(splitCount)
         GPUContext.compute(kernel, reading: [lhs, rhs], writing: [partial]) { arguments in
-            arguments.buffer(lhs)
-            arguments.buffer(rhs)
-            arguments.buffer(partial)
+            arguments.buffers(lhs, rhs, partial)
             arguments.value(vectorParameters)
             arguments.dispatch(threadgroups: threadgroups, threadgroup: threadgroup)
         }
         var sumParameters = parameters
         sumParameters.splits = Int32(splitCount)
-        GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial, result], writing: [result]) { arguments in
-            arguments.buffer(partial)
-            arguments.buffer(result)
+        GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial], writing: [result]) { arguments in
+            arguments.buffers(partial, result)
             arguments.value(sumParameters)
             arguments.dispatch(threads: MTLSize(width: columns, height: 1, depth: count), threadgroup: MTLSize(width: min(columns, 256), height: 1, depth: 1))
         }
@@ -258,13 +245,12 @@ enum GPUMatrixMultiplication {
             let partial = GPUKernels.temporary(count: splits * rows * columns, near: result)
             encodeMatrices(lhs: lhs, lhsShape: [partLength, lhsShape[1]], rhs: rhs, rhsShape: [partLength, rhsShape[1]], result: partial, rows: rows, columns: columns, inner: partLength, count: splits, alpha: 1, beta: 0, transposeFirst: true, transposeSecond: false)
             var sumParameters = GemmParameters(
-                rows: Int32(rows), columns: Int32(columns), inner: Int32(inner), lda: 0, ldb: 0, ldc: Int32(columns), transposeA: 1, transposeB: 0,
+                rows: Int32(rows), columns: Int32(columns), inner: Int32(inner), lda: 0, ldb: 0, ldc: Int32(columns), transposeA: 1,
                 alpha: alpha, beta: beta, batchStrideA: 0, batchStrideB: 0, batchStrideC: 0, splitLength: Int32(partLength),
             )
             sumParameters.splits = Int32(splits)
-            GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial, result], writing: [result]) { arguments in
-                arguments.buffer(partial)
-                arguments.buffer(result)
+            GPUContext.compute(GPUKernels.kernel("gemm_split_sum", in: .matrix), reading: [partial], writing: [result]) { arguments in
+                arguments.buffers(partial, result)
                 arguments.value(sumParameters)
                 arguments.dispatch(threads: MTLSize(width: columns, height: rows, depth: 1), threadgroup: MTLSize(width: min(columns, 32), height: min(rows, 8), depth: 1))
             }
@@ -283,7 +269,7 @@ enum GPUMatrixMultiplication {
 
     /// Records a Metal Performance Shaders product of `count` matrices of each operand, which follow each other in memory.
     private static func encodeMatrices(lhs: GPUBuffer, lhsShape: [Int], rhs: GPUBuffer, rhsShape: [Int], result: GPUBuffer, rows: Int, columns: Int, inner: Int, count: Int, alpha: Float, beta: Float, transposeFirst: Bool, transposeSecond: Bool) {
-        let context = GPUContext.of(reading: [lhs, rhs, result], writing: [result])
+        let context = GPUContext.of(reading: [lhs, rhs], writing: [result])
         let key = GPUMatrixProductKey(transposeLeft: transposeFirst, transposeRight: transposeSecond, rows: rows, columns: columns, inner: inner, alpha: alpha, beta: beta)
         let kernel = GPUCache.value(in: context.matrixProducts, for: key) {
             // The creation autoreleases descriptors, see ``GPUContext``.
@@ -305,7 +291,7 @@ enum GPUMatrixMultiplication {
             let descriptor = MPSMatrixDescriptor(rows: rows, columns: columns, matrices: count, rowBytes: rowBytes, matrixBytes: rows * rowBytes, dataType: .float32)
             return MPSMatrix(buffer: buffer.storage.buffer, offset: buffer.byteOffset, descriptor: descriptor)
         }
-        context.commands(reading: [lhs, rhs, result], writing: [result]) { commandBuffer in
+        context.commands(reading: [lhs, rhs], writing: [result]) { commandBuffer in
             // The matrices are created while the stream is locked, because a storage that no command used yet can still replace
             // its buffer.
             let left = matrix(lhs, rows: lhsShape[0], columns: lhsShape[1])

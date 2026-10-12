@@ -27,7 +27,7 @@ import Foundation
 
 /// A 2D convolutional layer
 @Layer
-public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct Convolution2D<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Convolution filters, shape [outputChannels, inputChannels, kernelHeight, kernelWidth]
     public var filters: Tensor<Element, Device>
     /// Bias, shape [1, outputChannels, 1, 1]
@@ -92,7 +92,7 @@ public struct Convolution2D<Element: RandomizableType, Device: DeviceType>: Coda
 
 /// A 2D transposed (fractionally strided) convolutional layer
 @Layer
-public struct TransposedConvolution2D<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct TransposedConvolution2D<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Convolution filters, shape [outputChannels, inputChannels, kernelHeight, kernelWidth]
     public var filters: Tensor<Element, Device>
 

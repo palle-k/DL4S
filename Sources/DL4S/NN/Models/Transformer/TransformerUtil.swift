@@ -38,16 +38,22 @@ func makeEncoderMasks<Element, Device>(sequenceLengths: [Int], length: Int? = ni
     }).view(as: batchSize, 1, 1, maxInLen)
 }
 
-func makeDecoderMasks<Element, Device>(sequenceLengths: [Int]) -> Tensor<Element, Device> {
-    let batchSize = sequenceLengths.count
-    let maxLen = sequenceLengths.reduce(0, max)
-
-    let decoderSeqMask = Tensor<Element, Device>(sequenceLengths.map {
-        Array(repeating: 0, count: $0) + Array(repeating: 1, count: maxLen - $0)
-    })
-
-    let decoderCausalMask = Tensor<Element, Device>(repeating: 1, shape: maxLen, maxLen)
-        .bandMatrix(belowDiagonal: -1, aboveDiagonal: nil) // [maxLen, maxLen]
-
-    return 1 - relu(1 - decoderSeqMask.view(as: batchSize, 1, 1, maxLen) - decoderCausalMask)
+/// Returns the mask of the self attention of a decoder with the shape [batchSize, 1, length, length], with 1 for the keys
+/// after the query and for the positions after the length of a sequence.
+/// - Parameters:
+///   - sequenceLengths: Length of each sequence without padding
+///   - length: Number of positions of the padded sequences
+func makeDecoderMasks<Element, Device>(sequenceLengths: [Int], length: Int) -> Tensor<Element, Device> {
+    precondition(sequenceLengths.allSatisfy { $0 <= length }, "The sequences must not be longer than the padded length \(length).")
+    // The mask is built on the host in one tensor, which is one upload instead of several operations on the device.
+    var elements = [Element](repeating: 0, count: sequenceLengths.count * length * length)
+    for (sequence, sequenceLength) in sequenceLengths.enumerated() {
+        for query in 0 ..< length {
+            let row = (sequence * length + query) * length
+            for key in Swift.min(query + 1, sequenceLength) ..< length {
+                elements[row + key] = 1
+            }
+        }
+    }
+    return Tensor(elements, shape: [sequenceLengths.count, 1, length, length])
 }

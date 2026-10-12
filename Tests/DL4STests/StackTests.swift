@@ -45,8 +45,8 @@ struct StackTests {
         }
         let stacked = stack(sources)
 
-        func backwardPass() -> [WeakReference<TensorHandle<Float, CPU>>] {
-            stacked.reduceSum().gradients(of: sources).map { WeakReference($0.handle) }
+        func backwardPass() -> [WeakReference<CPUStorage>] {
+            stacked.reduceSum().gradients(of: sources).map { WeakReference($0.memory.storage!) }
         }
 
         for _ in 0 ..< 10 {

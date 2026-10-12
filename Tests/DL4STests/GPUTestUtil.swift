@@ -58,7 +58,7 @@ enum GPUTest {
     /// Runs `body` on the CPU, then on the GPU in the placement modes, and records an issue when a result differs.
     ///
     /// - Parameters:
-    ///   - tolerance: Largest difference of an element, relative to the magnitude of the expected element when it is larger than 1.
+    ///   - tolerance: Largest relative difference of an element, as in ``expectElementwiseClose(_:_:tolerance:_:sourceLocation:)``.
     ///   - modes: Placement modes in which `body` runs on the GPU
     ///   - body: Computes the results on the GPU when its argument is true, on the CPU otherwise.
     static func compare(_ name: String, tolerance: Float = 1e-3, modes: [GPUPlacementMode] = GPUPlacementMode.allCases, _ body: (Bool) -> [Tensor<Float, CPU>], sourceLocation: SourceLocation = #_sourceLocation) {
@@ -67,12 +67,7 @@ enum GPUTest {
             let actual = withHostExecutionLimit(mode.hostExecutionLimit) { body(true) }
             #expect(actual.count == expected.count, "\(name) [\(mode)]: result count", sourceLocation: sourceLocation)
             for (index, (a, e)) in zip(actual, expected).enumerated() {
-                guard a.shape == e.shape else {
-                    Issue.record("\(name) [\(mode)]: shape \(a.shape) differs from \(e.shape)", sourceLocation: sourceLocation)
-                    continue
-                }
-                let difference = zip(a.elements, e.elements).map { Swift.abs($0 - $1) / Swift.max(1, Swift.abs($1)) }.max() ?? 0
-                #expect(difference <= tolerance, "\(name) [\(mode)]: result \(index) has the relative difference \(difference)", sourceLocation: sourceLocation)
+                expectElementwiseClose(a, e, tolerance: tolerance, "\(name) [\(mode)]: result \(index)", sourceLocation: sourceLocation)
             }
         }
     }
@@ -85,12 +80,6 @@ enum GPUTest {
             GPU.hostExecutionLimit = previous
         }
         return try body()
-    }
-
-    /// A tensor with uniformly distributed elements from a generator with the given seed.
-    static func random(_ shape: [Int], seed: UInt64, min: Float = -1, max: Float = 1, requiresGradient: Bool = false) -> Tensor<Float, CPU> {
-        var generator = WyHash(seed: seed)
-        return Tensor<Float, CPU>(uniformlyDistributedWithShape: shape, min: min, max: max, requiresGradient: requiresGradient, using: &generator)
     }
 
     /// Runs `cpu` on the inputs, or `gpu` on copies of the inputs on the GPU.

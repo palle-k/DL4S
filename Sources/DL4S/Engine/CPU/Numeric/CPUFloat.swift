@@ -530,3 +530,5 @@ extension Float: CPUNumeric {
         #endif
     }
 }
+
+extension Float: CPUFloatingPointNumeric {}

@@ -72,7 +72,7 @@ public struct TransformerDecoderInputs<Element: NumericType, Device: DeviceType>
 /// autoregressively with ``makeState(batchSize:encoded:)`` and ``decode(_:lengths:state:)``, which compute only the new
 /// positions of each step. A decoder whose blocks do not attend to an encoder is the decoder of a decoder-only model.
 @Layer
-public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct TransformerDecoder<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     public var decoderLayers: [TransformerDecoderBlock<Element, Device>]
 
     /// Whether a block of the decoder attends to the states of an encoder
@@ -110,7 +110,7 @@ public struct TransformerDecoder<Element: RandomizableType, Device: DeviceType>:
         OperationGroup.capture(named: "Decoder") {
             precondition((inputs.encoded != nil) == attendsToEncoder, attendsToEncoder ? "The decoder attends to an encoder, so it needs the encoder output." : "The decoder does not attend to an encoder, so it takes no encoder output.")
             let encoderMask: Tensor<Element, Device>? = inputs.encoded.map { makeEncoderMasks(sequenceLengths: $0.lengths, length: $0.states.shape[1]) }
-            let decoderMask: Tensor<Element, Device> = makeDecoderMasks(sequenceLengths: inputs.lengths)
+            let decoderMask: Tensor<Element, Device> = makeDecoderMasks(sequenceLengths: inputs.lengths, length: inputs.input.shape[1])
 
             return decoderLayers.reduce(inputs.input) { acc, layer in
                 layer.attendsToEncoder

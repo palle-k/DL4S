@@ -44,12 +44,8 @@ public protocol CPUNumeric: Numeric, Comparable {
 
     static func gemm(lhs: UnsafeBufferPointer<Self>, rhs: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, lhsShape: (Int, Int), rhsShape: (Int, Int), resultShape: (Int, Int), alpha: Self, beta: Self, transposeFirst: Bool, transposeSecond: Bool)
 
-    static func log(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func exp(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func relu(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
     static func heaviside(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func tanh(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func sqrt(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
 
     static func sum(val: UnsafeBufferPointer<Self>, count: Int) -> Self
     /// Returns the sum of the products of the elements, `lhs[0] * rhs[0] + ... + lhs[count - 1] * rhs[count - 1]`.
@@ -69,13 +65,20 @@ public protocol CPUNumeric: Numeric, Comparable {
 
     static func arange(start: Self, end: Self, result: UnsafeMutableBufferPointer<Self>, count: Int)
 
-    static func sin(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func cos(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-    static func tan(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
-
     static func img2col(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int)
     static func col2img(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, batchSize: Int, channels: Int, height: Int, width: Int, kernelHeight: Int, kernelWidth: Int, padding: Int, stride: Int)
 
     static func scatter(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, resultShape: [Int], axis: Int, ignoreIndex: Int32)
     static func gather(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, valuesShape: [Int], axis: Int, ignoreIndex: Int32)
+}
+
+/// The vector functions of floating point numbers on the CPU.
+public protocol CPUFloatingPointNumeric: CPUNumeric {
+    static func log(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func exp(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func tanh(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func sqrt(val: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func sin(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func cos(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
+    static func tan(values: UnsafeBufferPointer<Self>, result: UnsafeMutableBufferPointer<Self>, count: Int)
 }

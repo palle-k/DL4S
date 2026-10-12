@@ -38,30 +38,12 @@ enum UniqueID {
     }
 }
 
-/// Owns the storage of a tensor and frees it when the last tensor that uses it is released.
-final class TensorHandle<Element, Device: DeviceType>: @unchecked Sendable {
-    // `@unchecked Sendable`: The storage is only written through `Tensor.mutableValues`, which copies it first when another
-    // tensor shares it, so no two threads write or read and write the same storage.
-    let values: MutableBuffer<Element, Device>
-    let parent: TensorHandle<Element, Device>?
-
-    init(values: MutableBuffer<Element, Device>, parent: TensorHandle<Element, Device>? = nil) {
-        self.values = values
-        self.parent = parent
-    }
-
-    deinit {
-        if parent == nil {
-            Device.Memory.free(self.values)
-        }
-    }
-}
-
 // MARK: Core Tensor functionality
 
 /// A tensor is an n-dimensional array of numbers with a given shape.
 public struct Tensor<Element: NumericType, Device: DeviceType> {
-    var handle: TensorHandle<Element, Device>
+    /// The memory of the elements, which the tensor shares with its copies and views.
+    var memory: Device.Memory.RawBuffer
     var context: TensorContext<Element, Device>?
 
     /// Identifies the tensor during backpropagation.
@@ -103,7 +85,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
 
     /// Read-only view of the storage of the tensor.
     var values: ShapedBuffer<Element, Device> {
-        ShapedBuffer(values: Buffer(handle.values), shape: shape)
+        ShapedBuffer(values: Buffer(memory: memory), shape: shape)
     }
 
     /// Number of elements in the tensor.
@@ -133,7 +115,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     public init(repeating value: Element, shape: [Int], requiresGradient: Bool = false) {
         let values = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
         Device.Engine.fill(value: value, result: values.values, count: values.count)
-        handle = TensorHandle(values: values.values)
+        memory = values.values.memory
         self.requiresGradient = requiresGradient
         self.shape = shape
     }
@@ -147,7 +129,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         v.withUnsafeBufferPointer { ptr in
             Device.Memory.assign(from: ptr, to: values.values, count: v.count)
         }
-        handle = TensorHandle(values: values.values)
+        memory = values.values.memory
         self.requiresGradient = requiresGradient
         shape = [v.count]
     }
@@ -164,7 +146,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
         v.withUnsafeBufferPointer { ptr in
             Device.Memory.assign(from: ptr, to: values.values, count: v.count)
         }
-        handle = TensorHandle(values: values.values)
+        memory = values.values.memory
         self.requiresGradient = requiresGradient
         self.shape = shape
     }
@@ -179,14 +161,14 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     }
 
     init(using values: MutableShapedBuffer<Element, Device>, context: TensorContext<Element, Device>?) {
-        handle = TensorHandle(values: values.values)
+        memory = values.values.memory
         self.context = context
         requiresGradient = context != nil
         shape = values.shape
     }
 
-    init(handle: TensorHandle<Element, Device>, shape: [Int], context: TensorContext<Element, Device>?) {
-        self.handle = handle
+    init(memory: Device.Memory.RawBuffer, shape: [Int], context: TensorContext<Element, Device>?) {
+        self.memory = memory
         self.context = context
         requiresGradient = context != nil
         self.shape = shape
@@ -346,17 +328,16 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
     /// Operations like `view` avoid extraneous copies of the underlying memory.
     /// In place mutations must ensure that no other tensors reference the same storage.
     mutating func ensureOwnership() {
-        if isKnownUniquelyReferenced(&handle), handle.parent == nil {
+        if Device.Memory.isUniquelyReferenced(&memory) {
             return
         }
 
         let original = self
-        let replacementHandle = TensorHandle(values:
-            Device.Memory.allocateBuffer(withShape: shape, type: Element.self).values)
-        Device.Memory.assign(from: Buffer(handle.values), to: replacementHandle.values, count: count)
+        let replacement = Device.Memory.allocateBuffer(withShape: shape, type: Element.self)
+        Device.Memory.assign(from: values.values, to: replacement.values, count: count)
 
         self = Tensor(
-            handle: replacementHandle,
+            memory: replacement.values.memory,
             shape: shape,
             context: requiresGradient ? TensorContext(
                 tag: "identity",
@@ -373,7 +354,7 @@ public struct Tensor<Element: NumericType, Device: DeviceType> {
 
     /// Detaches the tensor from the compute graph. No gradients can be computed for the resulting tensor.
     public func detached() -> Self {
-        Tensor(handle: handle, shape: shape, context: nil)
+        Tensor(memory: memory, shape: shape, context: nil)
     }
 }
 
@@ -385,7 +366,7 @@ extension Tensor {
         mutating get {
             // Assume write, so perform CoW if necessary.
             ensureOwnership()
-            return MutableShapedBuffer(values: handle.values, shape: shape)
+            return MutableShapedBuffer(values: MutableBuffer(memory: memory), shape: shape)
         }
     }
 }
