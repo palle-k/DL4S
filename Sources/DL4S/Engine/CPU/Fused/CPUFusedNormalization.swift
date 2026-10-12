@@ -32,7 +32,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func layerNormalization<N: NumericType>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>, epsilon: N, result: MutableShapedBuffer<N, CPU>) {
+    static func layerNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>, epsilon: N, result: MutableShapedBuffer<N, CPU>) {
         checkLayerNormalizationShapes(input: input, scale: scale, shift: shift)
         let rowLength = scale.count
         let (x, y) = (input.elementPointer, result.elementPointer)
@@ -41,17 +41,21 @@ public extension CPUFusedOperations {
         for row in 0 ..< input.count / rowLength {
             let (values, output) = (x + row * rowLength, y + row * rowLength)
             let mean = CPUKernels.sum(values, count: rowLength) * inverseLength
-            let variance = CPUKernels.dot(values, values, count: rowLength) * inverseLength - mean * mean
+            // The variance of the centered values cannot be negative, which E[x²] - E[x]² can be after rounding.
+            for j in 0 ..< rowLength {
+                output[j] = values[j] - mean
+            }
+            let variance = CPUKernels.dot(output, output, count: rowLength) * inverseLength
             let inverseDivisor = 1 / (variance.sqrt() + epsilon)
             for j in 0 ..< rowLength {
-                output[j] = (values[j] - mean) * inverseDivisor * gamma[j] + beta[j]
+                output[j] = output[j] * inverseDivisor * gamma[j] + beta[j]
             }
         }
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func layerNormalizationBackward<N: NumericType>(
+    static func layerNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, CPU>,
         scale: ShapedBuffer<N, CPU>,
         shift: ShapedBuffer<N, CPU>,
@@ -128,7 +132,8 @@ public extension CPUFusedOperations {
             }
             // dx = (dn - mean(dn) - n * mean(dn * n) * d / sqrt(variance)) / d
             let meanGradient = CPUKernels.sum(normalizedGradient, count: rowLength) * inverseLength
-            let correlation = CPUKernels.dot(normalizedGradient, normalized, count: rowLength) * inverseLength * divisor / standardDeviation
+            // A row of equal values has the normalized values 0, so the term is 0, and the division would give NaN.
+            let correlation = standardDeviation > 0 ? CPUKernels.dot(normalizedGradient, normalized, count: rowLength) * inverseLength * divisor / standardDeviation : 0
             // Without an accumulated gradient, the row is written directly.
             let target = beta == 0 ? dx + row * rowLength : rowGradient
             for j in 0 ..< rowLength {
@@ -142,34 +147,17 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>, epsilon: N, result: MutableShapedBuffer<N, CPU>, mean: MutableShapedBuffer<N, CPU>, variance: MutableShapedBuffer<N, CPU>) {
+    static func batchNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>, epsilon: N, result: MutableShapedBuffer<N, CPU>, mean: MutableShapedBuffer<N, CPU>, variance: MutableShapedBuffer<N, CPU>) {
         let columnShape = Array(input.shape.dropFirst())
-        let math = BufferMath<N, CPU>()
-        defer {
-            math.release()
-        }
         precondition(input.dim >= 1, "The input must have a batch axis.")
         precondition(mean.shape == columnShape && variance.shape == columnShape, "The mean and the variance must have the shape of the input without the batch axis.")
-        let (gamma, beta) = (columns(of: scale, shape: columnShape, math: math), columns(of: shift, shape: columnShape, math: math))
+        let (scaleColumns, shiftColumns) = (columns(of: scale, shape: columnShape), columns(of: shift, shape: columnShape))
+        let (gamma, beta) = (scaleColumns.elementPointer, shiftColumns.elementPointer)
         let batchSize = input.shape[0]
         let columns = input.count / batchSize
         let (x, y) = (input.elementPointer, result.elementPointer)
         let (means, variances) = (mean.elementPointer, variance.elementPointer)
-        CPUKernels.fill(means, with: 0, count: columns)
-        CPUKernels.fill(variances, with: 0, count: columns)
-
-        for row in 0 ..< batchSize {
-            let values = x + row * columns
-            for j in 0 ..< columns {
-                means[j] += values[j]
-                variances[j] += values[j] * values[j]
-            }
-        }
-        let inverseBatchSize = 1 / N(batchSize)
-        for j in 0 ..< columns {
-            means[j] *= inverseBatchSize
-            variances[j] = variances[j] * inverseBatchSize - means[j] * means[j]
-        }
+        columnMoments(of: x, rows: batchSize, columns: columns, means: means, variances: variances)
 
         // y = x * factor + offset with factor = gamma / d and offset = beta - mean * factor
         let factors = UnsafeMutablePointer<N>.allocate(capacity: columns)
@@ -192,7 +180,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func batchNormalizationBackward<N: NumericType>(
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, CPU>,
         scale: ShapedBuffer<N, CPU>,
         shift: ShapedBuffer<N, CPU>,
@@ -203,14 +191,11 @@ public extension CPUFusedOperations {
         shiftGradient: GradientBuffer<N, CPU>?,
     ) {
         let columnShape = Array(input.shape.dropFirst())
-        let math = BufferMath<N, CPU>()
-        defer {
-            math.release()
-        }
         precondition(input.dim >= 1, "The input must have a batch axis.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
-        precondition(CPUKernels.broadcasts(shift.shape, to: columnShape), "The shift must be broadcastable to the shape of the input without the batch axis.")
-        let gamma = columns(of: scale, shape: columnShape, math: math)
+        precondition(ShapeUtil.broadcasts(shift.shape, to: columnShape), "The shift must be broadcastable to the shape of the input without the batch axis.")
+        let scaleColumns = columns(of: scale, shape: columnShape)
+        let gamma = scaleColumns.elementPointer
         let batchSize = input.shape[0]
         let columns = input.count / batchSize
         let (x, g) = (input.elementPointer, outputGradient.elementPointer)
@@ -229,33 +214,17 @@ public extension CPUFusedOperations {
                 buffer.deallocate()
             }
         }
-        for buffer in [means, gradientSums, productSums, squares, scaleSums, shiftSums] {
+        for buffer in [gradientSums, productSums, scaleSums, shiftSums] {
             CPUKernels.fill(buffer, with: 0, count: columns)
         }
-
-        for row in 0 ..< batchSize {
-            let values = x + row * columns
-            for j in 0 ..< columns {
-                means[j] += values[j]
-            }
-        }
+        columnMoments(of: x, rows: batchSize, columns: columns, means: means, variances: squares)
         for j in 0 ..< columns {
-            means[j] *= inverseBatchSize
-        }
-        // The variance of the centered values equals the variance of the forward pass up to rounding.
-        for row in 0 ..< batchSize {
-            let values = x + row * columns
-            for j in 0 ..< columns {
-                let centered = values[j] - means[j]
-                squares[j] += centered * centered
-            }
-        }
-        for j in 0 ..< columns {
-            let standardDeviation = (squares[j] * inverseBatchSize).sqrt()
+            let standardDeviation = squares[j].sqrt()
             let divisor = standardDeviation + epsilon
             inverseDivisors[j] = 1 / divisor
-            // Holds d / sqrt(variance) until the sums of the gradients are known.
-            correlationFactors[j] = divisor / standardDeviation
+            // Holds d / sqrt(variance) until the sums of the gradients are known. A column of equal values has the
+            // normalized values 0, so its term is 0, and the division would give NaN.
+            correlationFactors[j] = standardDeviation > 0 ? divisor / standardDeviation : 0
         }
 
         for row in 0 ..< batchSize {
@@ -270,8 +239,8 @@ public extension CPUFusedOperations {
                 shiftSums[j] += gradient
             }
         }
-        addColumnSums(scaleSums, columnShape: columnShape, to: scaleGradient, math: math)
-        addColumnSums(shiftSums, columnShape: columnShape, to: shiftGradient, math: math)
+        addColumnSums(scaleSums, columnShape: columnShape, to: scaleGradient)
+        addColumnSums(shiftSums, columnShape: columnShape, to: shiftGradient)
         guard let inputGradient else {
             return
         }
@@ -298,17 +267,13 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>, mean: ShapedBuffer<N, CPU>, variance: ShapedBuffer<N, CPU>, epsilon: N, result: MutableShapedBuffer<N, CPU>) {
+    static func batchNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>, mean: ShapedBuffer<N, CPU>, variance: ShapedBuffer<N, CPU>, epsilon: N, result: MutableShapedBuffer<N, CPU>) {
         let columnShape = Array(input.shape.dropFirst())
-        let math = BufferMath<N, CPU>()
-        defer {
-            math.release()
-        }
         precondition(input.dim >= 1, "The input must have a batch axis.")
-        let affine = FixedNormalizationColumns(scale: scale, shift: shift, mean: mean, variance: variance, columnShape: columnShape, epsilon: epsilon, math: math)
+        let affine = FixedNormalizationColumns(scale: scale, shift: shift, mean: mean, variance: variance, columnShape: columnShape, epsilon: epsilon)
         let columns = input.count / input.shape[0]
         let (x, y) = (input.elementPointer, result.elementPointer)
-        let (factors, offsets) = (affine.factors, affine.offsets)
+        let (factors, offsets) = (affine.factors.elementPointer, affine.offsets.elementPointer)
         for row in 0 ..< input.shape[0] {
             let (values, output) = (x + row * columns, y + row * columns)
             for j in 0 ..< columns {
@@ -319,7 +284,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func batchNormalizationBackward<N: NumericType>(
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, CPU>,
         scale: ShapedBuffer<N, CPU>,
         shift: ShapedBuffer<N, CPU>,
@@ -332,13 +297,9 @@ public extension CPUFusedOperations {
         shiftGradient: GradientBuffer<N, CPU>?,
     ) {
         let columnShape = Array(input.shape.dropFirst())
-        let math = BufferMath<N, CPU>()
-        defer {
-            math.release()
-        }
         precondition(input.dim >= 1, "The input must have a batch axis.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
-        let affine = FixedNormalizationColumns(scale: scale, shift: shift, mean: mean, variance: variance, columnShape: columnShape, epsilon: epsilon, math: math)
+        let affine = FixedNormalizationColumns(scale: scale, shift: shift, mean: mean, variance: variance, columnShape: columnShape, epsilon: epsilon)
         let columns = input.count / input.shape[0]
         let (x, g) = (input.elementPointer, outputGradient.elementPointer)
         let dx = inputGradient?.elementsToWrite()
@@ -353,7 +314,7 @@ public extension CPUFusedOperations {
         CPUKernels.fill(scaleSums, with: 0, count: columns)
         CPUKernels.fill(shiftSums, with: 0, count: columns)
 
-        let (factors, inverseDivisors, means) = (affine.factors, affine.inverseDivisors, affine.means)
+        let (factors, inverseDivisors, means) = (affine.factors.elementPointer, affine.inverseDivisors.elementPointer, affine.means.elementPointer)
         for row in 0 ..< input.shape[0] {
             let (values, gradients) = (x + row * columns, g + row * columns)
             for j in 0 ..< columns {
@@ -372,38 +333,59 @@ public extension CPUFusedOperations {
                 }
             }
         }
-        addColumnSums(scaleSums, columnShape: columnShape, to: scaleGradient, math: math)
-        addColumnSums(shiftSums, columnShape: columnShape, to: shiftGradient, math: math)
+        addColumnSums(scaleSums, columnShape: columnShape, to: scaleGradient)
+        addColumnSums(shiftSums, columnShape: columnShape, to: shiftGradient)
     }
 }
 
 extension CPUFusedOperations {
-    /// Checks that the scale and the shift have the shape of the trailing axes of the input.
-    static func checkLayerNormalizationShapes<N>(input: ShapedBuffer<N, CPU>, scale: ShapedBuffer<N, CPU>, shift: ShapedBuffer<N, CPU>) {
-        precondition(scale.dim <= input.dim && Array(input.shape.suffix(scale.dim)) == scale.shape, "The scale must have the shape of the trailing axes of the input.")
-        precondition(shift.shape == scale.shape, "The shift must have the shape of the scale.")
+    // The variance of the centered values cannot be negative, which E[x²] - E[x]² can be after rounding.
+    /// Writes the mean and the biased variance of every column of a [rows, columns] matrix.
+    static func columnMoments<N: FloatingPointNumericType>(of x: UnsafePointer<N>, rows: Int, columns: Int, means: UnsafeMutablePointer<N>, variances: UnsafeMutablePointer<N>) {
+        CPUKernels.fill(means, with: 0, count: columns)
+        CPUKernels.fill(variances, with: 0, count: columns)
+        for row in 0 ..< rows {
+            let values = x + row * columns
+            for j in 0 ..< columns {
+                means[j] += values[j]
+            }
+        }
+        let inverseRows = 1 / N(rows)
+        for j in 0 ..< columns {
+            means[j] *= inverseRows
+        }
+        for row in 0 ..< rows {
+            let values = x + row * columns
+            for j in 0 ..< columns {
+                let centered = values[j] - means[j]
+                variances[j] += centered * centered
+            }
+        }
+        for j in 0 ..< columns {
+            variances[j] *= inverseRows
+        }
     }
 
-    /// The elements of values that are broadcastable to the columns, repeated into an intermediate buffer of `math` when the shapes differ.
-    static func columns<N: NumericType>(of values: ShapedBuffer<N, CPU>, shape columnShape: [Int], math: BufferMath<N, CPU>) -> UnsafePointer<N> {
+    /// Values that are broadcastable to the columns, repeated into a new buffer when the shapes differ.
+    static func columns<N: FloatingPointNumericType>(of values: ShapedBuffer<N, CPU>, shape columnShape: [Int]) -> ShapedBuffer<N, CPU> {
         if values.shape == columnShape {
-            return values.elementPointer
+            return values
         }
-        precondition(CPUKernels.broadcasts(values.shape, to: columnShape), "The parameters must be broadcastable to the shape of the input without the batch axis.")
-        let repeated = math.temporary(columnShape)
+        precondition(ShapeUtil.broadcasts(values.shape, to: columnShape), "The parameters must be broadcastable to the shape of the input without the batch axis.")
+        let repeated = CPU.Memory.allocateBuffer(withShape: columnShape, type: N.self)
         CPUKernels.broadcast(values, into: repeated)
-        return UnsafePointer(repeated.elementPointer)
+        return ShapedBuffer(repeated)
     }
 
     /// Writes sums with the shape of the columns into the gradient of a parameter that broadcasts to the columns.
-    static func addColumnSums<N: NumericType>(_ sums: UnsafePointer<N>, columnShape: [Int], to gradient: GradientBuffer<N, CPU>?, math: BufferMath<N, CPU>) {
+    static func addColumnSums<N: FloatingPointNumericType>(_ sums: UnsafePointer<N>, columnShape: [Int], to gradient: GradientBuffer<N, CPU>?) {
         guard let gradient else {
             return
         }
         guard gradient.shape == columnShape else {
-            let columns = math.temporary(columnShape)
+            let columns = CPU.Memory.allocateBuffer(withShape: columnShape, type: N.self)
             columns.elementPointer.update(from: sums, count: columns.count)
-            math.writeSum(of: columns, into: gradient)
+            BufferMath<N, CPU>().writeSum(of: columns, into: gradient)
             return
         }
         gradient.write(sums)
@@ -412,13 +394,13 @@ extension CPUFusedOperations {
 
 /// The columns of a normalization with fixed statistics: the factors `scale / (sqrt(variance) + epsilon)`, their divisors,
 /// the offsets `shift - mean * factor`, and the means.
-struct FixedNormalizationColumns<N: NumericType> {
-    let factors: UnsafePointer<N>
-    let inverseDivisors: UnsafePointer<N>
-    let offsets: UnsafePointer<N>
-    let means: UnsafePointer<N>
+struct FixedNormalizationColumns<N: FloatingPointNumericType> {
+    let factors: ShapedBuffer<N, CPU>
+    let inverseDivisors: ShapedBuffer<N, CPU>
+    let offsets: ShapedBuffer<N, CPU>
+    let means: ShapedBuffer<N, CPU>
 
-    /// Computes the columns in intermediate buffers of `math`. The parameters must be broadcastable to the columns.
+    /// Computes the columns. The parameters must be broadcastable to the columns.
     init(
         scale: ShapedBuffer<N, CPU>,
         shift: ShapedBuffer<N, CPU>,
@@ -426,21 +408,25 @@ struct FixedNormalizationColumns<N: NumericType> {
         variance: ShapedBuffer<N, CPU>,
         columnShape: [Int],
         epsilon: N,
-        math: BufferMath<N, CPU>,
     ) {
         typealias Columns = CPUFusedOperations
-        let (gamma, beta) = (Columns.columns(of: scale, shape: columnShape, math: math), Columns.columns(of: shift, shape: columnShape, math: math))
-        let (means, variances) = (Columns.columns(of: mean, shape: columnShape, math: math), Columns.columns(of: variance, shape: columnShape, math: math))
-        let count = columnShape.reduce(1, *)
-        let (factors, inverseDivisors, offsets) = (math.temporary(columnShape).elementPointer, math.temporary(columnShape).elementPointer, math.temporary(columnShape).elementPointer)
-        for j in 0 ..< count {
-            inverseDivisors[j] = 1 / (variances[j].sqrt() + epsilon)
-            factors[j] = gamma[j] * inverseDivisors[j]
-            offsets[j] = beta[j] - means[j] * factors[j]
+        let (scaleColumns, shiftColumns) = (Columns.columns(of: scale, shape: columnShape), Columns.columns(of: shift, shape: columnShape))
+        let varianceColumns = Columns.columns(of: variance, shape: columnShape)
+        let (factors, inverseDivisors, offsets) = (
+            CPU.Memory.allocateBuffer(withShape: columnShape, type: N.self),
+            CPU.Memory.allocateBuffer(withShape: columnShape, type: N.self),
+            CPU.Memory.allocateBuffer(withShape: columnShape, type: N.self),
+        )
+        means = Columns.columns(of: mean, shape: columnShape)
+        let (gamma, beta, variances, meanElements) = (scaleColumns.elementPointer, shiftColumns.elementPointer, varianceColumns.elementPointer, means.elementPointer)
+        let (factorElements, divisorElements, offsetElements) = (factors.elementPointer, inverseDivisors.elementPointer, offsets.elementPointer)
+        for j in 0 ..< factors.count {
+            divisorElements[j] = 1 / (variances[j].sqrt() + epsilon)
+            factorElements[j] = gamma[j] * divisorElements[j]
+            offsetElements[j] = beta[j] - meanElements[j] * factorElements[j]
         }
-        self.factors = UnsafePointer(factors)
-        self.inverseDivisors = UnsafePointer(inverseDivisors)
-        self.offsets = UnsafePointer(offsets)
-        self.means = means
+        self.factors = ShapedBuffer(factors)
+        self.inverseDivisors = ShapedBuffer(inverseDivisors)
+        self.offsets = ShapedBuffer(offsets)
     }
 }

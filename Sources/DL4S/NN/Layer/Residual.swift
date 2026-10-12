@@ -27,7 +27,7 @@ import Foundation
 
 /// Residual block with two convolution and batch normalization layers as well as an optional downsampling block.
 @Layer
-public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Sendable {
+public struct ResidualBlock<Element: FloatingPointNumericType, Device: DeviceType>: Sendable {
     /// First convolution layer
     public var conv1: Convolution2D<Element, Device>
     /// Second convolution layer
@@ -65,13 +65,17 @@ public struct ResidualBlock<Element: RandomizableType, Device: DeviceType>: Send
         if downsample != 1 {
             self.downsample = Sequential {
                 Convolution2D<Element, Device>(inputChannels: inputShape[0], outputChannels: outPlanes, kernelSize: (1, 1), padding: 0, stride: downsample, using: &generator)
-                BatchNorm<Element, Device>(inputSize: [outPlanes, inputShape[1] / downsample, inputShape[2] / downsample])
+                BatchNorm<Element, Device>(inputSize: ConvUtil.outputShape(for: inputShape, kernelCount: outPlanes, kernelWidth: 1, kernelHeight: 1, stride: downsample, padding: 0))
             }
         } else {
             self.downsample = nil
         }
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         OperationGroup.capture(named: "ResidualBlock") {
             var x = inputs

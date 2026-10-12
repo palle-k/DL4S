@@ -31,7 +31,7 @@ import Foundation
 ///
 /// https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
 @Layer
-public struct AlexNet<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct AlexNet<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     var featureNet: Sequential<
         Convolution2D<Element, Device>,
         Relu<Element, Device>,
@@ -145,6 +145,10 @@ public struct AlexNet<Element: RandomizableType, Device: DeviceType>: Codable, S
         }
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         classifier(avgPool(featureNet(inputs)))
     }

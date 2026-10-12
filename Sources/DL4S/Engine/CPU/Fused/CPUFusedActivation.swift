@@ -34,7 +34,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func tanhBackward<N: NumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
+    static func tanhBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
@@ -67,7 +67,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func sigmoid<N: NumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func sigmoid<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         CPUKernels.map(input, into: result) { x, y, length in
             CPUKernels.sigmoid(x, into: y, count: length)
         }
@@ -75,7 +75,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func sigmoidBackward<N: NumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
+    static func sigmoidBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
@@ -91,8 +91,8 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func leakyRelu<N: NumericType>(input: ShapedBuffer<N, CPU>, leakage: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
-        precondition(CPUKernels.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
+    static func leakyRelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, leakage: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+        precondition(ShapeUtil.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
         // The kernel supports a scalar leakage.
         guard leakage.count == 1 else {
             DefaultFusedOperations<CPU>.leakyRelu(input: input, leakage: leakage, result: result)
@@ -109,14 +109,14 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func leakyReluBackward<N: NumericType>(
+    static func leakyReluBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, CPU>,
         leakage: ShapedBuffer<N, CPU>,
         outputGradient: ShapedBuffer<N, CPU>,
         inputGradient: GradientBuffer<N, CPU>?,
         leakageGradient: GradientBuffer<N, CPU>?,
     ) {
-        precondition(CPUKernels.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(leakage.shape, to: input.shape), "The leakage must be broadcastable to the shape of the input.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         // The kernel supports a scalar leakage.
         guard leakage.count == 1 else {
@@ -155,14 +155,14 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func gelu<N: NumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func gelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         let half = N(0.5)
         let t = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         defer {
             t.deallocate()
         }
         CPUKernels.map(input, into: result) { x, y, length in
-            CPUKernels.tanhOfHalf(x, scale: N(1.702), into: t, count: length)
+            CPUKernels.tanhOfHalf(x, scale: N(FusedConstants.geluSlope), into: t, count: length)
             for i in 0 ..< length {
                 y[i] = x[i] * (t[i] * half + half)
             }
@@ -171,13 +171,13 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func geluBackward<N: NumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
+    static func geluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         let (x, g) = (input.elementPointer, outputGradient.elementPointer)
-        let (half, slope) = (N(0.5), N(1.702))
+        let (half, slope) = (N(0.5), N(FusedConstants.geluSlope))
         let t = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         defer {
             t.deallocate()
@@ -194,8 +194,8 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func swish<N: NumericType>(input: ShapedBuffer<N, CPU>, beta: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
-        precondition(CPUKernels.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
+    static func swish<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, beta: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+        precondition(ShapeUtil.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
         // The kernel supports a scalar beta and a beta with the shape of the trailing axes of the input.
         guard let rowLength = swishRowLength(input: input, beta: beta) else {
             DefaultFusedOperations<CPU>.swish(input: input, beta: beta, result: result)
@@ -226,14 +226,14 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func swishBackward<N: NumericType>(
+    static func swishBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, CPU>,
         beta: ShapedBuffer<N, CPU>,
         outputGradient: ShapedBuffer<N, CPU>,
         inputGradient: GradientBuffer<N, CPU>?,
         betaGradient: GradientBuffer<N, CPU>?,
     ) {
-        precondition(CPUKernels.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(beta.shape, to: input.shape), "The beta must be broadcastable to the shape of the input.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         // The kernel supports a scalar beta and a beta with the shape of the trailing axes of the input.
         guard let rowLength = swishRowLength(input: input, beta: beta) else {
@@ -306,7 +306,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func mish<N: NumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func mish<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         let factors = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         let exponentials = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         defer {
@@ -323,7 +323,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func mishBackward<N: NumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
+    static func mishBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
@@ -349,7 +349,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func lisht<N: NumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func lisht<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         let t = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         defer {
             t.deallocate()
@@ -364,7 +364,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func lishtBackward<N: NumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
+    static func lishtBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
@@ -385,8 +385,8 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func elu<N: NumericType>(input: ShapedBuffer<N, CPU>, alpha: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
-        precondition(CPUKernels.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
+    static func elu<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, alpha: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+        precondition(ShapeUtil.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
         // The kernel supports a scalar alpha.
         guard alpha.count == 1 else {
             DefaultFusedOperations<CPU>.elu(input: input, alpha: alpha, result: result)
@@ -408,14 +408,14 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func eluBackward<N: NumericType>(
+    static func eluBackward<N: FloatingPointNumericType>(
         input: ShapedBuffer<N, CPU>,
         alpha: ShapedBuffer<N, CPU>,
         outputGradient: ShapedBuffer<N, CPU>,
         inputGradient: GradientBuffer<N, CPU>?,
         alphaGradient: GradientBuffer<N, CPU>?,
     ) {
-        precondition(CPUKernels.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
+        precondition(ShapeUtil.broadcasts(alpha.shape, to: input.shape), "The alpha must be broadcastable to the shape of the input.")
         precondition(outputGradient.shape == input.shape, "The gradient of the result must have the shape of the input.")
         // The kernel supports a scalar alpha.
         guard alpha.count == 1 else {
@@ -457,23 +457,32 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softplus<N: NumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func softplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         let exponentials = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         defer {
             exponentials.deallocate()
         }
+        // max(x, 0) + log(1 + exp(-|x|)), because exp(x) overflows for large x.
         CPUKernels.map(input, into: result) { x, y, length in
-            CPUKernels.exp(x, into: exponentials, count: length)
+            for i in 0 ..< length {
+                let value = x[i]
+                exponentials[i] = value < 0 ? value : -value
+            }
+            CPUKernels.exp(exponentials, into: exponentials, count: length)
             for i in 0 ..< length {
                 exponentials[i] += 1
             }
             CPUKernels.log(exponentials, into: y, count: length)
+            for i in 0 ..< length {
+                let value = x[i]
+                y[i] += value > 0 ? value : 0
+            }
         }
     }
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func softplusBackward<N: NumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
+    static func softplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
@@ -495,7 +504,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func squareplus<N: NumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
+    static func squareplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, result: MutableShapedBuffer<N, CPU>) {
         let half = N(0.5)
         let roots = UnsafeMutablePointer<N>.allocate(capacity: CPUKernels.blockSize)
         defer {
@@ -514,7 +523,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func squareplusBackward<N: NumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
+    static func squareplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, outputGradient: ShapedBuffer<N, CPU>, inputGradient: GradientBuffer<N, CPU>?) {
         guard let inputGradient else {
             return
         }
@@ -571,12 +580,13 @@ extension CPUFusedOperations {
         }
     }
 
+    // The limit keeps `n` from an overflow. The factor already rounds to 1 there, in single and in double precision.
     /// Computes `tanh(log(1 + exp(x)))` with a single exponential, and writes `exp(x)` to `exponentials`.
     ///
     /// With `e = exp(x)` and `n = e * (e + 2)`, `tanh(log(1 + e)) = n / (n + 2)`. The input is limited to 20 before the
-    /// exponential, so that `n` does not overflow. The factor already rounds to 1 there, in single and in double precision.
+    /// exponential.
     @inline(__always)
-    static func mishFactors<N: NumericType>(_ x: UnsafePointer<N>, exponentials: UnsafeMutablePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func mishFactors<N: FloatingPointNumericType>(_ x: UnsafePointer<N>, exponentials: UnsafeMutablePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         let limit = N(20)
         for i in 0 ..< count {
             result[i] = Swift.min(x[i], limit)
@@ -591,7 +601,7 @@ extension CPUFusedOperations {
 
     /// Computes `exp(min(x, 0))`, which does not overflow for large inputs.
     @inline(__always)
-    static func exponentialOfNegativePart<N: NumericType>(_ x: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
+    static func exponentialOfNegativePart<N: FloatingPointNumericType>(_ x: UnsafePointer<N>, into result: UnsafeMutablePointer<N>, count: Int) {
         for i in 0 ..< count {
             result[i] = Swift.min(x[i], 0)
         }

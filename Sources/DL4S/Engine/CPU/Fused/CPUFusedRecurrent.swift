@@ -32,7 +32,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func gatedRecurrentUnitStep<N: NumericType>(
+    static func gatedRecurrentUnitStep<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, CPU>,
         resetInput: ShapedBuffer<N, CPU>,
         candidateInput: ShapedBuffer<N, CPU>,
@@ -59,7 +59,7 @@ public extension CPUFusedOperations {
 
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func gatedRecurrentUnitStepBackward<N: NumericType>(
+    static func gatedRecurrentUnitStepBackward<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, CPU>,
         resetInput: ShapedBuffer<N, CPU>,
         candidateInput: ShapedBuffer<N, CPU>,
@@ -97,12 +97,8 @@ public extension CPUFusedOperations {
         // The weight gradients are added to the accumulated gradients with GEMMs, so a weight that every time step uses needs no temporary gradient.
         let matrixShape = (batchSize, hiddenSize)
         let weightShape = (hiddenSize, hiddenSize)
-        if let (target, beta) = gradients.updateInput?.elementsToWrite() {
-            CPUKernels.store(updateActivationGradient, into: target, beta: beta, count: count)
-        }
-        if let (target, beta) = gradients.candidateInput?.elementsToWrite() {
-            CPUKernels.store(candidateActivationGradient, into: target, beta: beta, count: count)
-        }
+        gradients.updateInput?.write(updateActivationGradient)
+        gradients.candidateInput?.write(candidateActivationGradient)
         if let (target, beta) = gradients.updateWeights?.elementsToWrite() {
             CPUKernels.gemm(h, shape: matrixShape, lhsTransposed: true, updateActivationGradient, shape: matrixShape, into: target, beta: beta)
         }
@@ -120,9 +116,7 @@ public extension CPUFusedOperations {
             let (gradient, r) = (resetStateGradient[i], reset[i])
             resetActivationGradient[i] = gradient * h[i] * r * (1 - r)
         }
-        if let (target, beta) = gradients.resetInput?.elementsToWrite() {
-            CPUKernels.store(resetActivationGradient, into: target, beta: beta, count: count)
-        }
+        gradients.resetInput?.write(resetActivationGradient)
         if let (target, beta) = gradients.resetWeights?.elementsToWrite() {
             CPUKernels.gemm(h, shape: matrixShape, lhsTransposed: true, resetActivationGradient, shape: matrixShape, into: target, beta: beta)
         }
@@ -141,7 +135,7 @@ public extension CPUFusedOperations {
 }
 
 /// Scratch buffers of the gates of one step of a gated recurrent unit.
-struct GatedRecurrentUnitScratch<N: NumericType> {
+struct GatedRecurrentUnitScratch<N: FloatingPointNumericType> {
     /// Update gate
     let update: UnsafeMutablePointer<N>
     /// Reset gate
@@ -183,7 +177,7 @@ struct GatedRecurrentUnitGeometry {
 
     /// Computes the update gate, the reset gate, the reset state, and the candidate state.
     @inline(__always)
-    func computeGates<N: NumericType>(
+    func computeGates<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, CPU>,
         resetInput: ShapedBuffer<N, CPU>,
         candidateInput: ShapedBuffer<N, CPU>,

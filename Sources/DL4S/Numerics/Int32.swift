@@ -38,14 +38,6 @@ extension Int32: NumericType {
         false
     }
 
-    public func toUInt8() -> UInt8 {
-        UInt8(self)
-    }
-
-    public func toInt() -> Int {
-        Int(self)
-    }
-
     public var floatValue: Float {
         Float(self)
     }
@@ -54,47 +46,7 @@ extension Int32: NumericType {
         Double(self)
     }
 
-    public var intValue: Int32 {
-        self
-    }
-
     public static var one: Int32 {
         1
-    }
-
-    public func sqrt() -> Int32 {
-        Int32(Foundation.sqrt(Float(self)))
-    }
-
-    public func log() -> Int32 {
-        Int32(Foundation.log(Float(self)))
-    }
-
-    public func exp() -> Int32 {
-        Int32(Foundation.exp(Float(self)))
-    }
-
-    public func sin() -> Int32 {
-        Int32(round(Float(Foundation.sin(Float(self)))))
-    }
-
-    public func cos() -> Int32 {
-        Int32(round(Float(Foundation.cos(Float(self)))))
-    }
-
-    public func tan() -> Int32 {
-        Int32(round(Float(Foundation.tan(Float(self)))))
-    }
-
-    public func sinh() -> Int32 {
-        Int32(round(Float(Foundation.sinh(Float(self)))))
-    }
-
-    public func cosh() -> Int32 {
-        Int32(round(Float(Foundation.cosh(Float(self)))))
-    }
-
-    public func tanh() -> Int32 {
-        Int32(round(Float(Foundation.tanh(Float(self)))))
     }
 }

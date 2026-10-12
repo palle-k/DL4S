@@ -72,15 +72,10 @@ struct FusedOperationCase: CustomTestStringConvertible, Sendable {
 
 // MARK: Test values
 
-private func uniform(_ shape: [Int], min: Double = -1, max: Double = 1, seed: UInt64) -> DoubleTensor {
-    var generator = WyHash(seed: seed)
-    return DoubleTensor(uniformlyDistributedWithShape: shape, min: min, max: max, using: &generator)
-}
-
 /// Uniform values whose magnitudes are at least 0.1, so that no value is close to the kink of a piecewise function.
 private func awayFromZero(_ shape: [Int], seed: UInt64) -> DoubleTensor {
-    let values = uniform(shape, min: 0.1, max: 1, seed: seed)
-    let signs = uniform(shape, seed: seed + 1).elements.map { $0 < 0 ? -1.0 : 1.0 }
+    let values = DoubleTensor.uniform(shape, min: 0.1, max: 1, seed: seed)
+    let signs = DoubleTensor.uniform(shape, seed: seed + 1).elements.map { $0 < 0 ? -1.0 : 1.0 }
     return values * DoubleTensor(signs, shape: shape)
 }
 
@@ -165,6 +160,7 @@ private func referenceNormalization(_ input: DoubleTensor, along axes: [Int], sc
 }
 
 private func referenceAttention(queries: DoubleTensor, keys: DoubleTensor, values: DoubleTensor, mask: DoubleTensor?, temperature: Double) -> DoubleTensor {
+    let (keys, values) = (repeatedHeads(keys, to: queries.shape[1]), repeatedHeads(values, to: queries.shape[1]))
     var scores = (queries / DoubleTensor(temperature)).broadcastMatrixMultiplied(with: keys, transposeSelf: false, transposeOther: true)
     if let mask {
         scores -= mask * 1e9
@@ -172,16 +168,26 @@ private func referenceAttention(queries: DoubleTensor, keys: DoubleTensor, value
     return referenceSoftmax(scores, axis: 3).broadcastMatrixMultiplied(with: values)
 }
 
+/// Repeats every head of a [batchSize, groupHeads, count, size] tensor for the query heads of its group.
+private func repeatedHeads(_ tensor: DoubleTensor, to heads: Int) -> DoubleTensor {
+    let groupSize = heads / tensor.shape[1]
+    guard groupSize > 1 else {
+        return tensor
+    }
+    return DoubleTensor(stacking: (0 ..< heads).map { tensor[nil, $0 / groupSize].view(as: tensor.shape[0], 1, tensor.shape[2], tensor.shape[3]) }, along: 1)
+}
+
 private func referenceMultiHeadAttention(_ sources: [DoubleTensor], mask: DoubleTensor?, heads: Int) -> DoubleTensor {
     let (q, k, v) = (sources[0], sources[1], sources[2])
     let (queryWeights, keyWeights, valueWeights, outputWeights) = (sources[3], sources[4], sources[5], sources[6])
     let keyDim = queryWeights.shape[1] / heads
-    let valueDim = valueWeights.shape[1] / heads
+    let keyHeads = keyWeights.shape[1] / keyDim
+    let valueDim = valueWeights.shape[1] / keyHeads
 
     let queryHeads = q.broadcastMatrixMultiplied(with: queryWeights).view(as: q.shape[0], q.shape[1], heads, keyDim).permuted(to: 0, 2, 1, 3)
-    let keyHeads = k.broadcastMatrixMultiplied(with: keyWeights).view(as: k.shape[0], k.shape[1], heads, keyDim).permuted(to: 0, 2, 1, 3)
-    let valueHeads = v.broadcastMatrixMultiplied(with: valueWeights).view(as: v.shape[0], v.shape[1], heads, valueDim).permuted(to: 0, 2, 1, 3)
-    let attended = referenceAttention(queries: queryHeads, keys: keyHeads, values: valueHeads, mask: mask, temperature: Double(keyDim).squareRoot())
+    let keyProjection = k.broadcastMatrixMultiplied(with: keyWeights).view(as: k.shape[0], k.shape[1], keyHeads, keyDim).permuted(to: 0, 2, 1, 3)
+    let valueHeads = v.broadcastMatrixMultiplied(with: valueWeights).view(as: v.shape[0], v.shape[1], keyHeads, valueDim).permuted(to: 0, 2, 1, 3)
+    let attended = referenceAttention(queries: queryHeads, keys: keyProjection, values: valueHeads, mask: mask, temperature: Double(keyDim).squareRoot())
     return attended
         .permuted(to: 0, 2, 1, 3)
         .view(as: q.shape[0], q.shape[1], -1)
@@ -194,93 +200,93 @@ extension FusedOperationCase {
     static let convolutions: [FusedOperationCase] = [
         FusedOperationCase(
             "convolved2d, padding 1, stride 2",
-            sources: [uniform([2, 2, 5, 5], seed: 1), uniform([3, 2, 3, 3], seed: 2), uniform([1, 3, 1, 1], seed: 3)],
+            sources: [DoubleTensor.uniform([2, 2, 5, 5], seed: 1), DoubleTensor.uniform([3, 2, 3, 3], seed: 2), DoubleTensor.uniform([1, 3, 1, 1], seed: 3)],
             fused: { $0[0].convolved2d(filters: $0[1], bias: $0[2], padding: 1, stride: 2) },
             reference: { referenceConvolution($0[0], filters: $0[1], padding: 1, stride: 2) + $0[2] },
         ),
         FusedOperationCase(
             "convolved2d without bias, rectangular kernel",
-            sources: [uniform([1, 2, 5, 4], seed: 4), uniform([2, 2, 3, 2], seed: 5)],
+            sources: [DoubleTensor.uniform([1, 2, 5, 4], seed: 4), DoubleTensor.uniform([2, 2, 3, 2], seed: 5)],
             fused: { $0[0].convolved2d(filters: $0[1], padding: 0) },
             reference: { referenceConvolution($0[0], filters: $0[1], padding: 0, stride: 1) },
         ),
         FusedOperationCase(
             "transposedConvolved2d, inset 1, stride 2",
-            sources: [uniform([2, 3, 3, 3], seed: 6), uniform([2, 3, 3, 3], seed: 7), uniform([1, 2, 1, 1], seed: 8)],
+            sources: [DoubleTensor.uniform([2, 3, 3, 3], seed: 6), DoubleTensor.uniform([2, 3, 3, 3], seed: 7), DoubleTensor.uniform([1, 2, 1, 1], seed: 8)],
             fused: { $0[0].transposedConvolved2d(filters: $0[1], bias: $0[2], inset: 1, stride: 2) },
             reference: { referenceTransposedConvolution($0[0], filters: $0[1], inset: 1, stride: 2) + $0[2] },
         ),
         FusedOperationCase(
             "transposedConvolved2d without bias",
-            sources: [uniform([1, 2, 3, 3], seed: 9), uniform([3, 2, 2, 2], seed: 10)],
+            sources: [DoubleTensor.uniform([1, 2, 3, 3], seed: 9), DoubleTensor.uniform([3, 2, 2, 2], seed: 10)],
             fused: { $0[0].transposedConvolved2d(filters: $0[1], inset: 0) },
             reference: { referenceTransposedConvolution($0[0], filters: $0[1], inset: 0, stride: 1) },
         ),
         // Distinct values, so that the maximum of every window is unique.
         FusedOperationCase(
             "maxPooled2d",
-            sources: [DoubleTensor((0 ..< 32).map { Double(($0 * 7) % 32) / 32 + 0.01 }, shape: [2, 1, 4, 4])],
+            sources: [DoubleTensor((0 ..< 32).map { (i: Int) -> Double in Double(i * 7 % 32) / 32 + 0.01 }, shape: [2, 1, 4, 4])],
             fused: { $0[0].maxPooled2d(windowSize: 2, padding: 0, stride: 2) },
             reference: { referencePooling($0[0], windowSize: 2, padding: 0, stride: 2) { $0.reduceMax(along: [0]) } },
         ),
         FusedOperationCase(
             "maxPooled2d with padding and overlapping windows",
-            sources: [DoubleTensor((0 ..< 50).map { Double(($0 * 11) % 50) / 50 + 0.01 }, shape: [1, 2, 5, 5])],
+            sources: [DoubleTensor((0 ..< 50).map { (i: Int) -> Double in Double(i * 11 % 50) / 50 + 0.01 }, shape: [1, 2, 5, 5])],
             fused: { $0[0].maxPooled2d(windowSize: 3, padding: 1, stride: 2) },
             reference: { referencePooling($0[0], windowSize: 3, padding: 1, stride: 2) { $0.reduceMax(along: [0]) } },
         ),
         FusedOperationCase(
             "averagePooled2d",
-            sources: [uniform([2, 2, 5, 5], seed: 11)],
+            sources: [DoubleTensor.uniform([2, 2, 5, 5], seed: 11)],
             fused: { $0[0].averagePooled2d(windowSize: 3, padding: 1, stride: 2) },
             reference: { referencePooling($0[0], windowSize: 3, padding: 1, stride: 2) { referenceMean($0, along: [0]) } },
         ),
     ]
 
     static let activations: [FusedOperationCase] = [
-        FusedOperationCase("tanh", sources: [uniform([3, 4], seed: 20)], fused: { $0[0].tanh() }, reference: { $0[0].tanh() }),
+        FusedOperationCase("tanh", sources: [DoubleTensor.uniform([3, 4], seed: 20)], fused: { $0[0].tanh() }, reference: { $0[0].tanh() }),
         FusedOperationCase(
             "rectifiedLinear",
             sources: [awayFromZero([3, 4], seed: 21)],
             fused: { $0[0].rectifiedLinear() },
             reference: { $0[0].rectifiedLinear() },
         ),
-        FusedOperationCase("sigmoid", sources: [uniform([3, 4], seed: 22)], fused: { $0[0].sigmoid() }, reference: { referenceSigmoid($0[0]) }),
-        FusedOperationCase("softmax", sources: [uniform([3, 4], seed: 23)], fused: { $0[0].softmax(axis: 1) }, reference: { referenceSoftmax($0[0], axis: 1) }),
+        FusedOperationCase("sigmoid", sources: [DoubleTensor.uniform([3, 4], seed: 22)], fused: { $0[0].sigmoid() }, reference: { referenceSigmoid($0[0]) }),
+        FusedOperationCase("softmax", sources: [DoubleTensor.uniform([3, 4], seed: 23)], fused: { $0[0].softmax(axis: 1) }, reference: { referenceSoftmax($0[0], axis: 1) }),
         FusedOperationCase(
             "softmax along axis 0 of 3 axes",
-            sources: [uniform([3, 2, 2], seed: 24)],
+            sources: [DoubleTensor.uniform([3, 2, 2], seed: 24)],
             fused: { $0[0].softmax(axis: 0) },
             reference: { referenceSoftmax($0[0], axis: 0) },
         ),
-        FusedOperationCase("logSoftmax", sources: [uniform([3, 4], seed: 25)], fused: { $0[0].logSoftmax(axis: 1) }, reference: { referenceLogSoftmax($0[0], axis: 1) }),
+        FusedOperationCase("logSoftmax", sources: [DoubleTensor.uniform([3, 4], seed: 25)], fused: { $0[0].logSoftmax(axis: 1) }, reference: { referenceLogSoftmax($0[0], axis: 1) }),
         FusedOperationCase(
             "leakyRectifiedLinear",
-            sources: [awayFromZero([3, 4], seed: 26), uniform([4], min: 0.01, max: 0.3, seed: 27)],
+            sources: [awayFromZero([3, 4], seed: 26), DoubleTensor.uniform([4], min: 0.01, max: 0.3, seed: 27)],
             fused: { $0[0].leakyRectifiedLinear(leakage: $0[1]) },
             reference: { $0[0].rectifiedLinear() - $0[1] * (-$0[0]).rectifiedLinear() },
         ),
         FusedOperationCase(
             "gaussianErrorLinear",
-            sources: [uniform([3, 4], min: -3, max: 3, seed: 28)],
+            sources: [DoubleTensor.uniform([3, 4], min: -3, max: 3, seed: 28)],
             fused: { $0[0].gaussianErrorLinear() },
             reference: { $0[0] * referenceSigmoid($0[0] * 1.702) },
         ),
         FusedOperationCase(
             "swishActivated",
-            sources: [uniform([3, 4], min: -3, max: 3, seed: 29), uniform([4], min: 0.5, max: 2, seed: 30)],
+            sources: [DoubleTensor.uniform([3, 4], min: -3, max: 3, seed: 29), DoubleTensor.uniform([4], min: 0.5, max: 2, seed: 30)],
             fused: { $0[0].swishActivated(beta: $0[1]) },
             reference: { $0[0] * referenceSigmoid($0[1] * $0[0]) },
         ),
         FusedOperationCase(
             "mishActivated",
-            sources: [uniform([3, 4], min: -3, max: 3, seed: 31)],
+            sources: [DoubleTensor.uniform([3, 4], min: -3, max: 3, seed: 31)],
             fused: { $0[0].mishActivated() },
             reference: { $0[0] * (1 + $0[0].exp()).log().tanh() },
         ),
         FusedOperationCase(
             "lishtActivated",
-            sources: [uniform([3, 4], min: -3, max: 3, seed: 32)],
+            sources: [DoubleTensor.uniform([3, 4], min: -3, max: 3, seed: 32)],
             fused: { $0[0].lishtActivated() },
             reference: { $0[0] * $0[0].tanh() },
         ),
@@ -293,66 +299,66 @@ extension FusedOperationCase {
                 return positive * $0[0] + (1 - positive) * $0[1] * ($0[0].exp() - 1)
             },
         ),
-        FusedOperationCase("softplus", sources: [uniform([3, 4], min: -3, max: 3, seed: 34)], fused: { $0[0].softplus() }, reference: { ($0[0].exp() + 1).log() }),
+        FusedOperationCase("softplus", sources: [DoubleTensor.uniform([3, 4], min: -3, max: 3, seed: 34)], fused: { $0[0].softplus() }, reference: { ($0[0].exp() + 1).log() }),
         FusedOperationCase(
             "squareplus",
-            sources: [uniform([3, 4], min: -3, max: 3, seed: 35)],
+            sources: [DoubleTensor.uniform([3, 4], min: -3, max: 3, seed: 35)],
             fused: { $0[0].squareplus() },
             reference: { ($0[0] + ($0[0] * $0[0] + 4).sqrt()) / 2 },
         ),
     ]
 
     static let reductions: [FusedOperationCase] = [
-        FusedOperationCase("reduceMean along 1", sources: [uniform([3, 4], seed: 40)], fused: { $0[0].reduceMean(along: [1]) }, reference: { referenceMean($0[0], along: [1]) }),
-        FusedOperationCase("reduceMean along 0 and 2", sources: [uniform([2, 3, 4], seed: 41)], fused: { $0[0].reduceMean(along: [0, 2]) }, reference: { referenceMean($0[0], along: [0, 2]) }),
-        FusedOperationCase("reduceMean of all elements", sources: [uniform([2, 3], seed: 42)], fused: { $0[0].reduceMean() }, reference: { referenceMean($0[0], along: [0, 1]) }),
-        FusedOperationCase("variance along 1", sources: [uniform([3, 4], seed: 43)], fused: { $0[0].variance(along: [1]) }, reference: { referenceVariance($0[0], along: [1]) }),
-        FusedOperationCase("variance along 0 and 2", sources: [uniform([2, 3, 4], seed: 44)], fused: { $0[0].variance(along: [0, 2]) }, reference: { referenceVariance($0[0], along: [0, 2]) }),
+        FusedOperationCase("reduceMean along 1", sources: [DoubleTensor.uniform([3, 4], seed: 40)], fused: { $0[0].reduceMean(along: [1]) }, reference: { referenceMean($0[0], along: [1]) }),
+        FusedOperationCase("reduceMean along 0 and 2", sources: [DoubleTensor.uniform([2, 3, 4], seed: 41)], fused: { $0[0].reduceMean(along: [0, 2]) }, reference: { referenceMean($0[0], along: [0, 2]) }),
+        FusedOperationCase("reduceMean of all elements", sources: [DoubleTensor.uniform([2, 3], seed: 42)], fused: { $0[0].reduceMean() }, reference: { referenceMean($0[0], along: [0, 1]) }),
+        FusedOperationCase("variance along 1", sources: [DoubleTensor.uniform([3, 4], seed: 43)], fused: { $0[0].variance(along: [1]) }, reference: { referenceVariance($0[0], along: [1]) }),
+        FusedOperationCase("variance along 0 and 2", sources: [DoubleTensor.uniform([2, 3, 4], seed: 44)], fused: { $0[0].variance(along: [0, 2]) }, reference: { referenceVariance($0[0], along: [0, 2]) }),
     ]
 
     static let normalizations: [FusedOperationCase] = [
         FusedOperationCase(
             "layerNormalized along the last axis",
-            sources: [uniform([2, 3, 4], seed: 50), uniform([4], min: 0.5, max: 1.5, seed: 51), uniform([4], seed: 52)],
+            sources: [DoubleTensor.uniform([2, 3, 4], seed: 50), DoubleTensor.uniform([4], min: 0.5, max: 1.5, seed: 51), DoubleTensor.uniform([4], seed: 52)],
             fused: { $0[0].layerNormalized(scale: $0[1], shift: $0[2]) },
             reference: { referenceNormalization($0[0], along: [2], scale: $0[1], shift: $0[2]) },
         ),
         FusedOperationCase(
             "layerNormalized along 2 axes",
-            sources: [uniform([2, 3, 4], seed: 53), uniform([3, 4], min: 0.5, max: 1.5, seed: 54), uniform([3, 4], seed: 55)],
+            sources: [DoubleTensor.uniform([2, 3, 4], seed: 53), DoubleTensor.uniform([3, 4], min: 0.5, max: 1.5, seed: 54), DoubleTensor.uniform([3, 4], seed: 55)],
             fused: { $0[0].layerNormalized(scale: $0[1], shift: $0[2]) },
             reference: { referenceNormalization($0[0], along: [1, 2], scale: $0[1], shift: $0[2]) },
         ),
         FusedOperationCase(
             "batchNormalized",
-            sources: [uniform([4, 3], seed: 56), uniform([3], min: 0.5, max: 1.5, seed: 57), uniform([3], seed: 58)],
+            sources: [DoubleTensor.uniform([4, 3], seed: 56), DoubleTensor.uniform([3], min: 0.5, max: 1.5, seed: 57), DoubleTensor.uniform([3], seed: 58)],
             fused: { $0[0].batchNormalized(scale: $0[1], shift: $0[2]).output },
             reference: { referenceNormalization($0[0], along: [0], scale: $0[1], shift: $0[2]) },
         ),
         FusedOperationCase(
             "batchNormalized with broadcast scale",
-            sources: [uniform([3, 2, 2, 2], seed: 59), uniform([2, 1, 1], min: 0.5, max: 1.5, seed: 60), uniform([2, 1, 1], seed: 61)],
+            sources: [DoubleTensor.uniform([3, 2, 2, 2], seed: 59), DoubleTensor.uniform([2, 1, 1], min: 0.5, max: 1.5, seed: 60), DoubleTensor.uniform([2, 1, 1], seed: 61)],
             fused: { $0[0].batchNormalized(scale: $0[1], shift: $0[2]).output },
             reference: { referenceNormalization($0[0], along: [0], scale: $0[1], shift: $0[2]) },
         ),
         FusedOperationCase(
             "batchNormalized with fixed statistics",
-            sources: [uniform([4, 3], seed: 62), uniform([3], min: 0.5, max: 1.5, seed: 63), uniform([3], seed: 64)],
-            fused: { $0[0].batchNormalized(scale: $0[1], shift: $0[2], mean: uniform([3], seed: 65), variance: uniform([3], min: 0.5, max: 2, seed: 66)) },
-            reference: { ($0[0] - uniform([3], seed: 65)) / (uniform([3], min: 0.5, max: 2, seed: 66).sqrt() + 1e-5) * $0[1] + $0[2] },
+            sources: [DoubleTensor.uniform([4, 3], seed: 62), DoubleTensor.uniform([3], min: 0.5, max: 1.5, seed: 63), DoubleTensor.uniform([3], seed: 64)],
+            fused: { $0[0].batchNormalized(scale: $0[1], shift: $0[2], mean: DoubleTensor.uniform([3], seed: 65), variance: DoubleTensor.uniform([3], min: 0.5, max: 2, seed: 66)) },
+            reference: { ($0[0] - DoubleTensor.uniform([3], seed: 65)) / (DoubleTensor.uniform([3], min: 0.5, max: 2, seed: 66).sqrt() + 1e-5) * $0[1] + $0[2] },
         ),
     ]
 
     static let layers: [FusedOperationCase] = [
         FusedOperationCase(
             "linearlyTransformed",
-            sources: [uniform([3, 4], seed: 70), uniform([4, 2], seed: 71), uniform([2], seed: 72)],
+            sources: [DoubleTensor.uniform([3, 4], seed: 70), DoubleTensor.uniform([4, 2], seed: 71), DoubleTensor.uniform([2], seed: 72)],
             fused: { $0[0].linearlyTransformed(weights: $0[1], bias: $0[2]) },
             reference: { $0[0].matrixMultiplied(with: $0[1]) + $0[2] },
         ),
         FusedOperationCase(
             "linearlyTransformed vector without bias",
-            sources: [uniform([4], seed: 73), uniform([4, 3], seed: 74)],
+            sources: [DoubleTensor.uniform([4], seed: 73), DoubleTensor.uniform([4, 3], seed: 74)],
             fused: { $0[0].linearlyTransformed(weights: $0[1]) },
             reference: { $0[0].matrixMultiplied(with: $0[1]) },
         ),
@@ -361,7 +367,7 @@ extension FusedOperationCase {
     static let losses: [FusedOperationCase] = [
         FusedOperationCase(
             "binaryCrossEntropy",
-            sources: [uniform([2, 3], seed: 80), uniform([2, 3], min: 0.1, max: 0.9, seed: 81)],
+            sources: [DoubleTensor.uniform([2, 3], seed: 80), DoubleTensor.uniform([2, 3], min: 0.1, max: 0.9, seed: 81)],
             fused: { binaryCrossEntropy(expected: $0[0], actual: $0[1]) },
             reference: {
                 let (e, a) = ($0[0].view(as: [-1]), $0[1].view(as: [-1]))
@@ -370,25 +376,25 @@ extension FusedOperationCase {
         ),
         FusedOperationCase(
             "categoricalCrossEntropy",
-            sources: [uniform([4, 3], min: 0.1, max: 0.9, seed: 82)],
+            sources: [DoubleTensor.uniform([4, 3], min: 0.1, max: 0.9, seed: 82)],
             fused: { categoricalCrossEntropy(expected: Tensor<Int32, CPU>([2, 0, 1, 1]), actual: $0[0]) },
             reference: { -referenceMean($0[0].gather(using: Tensor<Int32, CPU>([2, 0, 1, 1]), alongAxis: 1).log(), along: [0]) },
         ),
         FusedOperationCase(
             "categoricalNegativeLogLikelihood with an ignored label",
-            sources: [uniform([2, 2, 3], min: -3, max: -0.1, seed: 83)],
+            sources: [DoubleTensor.uniform([2, 2, 3], min: -3, max: -0.1, seed: 83)],
             fused: { categoricalNegativeLogLikelihood(expected: Tensor<Int32, CPU>([2, -1, 1, 0], shape: [2, 2]), actual: $0[0]) },
             reference: { -referenceMean($0[0].view(as: [4, 3]).gather(using: Tensor<Int32, CPU>([2, -1, 1, 0]), alongAxis: 1), along: [0]) },
         ),
         FusedOperationCase(
             "meanSquaredError",
-            sources: [uniform([3, 2], seed: 84), uniform([3, 2], seed: 85)],
+            sources: [DoubleTensor.uniform([3, 2], seed: 84), DoubleTensor.uniform([3, 2], seed: 85)],
             fused: { meanSquaredError(expected: $0[0], actual: $0[1]) },
             reference: { (($0[0] - $0[1]) * ($0[0] - $0[1])).reduceSum() / 3 },
         ),
         FusedOperationCase(
             "meanSquaredError with a broadcast expected value",
-            sources: [DoubleTensor(0.25), uniform([3, 2], seed: 86)],
+            sources: [DoubleTensor(0.25), DoubleTensor.uniform([3, 2], seed: 86)],
             fused: { meanSquaredError(expected: $0[0], actual: $0[1]) },
             reference: { (($0[0] - $0[1]) * ($0[0] - $0[1])).reduceSum() },
         ),
@@ -398,27 +404,53 @@ extension FusedOperationCase {
             fused: { l1loss($0[0], loss: 0.3) },
             reference: { referenceMean($0[0].rectifiedLinear() + (-$0[0]).rectifiedLinear(), along: [0, 1]) * 0.3 },
         ),
-        FusedOperationCase("l2loss", sources: [uniform([3, 2], seed: 88)], fused: { l2loss($0[0], loss: 0.3) }, reference: { referenceMean($0[0] * $0[0], along: [0, 1]) * 0.3 }),
+        FusedOperationCase("l2loss", sources: [DoubleTensor.uniform([3, 2], seed: 88)], fused: { l2loss($0[0], loss: 0.3) }, reference: { referenceMean($0[0] * $0[0], along: [0, 1]) * 0.3 }),
     ]
 
     static let attention: [FusedOperationCase] = [
         FusedOperationCase(
             "scaledDotProductAttention with mask",
-            sources: [uniform([1, 2, 3, 4], seed: 90), uniform([1, 2, 5, 4], seed: 91), uniform([1, 2, 5, 3], seed: 92)],
+            sources: [DoubleTensor.uniform([1, 2, 3, 4], seed: 90), DoubleTensor.uniform([1, 2, 5, 4], seed: 91), DoubleTensor.uniform([1, 2, 5, 3], seed: 92)],
             fused: { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 1, 0, 1], shape: [1, 1, 1, 5]), temperature: 2) },
             reference: { referenceAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 1, 0, 1], shape: [1, 1, 1, 5]), temperature: 2) },
         ),
         FusedOperationCase(
             "scaledDotProductAttention without mask",
-            sources: [uniform([2, 1, 3, 2], seed: 93), uniform([2, 1, 3, 2], seed: 94), uniform([2, 1, 3, 2], seed: 95)],
+            sources: [DoubleTensor.uniform([2, 1, 3, 2], seed: 93), DoubleTensor.uniform([2, 1, 3, 2], seed: 94), DoubleTensor.uniform([2, 1, 3, 2], seed: 95)],
             fused: { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 1.5) },
             reference: { referenceAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 1.5) },
         ),
         FusedOperationCase(
+            "scaledDotProductAttention with grouped heads",
+            sources: [DoubleTensor.uniform([2, 4, 3, 4], seed: 103), DoubleTensor.uniform([2, 2, 5, 4], seed: 104), DoubleTensor.uniform([2, 1, 5, 3], seed: 105)],
+            fused: { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0], shape: [1, 4, 1, 5]), temperature: 2) },
+            reference: { referenceAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0], shape: [1, 4, 1, 5]), temperature: 2) },
+        ),
+        FusedOperationCase(
+            "scaledDotProductAttention with broadcast queries",
+            sources: [DoubleTensor.uniform([1, 2, 3, 4], seed: 106), DoubleTensor.uniform([2, 2, 5, 4], seed: 107), DoubleTensor.uniform([2, 2, 5, 3], seed: 108)],
+            fused: { scaledDotProductAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 2) },
+            reference: { referenceAttention(queries: $0[0], keys: $0[1], values: $0[2], mask: nil, temperature: 2) },
+        ),
+        FusedOperationCase(
+            "multiHeadAttention with grouped heads",
+            sources: [
+                DoubleTensor.uniform([2, 3, 8], seed: 120), DoubleTensor.uniform([2, 5, 8], seed: 121), DoubleTensor.uniform([2, 5, 8], seed: 122),
+                DoubleTensor.uniform([8, 8], seed: 123), DoubleTensor.uniform([8, 4], seed: 124), DoubleTensor.uniform([8, 6], seed: 125), DoubleTensor.uniform([12, 8], seed: 126),
+            ],
+            fused: {
+                multiHeadAttention(
+                    queries: $0[0], keys: $0[1], values: $0[2], mask: DoubleTensor([0, 0, 0, 1, 1], shape: [1, 1, 1, 5]),
+                    queryWeights: $0[3], keyWeights: $0[4], valueWeights: $0[5], outputWeights: $0[6], heads: 4, temperature: 2.0.squareRoot(),
+                )
+            },
+            reference: { referenceMultiHeadAttention($0, mask: DoubleTensor([0, 0, 0, 1, 1], shape: [1, 1, 1, 5]), heads: 4) },
+        ),
+        FusedOperationCase(
             "multiHeadAttention",
             sources: [
-                uniform([2, 3, 4], seed: 96), uniform([2, 5, 4], seed: 97), uniform([2, 5, 4], seed: 98),
-                uniform([4, 4], seed: 99), uniform([4, 4], seed: 100), uniform([4, 6], seed: 101), uniform([6, 4], seed: 102),
+                DoubleTensor.uniform([2, 3, 4], seed: 96), DoubleTensor.uniform([2, 5, 4], seed: 97), DoubleTensor.uniform([2, 5, 4], seed: 98),
+                DoubleTensor.uniform([4, 4], seed: 99), DoubleTensor.uniform([4, 4], seed: 100), DoubleTensor.uniform([4, 6], seed: 101), DoubleTensor.uniform([6, 4], seed: 102),
             ],
             fused: {
                 multiHeadAttention(
@@ -434,8 +466,8 @@ extension FusedOperationCase {
         FusedOperationCase(
             "gatedRecurrentUnitStep",
             sources: [
-                uniform([3, 4], seed: 110), uniform([3, 4], seed: 111), uniform([3, 4], seed: 112), uniform([3, 4], seed: 113),
-                uniform([4, 4], seed: 114), uniform([4, 4], seed: 115), uniform([4, 4], seed: 116),
+                DoubleTensor.uniform([3, 4], seed: 110), DoubleTensor.uniform([3, 4], seed: 111), DoubleTensor.uniform([3, 4], seed: 112), DoubleTensor.uniform([3, 4], seed: 113),
+                DoubleTensor.uniform([4, 4], seed: 114), DoubleTensor.uniform([4, 4], seed: 115), DoubleTensor.uniform([4, 4], seed: 116),
             ],
             fused: {
                 gatedRecurrentUnitStep(updateInput: $0[0], resetInput: $0[1], candidateInput: $0[2], state: $0[3], updateWeights: $0[4], resetWeights: $0[5], candidateWeights: $0[6])
@@ -454,40 +486,10 @@ extension FusedOperationCase {
 
 // MARK: Checks
 
-/// Returns the gradients of `sum(function(sources) * weights)` with respect to the differentiable sources, estimated with central differences.
-private func numericalGradients(of function: ([DoubleTensor]) -> DoubleTensor, at sources: [DoubleTensor], differentiable: [Int], step: Double = 1e-5) -> [DoubleTensor] {
-    let plainSources = sources.map { $0.detached() }
-    return differentiable.map { position in
-        let elements = plainSources[position].elements
-        let gradient = elements.indices.map { index in
-            func value(at offset: Double) -> Double {
-                var shifted = elements
-                shifted[index] += offset
-                var arguments = plainSources
-                arguments[position] = DoubleTensor(shifted, shape: plainSources[position].shape)
-                return function(arguments).reduceSum().item
-            }
-            return (value(at: step) - value(at: -step)) / (2 * step)
-        }
-        return DoubleTensor(gradient, shape: plainSources[position].shape)
-    }
-}
-
-/// Records an issue when the largest difference is larger than `tolerance` times the largest magnitude of `expected`, plus `tolerance`.
-private func expectApproximatelyEqual(_ actual: DoubleTensor, _ expected: DoubleTensor, tolerance: Double = 1e-6, _ comment: String, sourceLocation: SourceLocation = #_sourceLocation) {
-    guard actual.shape == expected.shape else {
-        Issue.record("\(comment): shape \(actual.shape) differs from \(expected.shape)", sourceLocation: sourceLocation)
-        return
-    }
-    let difference = zip(actual.elements, expected.elements).map { abs($0 - $1) }.max() ?? 0
-    let magnitude = expected.elements.map(abs).max() ?? 0
-    #expect(difference <= tolerance * (1 + magnitude), "\(comment): difference \(difference): \(actual) vs \(expected)", sourceLocation: sourceLocation)
-}
-
 struct FusedOperationTests {
     /// Weights of the elements of a result, so that every element contributes differently to the checked sum.
     private func outputWeights(for result: DoubleTensor) -> DoubleTensor {
-        uniform(result.shape, min: 0.5, max: 1.5, seed: 1000)
+        DoubleTensor.uniform(result.shape, min: 0.5, max: 1.5, seed: 1000)
     }
 
     @Test(arguments: FusedOperationCase.all)
@@ -536,7 +538,7 @@ struct FusedOperationTests {
     func secondDerivativeMatchesNumericalGradient(_ operation: FusedOperationCase) {
         let sources = operation.makeSources()
         let weights = outputWeights(for: operation.fused(sources))
-        let directions = operation.differentiable.map { uniform(sources[$0].shape, seed: 2000 + UInt64($0)) }
+        let directions = operation.differentiable.map { DoubleTensor.uniform(sources[$0].shape, seed: 2000 + UInt64($0)) }
 
         let directionalDerivative: ([DoubleTensor]) -> DoubleTensor = { arguments in
             var arguments = arguments
@@ -561,9 +563,9 @@ struct FusedOperationTests {
     }
 
     @Test func backwardComputesOnlyRequestedGradients() {
-        let input = uniform([1, 2, 4, 4], seed: 3000)
-        let filters = uniform([3, 2, 3, 3], seed: 3001)
-        let bias = uniform([3], seed: 3002)
+        let input = DoubleTensor.uniform([1, 2, 4, 4], seed: 3000)
+        let filters = DoubleTensor.uniform([3, 2, 3, 3], seed: 3001)
+        let bias = DoubleTensor.uniform([3], seed: 3002)
         let outputGradient = DoubleTensor(repeating: 1, shape: [1, 3, 4, 4])
 
         var inputGradient = GradientAccumulator<Double, CPU>(isRequested: true, shape: input.shape)
@@ -579,9 +581,9 @@ struct FusedOperationTests {
     }
 
     @Test func backwardAddsToAccumulatedGradients() throws {
-        let (input, weights) = (uniform([3, 4], seed: 3006), uniform([4, 5], seed: 3007))
-        let outputGradient = uniform([3, 5], seed: 3008)
-        let (inputStart, weightStart) = (uniform([3, 4], seed: 3009), uniform([4, 5], seed: 3010))
+        let (input, weights) = (DoubleTensor.uniform([3, 4], seed: 3006), DoubleTensor.uniform([4, 5], seed: 3007))
+        let outputGradient = DoubleTensor.uniform([3, 5], seed: 3008)
+        let (inputStart, weightStart) = (DoubleTensor.uniform([3, 4], seed: 3009), DoubleTensor.uniform([4, 5], seed: 3010))
 
         func linearGradients(inputStart: DoubleTensor?, weightStart: DoubleTensor?) -> (input: DoubleTensor?, weights: DoubleTensor?, bias: DoubleTensor?) {
             var inputGradient = GradientAccumulator(isRequested: true, shape: input.shape, value: inputStart)
@@ -599,13 +601,13 @@ struct FusedOperationTests {
         try expectApproximatelyEqual(#require(accumulated.weights), weightStart + empty.weights!, tolerance: 1e-12, "weight gradient")
         #expect(accumulated.bias == nil)
         // The accumulators share their storage with the start values, so the kernels must copy them before they write.
-        #expect(inputStart == uniform([3, 4], seed: 3009))
-        #expect(weightStart == uniform([4, 5], seed: 3010))
+        #expect(inputStart == DoubleTensor.uniform([3, 4], seed: 3009))
+        #expect(weightStart == DoubleTensor.uniform([4, 5], seed: 3010))
     }
 
     @Test func binaryCrossEntropyComparesElementsInMemoryOrder() {
-        var expected = uniform([4], min: 0, max: 1, seed: 3020)
-        var actual = uniform([4, 1], min: 0.1, max: 0.9, seed: 3021)
+        var expected = DoubleTensor.uniform([4], min: 0, max: 1, seed: 3020)
+        var actual = DoubleTensor.uniform([4, 1], min: 0.1, max: 0.9, seed: 3021)
         expected.requiresGradient = true
         actual.requiresGradient = true
         let gradients = binaryCrossEntropy(expected: expected, actual: actual).gradients(of: [expected, actual])
@@ -617,7 +619,7 @@ struct FusedOperationTests {
     }
 
     @Test func weightsUsedInSeveralStepsGetSumOfGradients() {
-        let sources = [uniform([2, 6], seed: 3060), uniform([6, 6], seed: 3061), uniform([6, 6], seed: 3062), uniform([6, 6], seed: 3063)]
+        let sources = [DoubleTensor.uniform([2, 6], seed: 3060), DoubleTensor.uniform([6, 6], seed: 3061), DoubleTensor.uniform([6, 6], seed: 3062), DoubleTensor.uniform([6, 6], seed: 3063)]
         // Three steps of a recurrent unit with batch size 2 and shared weights, as in a sequence model.
         func unroll(_ sources: [DoubleTensor]) -> DoubleTensor {
             var state = sources[0]
@@ -634,7 +636,7 @@ struct FusedOperationTests {
         for index in trainable.indices {
             trainable[index].requiresGradient = true
         }
-        let weights = uniform([2, 6], min: 0.5, max: 1.5, seed: 3064)
+        let weights = DoubleTensor.uniform([2, 6], min: 0.5, max: 1.5, seed: 3064)
         let gradients = (unroll(trainable) * weights).reduceSum().gradients(of: trainable)
         let numerical = numericalGradients(of: { unroll($0) * weights }, at: sources, differentiable: Array(sources.indices))
         for index in sources.indices {
@@ -643,10 +645,10 @@ struct FusedOperationTests {
     }
 
     @Test func frozenSourcesGetNoGradient() {
-        var input = uniform([1, 2, 4, 4], seed: 3003)
+        var input = DoubleTensor.uniform([1, 2, 4, 4], seed: 3003)
         input.requiresGradient = true
-        let filters = uniform([3, 2, 3, 3], seed: 3004)
-        let result = input.convolved2d(filters: filters, bias: uniform([1, 3, 1, 1], seed: 3005), padding: 1)
+        let filters = DoubleTensor.uniform([3, 2, 3, 3], seed: 3004)
+        let result = input.convolved2d(filters: filters, bias: DoubleTensor.uniform([1, 3, 1, 1], seed: 3005), padding: 1)
 
         let gradients = result.reduceSum().gradients(of: [input, filters])
         expectApproximatelyEqual(gradients[0], referenceConvolution(input, filters: filters, padding: 1, stride: 1).reduceSum().gradients(of: [input])[0], "input gradient")
@@ -655,8 +657,8 @@ struct FusedOperationTests {
 
     @Test func sameSourceInSeveralPositionsGetsSumOfGradients() {
         let sources = [
-            uniform([2, 3, 4], seed: 3010),
-            uniform([4, 4], seed: 3011), uniform([4, 4], seed: 3012), uniform([4, 4], seed: 3013), uniform([4, 4], seed: 3014),
+            DoubleTensor.uniform([2, 3, 4], seed: 3010),
+            DoubleTensor.uniform([4, 4], seed: 3011), DoubleTensor.uniform([4, 4], seed: 3012), DoubleTensor.uniform([4, 4], seed: 3013), DoubleTensor.uniform([4, 4], seed: 3014),
         ]
         func selfAttention(_ sources: [DoubleTensor]) -> DoubleTensor {
             multiHeadAttention(
@@ -672,14 +674,14 @@ struct FusedOperationTests {
     }
 
     @Test func batchNormalizationReturnsBatchStatistics() {
-        let input = uniform([5, 3], seed: 3020)
-        let (_, mean, variance) = input.batchNormalized(scale: DoubleTensor(repeating: 1, shape: [3]), shift: DoubleTensor(repeating: 0, shape: [3]))
-        expectApproximatelyEqual(mean, referenceMean(input, along: [0]), "mean")
-        expectApproximatelyEqual(variance, referenceVariance(input, along: [0]), "variance")
+        let input = DoubleTensor.uniform([5, 3], seed: 3020)
+        let statistics = input.batchNormalized(scale: DoubleTensor(repeating: 1, shape: [3]), shift: DoubleTensor(repeating: 0, shape: [3]))
+        expectApproximatelyEqual(statistics.mean, referenceMean(input, along: [0]), "mean")
+        expectApproximatelyEqual(statistics.variance, referenceVariance(input, along: [0]), "variance")
     }
 
     @Test func dropoutGradientUsesTheMaskOfTheForwardPass() {
-        var input = uniform([200], min: 1, max: 2, seed: 3030)
+        var input = DoubleTensor.uniform([200], min: 1, max: 2, seed: 3030)
         input.requiresGradient = true
         let result = input.droppedOut(rate: 0.5)
         // Every element is either kept or zero.
@@ -688,7 +690,7 @@ struct FusedOperationTests {
         let mask = DoubleTensor(ratios.map { $0 > 0.5 ? 1 : 0 })
         #expect(mask.elements.contains(0) && mask.elements.contains(1))
 
-        let weights = uniform([200], seed: 3031)
+        let weights = DoubleTensor.uniform([200], seed: 3031)
         let gradient = (result * weights).reduceSum().gradients(of: [input])[0]
         expectApproximatelyEqual(gradient, weights * mask, "gradient")
 
@@ -698,7 +700,7 @@ struct FusedOperationTests {
     }
 
     @Test func categoricalCrossEntropyIgnoresLabels() {
-        let actual = uniform([3, 4], min: 0.1, max: 0.9, seed: 3040)
+        let actual = DoubleTensor.uniform([3, 4], min: 0.1, max: 0.9, seed: 3040)
         let loss = categoricalCrossEntropy(expected: Tensor<Int32, CPU>([1, -1, 3]), actual: actual)
         let selected = actual.gather(using: Tensor<Int32, CPU>([1, 0, 3]), alongAxis: 1).elements
         expectApproximatelyEqual(loss, DoubleTensor(-(Foundation.log(selected[0]) + Foundation.log(selected[2])) / 3), "loss")

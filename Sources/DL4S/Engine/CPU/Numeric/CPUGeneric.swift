@@ -277,110 +277,52 @@ public extension CPUNumeric {
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
-    static func scatter(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, dst_shape: [Int], axis: Int, ignoreIndex: Int32) {
-        let src = values.baseAddress!
-        let target = result.baseAddress!
-        let context = context.baseAddress!
-
-        let dst_dim = dst_shape.count
-
-        let src_strides = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim - 1)
-        let src_shape = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim - 1)
-        let dst_strides = UnsafeMutablePointer<Int>.allocate(capacity: dst_dim)
-
-        defer {
-            src_strides.deallocate()
-            src_shape.deallocate()
-            dst_strides.deallocate()
+    static func scatter(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, resultShape: [Int], axis: Int, ignoreIndex: Int32) {
+        // The result is viewed as [outer, axis, inner], the values and the context as [outer, inner].
+        let axisSize = resultShape[axis]
+        let outer = resultShape[..<axis].reduce(1, *)
+        let inner = resultShape[(axis + 1)...].reduce(1, *)
+        fill(value: .zero, result: result, count: outer * axisSize * inner)
+        guard outer * inner > 0 else {
+            return
         }
-
-        dst_strides[dst_dim - 1] = 1
-        src_strides[dst_dim - 2] = 1
-
-        for i in (0 ... (dst_dim - 2)).reversed() {
-            dst_strides[i] = dst_shape[i &+ 1] &* dst_strides[i &+ 1]
-        }
-        for i in (0 ... (dst_dim - 2)).reversed() {
-            src_shape[i] = dst_shape[i >= axis ? i &+ 1 : i]
-            if i < dst_dim - 2 {
-                src_strides[i] = src_shape[i &+ 1] &* src_strides[i &+ 1]
-            } else {
-                src_strides[i] = 1
+        let (source, target, context) = (values.baseAddress!, result.baseAddress!, context.baseAddress!)
+        for row in 0 ..< outer {
+            for column in 0 ..< inner {
+                let position = row * inner + column
+                let index = context[position]
+                if index == ignoreIndex {
+                    continue
+                }
+                precondition(index >= 0 && Int(index) < axisSize, "Scatter index \(index) is out of range for an axis of size \(axisSize).")
+                target[(row * axisSize + Int(index)) * inner + column] = source[position]
             }
-        }
-        let count = src_shape[0] * src_strides[0]
-
-        let dst_count = dst_strides[0] * dst_shape[0]
-        fill(value: .zero, result: result, count: dst_count)
-
-        for i in 0 ..< count {
-            let src_idx = i
-            let c = context[i]
-            if c == ignoreIndex {
-                continue
-            }
-            var dst_idx = Int(c) &* dst_strides[axis]
-
-            for a in 0 ..< dst_dim - 1 {
-                let src_dim_idx = (i / src_strides[a]) % src_shape[a]
-                dst_idx = dst_idx &+ src_dim_idx &* dst_strides[a >= axis ? a &+ 1 : a]
-            }
-            target[dst_idx] = src[src_idx]
         }
     }
 
     @_specialize(where Self == Float)
     @_specialize(where Self == Int32)
     @_specialize(where Self == Double)
-    static func gather(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, src_shape: [Int], axis: Int, ignoreIndex: Int32) {
-        let src_dim = src_shape.count
-
-        let src = values.baseAddress!
-        let target = result.baseAddress!
-        let context = context.baseAddress!
-
-        let dst_strides = UnsafeMutablePointer<Int>.allocate(capacity: src_dim - 1)
-        let dst_shape = UnsafeMutablePointer<Int>.allocate(capacity: src_dim - 1)
-        let src_strides = UnsafeMutablePointer<Int>.allocate(capacity: src_dim)
-
-        defer {
-            dst_strides.deallocate()
-            dst_shape.deallocate()
-            src_strides.deallocate()
+    static func gather(values: UnsafeBufferPointer<Self>, context: UnsafeBufferPointer<Int32>, result: UnsafeMutableBufferPointer<Self>, valuesShape: [Int], axis: Int, ignoreIndex: Int32) {
+        // The values are viewed as [outer, axis, inner], the result and the context as [outer, inner].
+        let axisSize = valuesShape[axis]
+        let outer = valuesShape[..<axis].reduce(1, *)
+        let inner = valuesShape[(axis + 1)...].reduce(1, *)
+        guard outer * inner > 0 else {
+            return
         }
-
-        src_strides[src_dim - 1] = 1
-        dst_strides[src_dim - 2] = 1
-
-        for i in (0 ... (src_dim - 2)).reversed() {
-            src_strides[i] = src_shape[i &+ 1] * src_strides[i &+ 1]
-        }
-        for i in (0 ... (src_dim - 2)).reversed() {
-            dst_shape[i] = src_shape[i >= axis ? i &+ 1 : i]
-            if i < src_dim &- 2 {
-                dst_strides[i] = dst_shape[i &+ 1] &* dst_strides[i &+ 1]
-            } else {
-                dst_strides[i] = 1
+        let (source, target, context) = (values.baseAddress!, result.baseAddress!, context.baseAddress!)
+        for row in 0 ..< outer {
+            for column in 0 ..< inner {
+                let position = row * inner + column
+                let index = context[position]
+                if index == ignoreIndex {
+                    target[position] = 0
+                    continue
+                }
+                precondition(index >= 0 && Int(index) < axisSize, "Gather index \(index) is out of range for an axis of size \(axisSize).")
+                target[position] = source[(row * axisSize + Int(index)) * inner + column]
             }
-        }
-
-        let count = dst_shape[0] &* dst_strides[0]
-
-        for i in 0 ..< count {
-            let dst_idx = i
-            let c = context[i]
-            if c == ignoreIndex {
-                target[dst_idx] = 0
-                continue
-            }
-
-            var src_idx = Int(c) &* src_strides[axis]
-
-            for a in 0 ..< src_dim - 1 {
-                let dst_dim_idx = (i / dst_strides[a]) % dst_shape[a]
-                src_idx = src_idx &+ dst_dim_idx &* src_strides[a >= axis ? a &+ 1 : a]
-            }
-            target[dst_idx] = src[src_idx]
         }
     }
 

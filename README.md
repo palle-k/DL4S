@@ -10,14 +10,14 @@
 <a href="https://github.com/palle-k/DL4S/actions/workflows/ci.yml"><img src="https://github.com/palle-k/DL4S/actions/workflows/ci.yml/badge.svg" alt="Build Status" /></a>
 </p>
 
-DL4S provides a high-level API for many accelerated operations common in neural networks and deep learning.
-It furthermore has automatic differentiation builtin, which allows you to create and train neural networks without needing to manually
-implement backpropagation - without needing a special Swift toolchain.
+DL4S is a unified training and inference framework for deep learning, allowing you to train and deploy machine learning models using the same codebase.
+It supports GPU compute through Metal and Metal Performance Shaders. 
 
-Features include implementations for many basic binary and unary operators,
-broadcasting, matrix operations, convolutional and recurrent neural networks, 
-commonly used optimizers, second derivatives and much more.
-DL4S provides implementations for common network architectures, such as VGG, AlexNet, ResNet and Transformers.
+DL4S provides high flexibility through basic building blocks like you might find in NumPy - including broadcasting, as well as powerful neural network operators like convolution and pooling, recurrent units, and multi-head attention. 
+All operators are differentiable, including backwards passes themselves.
+
+DL4S supports the industry standard .safetensors format to persist and load models.   
+It provides implementations for common network architectures, such as VGG, AlexNet, ResNet and Transformers.
 
 While its primary purpose is deep learning and optimization, DL4S can be used as a library for vectorized mathematical operations like numpy.
 
@@ -50,13 +50,15 @@ While its primary purpose is deep learning and optimization, DL4S can be used as
 Add the dependency to your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/palle-k/DL4S.git", .branch("master"))
+.package(url: "https://github.com/palle-k/DL4S.git", branch: "master")
 ```
 
 Then add `DL4S` as a dependency to your target:
 
 ```swift
-.target(name: "MyPackage", dependencies: ["DL4S"])
+.target(name: "MyPackage", dependencies: [
+    .product(name: "DL4S", package: "DL4S"),
+])
 ```
 
 #### MKL / IPP / OpenMP Support
@@ -85,6 +87,23 @@ swift build -c release --traits MKL
 swift test --traits MKL
 ```
 
+
+#### GPU Support
+
+On Apple devices that support Metal, including Mac, iPhone & iPads, DL4S can utilize the GPU for increased performance.
+
+```swift
+if GPU.isAvailable {
+    var model = Sequential {
+        Dense<Float, GPU>(inputSize: 784, outputSize: 256)
+        Relu<Float, GPU>()
+        Dense<Float, GPU>(inputSize: 256, outputSize: 10)
+        LogSoftmax<Float, GPU>()
+    }
+    let batch = Tensor<Float, GPU>(cpuBatch) // copies a CPU tensor to the GPU
+    let prediction = Tensor<Float, CPU>(model(batch)) // copies the result back
+}
+```
 
 ### TensorBoard Support
 
@@ -159,6 +178,7 @@ Transformer:
 - [x] Positional Encoding
 - [x] Scaled Dot Product Attention
 - [x] Multihead Attention
+- [x] Grouped-Query Attention
 - [x] Pointwise Feed Forward
 - [x] Transformer Encoder Block
 - [x] Transformer Decoder Block
@@ -237,6 +257,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] variance
 - [x] scatter
 - [x] gather
+- [x] gather and scatter of rows
 - [x] conv2d
 - [x] transposed conv2d
 - [x] max pool
@@ -255,7 +276,7 @@ Behavior of broadcast operations is consistent with numpy rules.
 - [x] linear transformation (matmul plus bias)
 - [x] layer normalization / batch normalization
 - [x] dropout
-- [x] scaled dot product attention / multi-head attention
+- [x] scaled dot product attention / multi-head attention, with grouped-query attention
 - [x] positional encoding
 - [x] diagonal matrix generation
 - [x] diagonal extraction
@@ -273,6 +294,7 @@ Engines
 - [x] CPU (Accelerate framework for Apple Devices)
 - [x] CPU (Intel Math Kernel Library and Integrated Performance Primitives)
 - [x] CPU (Generic)
+- [x] GPU (Metal and Metal Performance Shaders for Apple Devices)
 
 </p>
 </details>
@@ -288,7 +310,7 @@ Default implementations are provided for the following architectures:
 - [x] ResNet18
 - [x] VGG (11, 13, 16, 19)
 - [x] AlexNet
-- [x] Transformer
+- [x] Transformer (Encoder-Decoder, Decoder-only)
 
 </p>
 </details>

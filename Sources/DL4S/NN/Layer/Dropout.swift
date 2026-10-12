@@ -27,7 +27,7 @@ import Foundation
 
 /// A dropout layer
 @Layer
-public struct Dropout<Element: RandomizableType, Device: DeviceType>: Codable, Sendable {
+public struct Dropout<Element: FloatingPointNumericType, Device: DeviceType>: Codable, Sendable {
     /// Rate, with which dropout is applied.
     public var rate: Float
 
@@ -40,6 +40,10 @@ public struct Dropout<Element: RandomizableType, Device: DeviceType>: Codable, S
         self.rate = rate
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         isActive ? inputs.droppedOut(rate: rate) : inputs
     }

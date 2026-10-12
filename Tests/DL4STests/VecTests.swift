@@ -27,6 +27,27 @@ import DL4S
 import Foundation
 import Testing
 
+/// An arithmetic operator with broadcasting, whose gradients ``VecTests`` checks.
+enum ArithmeticOperator: String, CaseIterable, CustomTestStringConvertible, Sendable {
+    case add
+    case subtract
+    case multiply
+    case divide
+
+    var testDescription: String {
+        rawValue
+    }
+
+    func apply<Element: NumericType, Device: DeviceType>(_ lhs: Tensor<Element, Device>, _ rhs: Tensor<Element, Device>) -> Tensor<Element, Device> {
+        switch self {
+        case .add: lhs + rhs
+        case .subtract: lhs - rhs
+        case .multiply: lhs * rhs
+        case .divide: lhs / rhs
+        }
+    }
+}
+
 struct VecTests {
     @Test func testVectorWriteItem() {
         var vector: Tensor<Float, CPU> = Tensor([0, 1, 2, 3, 4, 5], shape: 3, 2)
@@ -246,228 +267,39 @@ struct VecTests {
         }
     }
 
-    @Test func testAddBackwards() {
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
+    /// Shapes of the operands of the arithmetic gradient tests: equal shapes, broadcasting of either operand, and broadcasting of both.
+    static let broadcastShapes: [(lhs: [Int], rhs: [Int])] = [
+        ([2], [2]),
+        ([3, 2], [2]),
+        ([2], [3, 2]),
+        ([3, 2], [3, 1]),
+        ([3, 1], [1, 2]),
+        ([], [3, 2]),
+        ([3, 2], []),
+    ]
 
-        let result = b + c
-        let grads = result.gradients(of: [b, c])
+    @Test(arguments: ArithmeticOperator.allCases, broadcastShapes)
+    func testArithmeticGradients(operation: ArithmeticOperator, shapes: (lhs: [Int], rhs: [Int])) {
+        // The right operand is the divisor, so its elements are away from zero.
+        let lhs = Tensor<Double, CPU>.uniform(shapes.lhs, seed: 1, requiresGradient: true)
+        let rhs = Tensor<Double, CPU>.uniform(shapes.rhs, min: 0.5, max: 2, seed: 2, requiresGradient: true)
+        let weights = Tensor<Double, CPU>.uniform(operation.apply(lhs, rhs).shape, min: 0.5, max: 1.5, seed: 3)
+        expectGradientsMatchCentralDifferences(of: { operation.apply($0[0], $0[1]) * weights }, at: [lhs, rhs])
 
-        let bExpected: [Float] = [1, 1]
-        let cExpected: [Float] = [1, 1]
-
-        for i in 0 ..< 2 {
-            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
-        }
-    }
-
-    @Test func testAddBackwards2() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (a + b) * 2
-        let grads = result.gradients(of: [a, b])
-
-        let aExpected: [[Float]] = [[2, 2], [2, 2], [2, 2]]
-        let bExpected: [Float] = [6, 6]
-
-        for i in 0 ..< 2 {
-            expectEqual(grads[1][i].item, bExpected[i], accuracy: 0.0001)
-        }
-
-        for r in 0 ..< 3 {
-            for c in 0 ..< 2 {
-                #expect(grads[0][r, c].item == aExpected[r][c])
-            }
-        }
-    }
-
-    @Test func testAddBackwards3() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (a + b) * 2
-        let aGrad = result.gradients(of: [a])[0]
-
-        let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
-        }
-    }
-
-    @Test func testAddBackwards4() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (b + a) * 2
-        let aGrad = result.gradients(of: [a])[0]
-
-        let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
-        }
-    }
-
-    @Test func testSubBackwards() {
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = b - c
-        let grads = result.gradients(of: [b, c])
-
-        let bExpected: [Float] = [1, 1]
-        let cExpected: [Float] = [-1, -1]
-
-        for i in 0 ..< 2 {
-            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
-        }
-    }
-
-    @Test func testSubBackwards2() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (a - b) * 2
-        let aGrad = result.gradients(of: [a])[0]
-
-        let refGrad: [[Float]] = [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
-        }
-    }
-
-    @Test func testSubBackwards3() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (b - a) * 2
-        let aGrad = result.gradients(of: [a])[0]
-
-        let refGrad: [[Float]] = [[-2.0, -2.0], [-2.0, -2.0], [-2.0, -2.0]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
-        }
-    }
-
-    @Test func testMulBackwards() {
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = b * c
-
-        let grads = result.gradients(of: [b, c])
-
-        let bExpected: [Float] = [1, 2]
-        let cExpected: [Float] = [1, 2]
-
-        for i in 0 ..< 2 {
-            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
-        }
-    }
-
-    @Test func testMulBackwards2() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (a * b) * 2
-
-        let aGrad = result.gradients(of: [a])[0]
-
-        let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
-        }
-    }
-
-    @Test func testMulBackwards3() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (b * a) * 2
-
-        let aGrad = result.gradients(of: [a])[0]
-
-        let refGrad: [[Float]] = [[2.0, 4.0], [2.0, 4.0], [2.0, 4.0]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
-        }
-    }
-
-    @Test func testDivBackwards() {
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-        let c = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = b / c
-        let grads = result.gradients(of: [b, c])
-
-        let bExpected: [Float] = [1, 0.5]
-        let cExpected: [Float] = [-1, -0.5]
-
-        for i in 0 ..< 2 {
-            expectEqual(grads[0][i].item, bExpected[i], accuracy: 0.0001)
-            expectEqual(grads[1][i].item, cExpected[i], accuracy: 0.0001)
-        }
-    }
-
-    @Test func testDivBackwards2() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (a / b) * 2
-
-        let aGrad = result.gradients(of: [a])[0]
-
-        let refGrad: [[Float]] = [[2.0, 1.0], [2.0, 1.0], [2.0, 1.0]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(aGrad[row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
-        }
-    }
-
-    @Test func testDivBackwards3() {
-        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]], requiresGradient: true)
-        let b = Tensor<Float, CPU>([1, 2], requiresGradient: true)
-
-        let result = (b / a) * 2
-
-        let grads = result.gradients(of: [a, b])
-
-        let refGrad: [[Float]] = [[-2.0, -1.0], [-0.22222222, -0.25], [-0.08, -0.11111111]]
-
-        for row in 0 ..< 3 {
-            for column in 0 ..< 2 {
-                expectEqual(grads[0][row, column].item, refGrad[row][column], accuracy: 0.0001)
-            }
+        // The kernels of Float differ from the kernels of Double, so the Float gradients are checked against the Double gradients.
+        let expected = (operation.apply(lhs, rhs) * weights).reduceSum().gradients(of: [lhs, rhs])
+        let floatSources = [lhs, rhs].map { Tensor<Float, CPU>($0.elements.map(Float.init), shape: $0.shape, requiresGradient: true) }
+        let floatWeights = Tensor<Float, CPU>(weights.elements.map(Float.init), shape: weights.shape)
+        let gradients = (operation.apply(floatSources[0], floatSources[1]) * floatWeights).reduceSum().gradients(of: floatSources)
+        for (gradient, expectedGradient) in zip(gradients, expected) {
+            expectClose(gradient, Tensor(expectedGradient.elements.map(Float.init), shape: expectedGradient.shape), tolerance: 1e-8)
         }
     }
 
     @Test func testAxisSum() {
         let a = Tensor<Float, CPU>([[1, 2, 3], [4, 5, 6]])
 
-        let result = sum(a, axes: [0])
+        let result = a.reduceSum(along: [0])
 
         #expect(result == Tensor([5, 7, 9]))
     }

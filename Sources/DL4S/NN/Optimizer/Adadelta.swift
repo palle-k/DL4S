@@ -28,7 +28,7 @@ import Foundation
 /// Adadelta Optimizer
 ///
 /// Follows [Matthew D. Zeiler - Adadelta: An adaptive learning rate method](https://arxiv.org/pdf/1212.5701.pdf)
-public struct Adadelta<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct Adadelta<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Initial learning rate scaling factor. Only used in first optimization step after initialization or reset.
@@ -73,6 +73,10 @@ public struct Adadelta<Element: NumericType, Device: DeviceType>: Optimizer, Sen
         updateSums = Self.zeroState(for: layout.children(of: "updateSums"))
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         let isInitialized = !updateSums.isEmpty

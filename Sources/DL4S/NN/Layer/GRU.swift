@@ -26,7 +26,7 @@
 import Foundation
 
 @Layer
-public struct GRU<Element: RandomizableType, Device: DeviceType>: RNN, Codable, Sendable {
+public struct GRU<Element: FloatingPointNumericType, Device: DeviceType>: RNN, Codable, Sendable {
     public typealias Inputs = Tensor<Element, Device>
     public typealias Outputs = (Tensor<Element, Device>, () -> Tensor<Element, Device>)
 

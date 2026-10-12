@@ -25,6 +25,15 @@
 
 import Foundation
 
+/// Constants that the implementations of the fused operations share. The GPU kernels repeat them in their shaders.
+enum FusedConstants {
+    /// Factor of the input in the sigmoid of the approximation of GELU, `input * sigmoid(1.702 * input)`.
+    static let geluSlope = 1.702
+    /// Factor of the mask that attention subtracts from the scores, so that the softmax sets the weights of the masked
+    /// entries to 0.
+    static let maskScale = 1e9
+}
+
 /// High-level operations of a device, such as convolutions, normalizations, activations, losses, and attention, and their first derivatives.
 ///
 /// A fused operation computes a high-level operation, or its first derivative, in one requirement.
@@ -146,7 +155,7 @@ public protocol FusedOperationsType<Device> {
     ///   - output: Result of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func tanhBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func tanhBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the gradient of the element-wise rectified linear unit, `outputGradient` where `input > 0` and 0 elsewhere.
     /// - Parameters:
@@ -159,21 +168,21 @@ public protocol FusedOperationsType<Device> {
     /// - Parameters:
     ///   - input: Input values
     ///   - result: Result, with the shape of the input
-    static func sigmoid<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func sigmoid<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``sigmoid(input:result:)``, `outputGradient * output * (1 - output)`.
     /// - Parameters:
     ///   - output: Result of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func sigmoidBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func sigmoidBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the softmax function along an axis.
     /// - Parameters:
     ///   - input: Input values
     ///   - axis: Axis to normalize along
     ///   - result: Result, with the shape of the input
-    static func softmax<N: NumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>)
+    static func softmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``softmax(input:axis:result:)``, `output * (outputGradient - sum(outputGradient * output, axis))`.
     /// - Parameters:
@@ -181,14 +190,14 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - axis: Axis of the forward operation
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func softmaxBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?)
+    static func softmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the logarithm of the softmax function along an axis.
     /// - Parameters:
     ///   - input: Input values
     ///   - axis: Axis to normalize along
     ///   - result: Result, with the shape of the input
-    static func logSoftmax<N: NumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>)
+    static func logSoftmax<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, axis: Int, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``logSoftmax(input:axis:result:)``, `outputGradient - exp(output) * sum(outputGradient, axis)`.
     /// - Parameters:
@@ -196,14 +205,14 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - axis: Axis of the forward operation
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func logSoftmaxBackward<N: NumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?)
+    static func logSoftmaxBackward<N: FloatingPointNumericType>(output: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axis: Int, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise leaky rectified linear unit, `input` where `input > 0` and `leakage * input` elsewhere.
     /// - Parameters:
     ///   - input: Input values
     ///   - leakage: Slope for negative inputs, broadcastable to the shape of the input
     ///   - result: Result, with the shape of the input
-    static func leakyRelu<N: NumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func leakyRelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``leakyRelu(input:leakage:result:)``.
     /// - Parameters:
@@ -212,27 +221,27 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
     ///   - leakageGradient: Gradient of the leakage, or nil when it is not requested
-    static func leakyReluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, leakageGradient: GradientBuffer<N, Device>?)
+    static func leakyReluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, leakage: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, leakageGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise Gaussian error linear unit, `input * sigmoid(1.702 * input)`.
     /// - Parameters:
     ///   - input: Input values
     ///   - result: Result, with the shape of the input
-    static func gelu<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func gelu<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``gelu(input:result:)``.
     /// - Parameters:
     ///   - input: Input of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func geluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func geluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise Swish activation, `input * sigmoid(beta * input)`.
     /// - Parameters:
     ///   - input: Input values
     ///   - beta: Slope of the sigmoid, broadcastable to the shape of the input
     ///   - result: Result, with the shape of the input
-    static func swish<N: NumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func swish<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``swish(input:beta:result:)``.
     /// - Parameters:
@@ -241,40 +250,40 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
     ///   - betaGradient: Gradient of the beta, or nil when it is not requested
-    static func swishBackward<N: NumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, betaGradient: GradientBuffer<N, Device>?)
+    static func swishBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, beta: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, betaGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise Mish activation, `input * tanh(log(1 + exp(input)))`.
     /// - Parameters:
     ///   - input: Input values
     ///   - result: Result, with the shape of the input
-    static func mish<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func mish<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``mish(input:result:)``.
     /// - Parameters:
     ///   - input: Input of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func mishBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func mishBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise LiSHT activation, `input * tanh(input)`.
     /// - Parameters:
     ///   - input: Input values
     ///   - result: Result, with the shape of the input
-    static func lisht<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func lisht<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``lisht(input:result:)``.
     /// - Parameters:
     ///   - input: Input of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func lishtBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func lishtBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise exponential linear unit, `input` where `input > 0` and `alpha * (exp(input) - 1)` elsewhere.
     /// - Parameters:
     ///   - input: Input values
     ///   - alpha: Scale of the exponential part, broadcastable to the shape of the input
     ///   - result: Result, with the shape of the input
-    static func elu<N: NumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func elu<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``elu(input:alpha:result:)``.
     /// - Parameters:
@@ -283,33 +292,33 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
     ///   - alphaGradient: Gradient of the alpha, or nil when it is not requested
-    static func eluBackward<N: NumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, alphaGradient: GradientBuffer<N, Device>?)
+    static func eluBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, alpha: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?, alphaGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise softplus activation, `log(1 + exp(input))`.
     /// - Parameters:
     ///   - input: Input values
     ///   - result: Result, with the shape of the input
-    static func softplus<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func softplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``softplus(input:result:)``, `outputGradient * sigmoid(input)`.
     /// - Parameters:
     ///   - input: Input of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func softplusBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func softplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the element-wise squareplus activation, `(input + sqrt(input * input + 4)) / 2`.
     /// - Parameters:
     ///   - input: Input values
     ///   - result: Result, with the shape of the input
-    static func squareplus<N: NumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func squareplus<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``squareplus(input:result:)``.
     /// - Parameters:
     ///   - input: Input of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func squareplusBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func squareplusBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     // MARK: Reductions
 
@@ -318,7 +327,7 @@ public protocol FusedOperationsType<Device> {
     ///   - input: Values to reduce
     ///   - axes: Axes to reduce along, in ascending order
     ///   - result: Result, with the shape of the input without the reduced axes
-    static func variance<N: NumericType>(input: ShapedBuffer<N, Device>, axes: [Int], result: MutableShapedBuffer<N, Device>)
+    static func variance<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, axes: [Int], result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``variance(input:axes:result:)``.
     /// - Parameters:
@@ -326,7 +335,7 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
     ///   - axes: Axes of the forward operation
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func varianceBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axes: [Int], inputGradient: GradientBuffer<N, Device>?)
+    static func varianceBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, axes: [Int], inputGradient: GradientBuffer<N, Device>?)
 
     // MARK: Normalization
 
@@ -340,7 +349,7 @@ public protocol FusedOperationsType<Device> {
     ///   - shift: Shift, with the shape of the trailing axes of the input
     ///   - epsilon: Value added to the standard deviation
     ///   - result: Result, with the shape of the input
-    static func layerNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>)
+    static func layerNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``layerNormalization(input:scale:shift:epsilon:result:)``.
     /// - Parameters:
@@ -352,7 +361,7 @@ public protocol FusedOperationsType<Device> {
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
     ///   - scaleGradient: Gradient of the scale, or nil when it is not requested
     ///   - shiftGradient: Gradient of the shift, or nil when it is not requested
-    static func layerNormalizationBackward<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, epsilon: N, inputGradient: GradientBuffer<N, Device>?, scaleGradient: GradientBuffer<N, Device>?, shiftGradient: GradientBuffer<N, Device>?)
+    static func layerNormalizationBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, epsilon: N, inputGradient: GradientBuffer<N, Device>?, scaleGradient: GradientBuffer<N, Device>?, shiftGradient: GradientBuffer<N, Device>?)
 
     /// Normalizes the input along the batch axis with the statistics of the batch, then scales and shifts it.
     ///
@@ -366,7 +375,7 @@ public protocol FusedOperationsType<Device> {
     ///   - result: Normalized values, with the shape of the input
     ///   - mean: Mean of the batch, with the shape of the input without the batch axis
     ///   - variance: Biased variance of the batch, with the shape of the input without the batch axis
-    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>, mean: MutableShapedBuffer<N, Device>, variance: MutableShapedBuffer<N, Device>)
+    static func batchNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>, mean: MutableShapedBuffer<N, Device>, variance: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``batchNormalization(input:scale:shift:epsilon:result:mean:variance:)``.
     /// - Parameters:
@@ -378,7 +387,7 @@ public protocol FusedOperationsType<Device> {
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
     ///   - scaleGradient: Gradient of the scale, or nil when it is not requested
     ///   - shiftGradient: Gradient of the shift, or nil when it is not requested
-    static func batchNormalizationBackward<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, epsilon: N, inputGradient: GradientBuffer<N, Device>?, scaleGradient: GradientBuffer<N, Device>?, shiftGradient: GradientBuffer<N, Device>?)
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, epsilon: N, inputGradient: GradientBuffer<N, Device>?, scaleGradient: GradientBuffer<N, Device>?, shiftGradient: GradientBuffer<N, Device>?)
 
     /// Normalizes the input with given statistics, then scales and shifts it.
     ///
@@ -391,7 +400,7 @@ public protocol FusedOperationsType<Device> {
     ///   - variance: Variance, broadcastable to the shape of the input without the batch axis
     ///   - epsilon: Value added to the standard deviation
     ///   - result: Result, with the shape of the input
-    static func batchNormalization<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, mean: ShapedBuffer<N, Device>, variance: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>)
+    static func batchNormalization<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, mean: ShapedBuffer<N, Device>, variance: ShapedBuffer<N, Device>, epsilon: N, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``batchNormalization(input:scale:shift:mean:variance:epsilon:result:)``.
     ///
@@ -407,7 +416,7 @@ public protocol FusedOperationsType<Device> {
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
     ///   - scaleGradient: Gradient of the scale, or nil when it is not requested
     ///   - shiftGradient: Gradient of the shift, or nil when it is not requested
-    static func batchNormalizationBackward<N: NumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, mean: ShapedBuffer<N, Device>, variance: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, epsilon: N, inputGradient: GradientBuffer<N, Device>?, scaleGradient: GradientBuffer<N, Device>?, shiftGradient: GradientBuffer<N, Device>?)
+    static func batchNormalizationBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: ShapedBuffer<N, Device>, shift: ShapedBuffer<N, Device>, mean: ShapedBuffer<N, Device>, variance: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, epsilon: N, inputGradient: GradientBuffer<N, Device>?, scaleGradient: GradientBuffer<N, Device>?, shiftGradient: GradientBuffer<N, Device>?)
 
     // MARK: Layers
 
@@ -436,14 +445,14 @@ public protocol FusedOperationsType<Device> {
     ///   - rate: Probability, with which an element is set to zero
     ///   - result: Values, with the shape of the input
     ///   - mask: Mask with 1 for every element that is kept and 0 for every element that is set to zero, with the shape of the input
-    static func dropout<N: NumericType>(input: ShapedBuffer<N, Device>, rate: Float, result: MutableShapedBuffer<N, Device>, mask: MutableShapedBuffer<N, Device>)
+    static func dropout<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, rate: Float, result: MutableShapedBuffer<N, Device>, mask: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``dropout(input:rate:result:mask:)``, `outputGradient * mask`.
     /// - Parameters:
     ///   - mask: Mask of the forward operation
     ///   - outputGradient: Gradient of the values of the forward operation, with the shape of the input
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func dropoutBackward<N: NumericType>(mask: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
+    static func dropoutBackward<N: FloatingPointNumericType>(mask: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, inputGradient: GradientBuffer<N, Device>?)
 
     // MARK: Losses
 
@@ -454,7 +463,7 @@ public protocol FusedOperationsType<Device> {
     ///   - expected: Expected probabilities
     ///   - actual: Predicted probabilities in the range (0, 1), with the number of elements of `expected`
     ///   - result: Loss, a scalar
-    static func binaryCrossEntropy<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func binaryCrossEntropy<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``binaryCrossEntropy(expected:actual:result:)``.
     /// - Parameters:
@@ -463,7 +472,7 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the loss, a scalar
     ///   - expectedGradient: Gradient of the expected values, or nil when it is not requested
     ///   - actualGradient: Gradient of the predicted values, or nil when it is not requested
-    static func binaryCrossEntropyBackward<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?)
+    static func binaryCrossEntropyBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?)
 
     /// Computes the mean categorical cross entropy, `mean(-log(actual[expected]))`.
     ///
@@ -473,7 +482,7 @@ public protocol FusedOperationsType<Device> {
     ///   - actual: Predicted probabilities in the range (0, 1), with the classes along the last axis
     ///   - ignoreIndex: Label that is ignored
     ///   - result: Loss, a scalar
-    static func categoricalCrossEntropy<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>)
+    static func categoricalCrossEntropy<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``categoricalCrossEntropy(expected:actual:ignoreIndex:result:)``.
     /// - Parameters:
@@ -482,7 +491,7 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the loss, a scalar
     ///   - ignoreIndex: Ignored label of the forward operation
     ///   - actualGradient: Gradient of the predicted values, or nil when it is not requested
-    static func categoricalCrossEntropyBackward<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?)
+    static func categoricalCrossEntropyBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?)
 
     /// Computes the mean categorical negative log likelihood, `mean(-actual[expected])`.
     ///
@@ -492,7 +501,7 @@ public protocol FusedOperationsType<Device> {
     ///   - actual: Predicted log probabilities, with the classes along the last axis
     ///   - ignoreIndex: Label that is ignored
     ///   - result: Loss, a scalar
-    static func categoricalNegativeLogLikelihood<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>)
+    static func categoricalNegativeLogLikelihood<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, ignoreIndex: Int32, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``categoricalNegativeLogLikelihood(expected:actual:ignoreIndex:result:)``.
     /// - Parameters:
@@ -501,7 +510,7 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the loss, a scalar
     ///   - ignoreIndex: Ignored label of the forward operation
     ///   - actualGradient: Gradient of the predicted values, or nil when it is not requested
-    static func categoricalNegativeLogLikelihoodBackward<N: NumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?)
+    static func categoricalNegativeLogLikelihoodBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<Int32, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, ignoreIndex: Int32, actualGradient: GradientBuffer<N, Device>?)
 
     /// Computes the sum of squared differences, divided by the number of rows of `expected`.
     ///
@@ -510,7 +519,7 @@ public protocol FusedOperationsType<Device> {
     ///   - expected: Expected values
     ///   - actual: Predicted values, broadcastable with `expected`
     ///   - result: Loss, a scalar
-    static func meanSquaredError<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
+    static func meanSquaredError<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``meanSquaredError(expected:actual:result:)``.
     /// - Parameters:
@@ -519,14 +528,14 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the loss, a scalar
     ///   - expectedGradient: Gradient of the expected values, or nil when it is not requested
     ///   - actualGradient: Gradient of the predicted values, or nil when it is not requested
-    static func meanSquaredErrorBackward<N: NumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?)
+    static func meanSquaredErrorBackward<N: FloatingPointNumericType>(expected: ShapedBuffer<N, Device>, actual: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, expectedGradient: GradientBuffer<N, Device>?, actualGradient: GradientBuffer<N, Device>?)
 
     /// Computes the mean of the absolute values, multiplied with a factor, `mean(abs(input)) * scale`.
     /// - Parameters:
     ///   - input: Input values
     ///   - scale: Factor of the loss
     ///   - result: Loss, a scalar
-    static func l1Loss<N: NumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>)
+    static func l1Loss<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``l1Loss(input:scale:result:)``. The gradient at 0 is 0.
     /// - Parameters:
@@ -534,14 +543,14 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the loss, a scalar
     ///   - scale: Factor of the forward operation
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func l1LossBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?)
+    static func l1LossBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?)
 
     /// Computes the mean of the squared values, multiplied with a factor, `mean(input * input) * scale`.
     /// - Parameters:
     ///   - input: Input values
     ///   - scale: Factor of the loss
     ///   - result: Loss, a scalar
-    static func l2Loss<N: NumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>)
+    static func l2Loss<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, scale: N, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradient of ``l2Loss(input:scale:result:)``.
     /// - Parameters:
@@ -549,22 +558,26 @@ public protocol FusedOperationsType<Device> {
     ///   - outputGradient: Gradient of the loss, a scalar
     ///   - scale: Factor of the forward operation
     ///   - inputGradient: Gradient of the input, or nil when it is not requested
-    static func l2LossBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?)
+    static func l2LossBackward<N: FloatingPointNumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, scale: N, inputGradient: GradientBuffer<N, Device>?)
 
     // MARK: Attention
 
-    /// Computes scaled dot product attention, `softmax(queries × keysᵀ / temperature - 10⁹ \* mask) × values`.
+    /// Computes scaled dot product attention, `softmax(queries × keysᵀ / temperature - 10⁹ * mask) × values`.
     ///
-    /// The batch and head axes of the queries, keys, and values are broadcastable, and the result has the broadcast batch and head axes.
+    /// The batch axes of the queries, keys, and values are broadcastable, and the result has the broadcast batch axis.
+    /// The numbers of heads of the keys and of the values divide the number of heads of the queries. Query head `h` uses
+    /// key head `h / (heads / keyHeads)` and value head `h / (heads / valueHeads)`, so a group of query heads shares
+    /// one key head and one value head (grouped-query attention). With one key head and one value head, all query heads
+    /// share them (multi-query attention).
     /// - Parameters:
     ///   - queries: Queries, shape [batchSize, heads, queryCount, keyDim]
-    ///   - keys: Keys, shape [batchSize, heads, keyCount, keyDim]
-    ///   - values: Values, shape [batchSize, heads, keyCount, valueDim]
+    ///   - keys: Keys, shape [batchSize, keyHeads, keyCount, keyDim]
+    ///   - values: Values, shape [batchSize, valueHeads, keyCount, valueDim]
     ///   - mask: Mask with 1 for every key that a query must not attend to and 0 elsewhere,
     ///     broadcastable to [batchSize, heads, queryCount, keyCount], or nil for no mask
     ///   - temperature: Divisor of the dot products
     ///   - result: Result, shape [batchSize, heads, queryCount, valueDim]
-    static func scaledDotProductAttention<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, result: MutableShapedBuffer<N, Device>)
+    static func scaledDotProductAttention<N: FloatingPointNumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, temperature: N, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``scaledDotProductAttention(queries:keys:values:mask:temperature:result:)``.
     ///
@@ -579,13 +592,17 @@ public protocol FusedOperationsType<Device> {
     ///   - queryGradient: Gradient of the queries, or nil when it is not requested
     ///   - keyGradient: Gradient of the keys, or nil when it is not requested
     ///   - valueGradient: Gradient of the values, or nil when it is not requested
-    static func scaledDotProductAttentionBackward<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, outputGradient: ShapedBuffer<N, Device>, temperature: N, queryGradient: GradientBuffer<N, Device>?, keyGradient: GradientBuffer<N, Device>?, valueGradient: GradientBuffer<N, Device>?)
+    static func scaledDotProductAttentionBackward<N: FloatingPointNumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, outputGradient: ShapedBuffer<N, Device>, temperature: N, queryGradient: GradientBuffer<N, Device>?, keyGradient: GradientBuffer<N, Device>?, valueGradient: GradientBuffer<N, Device>?)
 
     /// Computes multi-head attention with input and output projections.
     ///
     /// The operation projects the queries, keys, and values with their weights, splits the projections into heads,
     /// computes ``scaledDotProductAttention(queries:keys:values:mask:temperature:result:)`` for every head,
     /// joins the heads, and multiplies the result with the output weights.
+    ///
+    /// The projections of the keys and the values have `keyHeads` heads, which divides `heads`. The number follows from
+    /// the shapes of the weights. With fewer key heads than query heads, a group of query heads shares one key head and
+    /// one value head (grouped-query attention).
     /// - Parameters:
     ///   - queries: Queries, shape [batchSize, queryCount, hiddenDim]
     ///   - keys: Keys, shape [batchSize, keyCount, hiddenDim]
@@ -593,13 +610,13 @@ public protocol FusedOperationsType<Device> {
     ///   - mask: Mask with 1 for every key that a query must not attend to and 0 elsewhere,
     ///     broadcastable to [batchSize, heads, queryCount, keyCount], or nil for no mask
     ///   - queryWeights: Query projection, shape [hiddenDim, heads \* keyDim]
-    ///   - keyWeights: Key projection, shape [hiddenDim, heads \* keyDim]
-    ///   - valueWeights: Value projection, shape [hiddenDim, heads \* valueDim]
+    ///   - keyWeights: Key projection, shape [hiddenDim, keyHeads \* keyDim]
+    ///   - valueWeights: Value projection, shape [hiddenDim, keyHeads \* valueDim]
     ///   - outputWeights: Output projection, shape [heads \* valueDim, outputDim]
-    ///   - heads: Number of attention heads
+    ///   - heads: Number of query heads
     ///   - temperature: Divisor of the dot products
     ///   - result: Result, shape [batchSize, queryCount, outputDim]
-    static func multiHeadAttention<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, queryWeights: ShapedBuffer<N, Device>, keyWeights: ShapedBuffer<N, Device>, valueWeights: ShapedBuffer<N, Device>, outputWeights: ShapedBuffer<N, Device>, heads: Int, temperature: N, result: MutableShapedBuffer<N, Device>)
+    static func multiHeadAttention<N: FloatingPointNumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, queryWeights: ShapedBuffer<N, Device>, keyWeights: ShapedBuffer<N, Device>, valueWeights: ShapedBuffer<N, Device>, outputWeights: ShapedBuffer<N, Device>, heads: Int, temperature: N, result: MutableShapedBuffer<N, Device>)
 
     /// Computes the gradients of ``multiHeadAttention(queries:keys:values:mask:queryWeights:keyWeights:valueWeights:outputWeights:heads:temperature:result:)``.
     ///
@@ -614,10 +631,10 @@ public protocol FusedOperationsType<Device> {
     ///   - valueWeights: Value projection of the forward operation
     ///   - outputWeights: Output projection of the forward operation
     ///   - outputGradient: Gradient of the result of the forward operation, with the shape of the result
-    ///   - heads: Number of heads of the forward operation
+    ///   - heads: Number of query heads of the forward operation
     ///   - temperature: Temperature of the forward operation
     ///   - gradients: Gradients of the sources, nil for the sources whose gradient is not requested
-    static func multiHeadAttentionBackward<N: NumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, queryWeights: ShapedBuffer<N, Device>, keyWeights: ShapedBuffer<N, Device>, valueWeights: ShapedBuffer<N, Device>, outputWeights: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, heads: Int, temperature: N, gradients: MultiHeadAttentionGradients<GradientBuffer<N, Device>?>)
+    static func multiHeadAttentionBackward<N: FloatingPointNumericType>(queries: ShapedBuffer<N, Device>, keys: ShapedBuffer<N, Device>, values: ShapedBuffer<N, Device>, mask: ShapedBuffer<N, Device>?, queryWeights: ShapedBuffer<N, Device>, keyWeights: ShapedBuffer<N, Device>, valueWeights: ShapedBuffer<N, Device>, outputWeights: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, heads: Int, temperature: N, gradients: MultiHeadAttentionGradients<GradientBuffer<N, Device>?>)
 
     // MARK: Recurrent cells
 
@@ -634,7 +651,7 @@ public protocol FusedOperationsType<Device> {
     ///   - resetWeights: Weights of the state for the reset gate, shape [hiddenSize, hiddenSize]
     ///   - candidateWeights: Weights of the reset state for the candidate state, shape [hiddenSize, hiddenSize]
     ///   - result: New state, shape [batchSize, hiddenSize]
-    static func gatedRecurrentUnitStep<N: NumericType>(
+    static func gatedRecurrentUnitStep<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, Device>,
         resetInput: ShapedBuffer<N, Device>,
         candidateInput: ShapedBuffer<N, Device>,
@@ -656,7 +673,7 @@ public protocol FusedOperationsType<Device> {
     ///   - candidateWeights: Candidate weights of the forward operation
     ///   - outputGradient: Gradient of the new state, shape [batchSize, hiddenSize]
     ///   - gradients: Gradients of the sources, nil for the sources whose gradient is not requested
-    static func gatedRecurrentUnitStepBackward<N: NumericType>(
+    static func gatedRecurrentUnitStepBackward<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, Device>,
         resetInput: ShapedBuffer<N, Device>,
         candidateInput: ShapedBuffer<N, Device>,
@@ -688,7 +705,7 @@ public protocol FusedOperationsType<Device> {
     ///   - beta1Power: `beta1` to the power of the step number, for the bias correction of the first moment
     ///   - beta2Power: `beta2` to the power of the step number, for the bias correction of the second moment
     ///   - result: Parameter after the step, with the shape of the parameter, `parameter - learningRate * m / (sqrt(v) + epsilon)` with `m = firstMoment / (1 - beta1Power)` and `v = secondMoment / (1 - beta2Power)`
-    static func adamUpdate<N: NumericType>(
+    static func adamUpdate<N: FloatingPointNumericType>(
         parameter: ShapedBuffer<N, Device>,
         gradient: ShapedBuffer<N, Device>,
         firstMoment: MutableShapedBuffer<N, Device>,
@@ -711,7 +728,7 @@ public protocol FusedOperationsType<Device> {
     ///   - length: Number of positions
     ///   - hiddenSize: Number of elements per position, a multiple of 2
     ///   - result: Encoding, shape [length, hiddenSize]
-    static func positionalEncoding<N: NumericType>(length: Int, hiddenSize: Int, result: MutableShapedBuffer<N, Device>)
+    static func positionalEncoding<N: FloatingPointNumericType>(length: Int, hiddenSize: Int, result: MutableShapedBuffer<N, Device>)
 }
 
 /// Fused operations that use the default implementation of every requirement.

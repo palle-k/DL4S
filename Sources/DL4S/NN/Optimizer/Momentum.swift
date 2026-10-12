@@ -26,7 +26,7 @@
 import Foundation
 
 /// Gradient descent optimizer with momentum
-public struct Momentum<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct Momentum<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Learning rate with which to move along the gradient
@@ -60,6 +60,10 @@ public struct Momentum<Element: NumericType, Device: DeviceType>: Optimizer, Sen
         velocities = Self.zeroState(for: layout.children(of: "velocities"))
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&velocities, for: parameters)

@@ -28,7 +28,7 @@ import Foundation
 /// Adagrad optimizer
 ///
 /// Follows [Duchi et al - Adaptive Subgradient Methods for Online Learning and Stochastic Optimization](http://jmlr.org/papers/volume12/duchi11a/duchi11a.pdf)
-public struct Adagrad<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct Adagrad<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Learning rate scaling factor
@@ -64,6 +64,10 @@ public struct Adagrad<Element: NumericType, Device: DeviceType>: Optimizer, Send
         gradientSums = Self.zeroState(for: layout.children(of: "gradientSums"))
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&gradientSums, for: parameters)

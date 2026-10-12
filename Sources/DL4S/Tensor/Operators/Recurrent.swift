@@ -41,7 +41,11 @@ import Foundation
 ///   - resetWeights: Weights of the state for the reset gate, shape [hiddenSize, hiddenSize]
 ///   - candidateWeights: Weights of the reset state for the candidate state, shape [hiddenSize, hiddenSize]
 /// - Returns: New state, shape [batchSize, hiddenSize]
-public func gatedRecurrentUnitStep<Element, Device>(
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
+public func gatedRecurrentUnitStep<Element: FloatingPointNumericType, Device>(
     updateInput: Tensor<Element, Device>,
     resetInput: Tensor<Element, Device>,
     candidateInput: Tensor<Element, Device>,
@@ -53,6 +57,9 @@ public func gatedRecurrentUnitStep<Element, Device>(
     precondition(state.dim == 2 && [updateInput, resetInput, candidateInput].allSatisfy { $0.shape == state.shape }, "The inputs must have the shape of the state, [batchSize, hiddenSize].")
     precondition([updateWeights, resetWeights, candidateWeights].allSatisfy { $0.shape == [state.shape[1], state.shape[1]] }, "The weights must have the shape [hiddenSize, hiddenSize].")
     var result = Tensor<Element, Device>(uninitializedShape: state.shape)
+    guard result.count > 0 else {
+        return result
+    }
     Device.FusedOperations.gatedRecurrentUnitStep(
         updateInput: updateInput.values,
         resetInput: resetInput.values,

@@ -43,6 +43,10 @@ public extension Tensor {
     ///   - kernelHeight: Height of the convolution kernel
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func img2col(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int) -> Tensor<Element, Device> {
         let resultHeight = (shape[2] + 2 * padding - kernelHeight) / stride + 1
         let resultWidth = (shape[3] + 2 * padding - kernelWidth) / stride + 1
@@ -62,16 +66,9 @@ public extension Tensor {
             stride: stride,
         )
 
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "im2col",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    resultGradient.col2img(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride, resultShape: self.shape)
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "im2col", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.col2img(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride, resultShape: self.shape))
+        }
     }
 
     /// Computes the inverse of the img2col operation.
@@ -85,6 +82,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     ///   - resultShape: Shape of the resulting tensor
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func col2img(kernelWidth: Int, kernelHeight: Int, padding: Int, stride: Int, resultShape: [Int]) -> Tensor<Element, Device> {
         let resultBuffer = Device.Memory.allocateBuffer(withShape: resultShape, type: Element.self)
         Device.Engine.col2img(
@@ -96,16 +97,9 @@ public extension Tensor {
             stride: stride,
         )
 
-        return Tensor(
-            using: resultBuffer,
-            context: requiresGradient ? TensorContext(
-                tag: "col2im",
-                sources: [self],
-                backpropagate: [{ resultGradient in
-                    resultGradient.img2col(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
-                }],
-            ) : nil,
-        )
+        return Tensor(using: resultBuffer, context: nil).attachingContext(tag: "col2im", source: self) { resultGradient, gradient in
+            gradient.add(resultGradient.img2col(kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride))
+        }
     }
 }
 
@@ -123,6 +117,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height + 2 \* padding - kernelHeight) / stride + 1, (width + 2 \* padding - kernelWidth) / stride + 1)
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func convolved2d(filters: Tensor<Element, Device>, bias: Tensor<Element, Device>? = nil, padding: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let padding = padding ?? ((filters.shape[2] - 1) / 2)
         let bias = bias.map { bias in
@@ -135,6 +133,9 @@ public extension Tensor {
             ConvUtil.outputSize(inputSize: shape[2], kernelSize: filters.shape[2], padding: padding, stride: stride),
             ConvUtil.outputSize(inputSize: shape[3], kernelSize: filters.shape[3], padding: padding, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.convolution2d(input: values, filters: filters.values, bias: bias?.values, padding: padding, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "conv2d", sources: self, filters, bias) { resultGradient, inputGradient, filterGradient, biasGradient in
@@ -155,6 +156,10 @@ public extension Tensor {
     ///   - inset: Inset from edge of the source tensor
     ///   - stride: Stride, with which the kernel moves over the result image. Larger strides result in larger output shapes.
     /// - Returns: A tensor of shape [batchSize, outputChannels, (height - 1) * stride - 2 \* padding + kernelHeight, (width - 1) * stride - 2 \* padding + kernelWidth]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func transposedConvolved2d(filters: Tensor<Element, Device>, bias: Tensor<Element, Device>? = nil, inset: Int? = nil, stride: Int = 1) -> Tensor<Element, Device> {
         let inset = inset ?? ((filters.shape[2] - 1) / 2)
         let bias = bias.map { bias in
@@ -167,6 +172,9 @@ public extension Tensor {
             ConvUtil.transposedOutputSize(inputSize: shape[2], kernelSize: filters.shape[2], inset: inset, stride: stride),
             ConvUtil.transposedOutputSize(inputSize: shape[3], kernelSize: filters.shape[3], inset: inset, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.transposedConvolution2d(input: values, filters: filters.values, bias: bias?.values, inset: inset, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "transposedConv2d", sources: self, filters, bias) { resultGradient, inputGradient, filterGradient, biasGradient in
@@ -189,6 +197,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func maxPooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         let padding = padding ?? ((windowSize - 1) / 2)
         let stride = stride ?? windowSize
@@ -198,6 +210,9 @@ public extension Tensor {
             ConvUtil.outputSize(inputSize: shape[2], kernelSize: windowSize, padding: padding, stride: stride),
             ConvUtil.outputSize(inputSize: shape[3], kernelSize: windowSize, padding: padding, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.maxPooling2d(input: values, windowSize: windowSize, padding: padding, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "maxPool2d", source: self) { resultGradient, gradient in
@@ -216,6 +231,10 @@ public extension Tensor {
     ///   - padding: Padding applied before and after the image in the horizontal and vertical direction
     ///   - stride: Stride, with which the kernel is moved along the image
     /// - Returns: A tensor of shape [batchSize, channels, (height + 2 \* padding - windowSize) / stride + 1, (width + 2 \* padding - windowSize) / stride + 1]
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     func averagePooled2d(windowSize: Int, padding: Int? = nil, stride: Int? = nil) -> Tensor<Element, Device> {
         let padding = padding ?? ((windowSize - 1) / 2)
         let stride = stride ?? windowSize
@@ -225,6 +244,9 @@ public extension Tensor {
             ConvUtil.outputSize(inputSize: shape[2], kernelSize: windowSize, padding: padding, stride: stride),
             ConvUtil.outputSize(inputSize: shape[3], kernelSize: windowSize, padding: padding, stride: stride),
         ])
+        guard result.count > 0 else {
+            return result
+        }
         Device.FusedOperations.averagePooling2d(input: values, windowSize: windowSize, padding: padding, stride: stride, result: result.mutableValues)
 
         return result.attachingContext(tag: "averagePool2d", source: self) { resultGradient, gradient in

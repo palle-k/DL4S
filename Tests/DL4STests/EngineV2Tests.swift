@@ -34,7 +34,6 @@ struct EngineV2Tests {
         let context = Tensor<Int32, CPU>([0, 1, 2])
 
         let result = CPU.Memory.allocateBuffer(withShape: [5, 3], type: Double.self)
-        defer { CPU.Memory.free(result) }
         CPU.Engine.fill(value: 42, result: result.values, count: result.count)
 
         CPU.Engine.scatter(reduced: values.values, context: context.values, result: result, axis: 0, ignoreIndex: -1)
@@ -192,6 +191,22 @@ struct EngineV2Tests {
 
         let gathered = result.gather(using: c, alongAxis: 1)
         #expect(gathered == a)
+    }
+
+    @Test func testGatherRows() {
+        let a = Tensor<Float, CPU>([[1, 2], [3, 4], [5, 6]])
+        let indices = Tensor<Int32, CPU>([[2, 0], [-1, 2]])
+
+        let gathered = a.gatheringRows(at: indices)
+        #expect(gathered == Tensor([[[5, 6], [1, 2]], [[0, 0], [5, 6]]]))
+    }
+
+    @Test func testScatterRowsAddsRowsWithTheSameIndex() {
+        let a = Tensor<Float, CPU>([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+        let indices = Tensor<Int32, CPU>([[2, 0], [-1, 2]])
+
+        let scattered = a.scatteringRows(at: indices, rowCount: 4)
+        #expect(scattered == Tensor([[3, 4], [0, 0], [8, 10], [0, 0]]))
     }
 
     @Test func testBroadcastMatrixMultiply() {
@@ -367,9 +382,10 @@ struct EngineV2Tests {
             #expect(permuted.shape == resultShape, "arrangement \(arrangement)")
             #expect(permuted.elements == expected, "arrangement \(arrangement)")
 
-            var accumulator = Tensor<Double, CPU>(repeating: 1, shape: resultShape)
-            accumulator.addingPermuted(values, permutation: arrangement)
-            #expect(accumulator.elements == expected.map { $0 + 1 }, "accumulated arrangement \(arrangement)")
+            let accumulator = CPU.Memory.allocateBuffer(withShape: resultShape, type: Double.self)
+            CPU.Engine.fill(value: 1, result: accumulator.values, count: accumulator.count)
+            CPU.Engine.permuteAxesAdd(values: values.values, add: ShapedBuffer(accumulator), result: accumulator, arrangement: arrangement)
+            #expect(Buffer(accumulator.values).array == expected.map { $0 + 1 }, "accumulated arrangement \(arrangement)")
         }
     }
 
@@ -411,10 +427,6 @@ struct EngineV2Tests {
             for (isMaximum, combine) in [(true, Swift.max as (Double, Double) -> Double), (false, Swift.min)] {
                 let result = CPU.Memory.allocateBuffer(withShape: resultShape, type: Double.self)
                 let positions = CPU.Memory.allocateBuffer(withShape: resultShape, type: Int32.self)
-                defer {
-                    CPU.Memory.free(result)
-                    CPU.Memory.free(positions)
-                }
                 if isMaximum {
                     CPU.Engine.reduceMax(values: values.values, result: result, context: positions, axes: axes)
                 } else {
@@ -462,9 +474,6 @@ struct EngineV2Tests {
 
         let positive = Tensor<Float, CPU>([[3, 1], [2, 5], [4, 2]])
         let minimum = CPU.Memory.allocateBuffer(withShape: [2], type: Float.self)
-        defer {
-            CPU.Memory.free(minimum)
-        }
         withExtendedLifetime(positive) {
             CPU.Engine.reduceMin(values: positive.values, result: minimum, context: nil, axis: 0)
         }
@@ -480,6 +489,26 @@ struct EngineV2Tests {
         let diag = a.diagonalElements()
         let expected = Tensor<Float, CPU>([1, 5, 9])
         #expect(diag == expected)
+    }
+
+    @Test func testDiagonalOfRectangularMatrices() {
+        let wide = Tensor<Float, CPU>([
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+        ])
+        #expect(wide.diagonalElements() == Tensor<Float, CPU>([1, 6]))
+        let tall = Tensor<Float, CPU>([
+            [1, 2],
+            [3, 4],
+            [5, 6],
+        ])
+        #expect(tall.diagonalElements() == Tensor<Float, CPU>([1, 4]))
+    }
+
+    @Test func testLinearRampStartsAtTheLowerBound() {
+        #expect(Tensor<Float, CPU>(linearRampWithLowerBound: 2, upperBound: 6, by: 0.5).elements == [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5])
+        #expect(Tensor<Double, CPU>(linearRampWithLowerBound: -1, upperBound: 2).elements == [-1, 0, 1])
+        #expect(Tensor<Int32, CPU>(linearRampWithLowerBound: 3, upperBound: 9, by: 2).elements == [3, 5, 7])
     }
 
     @Test func testDiagonalGeneration() {

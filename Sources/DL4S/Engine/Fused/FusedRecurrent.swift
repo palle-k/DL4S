@@ -28,7 +28,7 @@ import Foundation
 // MARK: Default implementations
 
 public extension FusedOperationsType {
-    static func gatedRecurrentUnitStep<N: NumericType>(
+    static func gatedRecurrentUnitStep<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, Device>,
         resetInput: ShapedBuffer<N, Device>,
         candidateInput: ShapedBuffer<N, Device>,
@@ -39,9 +39,6 @@ public extension FusedOperationsType {
         result: MutableShapedBuffer<N, Device>,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let gates = GatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, candidate: result, math: math)
         // The new state is state + update * (candidate - state), and the candidate is in the result.
         math.subtract(result, state, into: result)
@@ -49,7 +46,7 @@ public extension FusedOperationsType {
         math.add(result, state, into: result)
     }
 
-    static func gatedRecurrentUnitStepBackward<N: NumericType>(
+    static func gatedRecurrentUnitStepBackward<N: FloatingPointNumericType>(
         updateInput: ShapedBuffer<N, Device>,
         resetInput: ShapedBuffer<N, Device>,
         candidateInput: ShapedBuffer<N, Device>,
@@ -61,18 +58,15 @@ public extension FusedOperationsType {
         gradients: GatedRecurrentUnitGradients<GradientBuffer<N, Device>?>,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // The gates are computed again instead of being kept alive between the forward and the backward pass.
-        let candidate = math.temporary(state.shape)
+        let candidate = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
         let gates = GatedRecurrentUnitGates(updateInput: updateInput, resetInput: resetInput, candidateInput: candidateInput, state: state, updateWeights: updateWeights, resetWeights: resetWeights, candidateWeights: candidateWeights, candidate: candidate, math: math)
         let (update, reset, resetState) = (gates.update, gates.reset, gates.resetState)
-        let slope = math.temporary(state.shape)
+        let slope = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
 
         // The new state is state + update * (candidate - state).
         // The gradient of the update activation is outputGradient * (candidate - state) * update * (1 - update).
-        let updateActivationGradient = math.temporary(state.shape)
+        let updateActivationGradient = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
         math.subtract(candidate, state, into: updateActivationGradient)
         math.multiply(updateActivationGradient, outputGradient, into: updateActivationGradient)
         math.subtract(1, update, into: slope)
@@ -86,29 +80,23 @@ public extension FusedOperationsType {
         math.multiply(candidateActivationGradient, outputGradient, into: candidateActivationGradient)
 
         // The weight gradients are added with GEMMs, so a weight that every time step uses needs no temporary gradient.
-        math.write(gradients.updateInput) { math.copy(updateActivationGradient, into: $0) }
-        math.write(gradients.candidateInput) { math.copy(candidateActivationGradient, into: $0) }
-        if let weightGradient = gradients.updateWeights {
-            math.multiplyMatrices(state, updateActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-        }
-        if let weightGradient = gradients.candidateWeights {
-            math.multiplyMatrices(resetState, candidateActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-        }
+        math.writeSum(of: updateActivationGradient, into: gradients.updateInput)
+        math.writeSum(of: candidateActivationGradient, into: gradients.candidateInput)
+        math.writeProduct(state, updateActivationGradient, lhsTransposed: true, into: gradients.updateWeights)
+        math.writeProduct(resetState, candidateActivationGradient, lhsTransposed: true, into: gradients.candidateWeights)
         guard gradients.resetInput != nil || gradients.state != nil || gradients.resetWeights != nil else {
             return
         }
-        let resetStateGradient = math.temporary(state.shape)
+        let resetStateGradient = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
         math.multiplyMatrices(candidateActivationGradient, candidateWeights, rhsTransposed: true, into: resetStateGradient)
         // The gradient of the reset activation is resetStateGradient * state * reset * (1 - reset).
-        let resetActivationGradient = math.temporary(state.shape)
+        let resetActivationGradient = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
         math.multiply(resetStateGradient, state, into: resetActivationGradient)
         math.subtract(1, reset, into: slope)
         math.multiply(slope, reset, into: slope)
         math.multiply(resetActivationGradient, slope, into: resetActivationGradient)
-        math.write(gradients.resetInput) { math.copy(resetActivationGradient, into: $0) }
-        if let weightGradient = gradients.resetWeights {
-            math.multiplyMatrices(state, resetActivationGradient, lhsTransposed: true, into: weightGradient.values, beta: weightGradient.beta)
-        }
+        math.writeSum(of: resetActivationGradient, into: gradients.resetInput)
+        math.writeProduct(state, resetActivationGradient, lhsTransposed: true, into: gradients.resetWeights)
         // outputGradient * (1 - update) + resetStateGradient * reset, and the products with the weights of the gates
         math.write(gradients.state) { stateGradient in
             math.subtract(1, update, into: stateGradient)
@@ -122,7 +110,7 @@ public extension FusedOperationsType {
 }
 
 /// The gates of one step of a gated recurrent unit, in intermediate buffers.
-struct GatedRecurrentUnitGates<N: NumericType, Device: DeviceType> {
+struct GatedRecurrentUnitGates<N: FloatingPointNumericType, Device: DeviceType> {
     /// Update gate, `sigmoid(updateInput + state × updateWeights)`
     let update: MutableShapedBuffer<N, Device>
     /// Reset gate, `sigmoid(resetInput + state × resetWeights)`
@@ -142,9 +130,9 @@ struct GatedRecurrentUnitGates<N: NumericType, Device: DeviceType> {
         candidate: MutableShapedBuffer<N, Device>,
         math: BufferMath<N, Device>,
     ) {
-        update = math.temporary(state.shape)
-        reset = math.temporary(state.shape)
-        resetState = math.temporary(state.shape)
+        update = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
+        reset = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
+        resetState = Device.Memory.allocateBuffer(withShape: state.shape, type: N.self)
         math.copy(updateInput, into: update)
         math.multiplyMatrices(state, updateWeights, into: update, beta: 1)
         math.sigmoid(update, into: update)

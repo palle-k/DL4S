@@ -29,26 +29,37 @@ import Foundation
 
 /// Computes scaled dot product attention as introduced by [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
 ///
-/// The result is `softmax(queries × keysᵀ / temperature - 10⁹ \* mask) × values`, with the softmax along the keys.
+/// The result is `softmax(queries × keysᵀ / temperature - 10⁹ * mask) × values`, with the softmax along the keys.
+///
+/// The keys and the values can have fewer heads than the queries, when their numbers of heads divide the number of query heads.
+/// Query head `h` then uses key head `h / (heads / keyHeads)` and value head `h / (heads / valueHeads)`, so a group of
+/// query heads shares one key head and one value head (grouped-query attention).
 ///
 /// - Parameters:
 ///   - queries: Queries, shape [batchSize, heads, queryCount, keyDim]
-///   - keys: Keys, shape [batchSize, heads, keyCount, keyDim]
-///   - values: Values, shape [batchSize, heads, keyCount, valueDim]
+///   - keys: Keys, shape [batchSize, keyHeads, keyCount, keyDim]
+///   - values: Values, shape [batchSize, valueHeads, keyCount, valueDim]
 ///   - mask: Mask with 1 for every key that a query must not attend to and 0 elsewhere,
 ///     broadcastable to [batchSize, heads, queryCount, keyCount], or nil for no mask. The mask gets no gradient.
 ///   - temperature: Divisor of the dot products
 /// - Returns: Attended values, shape [batchSize, heads, queryCount, valueDim]
-public func scaledDotProductAttention<Element, Device>(
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
+public func scaledDotProductAttention<Element: FloatingPointNumericType, Device>(
     queries: Tensor<Element, Device>,
     keys: Tensor<Element, Device>,
     values: Tensor<Element, Device>,
     mask: Tensor<Element, Device>?,
     temperature: Element,
 ) -> Tensor<Element, Device> {
-    precondition(queries.dim == 4 && keys.dim == 4 && values.dim == 4, "Queries, keys and values must have 4 axes.")
+    let shape = AttentionShape(queries: queries.values, keys: keys.values, values: values.values)
     let mask = mask?.detached()
-    var result = Tensor<Element, Device>(uninitializedShape: [queries.shape[0], queries.shape[1], queries.shape[2], values.shape[3]])
+    var result = Tensor<Element, Device>(uninitializedShape: shape.resultShape)
+    guard result.count > 0 else {
+        return result
+    }
     Device.FusedOperations.scaledDotProductAttention(queries: queries.values, keys: keys.values, values: values.values, mask: mask?.values, temperature: temperature, result: result.mutableValues)
 
     return result.attachingContext(tag: "scaledDotProductAttention", sources: queries, keys, values) { resultGradient, queryGradient, keyGradient, valueGradient in
@@ -64,6 +75,9 @@ public func scaledDotProductAttention<Element, Device>(
 /// computes ``scaledDotProductAttention(queries:keys:values:mask:temperature:)`` for every head,
 /// joins the heads, and multiplies the result with the output weights.
 ///
+/// The key and value projections can have fewer heads than the query projection, when their number of heads `keyHeads`
+/// divides `heads`. A group of query heads then shares one key head and one value head (grouped-query attention).
+///
 /// - Parameters:
 ///   - queries: Queries, shape [batchSize, queryCount, hiddenDim]
 ///   - keys: Keys, shape [batchSize, keyCount, hiddenDim]
@@ -71,13 +85,17 @@ public func scaledDotProductAttention<Element, Device>(
 ///   - mask: Mask with 1 for every key that a query must not attend to and 0 elsewhere,
 ///     broadcastable to [batchSize, heads, queryCount, keyCount], or nil for no mask. The mask gets no gradient.
 ///   - queryWeights: Query projection, shape [hiddenDim, heads \* keyDim]
-///   - keyWeights: Key projection, shape [hiddenDim, heads \* keyDim]
-///   - valueWeights: Value projection, shape [hiddenDim, heads \* valueDim]
+///   - keyWeights: Key projection, shape [hiddenDim, keyHeads \* keyDim]
+///   - valueWeights: Value projection, shape [hiddenDim, keyHeads \* valueDim]
 ///   - outputWeights: Output projection, shape [heads \* valueDim, outputDim]
-///   - heads: Number of attention heads
+///   - heads: Number of query heads
 ///   - temperature: Divisor of the dot products
 /// - Returns: Attended values, shape [batchSize, queryCount, outputDim]
-public func multiHeadAttention<Element, Device>(
+#if canImport(Metal) && canImport(MetalPerformanceShaders)
+@_specialize(where Element == Float, Device == GPU)
+#endif
+@_specialize(where Element == Float, Device == CPU)
+public func multiHeadAttention<Element: FloatingPointNumericType, Device>(
     queries: Tensor<Element, Device>,
     keys: Tensor<Element, Device>,
     values: Tensor<Element, Device>,
@@ -89,10 +107,21 @@ public func multiHeadAttention<Element, Device>(
     heads: Int,
     temperature: Element,
 ) -> Tensor<Element, Device> {
-    precondition(queries.dim == 3 && keys.dim == 3 && values.dim == 3, "Queries, keys and values must have 3 axes.")
-    precondition(queryWeights.shape[1].isMultiple(of: heads) && valueWeights.shape[1].isMultiple(of: heads), "The projections must have a multiple of the number of heads as outputs.")
+    let shape = MultiHeadAttentionShape(
+        queries: queries.values,
+        keys: keys.values,
+        values: values.values,
+        queryWeights: queryWeights.values,
+        keyWeights: keyWeights.values,
+        valueWeights: valueWeights.values,
+        outputWeights: outputWeights.values,
+        heads: heads,
+    )
     let mask = mask?.detached()
-    var result = Tensor<Element, Device>(uninitializedShape: [queries.shape[0], queries.shape[1], outputWeights.shape[1]])
+    var result = Tensor<Element, Device>(uninitializedShape: shape.resultShape)
+    guard result.count > 0 else {
+        return result
+    }
     Device.FusedOperations.multiHeadAttention(
         queries: queries.values,
         keys: keys.values,
@@ -113,13 +142,13 @@ public func multiHeadAttention<Element, Device>(
             queries: queries,
             keys: keys,
             values: values,
+            mask: mask,
             queryWeights: queryWeights,
             keyWeights: keyWeights,
             valueWeights: valueWeights,
             outputWeights: outputWeights,
             outputGradient: resultGradient,
             heads: heads,
-            mask: mask,
             temperature: temperature,
             gradients: &accumulated,
         )
@@ -142,7 +171,7 @@ public func multiHeadAttention<Element, Device>(
     }
 }
 
-public extension Tensor {
+public extension Tensor where Element: FloatingPointNumericType {
     /// Creates the sinusoidal positional encoding of [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf).
     ///
     /// The element at position `p` and index `2i` is `sin(p / 10000^(i / (hiddenSize / 2)))`,
@@ -154,6 +183,9 @@ public extension Tensor {
     init(positionalEncodingWithLength length: Int, hiddenSize: Int) {
         precondition(hiddenSize.isMultiple(of: 2), "Hidden size must be multiple of 2")
         self.init(uninitializedShape: [length, hiddenSize])
+        guard count > 0 else {
+            return
+        }
         Device.FusedOperations.positionalEncoding(length: length, hiddenSize: hiddenSize, result: mutableValues)
     }
 }

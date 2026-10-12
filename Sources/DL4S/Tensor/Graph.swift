@@ -168,38 +168,18 @@ public enum OperationGroup {
 }
 
 public extension Tensor {
-    private func follow(visited: inout Set<UInt64>) -> Digraph {
-        guard !visited.contains(backpropID) else {
-            return Digraph()
-        }
-
-        visited.insert(backpropID)
-
-        var graph = Digraph()
-        if let ctx = context {
-            graph.addNode(id: "\(backpropID)\(abs(ctx.tag.hashValue))", label: ctx.tag ?? "op", attributes: ["style": "rounded"])
-
-            for src in ctx.sources {
-                if let srcCtx = src.context {
-                    #if DEBUG
-                    if srcCtx.operationStack.map(\.id) == ctx.operationStack.map(\.id), !ctx.operationStack.isEmpty {
-                        graph.addEdge(
-                            from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))",
-                            to: "\(backpropID)\(abs(ctx.tag.hashValue))",
-                            attributes: [:],
-                        )
-                    } else {
-                        graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(backpropID)\(abs(ctx.tag.hashValue))")
-                    }
-                    #else
-                    graph.addEdge(from: "\(src.backpropID)\(abs(srcCtx.tag.hashValue))", to: "\(backpropID)\(abs(ctx.tag.hashValue))")
-                    #endif
-                } else {
-                    graph.addEdge(from: "\(src.backpropID)", to: "\(backpropID)\(abs(ctx.tag.hashValue))")
-                }
-                graph.join(with: src.follow(visited: &visited))
-            }
+    /// Identifier of the node of the tensor: the operation that created it, or the tensor when it has no context.
+    private var nodeID: String {
+        if let context {
+            "\(backpropID)\(abs(context.tag.hashValue))"
         } else {
+            "\(backpropID)"
+        }
+    }
+
+    /// Adds the node of the tensor and the edges from its sources to a graph.
+    private func addNode(to graph: inout Digraph) {
+        guard let context else {
             let label: String
 
             #if DEBUG
@@ -218,42 +198,32 @@ public extension Tensor {
             }
             #endif
 
-            graph.addNode(id: "\(backpropID)", label: label, shape: "box", attributes: requiresGradient ? ["style": "filled", "fillcolor": "\"#99ccff\""] : [:])
+            graph.addNode(id: nodeID, label: label, shape: "box", attributes: requiresGradient ? ["style": "filled", "fillcolor": "\"#99ccff\""] : [:])
+            return
         }
-        return graph
+        graph.addNode(id: nodeID, label: context.tag ?? "op", attributes: ["style": "rounded"])
+        for source in context.sources {
+            graph.addEdge(from: source.nodeID, to: nodeID)
+        }
     }
 
     #if DEBUG
-    private func followGroups(visited: inout Set<UInt64>) -> Digraph {
-        guard !visited.contains(backpropID) else {
-            return Digraph()
+    /// Adds the operation groups that enclose the operation of the tensor to a graph.
+    private func addGroups(to graph: inout Digraph) {
+        guard let context, let last = context.operationStack.last else {
+            return
         }
-        visited.insert(backpropID)
-
-        guard let ctx = context else {
-            return Digraph()
-        }
-
-        let opID = "\(backpropID)\(abs(ctx.tag.hashValue))"
-
-        var ctxGraph = Digraph()
-
-        if let last = ctx.operationStack.last {
-            var initial = Digraph(id: "cluster_\(last.id)", name: last.name, nodes: [Digraph.Node(id: opID)])
-
-            for node in ctx.sources where node.context == nil {
-                initial.addNode(id: "\(node.backpropID)", shape: "box")
-            }
-
-            let g = ctx.operationStack.dropLast().reversed().reduce(initial) { acc, item in
-                Digraph(id: "cluster_\(item.id)", name: item.name, subgraphs: [acc.id!: acc])
-            }
-            ctxGraph.subgraphs[g.id!] = g
+        var initial = Digraph(id: "cluster_\(last.id)", name: last.name, nodes: [Digraph.Node(id: nodeID)])
+        for source in context.sources where source.context == nil {
+            initial.addNode(id: source.nodeID, shape: "box")
         }
 
-        return ctx.sources.reduce(into: ctxGraph) { acc, src in
-            acc.join(with: src.followGroups(visited: &visited))
+        let group = context.operationStack.dropLast().reversed().reduce(initial) { inner, item in
+            Digraph(id: "cluster_\(item.id)", name: item.name, subgraphs: [inner.id!: inner])
         }
+        var groupGraph = Digraph()
+        groupGraph.subgraphs[group.id!] = group
+        graph.join(with: groupGraph)
     }
     #endif
 
@@ -264,12 +234,20 @@ public extension Tensor {
     /// **Note**: When running release builds, some information about the compute graph is discarded.
     /// To obtain a detailed compute graph, compile in debug mode.
     func graph() -> String {
-        var visited: Set<UInt64> = []
-        var graph = follow(visited: &visited)
-        #if DEBUG
-        visited.removeAll(keepingCapacity: true)
-        graph.join(with: followGroups(visited: &visited))
-        #endif
+        // The graph is traversed with a stack instead of recursion, because the graph of a long sequence, such as
+        // the unrolled steps of a recurrent network, is deeper than the call stack allows.
+        var graph = Digraph()
+        var visited: Set<UInt64> = [backpropID]
+        var pending = [self]
+        while let tensor = pending.popLast() {
+            tensor.addNode(to: &graph)
+            #if DEBUG
+            tensor.addGroups(to: &graph)
+            #endif
+            for source in tensor.context?.sources ?? [] where visited.insert(source.backpropID).inserted {
+                pending.append(source)
+            }
+        }
         return graph.description
     }
 }

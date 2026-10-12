@@ -51,6 +51,11 @@ public struct GradientBuffer<Element: NumericType, Device: DeviceType> {
     var shape: [Int] {
         values.shape
     }
+
+    /// The same gradient with another shape that has the same number of elements.
+    func reshaped(to shape: [Int]) -> GradientBuffer {
+        GradientBuffer(values: values.reshaped(to: shape), adds: adds)
+    }
 }
 
 /// A buffer whose elements the operations of ``BufferMath`` can read.
@@ -77,43 +82,13 @@ extension MutableShapedBuffer: ReadableBuffer {
 ///
 /// Every operation writes into a given result, which can be one of the operands when both have the same shape, so an
 /// implementation can compute in the buffers of its results and in few intermediate buffers.
-/// Intermediate buffers from ``temporary(_:)`` and ``constant(_:)`` stay allocated until ``release()``.
 struct BufferMath<N: NumericType, Device: DeviceType> {
     typealias Engine = Device.Engine
     typealias Writable = MutableShapedBuffer<N, Device>
 
-    private final class Temporaries {
-        var buffers: [MutableShapedBuffer<N, Device>] = []
-        var positions: [MutableShapedBuffer<Int32, Device>] = []
-    }
-
-    private let temporaries = Temporaries()
-
-    /// Releases every intermediate buffer.
-    func release() {
-        temporaries.buffers.forEach(Device.Memory.free)
-        temporaries.positions.forEach(Device.Memory.free)
-        temporaries.buffers = []
-        temporaries.positions = []
-    }
-
-    /// Returns an intermediate buffer with elements that are not initialized.
-    func temporary(_ shape: [Int]) -> Writable {
-        let buffer = Device.Memory.allocateBuffer(withShape: shape, type: N.self)
-        temporaries.buffers.append(buffer)
-        return buffer
-    }
-
-    /// Returns an intermediate buffer for positions, with elements that are not initialized.
-    func positions(_ shape: [Int]) -> MutableShapedBuffer<Int32, Device> {
-        let buffer = Device.Memory.allocateBuffer(withShape: shape, type: Int32.self)
-        temporaries.positions.append(buffer)
-        return buffer
-    }
-
     /// Returns an intermediate buffer of the given shape, whose elements have the given value.
     func constant(_ value: N, shape: [Int] = []) -> ShapedBuffer<N, Device> {
-        let buffer = temporary(shape)
+        let buffer = Device.Memory.allocateBuffer(withShape: shape, type: N.self)
         Engine.fill(value: value, result: buffer.values, count: buffer.count)
         return ShapedBuffer(buffer)
     }
@@ -159,19 +134,19 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         Engine.vNeg(val: values.readable.values, result: result.values, count: result.count)
     }
 
-    func exp(_ values: some ReadableBuffer<N, Device>, into result: Writable) {
+    func exp(_ values: some ReadableBuffer<N, Device>, into result: Writable) where N: FloatingPointNumericType {
         Engine.exp(values: values.readable, result: result)
     }
 
-    func log(_ values: some ReadableBuffer<N, Device>, into result: Writable) {
+    func log(_ values: some ReadableBuffer<N, Device>, into result: Writable) where N: FloatingPointNumericType {
         Engine.log(values: values.readable, result: result)
     }
 
-    func tanh(_ values: some ReadableBuffer<N, Device>, into result: Writable) {
+    func tanh(_ values: some ReadableBuffer<N, Device>, into result: Writable) where N: FloatingPointNumericType {
         Engine.tanh(values: values.readable, result: result)
     }
 
-    func sqrt(_ values: some ReadableBuffer<N, Device>, into result: Writable) {
+    func sqrt(_ values: some ReadableBuffer<N, Device>, into result: Writable) where N: FloatingPointNumericType {
         Engine.sqrt(values: values.readable, result: result)
     }
 
@@ -184,16 +159,8 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         Engine.heaviside(values: values.readable, result: result)
     }
 
-    func sine(_ values: some ReadableBuffer<N, Device>, into result: Writable) {
-        Engine.sin(values: values.readable, result: result)
-    }
-
-    func cosine(_ values: some ReadableBuffer<N, Device>, into result: Writable) {
-        Engine.cos(values: values.readable, result: result)
-    }
-
     /// Computes `sigmoid(scale * values)` as `tanh(scale * values / 2) / 2 + 1 / 2`, which does not overflow for large magnitudes.
-    func sigmoid(_ values: some ReadableBuffer<N, Device>, scale: N = 1, into result: Writable) {
+    func sigmoid(_ values: some ReadableBuffer<N, Device>, scale: N = 1, into result: Writable) where N: FloatingPointNumericType {
         let half = N(0.5)
         multiply(values, scale * half, into: result)
         tanh(result, into: result)
@@ -259,11 +226,16 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         let batchShape = shapeForBroadcastedOperands(lhsBatch, rhsBatch)
         let rows = transposeLhs ? lhsMatrix[1] : lhsMatrix[0]
         let columns = transposeRhs ? rhsMatrix[0] : rhsMatrix[1]
-        precondition(result.count == batchShape.reduce(1, *) * rows * columns, "The result must have the shape of the product.")
+        let batchCount = batchShape.reduce(1, *)
+        precondition(result.count == batchCount * rows * columns, "The result must have the shape of the product.")
+
+        if batchCount == 1 {
+            multiplyMatrices(lhs.reshaped(to: lhsMatrix), rhs.reshaped(to: rhsMatrix), lhsTransposed: transposeLhs, rhsTransposed: transposeRhs, into: result.reshaped(to: [rows, columns]), alpha: alpha, beta: beta)
+            return
+        }
 
         // When the right operand is one matrix and the left one is not transposed, the rows of all left matrices form one matrix.
         if rhsBatch.allSatisfy({ $0 == 1 }), !transposeLhs {
-            let batchCount = batchShape.reduce(1, *)
             multiplyMatrices(
                 lhs.reshaped(to: [batchCount * rows, lhsMatrix[1]]),
                 rhs.reshaped(to: rhsMatrix),
@@ -276,17 +248,35 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         }
 
         // A broadcast axis has the stride 0, so every product of the batch reads the same matrix.
-        func batchStrides(_ batch: [Int], matrixSize: Int) -> [Int] {
-            var strides = [Int](repeating: 0, count: batch.count)
-            var stride = matrixSize
-            for axis in batch.indices.reversed() {
-                strides[axis] = batch[axis] == 1 ? 0 : stride
-                stride *= batch[axis]
+        let lhsStrides = ShapeUtil.broadcastStrides(lhsBatch).map { $0 * lhsMatrix[0] * lhsMatrix[1] }
+        let rhsStrides = ShapeUtil.broadcastStrides(rhsBatch).map { $0 * rhsMatrix[0] * rhsMatrix[1] }
+
+        // When every operand is either complete or one matrix for the whole batch, the matrices of an operand have a
+        // constant stride, and the engine computes all products in one call.
+        func uniformStride(_ batch: [Int], matrixSize: Int) -> Int? {
+            if batch.allSatisfy({ $0 == 1 }) {
+                return 0
             }
-            return strides
+            return batch == batchShape ? matrixSize : nil
         }
-        let lhsStrides = batchStrides(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1])
-        let rhsStrides = batchStrides(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+        if let lhsStride = uniformStride(lhsBatch, matrixSize: lhsMatrix[0] * lhsMatrix[1]),
+           let rhsStride = uniformStride(rhsBatch, matrixSize: rhsMatrix[0] * rhsMatrix[1])
+        {
+            Engine.gemmBatched(
+                lhs: lhs.slice(offset: 0, shape: lhsMatrix),
+                lhsStride: lhsStride,
+                rhs: rhs.slice(offset: 0, shape: rhsMatrix),
+                rhsStride: rhsStride,
+                result: result.slice(offset: 0, shape: [rows, columns]),
+                count: batchCount,
+                alpha: alpha,
+                beta: beta,
+                transposeFirst: transposeLhs,
+                transposeSecond: transposeRhs,
+            )
+            return
+        }
+
         var resultOffset = 0
         StridedIteration.forEachOffset(shape: batchShape, strides: lhsStrides, rhsStrides) { lhsOffset, rhsOffset in
             multiplyMatrices(
@@ -303,9 +293,9 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
     }
 
     /// Computes the softmax along an axis. The values and the result can be the same memory.
-    func softmax(_ values: some ReadableBuffer<N, Device>, along axis: Int, into result: Writable) {
+    func softmax(_ values: some ReadableBuffer<N, Device>, along axis: Int, into result: Writable) where N: FloatingPointNumericType {
         let values = values.readable
-        let reduced = temporary(ShapeUtil.keptShape(of: values.shape, along: [axis]))
+        let reduced = Device.Memory.allocateBuffer(withShape: ShapeUtil.keptShape(of: values.shape, along: [axis]), type: N.self)
         maximum(values, along: axis, into: reduced)
         subtract(values, reduced, into: result)
         exp(result, into: result)
@@ -313,20 +303,8 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         divide(result, reduced, into: result)
     }
 
-    /// Computes the gradient of the softmax along an axis, `output * (outputGradient - sum(outputGradient * output))`.
-    /// The gradient of the output and the result can be the same memory.
-    func softmaxGradient(output: some ReadableBuffer<N, Device>, outputGradient: some ReadableBuffer<N, Device>, along axis: Int, into result: Writable) {
-        let (output, outputGradient) = (output.readable, outputGradient.readable)
-        let products = temporary(output.shape)
-        let sums = temporary(ShapeUtil.keptShape(of: output.shape, along: [axis]))
-        multiply(outputGradient, output, into: products)
-        sum(products, along: [axis], into: sums)
-        subtract(outputGradient, sums, into: result)
-        multiply(result, output, into: result)
-    }
-
     func permute(_ values: some ReadableBuffer<N, Device>, to arrangement: [Int], into result: Writable) {
-        Engine.permuteAxes(values: values.readable, result: result, arangement: arrangement)
+        Engine.permuteAxes(values: values.readable, result: result, arrangement: arrangement)
     }
 
     // MARK: Gradients
@@ -341,7 +319,7 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
             body(gradient.values)
             return
         }
-        let values = temporary(gradient.shape)
+        let values = Device.Memory.allocateBuffer(withShape: gradient.shape, type: N.self)
         body(values)
         add(gradient.values, values, into: gradient.values)
     }
@@ -353,13 +331,32 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
         }
         let values = values.readable
         let axes = ShapeUtil.broadcastAxes(from: gradient.shape, to: values.shape)
-        write(gradient) { result in
-            if axes.isEmpty {
-                copy(values, into: result)
+        // A gradient with the shape of the values is added or copied without an intermediate buffer.
+        guard !axes.isEmpty else {
+            if gradient.adds {
+                add(gradient.values, values.reshaped(to: gradient.shape), into: gradient.values)
             } else {
-                sum(values, along: axes, into: result)
+                copy(values, into: gradient.values)
             }
+            return
         }
+        write(gradient) { result in
+            sum(values, along: axes, into: result)
+        }
+    }
+
+    /// Writes the matrix product `op(lhs) × op(rhs)` into a gradient. Nothing happens for a gradient that is not requested.
+    func writeProduct(
+        _ lhs: some ReadableBuffer<N, Device>,
+        _ rhs: some ReadableBuffer<N, Device>,
+        lhsTransposed transposeLhs: Bool = false,
+        rhsTransposed transposeRhs: Bool = false,
+        into gradient: GradientBuffer<N, Device>?,
+    ) {
+        guard let gradient else {
+            return
+        }
+        multiplyMatrices(lhs, rhs, lhsTransposed: transposeLhs, rhsTransposed: transposeRhs, into: gradient.values, beta: gradient.beta)
     }
 
     /// Writes the batched matrix product `alpha * op(lhs) × op(rhs)` into a gradient. When the product has more batch axes or
@@ -381,7 +378,7 @@ struct BufferMath<N: NumericType, Device: DeviceType> {
             multiplyBatchedMatrices(lhs, rhs, lhsTransposed: transposeLhs, rhsTransposed: transposeRhs, into: gradient.values, alpha: alpha, beta: gradient.beta)
             return
         }
-        let product = temporary(productShape)
+        let product = Device.Memory.allocateBuffer(withShape: productShape, type: N.self)
         multiplyBatchedMatrices(lhs, rhs, lhsTransposed: transposeLhs, rhsTransposed: transposeRhs, into: product, alpha: alpha)
         writeSum(of: product, into: gradient)
     }

@@ -30,24 +30,12 @@ extension Double: NumericType {
         String(format: "%.\(maxDecimals)f", self)
     }
 
-    public func toUInt8() -> UInt8 {
-        UInt8(self)
-    }
-
-    public func toInt() -> Int {
-        Int(self)
-    }
-
     public var floatValue: Float {
         Float(self)
     }
 
     public var doubleValue: Double {
         self
-    }
-
-    public var intValue: Int32 {
-        Int32(self)
     }
 
     public static var one: Double {
@@ -72,18 +60,6 @@ extension Double: NumericType {
 
     public func cos() -> Double {
         Foundation.cos(self)
-    }
-
-    public func tan() -> Double {
-        Foundation.tanh(self)
-    }
-
-    public func sinh() -> Double {
-        Foundation.sinh(self)
-    }
-
-    public func cosh() -> Double {
-        Foundation.cosh(self)
     }
 
     public func tanh() -> Double {

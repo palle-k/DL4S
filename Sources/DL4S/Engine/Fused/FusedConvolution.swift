@@ -33,13 +33,10 @@ import Foundation
 public extension FusedOperationsType {
     static func convolution2d<N: NumericType>(input: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, bias: ShapedBuffer<N, Device>?, padding: Int, stride: Int, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let (outputChannels, windowSize) = (filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3])
         let (batchSize, outputHeight, outputWidth) = (result.shape[0], result.shape[2], result.shape[3])
-        let columns = math.temporary([windowSize, batchSize * outputHeight * outputWidth])
-        let product = math.temporary([outputChannels, batchSize, outputHeight, outputWidth])
+        let columns = Device.Memory.allocateBuffer(withShape: [windowSize, batchSize * outputHeight * outputWidth], type: N.self)
+        let product = Device.Memory.allocateBuffer(withShape: [outputChannels, batchSize, outputHeight, outputWidth], type: N.self)
         Device.Engine.img2col(values: input, result: columns, kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: padding, stride: stride)
         math.multiplyMatrices(filters.reshaped(to: [outputChannels, windowSize]), columns, into: product.reshaped(to: [outputChannels, product.count / outputChannels]))
         math.permute(product, to: [1, 0, 2, 3], into: result)
@@ -60,16 +57,20 @@ public extension FusedOperationsType {
         biasGradient: GradientBuffer<N, Device>?,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
+        math.write(biasGradient) { db in
+            math.sum(outputGradient, along: [0, 2, 3], into: db)
+        }
+        // The other gradients need the window matrix, which is the largest intermediate buffer.
+        guard inputGradient != nil || filterGradient != nil else {
+            return
         }
         let (outputChannels, windowSize) = (filters.shape[0], filters.shape[1] * filters.shape[2] * filters.shape[3])
         let windows = outputGradient.count / outputChannels
         let (kernelHeight, kernelWidth) = (filters.shape[2], filters.shape[3])
         // The layout of the matrix product of the forward pass: [outputChannels, batchSize * outputHeight * outputWidth]
-        let gradientMatrix = math.temporary([outputChannels, outputGradient.shape[0], outputGradient.shape[2], outputGradient.shape[3]])
+        let gradientMatrix = Device.Memory.allocateBuffer(withShape: [outputChannels, outputGradient.shape[0], outputGradient.shape[2], outputGradient.shape[3]], type: N.self)
         math.permute(outputGradient, to: [1, 0, 2, 3], into: gradientMatrix)
-        let columns = math.temporary([windowSize, windows])
+        let columns = Device.Memory.allocateBuffer(withShape: [windowSize, windows], type: N.self)
         math.write(inputGradient) { dx in
             math.multiplyMatrices(filters.reshaped(to: [outputChannels, windowSize]), gradientMatrix.reshaped(to: [outputChannels, windows]), lhsTransposed: true, into: columns)
             Device.Engine.col2img(matrix: ShapedBuffer(columns), image: dx, kernelWidth: kernelWidth, kernelHeight: kernelHeight, padding: padding, stride: stride)
@@ -85,21 +86,15 @@ public extension FusedOperationsType {
                 beta: filterGradient.beta,
             )
         }
-        math.write(biasGradient) { db in
-            math.sum(outputGradient, along: [0, 2, 3], into: db)
-        }
     }
 
     static func transposedConvolution2d<N: NumericType>(input: ShapedBuffer<N, Device>, filters: ShapedBuffer<N, Device>, bias: ShapedBuffer<N, Device>?, inset: Int, stride: Int, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let (inputChannels, kernelSize) = (input.shape[1], filters.shape[0] * filters.shape[2] * filters.shape[3])
         let pixels = input.count / inputChannels
         // The filters are read as a [inputChannels, outputChannels * kernelHeight * kernelWidth] matrix.
-        let inputMatrix = math.temporary([inputChannels, input.shape[0], input.shape[2], input.shape[3]])
-        let columns = math.temporary([kernelSize, pixels])
+        let inputMatrix = Device.Memory.allocateBuffer(withShape: [inputChannels, input.shape[0], input.shape[2], input.shape[3]], type: N.self)
+        let columns = Device.Memory.allocateBuffer(withShape: [kernelSize, pixels], type: N.self)
         math.permute(input, to: [1, 0, 2, 3], into: inputMatrix)
         math.multiplyMatrices(filters.reshaped(to: [inputChannels, kernelSize]), inputMatrix.reshaped(to: [inputChannels, pixels]), lhsTransposed: true, into: columns)
         Device.Engine.col2img(matrix: ShapedBuffer(columns), image: result, kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: inset, stride: stride)
@@ -120,16 +115,20 @@ public extension FusedOperationsType {
         biasGradient: GradientBuffer<N, Device>?,
     ) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
+        math.write(biasGradient) { db in
+            math.sum(outputGradient, along: [0, 2, 3], into: db)
+        }
+        // The other gradients need the window matrix, which is the largest intermediate buffer.
+        guard inputGradient != nil || filterGradient != nil else {
+            return
         }
         let (inputChannels, kernelSize) = (input.shape[1], filters.shape[0] * filters.shape[2] * filters.shape[3])
         let pixels = input.count / inputChannels
         let matrixShape = [inputChannels, input.shape[0], input.shape[2], input.shape[3]]
         // img2col is the adjoint of the col2img of the forward pass.
-        let columnGradient = math.temporary([kernelSize, pixels])
+        let columnGradient = Device.Memory.allocateBuffer(withShape: [kernelSize, pixels], type: N.self)
         Device.Engine.img2col(values: outputGradient, result: columnGradient, kernelWidth: filters.shape[3], kernelHeight: filters.shape[2], padding: inset, stride: stride)
-        let matrix = math.temporary(matrixShape)
+        let matrix = Device.Memory.allocateBuffer(withShape: matrixShape, type: N.self)
         math.write(inputGradient) { dx in
             math.multiplyMatrices(filters.reshaped(to: [inputChannels, kernelSize]), columnGradient, into: matrix.reshaped(to: [inputChannels, pixels]))
             math.permute(matrix, to: [1, 0, 2, 3], into: dx)
@@ -144,30 +143,21 @@ public extension FusedOperationsType {
                 beta: filterGradient.beta,
             )
         }
-        math.write(biasGradient) { db in
-            math.sum(outputGradient, along: [0, 2, 3], into: db)
-        }
     }
 
     static func maxPooling2d<N: NumericType>(input: ShapedBuffer<N, Device>, windowSize: Int, padding: Int, stride: Int, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let columns = poolingColumns(of: input, windowSize: windowSize, padding: padding, stride: stride, math: math)
         math.maximum(columns, along: 0, into: result)
     }
 
     static func maxPooling2dBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, windowSize: Int, padding: Int, stride: Int, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // The gradient of a window goes to the position of its largest value.
         let columns = poolingColumns(of: input, windowSize: windowSize, padding: padding, stride: stride, math: math)
         let windows = outputGradient.count
-        let positions = math.positions([windows])
-        math.maximum(columns, along: 0, into: math.temporary([windows]), positions: positions)
+        let positions = Device.Memory.allocateBuffer(withShape: [windows], type: Int32.self)
+        math.maximum(columns, along: 0, into: Device.Memory.allocateBuffer(withShape: [windows], type: N.self), positions: positions)
         math.write(inputGradient) { dx in
             Device.Engine.scatter(reduced: outputGradient.reshaped(to: [windows]), context: ShapedBuffer(positions), result: columns, axis: 0, ignoreIndex: -1)
             Device.Engine.col2img(matrix: ShapedBuffer(columns), image: dx.reshaped(to: poolingImageShape(of: input.shape)), kernelWidth: windowSize, kernelHeight: windowSize, padding: padding, stride: stride)
@@ -176,9 +166,6 @@ public extension FusedOperationsType {
 
     static func averagePooling2d<N: NumericType>(input: ShapedBuffer<N, Device>, windowSize: Int, padding: Int, stride: Int, result: MutableShapedBuffer<N, Device>) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         // Padding elements are zeros that count for the mean.
         let columns = poolingColumns(of: input, windowSize: windowSize, padding: padding, stride: stride, math: math)
         math.sum(columns, along: [0], into: result)
@@ -187,14 +174,11 @@ public extension FusedOperationsType {
 
     static func averagePooling2dBackward<N: NumericType>(input: ShapedBuffer<N, Device>, outputGradient: ShapedBuffer<N, Device>, windowSize: Int, padding: Int, stride: Int, inputGradient: GradientBuffer<N, Device>?) {
         let math = BufferMath<N, Device>()
-        defer {
-            math.release()
-        }
         let windowElements = windowSize * windowSize
         let windows = outputGradient.count
         math.write(inputGradient) { dx in
             // Every element of a window gets the gradient of the window, divided by the number of elements.
-            let columns = math.temporary([windowElements, windows])
+            let columns = Device.Memory.allocateBuffer(withShape: [windowElements, windows], type: N.self)
             math.multiply(math.constant(1 / N(windowElements), shape: [windowElements, 1]), outputGradient.reshaped(to: [1, windows]), into: columns)
             Device.Engine.col2img(matrix: ShapedBuffer(columns), image: dx.reshaped(to: poolingImageShape(of: input.shape)), kernelWidth: windowSize, kernelHeight: windowSize, padding: padding, stride: stride)
         }
@@ -211,7 +195,7 @@ extension FusedOperationsType {
     static func poolingColumns<N: NumericType>(of input: ShapedBuffer<N, Device>, windowSize: Int, padding: Int, stride: Int, math: BufferMath<N, Device>) -> MutableShapedBuffer<N, Device> {
         let windows = ConvUtil.outputSize(inputSize: input.shape[2], kernelSize: windowSize, padding: padding, stride: stride)
             * ConvUtil.outputSize(inputSize: input.shape[3], kernelSize: windowSize, padding: padding, stride: stride)
-        let columns = math.temporary([windowSize * windowSize, input.shape[0] * input.shape[1] * windows])
+        let columns = Device.Memory.allocateBuffer(withShape: [windowSize * windowSize, input.shape[0] * input.shape[1] * windows], type: N.self)
         Device.Engine.img2col(values: input.reshaped(to: poolingImageShape(of: input.shape)), result: columns, kernelWidth: windowSize, kernelHeight: windowSize, padding: padding, stride: stride)
         return columns
     }

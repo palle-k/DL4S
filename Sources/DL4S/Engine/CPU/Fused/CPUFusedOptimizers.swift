@@ -28,7 +28,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func adamUpdate<N: NumericType>(
+    static func adamUpdate<N: FloatingPointNumericType>(
         parameter: ShapedBuffer<N, CPU>,
         gradient: ShapedBuffer<N, CPU>,
         firstMoment: MutableShapedBuffer<N, CPU>,

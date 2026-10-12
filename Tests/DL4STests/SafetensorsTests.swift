@@ -29,7 +29,7 @@ import Testing
 
 /// A model with weights, frozen tensors, a sequence, an array of layers, a scalar, and an empty tensor.
 @Layer
-struct CheckpointModel<Element: RandomizableType> {
+struct CheckpointModel<Element: FloatingPointNumericType> {
     typealias Device = CPU
 
     var encoder: Sequential<Dense<Element, CPU>, Relu<Element, CPU>, Dense<Element, CPU>>

@@ -23,6 +23,13 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import Foundation
 
 /// Writes the tensors of a model to a safetensors file.
@@ -128,6 +135,9 @@ public struct SafetensorsEncoder: Sendable {
         }
 
         let shards = shards(of: tensors, by: sharding)
+        if let shard = shards.first(where: { !SafetensorsFormat.isValidShardFileName($0.fileName) }) {
+            throw SafetensorsError(.invalidShardFileName(shard.fileName))
+        }
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         var weightMap: [String: String] = [:]
         for shard in shards {
@@ -140,7 +150,7 @@ public struct SafetensorsEncoder: Sendable {
         let index = SafetensorsIndex(totalSize: tensors.reduce(0) { $0 + $1.byteCount }, weightMap: weightMap)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
-        try encoder.encode(index).write(to: url.appending(path: SafetensorsFormat.indexFileName))
+        try encoder.encode(index).write(to: url.appending(path: SafetensorsFormat.indexFileName), options: .atomic)
     }
 
     // MARK: Implementation
@@ -207,16 +217,44 @@ public struct SafetensorsEncoder: Sendable {
     }
 
     // Writes one tensor at a time, so that the transient memory stays at the size of the largest tensor.
+    // The tensors go into a temporary file in the same directory, which then replaces the file in one rename.
+    // A failed write thus does not leave a partly written file at `url`.
     private func write<Element, Device>(_ tensors: [EncodedTensor<Element, Device>], to url: URL) throws {
         let header = try SafetensorsFormat.encodeHeader(entries: entries(for: tensors), metadata: options.metadata)
-        // Creates the file, or truncates a file that exists.
-        try header.write(to: url)
-        let handle = try FileHandle(forWritingTo: url)
-        try handle.seekToEnd()
-        for tensor in tensors where tensor.byteCount > 0 {
-            try handle.write(contentsOf: tensor.bytes())
+        let temporaryURL = url.deletingLastPathComponent().appending(path: ".\(url.lastPathComponent).\(UUID().uuidString).tmp")
+        do {
+            try header.write(to: temporaryURL)
+            let handle = try FileHandle(forWritingTo: temporaryURL)
+            do {
+                try handle.seekToEnd()
+                for tensor in tensors where tensor.byteCount > 0 {
+                    try handle.write(contentsOf: tensor.bytes())
+                }
+            } catch {
+                try? handle.close()
+                throw error
+            }
+            try handle.close()
+            try Self.replaceItem(at: url, with: temporaryURL)
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            throw error
         }
-        try handle.close()
+    }
+
+    /// Moves a file to a destination and replaces the file at the destination, if it exists, in one step.
+    private static func replaceItem(at destination: URL, with source: URL) throws {
+        let errorCode = source.withUnsafeFileSystemRepresentation { sourcePath in
+            destination.withUnsafeFileSystemRepresentation { destinationPath -> POSIXErrorCode? in
+                guard let sourcePath, let destinationPath else {
+                    return .EINVAL
+                }
+                return rename(sourcePath, destinationPath) == 0 ? nil : POSIXErrorCode(rawValue: errno) ?? .EIO
+            }
+        }
+        if let errorCode {
+            throw POSIXError(errorCode)
+        }
     }
 }
 

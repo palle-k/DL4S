@@ -28,7 +28,7 @@ import Foundation
 public extension CPUFusedOperations {
     @_specialize(where N == Float)
     @_specialize(where N == Double)
-    static func dropout<N: NumericType>(input: ShapedBuffer<N, CPU>, rate: Float, result: MutableShapedBuffer<N, CPU>, mask: MutableShapedBuffer<N, CPU>) {
+    static func dropout<N: FloatingPointNumericType>(input: ShapedBuffer<N, CPU>, rate: Float, result: MutableShapedBuffer<N, CPU>, mask: MutableShapedBuffer<N, CPU>) {
         let (x, y, m) = (input.elementPointer, result.elementPointer, mask.elementPointer)
         let probability = Double(1 - rate)
 

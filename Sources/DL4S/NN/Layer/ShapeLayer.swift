@@ -37,6 +37,10 @@ public struct Reshape<Element: NumericType, Device: DeviceType>: Codable, Sendab
         self.outputShape = outputShape
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         // retain batch dimension
         inputs.view(as: [inputs.shape[0]] + outputShape)
@@ -49,6 +53,10 @@ public struct Flatten<Element: NumericType, Device: DeviceType>: Codable, Sendab
     /// Layer that flattens its inputs into a tensor of shape [batchSize, -1]
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: Tensor<Element, Device>) -> Tensor<Element, Device> {
         // retain batch dimension
         inputs.view(as: [inputs.shape[0], -1])
@@ -61,6 +69,10 @@ public struct Concat<Element: NumericType, Device: DeviceType>: Codable, Sendabl
     /// Layer that concatenates a list of input tensors along their second dimension
     public init() {}
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public func callAsFunction(_ inputs: [Tensor<Element, Device>]) -> Tensor<Element, Device> {
         // 0th axis is batch dimension
         Tensor(stacking: inputs, along: 1)

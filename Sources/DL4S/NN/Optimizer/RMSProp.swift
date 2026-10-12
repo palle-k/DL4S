@@ -28,7 +28,7 @@ import Foundation
 /// Root mean square optimizer
 ///
 /// Unpublished, proposed by [Geoffrey Hinton - Neural Networks for Machine Learning](https://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf)
-public struct RMSProp<Element: NumericType, Device: DeviceType>: Optimizer, Sendable {
+public struct RMSProp<Element: FloatingPointNumericType, Device: DeviceType>: Optimizer, Sendable {
     public typealias ParamTensor = Tensor<Element, Device>
 
     /// Learning rate scaling factor
@@ -69,6 +69,10 @@ public struct RMSProp<Element: NumericType, Device: DeviceType>: Optimizer, Send
         gradientSums = Self.zeroState(for: layout.children(of: "gradientSums"))
     }
 
+    #if canImport(Metal) && canImport(MetalPerformanceShaders)
+    @_specialize(where Element == Float, Device == GPU)
+    #endif
+    @_specialize(where Element == Float, Device == CPU)
     public mutating func update(_ parameters: inout [ParamTensor], along gradients: [ParamTensor]) {
         Self.validateGradients(gradients, against: parameters)
         Self.initializeStateIfNeeded(&gradientSums, for: parameters)
